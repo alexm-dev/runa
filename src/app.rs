@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::file_manager::{FileEntry, read_dir};
 use crate::formatter::Formatter;
 
@@ -7,12 +8,16 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new() -> std::io::Result<Self> {
+    pub fn new(config: &Config) -> std::io::Result<Self> {
         let mut entries = read_dir(".")?;
 
-        let formatter = Formatter::new(true, false, false);
+        let formatter = Formatter::new(
+            config.dirs_first,
+            config.show_hidden,
+            config.case_insensitive,
+        );
 
-        formatter.filter_hidden(&mut entries); // filters + sorts
+        formatter.filter_hidden(&mut entries);
 
         Ok(Self {
             entries,

@@ -1,12 +1,13 @@
 mod app;
+mod config;
 mod file_manager;
 mod formatter;
 mod terminal;
 
-// use crate::file_manager::FileEntry;
-// use crate::formatter::Formatter;
+use config::Config;
 
 fn main() -> std::io::Result<()> {
-    let mut app = app::AppState::new()?;
+    let config = Config::load("runner.toml");
+    let mut app = app::AppState::new(&config)?;
     terminal::run_terminal(&mut app)
 }
