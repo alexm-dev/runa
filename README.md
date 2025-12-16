@@ -26,10 +26,9 @@ cargo build --release
 
 ## Configuration
 runner uses a runner.toml file for configuration.
-It is located by default in:
+By default, it is located at:
 
-`$HOME/.config/runner/runner.toml` on Unix and on Windows (inside the user folder)  
-
+`$HOME/.config/runner/runner.toml` (on both Unix and Windows, inside the user folder)
 
 You can override the config path by setting a environment variable:
 
@@ -51,7 +50,9 @@ This will generate a config in the default config path.
 
 ## Roadmap
 
-runner is in active development. Future releases will focus on expanding functionality while keeping it fast and lightweight.  
+runner is in active development.  
+Future releases will focus on expanding functionality while keeping it fast and lightweight.  
+
 Planned features for future releases include:
 
 - Search functionality: search with other find or grep functions instead
