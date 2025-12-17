@@ -48,12 +48,24 @@ impl<'a> AppState<'a> {
         })
     }
 
-    pub fn entries(&self) -> &Vec<FileEntry> {
+    pub fn visible_entries(&self) -> &[FileEntry] {
         &self.entries
     }
 
-    pub fn selected(&self) -> usize {
-        self.selected
+    pub fn has_visible_entries(&self) -> bool {
+        !self.entries.is_empty()
+    }
+
+    pub fn selected_entry(&self) -> Option<&FileEntry> {
+        self.entries.get(self.selected)
+    }
+
+    pub fn visible_selected(&self) -> Option<usize> {
+        if self.entries.is_empty() {
+            None
+        } else {
+            Some(self.selected)
+        }
     }
 
     pub fn config(&self) -> &Config {

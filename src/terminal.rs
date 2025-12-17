@@ -65,7 +65,7 @@ fn event_loop<B: ratatui::backend::Backend>(
             let accent_color = parse_color(&cfg.theme.accent_color);
 
             let items: Vec<ListItem> = app
-                .entries()
+                .visible_entries()
                 .iter()
                 .map(|e| {
                     let dir_name = if e.is_dir() && app.config().display.show_dir_marker {
@@ -78,8 +78,8 @@ fn event_loop<B: ratatui::backend::Backend>(
                 .collect();
 
             let mut state = ListState::default();
-            if !app.entries().is_empty() {
-                state.select(Some(app.selected()));
+            if app.has_visible_entries() {
+                state.select(app.visible_selected());
             }
 
             let list = List::new(items)
