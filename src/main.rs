@@ -2,6 +2,7 @@ mod app;
 mod config;
 mod file_manager;
 mod formatter;
+mod keymap;
 mod terminal;
 mod utils;
 
