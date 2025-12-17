@@ -1,4 +1,7 @@
+use crate::config::Editor;
 use ratatui::style::Color;
+use std::path::Path;
+use std::process::Command;
 
 pub fn parse_color(s: &str) -> Color {
     match s.to_lowercase().as_str() {
@@ -26,4 +29,9 @@ pub fn parse_color(s: &str) -> Color {
             Color::Reset // Fallback
         }
     }
+}
+
+pub fn open_in_editor(editor: &Editor, path: &Path) -> std::io::Result<()> {
+    Command::new(&editor.cmd).arg(path).status()?;
+    Ok(())
 }

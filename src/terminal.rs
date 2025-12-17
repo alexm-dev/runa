@@ -37,7 +37,7 @@ fn keycode_to_str(key: &KeyCode) -> &'static str {
         KeyCode::Char('h') => "h",
         KeyCode::Char('l') => "l",
         KeyCode::Char('q') => "q",
-        KeyCode::Char('\n') => "Enter",
+        KeyCode::Enter => "Enter",
         KeyCode::Left => "Left Arrow",
         KeyCode::Right => "Right Arrow",
         KeyCode::Down => "Down Arrow",
