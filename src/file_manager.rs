@@ -2,11 +2,26 @@ use std::ffi::OsString;
 use std::fs;
 
 pub struct FileEntry {
-    pub name: OsString,
-    pub is_dir: bool,
-    pub is_hidden: bool,
+    name: OsString,
+    is_dir: bool,
+    is_hidden: bool,
     // flag for hidding system hidden files
-    pub is_system: bool,
+    is_system: bool,
+}
+
+impl FileEntry {
+    pub fn name(&self) -> &OsString {
+        &self.name
+    }
+    pub fn is_dir(&self) -> bool {
+        self.is_dir
+    }
+    pub fn is_hidden(&self) -> bool {
+        self.is_hidden
+    }
+    pub fn is_system(&self) -> bool {
+        self.is_system
+    }
 }
 
 pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
