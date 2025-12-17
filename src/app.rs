@@ -56,9 +56,9 @@ impl<'a> AppState<'a> {
         !self.entries.is_empty()
     }
 
-    pub fn selected_entry(&self) -> Option<&FileEntry> {
-        self.entries.get(self.selected)
-    }
+    // pub fn selected_entry(&self) -> Option<&FileEntry> {
+    //     self.entries.get(self.selected)
+    // }
 
     pub fn visible_selected(&self) -> Option<usize> {
         if self.entries.is_empty() {
