@@ -5,6 +5,8 @@ pub struct FileEntry {
     pub name: OsString,
     pub is_dir: bool,
     pub is_hidden: bool,
+    // flag for hidding system hidden files
+    pub is_system: bool,
 }
 
 pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
@@ -17,29 +19,32 @@ pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
 
         let name = entry.file_name();
         #[cfg(unix)]
-        let (is_dir, is_hidden) = {
+        let (is_dir, is_hidden, is_system) = {
             use std::os::unix::ffi::OsStrExt;
             let is_hidden = name.as_bytes().get(0) == Some(&b'.');
             let is_dir = entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false);
-            (is_dir, is_hidden)
+            (is_dir, is_hiddenm, false)
         };
 
         #[cfg(windows)]
-        let (is_dir, is_hidden) = {
+        let (is_dir, is_hidden, is_system) = {
             use std::os::windows::fs::MetadataExt;
 
             if let Ok(md) = entry.metadata() {
-                let is_hidden = md.file_attributes() & 0x2 != 0;
+                let attrs = md.file_attributes();
+                let is_hidden = attrs & 0x2 != 0;
+                let is_system = attrs & 0x4 != 0;
                 let is_dir = md.is_dir();
-                (is_dir, is_hidden)
+                (is_dir, is_hidden, is_system)
             } else {
-                (false, false)
+                (false, false, false)
             }
         };
         entries.push(FileEntry {
             name,
             is_dir,
             is_hidden,
+            is_system,
         });
     }
     Ok(entries)

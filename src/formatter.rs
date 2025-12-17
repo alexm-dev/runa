@@ -3,14 +3,21 @@ use crate::file_manager::FileEntry;
 pub struct Formatter {
     pub dirs_first: bool,
     pub show_hidden: bool,
+    pub show_system: bool,
     pub case_insensitive: bool,
 }
 
 impl Formatter {
-    pub fn new(dirs_first: bool, show_hidden: bool, case_insensitive: bool) -> Self {
+    pub fn new(
+        dirs_first: bool,
+        show_hidden: bool,
+        show_system: bool,
+        case_insensitive: bool,
+    ) -> Self {
         Self {
             dirs_first,
             show_hidden,
+            show_system,
             case_insensitive,
         }
     }
@@ -36,10 +43,12 @@ impl Formatter {
             entries.sort_unstable_by(cmp_name);
         }
     }
-    pub fn filter_hidden(&self, entries: &mut Vec<FileEntry>) {
-        if !self.show_hidden {
-            entries.retain(|e| !e.is_hidden);
-        }
+    pub fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
+        entries.retain(|e| {
+            let hidden_ok = self.show_hidden || !e.is_hidden;
+            let system_ok = self.show_system || !e.is_system;
+            hidden_ok && system_ok
+        });
         self.format(entries);
     }
 } // impl Formatter

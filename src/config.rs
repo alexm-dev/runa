@@ -16,6 +16,7 @@ use std::{
 pub struct Config {
     pub dirs_first: bool,
     pub show_hidden: bool,
+    pub show_system: bool,
     pub case_insensitive: bool,
     pub display: Display,
     pub theme: Theme,
@@ -108,6 +109,7 @@ impl Default for Config {
         Config {
             dirs_first: true,
             show_hidden: false,
+            show_system: false,
             case_insensitive: false,
             display: Display::default(),
             theme: Theme::default(),

@@ -28,10 +28,11 @@ impl<'a> AppState<'a> {
         let formatter = Formatter::new(
             config.dirs_first,
             config.show_hidden,
+            config.show_system,
             config.case_insensitive,
         );
 
-        formatter.filter_hidden(&mut entries);
+        formatter.filter_entries(&mut entries);
 
         Ok(Self {
             current_dir,
@@ -97,10 +98,11 @@ impl<'a> AppState<'a> {
             let formatter = Formatter::new(
                 self.config.dirs_first,
                 self.config.show_hidden,
+                self.config.show_system,
                 self.config.case_insensitive,
             );
 
-            formatter.filter_hidden(&mut entries);
+            formatter.filter_entries(&mut entries);
             self.entries = entries;
 
             if let Some(target_name) = focus_target {
