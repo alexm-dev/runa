@@ -15,10 +15,17 @@ This project is a work in progess.
 It is being actively developed and will change over time.  
 
 ## Features
-- Naviagate directories in the Terminal
+- Navigate directories in the Terminal
 - Lightweight and minimal memory usage
 - Cross-platform: Works on Linux, Windows and macOS.
 - Configurable keybindings via TOML configuration file.
+
+### Usage
+
+Run runner:
+```bash
+rn
+```
 
 ## Installation
 
@@ -60,7 +67,7 @@ $env:RUNNER_CONFIG="C:\path\to\runner.toml
 You can generate a default config using the --gen-config flag:
 
 ```bash
-runner --gen-config
+runner --init
 ```
 
 This will generate a config in the default config path.
