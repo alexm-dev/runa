@@ -1,12 +1,13 @@
 [package]
 name = "runner-tui"
 description = "A terminal based file browser"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/alexm-dev/runner"
 readme = "README.md"
 authors = ["alexm-dev"]
+rust-version = "1.92.0"
 categories = ["filesystem", "command-line-utilities", "command-line-interface"]
 keywords = ["file-browser", "file-manager", "tui", "cli", "search"]
 
