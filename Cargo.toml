@@ -5,6 +5,7 @@ version = "0.1.2"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/alexm-dev/runner"
+documentation = "https://docs.rs/runner-tui"
 readme = "README.md"
 authors = ["alexm-dev"]
 rust-version = "1.92"

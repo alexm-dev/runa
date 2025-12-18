@@ -5,6 +5,9 @@
 [![Language](https://img.shields.io/badge/language-Rust-orange)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+**Documentation**
+- [Configuration](docs/configuration.md)
+
 A fast and lightweight console file browser written in Rust
 
 runner is a minimal terminal file browser focused on speed and simplicity.  
