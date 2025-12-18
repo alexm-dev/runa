@@ -58,13 +58,18 @@ pub struct Editor {
 
 impl Config {
     pub fn load(path: &Path) -> Self {
-        match fs::read_to_string(path)
-            .ok()
-            .and_then(|content| toml::from_str(&content).ok())
-        {
-            Some(cfg) => cfg,
-            None => {
-                println!("Config file missing or invalid, using defaults.");
+        match fs::read_to_string(path) {
+            Ok(content) => match toml::from_str(&content) {
+                Ok(cfg) => cfg,
+                Err(err) => {
+                    eprintln!("Failed to parse config file:");
+                    eprintln!(" {err}");
+                    Config::default()
+                }
+            },
+            Err(err) => {
+                eprintln!("Failed to read config file:");
+                eprintln!(" {err}");
                 Config::default()
             }
         }
