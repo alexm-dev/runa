@@ -28,7 +28,7 @@ Installation via cargo:
 cargo install runner-tui
 ```
 
-# Build from source
+### Build from source
 
 Clone the repo and build with Cargo:
 
