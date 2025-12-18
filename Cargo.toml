@@ -1,12 +1,18 @@
 [package]
 name = "runner-tui"
-description = "A terminal based file runner"
+description = "A terminal based file browser"
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/alexm-dev/runner"
 readme = "README.md"
 authors = ["alexm-dev"]
+categories = ["terminal", "file-manager", "tui", "cli"]
+keywords = ["file browser", "file-manager", "tui", "cli", "rust"]
+
+[[bin]]
+name = "rn"
+path = "src/main.rs"
 
 [dependencies]
 dirs = "6.0.0"
