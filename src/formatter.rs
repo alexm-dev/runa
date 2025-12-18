@@ -30,7 +30,7 @@ impl Formatter {
                     .to_lowercase()
                     .cmp(&b.name().to_string_lossy().to_lowercase())
             } else {
-                a.name().cmp(&b.name())
+                a.name().cmp(b.name())
             }
         };
         if self.dirs_first {

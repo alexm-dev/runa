@@ -62,7 +62,7 @@ fn event_loop<B: ratatui::backend::Backend>(
                 block = block.borders(Borders::ALL);
             }
 
-            let accent_color = parse_color(&cfg.theme().accent_color());
+            let accent_color = parse_color(cfg.theme().accent_color());
 
             let items: Vec<ListItem> = app
                 .visible_entries()

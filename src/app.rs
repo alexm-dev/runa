@@ -128,8 +128,8 @@ impl<'a> AppState<'a> {
 
     fn handle_open_file(&mut self) -> KeypressResult {
         if let Some(entry) = self.entries.get(self.selected) {
-            let path = self.current_dir.join(&entry.name());
-            if let Err(e) = open_in_editor(&self.config.editor(), &path) {
+            let path = self.current_dir.join(entry.name());
+            if let Err(e) = open_in_editor(self.config.editor(), &path) {
                 eprintln!("Error opening editor: {}", e);
             }
             return KeypressResult::OpenedEditor;
