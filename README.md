@@ -9,9 +9,9 @@ A fast and lightweight console file browser written in Rust
 
 runner is a minimal terminal file browser focused on speed and simplicity.  
 
-It allows you to naviagate directories, view file listings, and perform typical file browser actions.  
+It allows you to navigate directories, view file listings, and perform typical file browser actions.  
 
-This project is a work in progess.  
+This project is a work in progress.  
 It is being actively developed and will change over time.  
 
 ## Features
