@@ -120,9 +120,35 @@ impl Config {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let default_toml = r#"
+        let default_toml = r#"# runner.toml — default configuration for runner
+#
+# Edit this file to customize behavior
+
+# General behavior
 dirs_first = true
 show_hidden = false
+show_system = false
+case_insensitive = false
+
+[display]
+show_selection_marker = true
+show_dir_marker = true
+borders = true
+
+[theme]
+background = "default"
+accent_color = "default"
+
+[editor]
+cmd = "nvim"
+
+[keys]
+open_file = ["Enter"]
+go_up = ["k", "Up Arrow"]
+go_down = ["j", "Down Arrow"]
+go_parent = ["h", "Left Arrow", "Backspace"]
+go_into_dir = ["l", "Right Arrow"]
+quit = ["q", "Esc"]
 "#;
         fs::write(path, default_toml)?;
         println!("Default config generated at {:?}", path);

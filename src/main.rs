@@ -12,7 +12,7 @@ fn handle_default_confg() -> std::io::Result<bool> {
     let args: Vec<String> = std::env::args().collect();
     let config_path = Config::default_path();
 
-    if args.len() > 1 && args[1] == "--gen-config" {
+    if args.len() > 1 && args[1] == "--init" {
         match Config::generate_default(&config_path) {
             Ok(_) => (),
             Err(e) => eprintln!("{}", e),
