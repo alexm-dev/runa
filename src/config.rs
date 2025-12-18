@@ -127,7 +127,7 @@ impl Config {
 # General behavior
 dirs_first = true
 show_hidden = false
-show_system = false     # shows hidden system files on windows
+show_system = false
 case_insensitive = true
 
 [display]
