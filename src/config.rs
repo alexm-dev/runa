@@ -116,9 +116,9 @@ impl Config {
             fs::create_dir_all(parent)?;
         }
         let default_toml = r#"
-        dirs_first = true
-        show_hidden = false
-        "#;
+dirs_first = true
+show_hidden = false
+"#;
         fs::write(path, default_toml)?;
         println!("Default config generated at {:?}", path);
         Ok(())
