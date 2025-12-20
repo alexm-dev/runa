@@ -117,5 +117,5 @@ Future releases will focus on expanding functionality while keeping it fast and 
 - [x] Navigation Context: Persisent Parent (Origin) and Preview panes (Completed in 0.2.0)  
 
 ## License
-This project is Licensed unde the MIT License  
+This project is Licensed under the MIT License  
 See the [LICENSE](LICENSE) file for details.
