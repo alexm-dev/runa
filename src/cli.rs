@@ -69,7 +69,7 @@ runner - Full Configuration Guide (runner.toml)
   show_hidden      (bool)  Show hidden files (dotfiles)
   show_system      (bool)  Show system/protected files
   case_insensitive (bool)  Ignore case when searching/sorting
-  always_show      (vec)   List of hidden names to always show
+  always_show      (list)  List of hidden names to always show
 
 [display]
   selection_marker (bool)  Show the cursor marker
@@ -89,12 +89,13 @@ runner - Full Configuration Guide (runner.toml)
   selection_icon   (str)   The cursor string (e.g., "> ")
 
 # Theme sections   (Each supports "fg" and "bg" keys)
-[theme.selection]  (ColorPair) Selection bar colors
-[theme.accent]     (ColorPair) Border and title accent colors
-[theme.entry]      (ColorPair) Standard file entry colors
-[theme.separator]  (ColorPair) Vertical line colors
-[theme.origin]     (ColorPair) Parent pane text colors
-[theme.preview]    (ColorPair) Preview pane text colors
+[theme.selection]   Selection bar colors    fg (str), bg (str)
+[theme.accent]      Border/title accents    fg (str), bg (str)
+[theme.entry]       Standard entry colors   fg (str), bg (str)
+[theme.separator]   Vertical line colors    fg (str), bg (str)
+[theme.origin]      Parent pane text        fg (str), bg (str)
+[theme.preview]     Preview pane text       fg (str), bg (str)
+[theme.path]        Path bar colors         fg (str), bg (str)
 
 [editor]
   cmd              (str)   Command to open files (e.g., "nvim")

@@ -37,6 +37,9 @@ show_system = false
 # Ignore case sensitivity when searching or sorting
 case_insensitive = true
 
+# Set directories to be always shown, ignoring the show_hidden option. Example: always_show = [".config", "..."]
+always_show = []
+
 [display]
 # Shows the selection icon next to the file/directory name
 selection_marker = true
