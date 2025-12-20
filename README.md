@@ -19,15 +19,15 @@ It is being actively developed and will change over time.
 
 ## What's New in v0.2.1
 
-### UI improvements
+#### UI improvements
 - Improved pane customization by adding pane specific selection cache.
 
-## Performance
+#### Performance
 - Switched to crossbeam-channel for better thread sync.
 - Performance improvements by reducing event_loop string creation.
 - Optimized `always_show` and other flags by using Atomics.
 
-## Fixes
+#### Fixes
 - Fixed preview sorting issue. Now shows the directories in the correct oder.
 
 
