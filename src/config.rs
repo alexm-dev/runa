@@ -5,8 +5,11 @@
 //!
 //! Each config struct corresponds to a top-level key in the `runner.toml`.
 
+use ratatui::style::{Color, Style};
 use serde::Deserialize;
 use std::{fs, io, path::PathBuf};
+
+use crate::utils::parse_color;
 
 #[derive(Deserialize, Debug)]
 #[serde(default)]
@@ -46,23 +49,26 @@ pub enum BorderStyle {
     Split,
 }
 
+#[derive(Deserialize, Debug, Default, Clone, Copy)]
+pub struct ColorPair {
+    #[serde(deserialize_with = "deserialize_color_field")]
+    fg: Color,
+    #[serde(deserialize_with = "deserialize_color_field")]
+    bg: Color,
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Theme {
-    background: String,
-    #[serde(rename = "selection_fg")]
-    selection: String,
-    #[serde(rename = "accent_fg")]
-    accent: String,
-    #[serde(rename = "entry_fg")]
-    entry: String,
-    #[serde(rename = "separator_fg")]
-    separator: String,
+    #[serde(deserialize_with = "deserialize_color_field")]
+    background: Color,
+    selection: ColorPair,
+    accent: ColorPair,
+    entry: ColorPair,
+    separator: ColorPair,
     selection_icon: String,
-    #[serde(rename = "origin_fg")]
-    origin: String,
-    #[serde(rename = "preview_fg")]
-    preview: String,
+    origin: ColorPair,
+    preview: ColorPair,
 }
 
 #[derive(Deserialize, Debug)]
@@ -164,8 +170,6 @@ impl Config {
             fs::create_dir_all(parent)?;
         }
         let full_toml = r#"# runner.toml - default configuration for runner
-#
-# Edit this file to customize behavior
 
 # General behavior
 dirs_first = true
@@ -189,13 +193,31 @@ scroll_padding = 5
 
 [theme]
 background = "default"
-selection_fg = "default"
-accent_fg = "default"
-entry_fg = "default"
-separator_fg = "default"
 selection_icon = "> "
-origin_fg = "default"
-preview_fg = "default"
+
+[theme.selection]
+fg = "default"
+bg = "default"
+
+[theme.accent]
+fg = "default"
+bg = "default"
+
+[theme.entry]
+fg = "default"
+bg = "default"
+
+[theme.separator]
+fg = "default"
+bg = "default"
+
+[theme.origin]
+fg = "default"
+bg = "default"
+
+[theme.preview]
+fg = "default"
+bg = "default"
 
 [editor]
 cmd = "nvim"
@@ -314,7 +336,7 @@ impl Default for Display {
             titles: false,
             separators: false,
             origin: false,
-            preview: false,
+            preview: true,
             origin_ratio: 25,
             main_ratio: 50,
             preview_ratio: 50,
@@ -323,51 +345,57 @@ impl Default for Display {
     }
 }
 
+impl ColorPair {
+    pub fn as_style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
+    }
+}
+
 impl Theme {
-    // pub fn background(&self) -> &str {
-    //     &self.background
+    // pub fn background(&self) -> Color {
+    //     self.background
     // }
 
-    pub fn accent(&self) -> &str {
-        &self.accent
+    pub fn accent(&self) -> Style {
+        self.accent.as_style()
     }
 
-    pub fn selection(&self) -> &str {
-        &self.selection
+    pub fn selection(&self) -> Style {
+        self.selection.as_style()
     }
 
-    pub fn entry(&self) -> &str {
-        &self.entry
+    pub fn entry(&self) -> Style {
+        self.entry.as_style()
     }
 
-    pub fn separator(&self) -> &str {
-        &self.separator
+    pub fn separator(&self) -> Style {
+        self.separator.as_style()
     }
 
     pub fn selection_icon(&self) -> &str {
         &self.selection_icon
     }
 
-    pub fn origin(&self) -> &str {
-        &self.origin
+    pub fn origin(&self) -> Style {
+        self.origin.as_style()
     }
 
-    pub fn preview(&self) -> &str {
-        &self.preview
+    pub fn preview(&self) -> Style {
+        self.preview.as_style()
     }
 }
 
 impl Default for Theme {
     fn default() -> Self {
         Theme {
-            background: "default".into(),
-            accent: "default".into(),
-            selection: "default".into(),
-            entry: "default".into(),
-            separator: "default".into(),
+            background: Color::Reset,
+            accent: ColorPair::default(),
+            selection: ColorPair::default(),
+            entry: ColorPair::default(),
+            separator: ColorPair::default(),
             selection_icon: "> ".into(),
-            origin: "default".into(),
-            preview: "default".into(),
+            origin: ColorPair::default(),
+            preview: ColorPair::default(),
         }
     }
 }
@@ -416,4 +444,13 @@ impl Default for Editor {
     fn default() -> Self {
         Editor { cmd: "nvim".into() }
     }
+}
+
+// Helper function to deserialize Theme colors
+fn deserialize_color_field<'de, D>(deserializer: D) -> Result<Color, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    Ok(parse_color(&s))
 }

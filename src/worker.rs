@@ -2,8 +2,10 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::Arc;
 use std::thread;
+
+use crossbeam_channel::{Receiver, Sender};
 
 use crate::file_manager::{FileEntry, browse_dir};
 use crate::formatter::Formatter;
@@ -16,7 +18,7 @@ pub enum WorkerTask {
         show_hidden: bool,
         show_system: bool,
         case_insensitive: bool,
-        always_show: Vec<String>,
+        always_show: Arc<Vec<String>>,
     },
     LoadPreview {
         path: PathBuf,

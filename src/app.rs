@@ -3,9 +3,11 @@ use crate::file_manager::FileEntry;
 use crate::keymap::{Action, Keymap};
 use crate::utils::open_in_editor;
 use crate::worker::{WorkerResponse, WorkerTask, start_worker};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::Arc;
+use std::time::Instant;
 
 pub enum KeypressResult {
     Continue,
@@ -14,9 +16,8 @@ pub enum KeypressResult {
 }
 
 /// Application state of the file browser
-///
-/// Stores the directory entires, the current selection, the directory positions
-/// and the configuration as a reference.
+/// The active app state
+/// Stores the directory entires, selections/dir_positions, and workser respoens
 pub struct AppState<'a> {
     current_dir: std::path::PathBuf,
     entries: Vec<FileEntry>,
@@ -27,16 +28,22 @@ pub struct AppState<'a> {
     worker_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
 
+    last_parent_path: Option<PathBuf>,
+    last_input_time: Instant,
+    preview_pending: bool,
+
     pub is_loading: bool,
+    pub preview_selected: usize,
     pub preview_content: Vec<String>,
     pub current_preview_path: Option<PathBuf>,
+    pub parent_selected: Option<usize>,
     pub parent_content: Vec<String>,
 }
 
 impl<'a> AppState<'a> {
     pub fn new(config: &'a Config) -> std::io::Result<Self> {
-        let (worker_tx, task_rx) = mpsc::channel();
-        let (res_tx, response_rx) = mpsc::channel();
+        let (worker_tx, task_rx) = unbounded::<WorkerTask>();
+        let (res_tx, response_rx) = unbounded::<WorkerResponse>();
         let current_dir = std::env::current_dir()?;
 
         // Start the engine
@@ -51,9 +58,14 @@ impl<'a> AppState<'a> {
             keymap: Keymap::from_config(config),
             worker_tx,
             response_rx,
+            last_parent_path: None,
+            last_input_time: Instant::now(),
+            preview_pending: false,
             is_loading: false,
+            preview_selected: 0,
             preview_content: vec!["Loading...".into()],
             current_preview_path: None,
+            parent_selected: None,
             parent_content: vec!["Loading...".into()],
         };
 
@@ -63,6 +75,7 @@ impl<'a> AppState<'a> {
 
     fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
+        let always_show = Arc::new(self.config.always_show().to_vec());
         let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
             path: self.current_dir.clone(),
             focus,
@@ -70,12 +83,20 @@ impl<'a> AppState<'a> {
             show_hidden: self.config.show_hidden(),
             show_system: self.config.show_system(),
             case_insensitive: self.config.case_insensitive(),
-            always_show: self.config.always_show().to_vec(),
+            always_show,
         });
     }
 
     pub fn tick(&mut self) -> bool {
         let mut changed = false;
+
+        // debounce timing
+        if self.preview_pending && self.last_input_time.elapsed().as_millis() > 15 {
+            self.request_preview();
+            self.preview_pending = false;
+            changed = true;
+        }
+
         while let Ok(response) = self.response_rx.try_recv() {
             changed = true;
             match response {
@@ -87,7 +108,6 @@ impl<'a> AppState<'a> {
                     if path == self.current_dir {
                         self.entries = entries;
                         self.is_loading = false;
-
                         self.selected = if let Some(target) = focus {
                             self.entries
                                 .iter()
@@ -100,20 +120,32 @@ impl<'a> AppState<'a> {
                                 .unwrap_or(0)
                         };
                         self.selected = self.selected.min(self.entries.len().saturating_sub(1));
+
                         self.request_preview();
-                        self.request_parent_conent();
+                        self.preview_pending = false;
+                        self.request_parent_content();
                     } else if Some(path.as_path()) == self.current_dir.parent() {
                         self.parent_content = entries
                             .iter()
-                            .map(|e| {
-                                let name = e.name().to_string_lossy();
-                                if e.is_dir() {
-                                    format!("{}/", name)
-                                } else {
-                                    name.into_owned()
-                                }
+                            .map(|e| e.display_name().to_string())
+                            .collect();
+
+                        let name = self.current_dir.file_name().map(|n| n.to_string_lossy());
+                        self.parent_selected = name.and_then(|n| {
+                            self.parent_content.iter().position(|line| {
+                                line == n.as_ref() || line.strip_suffix('/') == Some(n.as_ref())
                             })
-                            .collect()
+                        })
+                    } else if Some(&path) == self.current_preview_path.as_ref() {
+                        self.preview_content = entries
+                            .iter()
+                            .map(|e| e.display_name().to_string())
+                            .collect();
+
+                        self.preview_selected = self.dir_positions.get(&path).cloned().unwrap_or(0);
+
+                        self.preview_selected =
+                            self.preview_selected.min(entries.len().saturating_sub(1))
                     }
                 }
                 WorkerResponse::PreviewLoaded { path, lines } => {
@@ -130,31 +162,64 @@ impl<'a> AppState<'a> {
     }
 
     fn request_preview(&mut self) {
-        if let Some(entry) = self.entries.get(self.selected) {
-            let path = self.current_dir.join(entry.name());
-            if self.current_preview_path.as_ref() != Some(&path) {
-                self.current_preview_path = Some(path.clone());
-                let _ = self.worker_tx.send(WorkerTask::LoadPreview {
-                    path,
-                    max_lines: 60,
-                });
-            }
+        let entry = match self.entries.get(self.selected) {
+            Some(e) => e,
+            None => return,
+        };
+
+        let path = self.current_dir.join(entry.name());
+
+        if self.current_preview_path.as_ref() == Some(&path) {
+            return;
         }
-    }
-    fn request_parent_conent(&mut self) {
-        if let Some(parent_path) = self.current_dir.parent() {
+
+        self.current_preview_path = Some(path.clone());
+        self.preview_selected = 0;
+
+        if entry.is_dir() {
             let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
-                path: parent_path.to_path_buf(),
+                path,
                 focus: None,
                 dirs_first: self.config.dirs_first(),
                 show_hidden: self.config.show_hidden(),
                 show_system: self.config.show_system(),
                 case_insensitive: self.config.case_insensitive(),
-                always_show: self.config.always_show().to_vec(),
+                always_show: Arc::new(self.config.always_show().to_vec()),
             });
         } else {
-            self.parent_content = vec!["/".into()];
+            let _ = self.worker_tx.send(WorkerTask::LoadPreview {
+                path,
+                max_lines: 60,
+            });
         }
+    }
+
+    fn request_parent_content(&mut self) {
+        let parent_path = match self.current_dir.parent() {
+            Some(p) => p.to_path_buf(),
+            None => {
+                self.parent_content = vec!["/".into()];
+                self.last_parent_path = None;
+                return;
+            }
+        };
+
+        if Some(&parent_path) == self.last_parent_path.as_ref() {
+            return;
+        }
+
+        self.last_parent_path = Some(parent_path.clone());
+
+        let always_show = Arc::new(self.config.always_show().to_vec());
+        let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
+            path: parent_path,
+            focus: None,
+            dirs_first: self.config.dirs_first(),
+            show_hidden: self.config.show_hidden(),
+            show_system: self.config.show_system(),
+            case_insensitive: self.config.case_insensitive(),
+            always_show,
+        });
     }
 
     pub fn current_dir(&self) -> &std::path::Path {
@@ -226,7 +291,8 @@ impl<'a> AppState<'a> {
     fn handle_go_up(&mut self) -> KeypressResult {
         if self.selected > 0 {
             self.selected -= 1;
-            self.request_preview();
+            self.preview_pending = true;
+            self.last_input_time = Instant::now();
         }
         KeypressResult::Continue
     }
@@ -234,7 +300,8 @@ impl<'a> AppState<'a> {
     fn handle_go_down(&mut self) -> KeypressResult {
         if self.selected + 1 < self.entries.len() {
             self.selected += 1;
-            self.request_preview();
+            self.preview_pending = true;
+            self.last_input_time = Instant::now();
         }
         KeypressResult::Continue
     }

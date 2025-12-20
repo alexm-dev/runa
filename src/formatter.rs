@@ -1,12 +1,13 @@
 use crate::file_manager::FileEntry;
+use std::sync::Arc;
 
 pub struct Formatter {
     dirs_first: bool,
     show_hidden: bool,
     show_system: bool,
     case_insensitive: bool,
-    always_show: Vec<String>,
-    always_show_lowercase: Vec<String>,
+    always_show: Arc<Vec<String>>,
+    always_show_lowercase: Arc<Vec<String>>,
 }
 
 impl Formatter {
@@ -15,10 +16,10 @@ impl Formatter {
         show_hidden: bool,
         show_system: bool,
         case_insensitive: bool,
-        always_show: Vec<String>,
+        always_show: Arc<Vec<String>>,
     ) -> Self {
-        let always_show_lowercase: Vec<String> =
-            always_show.iter().map(|s| s.to_lowercase()).collect();
+        let always_show_lowercase =
+            Arc::new(always_show.iter().map(|s| s.to_lowercase()).collect());
         Self {
             dirs_first,
             show_hidden,

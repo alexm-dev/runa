@@ -39,7 +39,6 @@ pub fn open_in_editor(editor: &Editor, file_path: &std::path::Path) -> std::io::
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
 
-    // Allow for future extension (if Editor adds arguments/flags later)
     let status = std::process::Command::new(editor.cmd())
         .arg(file_path)
         .status();

@@ -57,40 +57,52 @@ separators = false
 origin = false
 
 # Show the file preview pane (right)
-preview = false
+preview = true
 
 # Pane width ratios (relative to each other)
 origin_ratio = 30
 main_ratio = 40
 preview_ratio = 30
 
-# Scroll paddding of the main pane
+# Scroll padding of the main pane
 scroll_padding = 5
 
 [theme]
 # Background color (terminal color name or Hex "#RRGGBB")
 background = "default"
 
-# Text color for the selection highlight
-selection_fg = "default"
-
-# Color for markers, icons, and highlights
-accent_fg = "default"
-
-# Default text color for file/folder entries
-entry_fg = "default"
-
-# Color of the vertical split lines
-separator_fg = "default"
-
-# Text color for the parent (origin) pane
-origin_fg = "default"
-
-# Text color for the preview pane
-preview_fg = "default"
-
 # The symbol used to indicate the current selection
 selection_icon = "> "
+
+# Color pairs for the entry selection color (The cursor and not all entries)
+[theme.selection]
+fg = "default"
+bg = "default"
+
+# Color pair for the accents (of the main pane)
+[theme.accent]
+fg = "default"
+bg = "default"
+
+# Colors for the entries (of the main pane)
+[theme.entry]
+fg = "default"
+bg = "default"
+
+# Color for the separator lines
+[theme.separator]
+fg = "default"
+bg = "default"
+
+# Colors for the origin (parent) pane
+[theme.origin]
+fg = "default"
+bg = "default"
+
+# Colors for the preview pane
+[theme.preview]
+fg = "default"
+bg = "default"
 
 [editor]
 # Change the default editor to open files with

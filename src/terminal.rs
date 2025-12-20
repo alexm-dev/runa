@@ -1,5 +1,4 @@
 use crate::app::{AppState, KeypressResult};
-use crate::utils::parse_color;
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
@@ -9,8 +8,7 @@ use ratatui::{
     Frame, Terminal,
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::Line,
+    style::{Modifier, Style},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 use std::{io, time::Duration};
@@ -78,22 +76,21 @@ fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
         .to_vec()
 }
 
-pub fn draw_separator(frame: &mut Frame, area: Rect, color: Color) {
-    let separator = Block::default()
-        .borders(Borders::LEFT)
-        .border_style(Style::default().fg(color));
+pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
+    let separator = Block::default().borders(Borders::LEFT).border_style(style);
     frame.render_widget(separator, area);
 }
 
-fn draw_main_pane(
-    frame: &mut Frame,
-    area: Rect,
-    app: &AppState,
-    accent_color: Color,
-    entry_color: Color,
-    highlight_symbol: &str,
-    block: Block,
-) {
+pub struct PaneContext<'a> {
+    pub area: Rect,
+    pub block: Block<'a>,
+    pub accent_style: Style,
+    pub entry_style: Style,
+    pub selection_style: Style,
+    pub highlight_symbol: &'a str,
+}
+
+fn draw_main_pane(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let show_marker = app.config().display().dir_marker();
     let items: Vec<ListItem> = app
         .visible_entries()
@@ -104,7 +101,7 @@ fn draw_main_pane(
             } else {
                 e.name_str()
             };
-            ListItem::new(text).style(Style::default().fg(entry_color))
+            ListItem::new(text).style(context.entry_style)
         })
         .collect();
 
@@ -117,37 +114,93 @@ fn draw_main_pane(
 
     frame.render_stateful_widget(
         List::new(items)
-            .block(block)
-            .highlight_style(
-                Style::default()
-                    .fg(accent_color)
-                    .add_modifier(Modifier::BOLD),
-            )
-            .highlight_symbol(highlight_symbol)
+            .block(context.block.border_style(context.accent_style))
+            .highlight_style(context.selection_style.add_modifier(Modifier::BOLD))
+            .highlight_symbol(context.highlight_symbol)
             .scroll_padding(padding),
+        context.area,
+        &mut state,
+    );
+}
+
+fn draw_preview_pane(
+    frame: &mut Frame,
+    area: Rect,
+    lines: &[String],
+    block: Block,
+    style: Style,
+    highlight_style: Style,
+    selected_idx: Option<usize>,
+) {
+    if lines.is_empty() {
+        frame.render_widget(Paragraph::new("").block(block), area);
+        return;
+    }
+
+    let items: Vec<ListItem> = lines
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let mut line_style = style;
+            if Some(i) == selected_idx {
+                line_style = highlight_style.add_modifier(Modifier::BOLD);
+            }
+            ListItem::new(s.as_str()).style(line_style)
+        })
+        .collect();
+
+    let mut state = ListState::default();
+    if let Some(idx) = selected_idx {
+        state.select(Some(idx.min(lines.len().saturating_sub(1))));
+    }
+
+    frame.render_stateful_widget(
+        List::new(items)
+            .block(block)
+            .highlight_style(highlight_style),
         area,
         &mut state,
     );
 }
 
-fn draw_preview_pane(frame: &mut Frame, area: Rect, lines: &[String], block: Block, color: Color) {
-    let text: Vec<Line> = lines
+fn draw_origin_pane(
+    frame: &mut Frame,
+    area: Rect,
+    lines: &[String],
+    block: Block,
+    style: Style,
+    highlight_style: Style,
+    selected_idx: Option<usize>,
+) {
+    if lines.is_empty() {
+        frame.render_widget(Paragraph::new("").block(block), area);
+        return;
+    }
+
+    let items: Vec<ListItem> = lines
         .iter()
-        .map(|s| Line::from(s.as_str()).style(Style::default().fg(color)))
+        .enumerate()
+        .map(|(i, s)| {
+            let mut line_style = style;
+            if Some(i) == selected_idx {
+                line_style = highlight_style.add_modifier(Modifier::BOLD);
+            }
+            ListItem::new(s.as_str()).style(line_style)
+        })
         .collect();
 
-    let paragraph = Paragraph::new(text).block(block);
-    frame.render_widget(paragraph, area);
-}
+    let mut state = ListState::default();
 
-fn draw_origin_pane(frame: &mut Frame, area: Rect, lines: &[String], block: Block, color: Color) {
-    let text: Vec<Line> = lines
-        .iter()
-        .map(|s| Line::from(s.as_str()).style(Style::default().fg(color)))
-        .collect();
+    // This ensures Ratatui scrolls the Parent pane to the correct spot
+    state.select(selected_idx.map(|idx| idx.min(lines.len().saturating_sub(1))));
 
-    let paragraph = Paragraph::new(text).block(block);
-    frame.render_widget(paragraph, area);
+    frame.render_stateful_widget(
+        List::new(items)
+            .block(block)
+            .highlight_style(highlight_style),
+        area,
+        &mut state,
+    );
 }
 
 fn render_ui(frame: &mut Frame, app: &AppState) {
@@ -156,22 +209,23 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
     let display_cfg = cfg.display();
     let theme_cfg = cfg.theme();
 
-    // 0. PRE-CALCULATE COLORS & SHARED DATA
+    // 0. PRE-CALCULATE COLORS AND SHARED DATA
     // let bg_color = parse_color(theme_cfg.background());
-    let accent_color = parse_color(theme_cfg.accent());
-    let selection_color = parse_color(theme_cfg.selection());
-    let parent_entry_color = parse_color(theme_cfg.origin());
-    let preview_entry_color = parse_color(theme_cfg.preview());
-    let entry_color = parse_color(theme_cfg.entry());
-    let separator_color = parse_color(theme_cfg.separator());
+    let accent_style = theme_cfg.accent();
+    let entry_style = theme_cfg.entry();
+    let selection_style = theme_cfg.selection();
+    let origin_style = theme_cfg.origin();
+    let preview_style = theme_cfg.preview();
+    let separator_style = theme_cfg.separator();
+
     let show_separators = display_cfg.separators() && !display_cfg.is_split();
     let path_str = app.current_dir().to_string_lossy();
 
-    // 1. HANDLE OUTER BORDER & TOP PATH
+    // 1. HANDLE OUTER BORDER AND TOP PATH
     if display_cfg.is_unified() {
         let mut outer_block = Block::default()
             .borders(Borders::ALL)
-            .border_style(Style::default().fg(accent_color));
+            .border_style(accent_style);
         if display_cfg.titles() {
             outer_block = outer_block.title(format!(" {} ", path_str));
         }
@@ -182,8 +236,7 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
             .direction(Direction::Vertical)
             .constraints([Constraint::Length(1), Constraint::Min(0)])
             .split(root_area);
-        let header =
-            Paragraph::new(format!("   {} ", path_str)).style(Style::default().fg(accent_color));
+        let header = Paragraph::new(format!("   {} ", path_str)).style(accent_style);
         frame.render_widget(header, header_layout[0]);
         root_area = header_layout[1];
     }
@@ -193,9 +246,7 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
     let get_pane_block = |title: &str| {
         let mut b = Block::default();
         if use_individual_borders {
-            b = b
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(accent_color));
+            b = b.borders(Borders::ALL).border_style(accent_style);
             if display_cfg.titles() {
                 b = b.title(format!(" {} ", title));
             }
@@ -214,7 +265,9 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
             chunks[pane_idx],
             &app.parent_content,
             get_pane_block("Parent"),
-            parent_entry_color,
+            origin_style,
+            selection_style,
+            app.parent_selected,
         );
         pane_idx += 1;
 
@@ -225,7 +278,7 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
                 width: 1,
                 height: root_area.height,
             };
-            draw_separator(frame, sep_rect, separator_color);
+            draw_separator(frame, sep_rect, separator_style);
             pane_idx += 1;
         }
     }
@@ -237,15 +290,17 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
         } else {
             ""
         };
-        draw_main_pane(
-            frame,
-            chunks[pane_idx],
-            app,
-            selection_color,
-            entry_color,
-            symbol,
-            get_pane_block("Files"),
-        );
+
+        let main_ctx = PaneContext {
+            area: chunks[pane_idx],
+            block: get_pane_block("Files"),
+            accent_style,
+            entry_style,
+            selection_style,
+            highlight_symbol: symbol,
+        };
+
+        draw_main_pane(frame, app, main_ctx);
         pane_idx += 1;
 
         if show_separators && display_cfg.preview() && pane_idx < chunks.len() {
@@ -255,45 +310,48 @@ fn render_ui(frame: &mut Frame, app: &AppState) {
                 width: 1,
                 height: root_area.height,
             };
-            draw_separator(frame, sep_rect, separator_color);
+            draw_separator(frame, sep_rect, separator_style);
             pane_idx += 1;
         }
     }
 
     // PREVIEW PANE
     if display_cfg.preview() && pane_idx < chunks.len() {
+        let is_dir = app
+            .visible_entries()
+            .get(app.visible_selected().unwrap_or(0))
+            .map(|e| e.is_dir())
+            .unwrap_or(false);
+
         draw_preview_pane(
             frame,
             chunks[pane_idx],
             &app.preview_content,
             get_pane_block("Preview"),
-            preview_entry_color,
+            preview_style,
+            selection_style,
+            if is_dir {
+                Some(app.preview_selected)
+            } else {
+                None
+            },
         );
     }
 }
 
 fn event_loop<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> io::Result<()> {
-    let mut should_render = true;
     loop {
-        if should_render {
-            terminal.draw(|frame| render_ui(frame, app))?;
-            should_render = false;
-        }
-
         if app.tick() {
-            should_render = true;
-            continue;
+            terminal.draw(|frame| render_ui(frame, app))?;
         }
 
-        // INPUT HANDLING
-        if event::poll(Duration::from_millis(10))? {
+        if event::poll(Duration::from_millis(5))? {
             match event::read()? {
-                // 1. Handle Keys
                 Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                     let key_str = keycode_to_str(&key_event.code);
                     let result = app.handle_keypress(key_str);
 
-                    should_render = true;
+                    terminal.draw(|frame| render_ui(frame, app))?;
 
                     if let KeypressResult::Quit = result {
                         break;
@@ -301,13 +359,9 @@ fn event_loop<B: Backend>(terminal: &mut Terminal<B>, app: &mut AppState) -> io:
                     if let KeypressResult::OpenedEditor = result {
                         terminal.clear()?;
                     }
-                    continue;
                 }
-
-                // 2. Handle Resizes Directly
                 Event::Resize(_, _) => {
-                    should_render = true;
-                    continue;
+                    terminal.draw(|frame| render_ui(frame, app))?;
                 }
                 _ => {}
             }
