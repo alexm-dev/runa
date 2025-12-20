@@ -70,10 +70,13 @@ export RUNNER_CONFIG=/path/to/runner.toml
 $env:RUNNER_CONFIG="C:\path\to\runner.toml
 ```
 
-You can generate a default config using the --gen-config flag:
+You can generate a default config using the --init or --init-minimal flag:
 
 ```bash
 rn --init
+
+# For a very minimal config
+rn --init-minimal
 ```
 
 This will generate a config in the default config path.
