@@ -35,6 +35,11 @@ pub struct AppState<'a> {
     pub is_loading: bool,
     pub preview_selected: usize,
     pub preview_content: Vec<String>,
+
+    pub preview_request_id: u64,
+    pub dir_request_id: u64,
+    pub parent_request_id: u64,
+
     pub current_preview_path: Option<PathBuf>,
     pub parent_selected: Option<usize>,
     pub parent_content: Vec<String>,
@@ -64,6 +69,9 @@ impl<'a> AppState<'a> {
             is_loading: false,
             preview_selected: 0,
             preview_content: vec!["Loading...".into()],
+            preview_request_id: 0,
+            dir_request_id: 0,
+            parent_request_id: 0,
             current_preview_path: None,
             parent_selected: None,
             parent_content: vec!["Loading...".into()],
@@ -75,6 +83,8 @@ impl<'a> AppState<'a> {
 
     fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
+        self.dir_request_id += 1;
+        let request_id = self.dir_request_id;
         let always_show = Arc::clone(self.config.always_show());
         let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
             path: self.current_dir.clone(),
@@ -84,6 +94,7 @@ impl<'a> AppState<'a> {
             show_system: self.config.show_system(),
             case_insensitive: self.config.case_insensitive(),
             always_show,
+            request_id,
         });
     }
 
@@ -91,7 +102,7 @@ impl<'a> AppState<'a> {
         let mut changed = false;
 
         // debounce timing
-        if self.preview_pending && self.last_input_time.elapsed().as_millis() > 15 {
+        if self.preview_pending && self.last_input_time.elapsed().as_millis() > 75 {
             self.request_preview();
             self.preview_pending = false;
             changed = true;
@@ -104,8 +115,9 @@ impl<'a> AppState<'a> {
                     path,
                     entries,
                     focus,
+                    request_id,
                 } => {
-                    if path == self.current_dir {
+                    if path == self.current_dir && request_id == self.dir_request_id {
                         self.entries = entries;
                         self.is_loading = false;
                         self.selected = if let Some(target) = focus {
@@ -136,7 +148,9 @@ impl<'a> AppState<'a> {
                                 line == n.as_ref() || line.strip_suffix('/') == Some(n.as_ref())
                             })
                         })
-                    } else if Some(&path) == self.current_preview_path.as_ref() {
+                    } else if Some(&path) == self.current_preview_path.as_ref()
+                        && request_id == self.preview_request_id
+                    {
                         self.preview_content = entries
                             .iter()
                             .map(|e| e.display_name().to_string())
@@ -148,9 +162,10 @@ impl<'a> AppState<'a> {
                             self.preview_selected.min(entries.len().saturating_sub(1))
                     }
                 }
-                WorkerResponse::PreviewLoaded { path, lines } => {
-                    if Some(path) == self.current_preview_path {
-                        self.preview_content = lines;
+                WorkerResponse::PreviewLoaded { lines, request_id } => {
+                    if request_id == self.preview_request_id {
+                        self.preview_content.clear();
+                        self.preview_content.extend(lines);
                     }
                 }
                 WorkerResponse::Error(e) => {
@@ -169,10 +184,8 @@ impl<'a> AppState<'a> {
 
         let path = self.current_dir.join(entry.name());
 
-        if self.current_preview_path.as_ref() == Some(&path) {
-            return;
-        }
-
+        self.preview_request_id += 1;
+        let req_id = self.preview_request_id;
         self.current_preview_path = Some(path.clone());
         self.preview_selected = 0;
 
@@ -185,11 +198,13 @@ impl<'a> AppState<'a> {
                 show_system: self.config.show_system(),
                 case_insensitive: self.config.case_insensitive(),
                 always_show: Arc::clone(self.config.always_show()),
+                request_id: req_id,
             });
         } else {
             let _ = self.worker_tx.send(WorkerTask::LoadPreview {
                 path,
-                max_lines: 60,
+                max_lines: 50,
+                request_id: req_id,
             });
         }
     }
@@ -209,6 +224,8 @@ impl<'a> AppState<'a> {
         }
 
         self.last_parent_path = Some(parent_path.clone());
+        self.parent_request_id += 1;
+        let request_id = self.parent_request_id;
 
         let always_show = Arc::clone(self.config.always_show());
         let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
@@ -219,6 +236,7 @@ impl<'a> AppState<'a> {
             show_system: self.config.show_system(),
             case_insensitive: self.config.case_insensitive(),
             always_show,
+            request_id,
         });
     }
 

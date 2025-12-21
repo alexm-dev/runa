@@ -1,5 +1,20 @@
 # Changelog
 
+## [v0.2.5] - 2025-12-21
+### Fixed
+- **File Preview:** Fixed an issue where files without extensions and with very short names (≤ 3 characters, for example `ht`, `xy`) were incorrectly shown in the preview pane.
+- **Preview Bleed/Race:** Hardened preview logic to ensure only the freshest preview request result is ever shown, preventing bleed from stale async worker responses during very fast navigation.
+
+### Changed
+- Reduced the default maximum number of previewed lines from 60 to 50 for better fit across a variety of terminal sizes. (Will make it configurable in following releases)
+- Increased tick debounce from 15 to 75 milliseconds to reduce excessive preview requests during very fast navigation.
+
+### Internal
+- Improved worker-response by relying on request IDs to always honor the latest directory or preview pane update, eliminating edge cases with rapid async requests.
+- Clarified and strengthened file preview and worker-response logic, including improved state handling and fewer UI edge case bugs.
+
+---
+
 ## [v0.2.4] - 2025-12-20
 ### Changed
 - Switched `always_show` config to use `HashSet<OsString>` for much faster and efficient lookups.
