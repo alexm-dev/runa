@@ -14,6 +14,7 @@ pub struct Display {
     main_ratio: u16,
     preview_ratio: u16,
     preview_underline: bool,
+    preview_underline_color: bool,
     scroll_padding: usize,
 }
 
@@ -74,6 +75,10 @@ impl Display {
         self.preview_underline
     }
 
+    pub fn preview_underline_color(&self) -> bool {
+        self.preview_underline_color
+    }
+
     pub fn scroll_padding(&self) -> usize {
         self.scroll_padding
     }
@@ -93,6 +98,7 @@ impl Default for Display {
             main_ratio: 40,
             preview_ratio: 40,
             preview_underline: false,
+            preview_underline_color: true,
             scroll_padding: 5,
         }
     }

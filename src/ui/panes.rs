@@ -51,6 +51,12 @@ pub struct PaneContext<'a> {
     pub highlight_symbol: &'a str,
 }
 
+pub struct PreviewOptions {
+    pub use_underline: bool,
+    pub underline_match_text: bool,
+    pub underline_style: Style,
+}
+
 pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let show_marker = app.config().display().dir_marker();
     let selected_idx = app.visible_selected();
@@ -93,7 +99,7 @@ pub fn draw_preview(
     context: PaneContext,
     preview: &PreviewData,
     selected_idx: Option<usize>,
-    use_underline: bool,
+    opts: PreviewOptions,
 ) {
     match preview {
         PreviewData::Empty => {
@@ -120,10 +126,22 @@ pub fn draw_preview(
                 .enumerate()
                 .map(|(i, e)| {
                     let is_selected = Some(i) == selected_idx;
-                    let mut style = context.styles.get_style(e.is_dir(), is_selected);
+                    let mut style = context.styles.get_style(e.is_dir(), false);
 
-                    if is_selected && use_underline {
+                    if is_selected && opts.use_underline {
                         style = style.add_modifier(Modifier::UNDERLINED);
+
+                        if let Some(bg_color) = opts.underline_style.bg
+                            && bg_color != Color::Reset
+                        {
+                            style = style.bg(bg_color);
+                        }
+                        if let Some(color) = opts.underline_style.fg {
+                            style = style.underline_color(color);
+                            if opts.underline_match_text {
+                                style = style.fg(color);
+                            }
+                        }
                     }
 
                     ListItem::new(e.display_name()).style(style)

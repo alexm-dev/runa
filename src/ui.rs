@@ -2,7 +2,10 @@ pub mod panes;
 pub mod widgets;
 
 use self::panes::PaneContext;
-use crate::{app::AppState, ui::panes::PaneStyles};
+use crate::{
+    app::AppState,
+    ui::panes::{PaneStyles, PreviewOptions},
+};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -14,44 +17,44 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
     let mut root_area = frame.area();
     {
         let chunks = layout_chunks(root_area, app);
-        let mut m = crate::app::LayoutMetrics::default();
+        let mut metrics = crate::app::LayoutMetrics::default();
         let display_cfg = app.config().display();
 
-        let mut c_idx = 0;
+        let mut current_idx = 0;
         let has_sep = display_cfg.separators() && !display_cfg.is_split();
 
         // Helper to determine inner space available for text
         let get_inner = |rect: ratatui::layout::Rect| {
-            let w = if display_cfg.is_split() || display_cfg.is_unified() {
+            let width = if display_cfg.is_split() || display_cfg.is_unified() {
                 rect.width.saturating_sub(2)
             } else {
                 rect.width
             };
-            let h = rect.height.saturating_sub(2);
-            (w as usize, h as usize)
+            let height = rect.height.saturating_sub(2);
+            (width as usize, height as usize)
         };
 
-        if display_cfg.origin() && c_idx < chunks.len() {
-            m.parent_width = get_inner(chunks[c_idx]).0;
-            c_idx += if has_sep { 2 } else { 1 };
+        if display_cfg.origin() && current_idx < chunks.len() {
+            metrics.parent_width = get_inner(chunks[current_idx]).0;
+            current_idx += if has_sep { 2 } else { 1 };
         }
 
-        if c_idx < chunks.len() {
-            m.main_width = get_inner(chunks[c_idx]).0;
-            c_idx += if has_sep && display_cfg.preview() {
+        if current_idx < chunks.len() {
+            metrics.main_width = get_inner(chunks[current_idx]).0;
+            current_idx += if has_sep && display_cfg.preview() {
                 2
             } else {
                 1
             };
         }
 
-        if display_cfg.preview() && c_idx < chunks.len() {
-            let (w, h) = get_inner(chunks[c_idx]);
-            m.preview_width = w;
-            m.preview_height = h;
+        if display_cfg.preview() && current_idx < chunks.len() {
+            let (width, height) = get_inner(chunks[current_idx]);
+            metrics.preview_width = width;
+            metrics.preview_height = height;
         }
 
-        app.metrics = m;
+        app.metrics = metrics;
     }
 
     let cfg = app.config();
@@ -202,7 +205,15 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             } else {
                 None
             },
-            display_cfg.preview_underline(),
+            PreviewOptions {
+                use_underline: display_cfg.preview_underline(),
+                underline_match_text: display_cfg.preview_underline_color(),
+                underline_style: if display_cfg.preview_underline_color() {
+                    theme_cfg.underline().as_style()
+                } else {
+                    selection_style
+                },
+            },
         );
     }
 }

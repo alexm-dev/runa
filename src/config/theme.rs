@@ -18,9 +18,8 @@ pub struct ColorPair {
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Theme {
-    #[serde(deserialize_with = "deserialize_color_field")]
-    background: Color,
     selection: ColorPair,
+    underline: ColorPair,
     accent: ColorPair,
     entry: ColorPair,
     directory: ColorPair,
@@ -64,16 +63,16 @@ impl ColorPair {
 }
 
 impl Theme {
-    // pub fn background(&self) -> Color {
-    //     self.background
-    // }
-
     pub fn accent(&self) -> ColorPair {
         self.accent
     }
 
     pub fn selection(&self) -> ColorPair {
         self.selection
+    }
+
+    pub fn underline(&self) -> ColorPair {
+        self.underline
     }
 
     pub fn entry(&self) -> ColorPair {
@@ -108,9 +107,9 @@ impl Theme {
 impl Default for Theme {
     fn default() -> Self {
         Theme {
-            background: Color::Reset,
             accent: ColorPair::default(),
             selection: ColorPair::default(),
+            underline: ColorPair::default(),
             entry: ColorPair::default(),
             directory: ColorPair::default(),
             separator: ColorPair::default(),

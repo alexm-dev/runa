@@ -66,7 +66,12 @@ main_ratio = 40
 preview_ratio = 30
 
 # Option to enable the underline in the preview pane
-preview_underline = false
+preview_underline = true
+
+# Enable independent color for the preview underline.
+# If true, uses the color defined in [theme.underline].
+# If false, the underline color is inherited from [theme.selection].
+preview_underline_color = true
 
 # Scroll padding of the main pane
 scroll_padding = 5
@@ -76,16 +81,18 @@ scroll_padding = 5
 # Example
 # [theme.selection]
 # fg = "#FFFFFF"
-
 [theme]
-# Background color.
-background = "default"
-
 # The symbol used to indicate the current selection. "" or " " to disable.
 selection_icon = "> "
 
 # Color pairs for the entry selection color (The cursor and not all entries)
 [theme.selection]
+fg = "default"
+bg = "default"
+
+# These colors are used when `preview_underline_color = true`
+# If preview_underline_color = true, these colors overlice the standard selection colors
+[theme.underline]
 fg = "default"
 bg = "default"
 

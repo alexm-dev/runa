@@ -72,25 +72,26 @@ runner - Full Configuration Guide (runner.toml)
   always_show       (list)  List of hidden names to always show
 
 [display]
-  selection_marker  (bool)  Show the cursor marker
-  dir_marker        (bool)  Show a marker for directories
-  borders           (str)   "none", "unified", or "split"
-  titles            (bool)  Show pane titles at the top
-  separators        (bool)  Draw vertical lines between panes
-  origin            (bool)  Show the parent directory pane
-  preview           (bool)  Show the file preview pane
-  origin_ratio      (u16)   Width % of the origin pane
-  main_ratio        (u16)   Width % of the center pane
-  preview_ratio     (u16)   Width % of the preview pane
-  scroll_padding    (usize) Scroll padding of the main pane
-  preview_underline (bool)  Enable a preview underline instead of selection highlight
+  selection_marker        (bool)  Show the cursor marker
+  dir_marker              (bool)  Show a marker for directories
+  borders                 (str)   "none", "unified", or "split"
+  titles                  (bool)  Show pane titles at the top
+  separators              (bool)  Draw vertical lines between panes
+  origin                  (bool)  Show the parent directory pane
+  preview                 (bool)  Show the file preview pane
+  origin_ratio            (u16)   Width % of the origin pane
+  main_ratio              (u16)   Width % of the center pane
+  preview_ratio           (u16)   Width % of the preview pane
+  scroll_padding          (usize) Scroll padding of the main pane
+  preview_underline       (bool)  Use underline for preview selection instead of a highlighted selection
+  preview_underline_color (bool)  Use underline colors instead of selection colors
 
 [theme]
-  background        (str)   Hex (#RRGGBB) or "default"
   selection_icon    (str)   The cursor string (e.g., "> ")
 
-# Theme sections    (Each supports "fg" and "bg" keys)
+# Theme sections    (Each supports "fg" and "bg" keys, colors can be as HEX '#FFFFFF')
 [theme.selection]    Selection bar colors    fg (str), bg (str)
+[theme.underline]    Underline colors        fg (str), bg (str)
 [theme.accent]       Border/title accents    fg (str), bg (str)
 [theme.entry]        Standard entry colors   fg (str), bg (str)
 [theme.directory]    Directory entry colors  fg (str), bg (str)

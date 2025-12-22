@@ -1,5 +1,17 @@
 # Changelog
 
+## [v0.2.7] - 2025-12-22
+## Added
+- **Preview underline theming**: Added `[theme.underline]` section to customize underline colors.
+- **Preview color source toggle**: New `preview_underline_color` setting to choose between `[theme.underline]` or the standard `[theme.selection]` colors for the underline.
+
+## Internal
+- **UI refactor**: Cleaned up the render function in ui.rs to improve readability and context.
+
+
+---
+
+
 ## [v0.2.6] - 2025-12-22
 ### Fixed
 - **File/Directory preview**: Fixed issue where preview did not correctly render when pane sizes where inconsistent. Now using `unicode-width` to correctly calculate pane width.

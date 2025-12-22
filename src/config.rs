@@ -168,14 +168,18 @@ preview = true
 origin_ratio = 20
 main_ratio = 40
 preview_ratio = 40
-preview_underline = false
+preview_underline = true
+preview_underline_color = true
 scroll_padding = 5
 
 [theme]
-background = "default"
 selection_icon = "> "
 
 [theme.selection]
+fg = "default"
+bg = "default"
+
+[theme.underline]
 fg = "default"
 bg = "default"
 
@@ -227,11 +231,12 @@ quit = ["q", "Esc"]
 # Only the essentials. The rest uses internal defaults.
 
 dirs_first = true
-show_hidden = false
 
 [display]
-origin = false
 preview = true
+
+[theme]
+selection_icon = "> "
 
 [editor]
 cmd = "nvim"
