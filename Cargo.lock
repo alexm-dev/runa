@@ -490,7 +490,7 @@ dependencies = [
 
 [[package]]
 name = "runner-tui"
-version = "0.2.7"
+version = "0.2.8"
 dependencies = [
  "crossbeam-channel",
  "crossterm 0.29.0",
