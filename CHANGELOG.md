@@ -1,8 +1,19 @@
 # Changelog
 
+## [v0.2.9] - 2025-12-22
+
+### Fixed
+- Fixed being unable to open a directory with a selected editor from the runner.toml config
+
+
+---
+
+
+
 ## [v0.2.8] - 2025-12-22
 ## Changed
 - Updated Cargo release profiles in `Cargo.toml` for optimized builds.
+
 
 
 ---
