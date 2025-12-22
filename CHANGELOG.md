@@ -5,6 +5,9 @@
 - **Preview underline theming**: Added `[theme.underline]` section to customize underline colors.
 - **Preview color source toggle**: New `preview_underline_color` setting to choose between `[theme.underline]` or the standard `[theme.selection]` colors for the underline.
 
+## Changed
+- **Preview underline default**: Enabled preview underline to be enabled by default in the runner.toml.
+
 ## Internal
 - **UI refactor**: Cleaned up the render function in ui.rs to improve readability and context.
 
