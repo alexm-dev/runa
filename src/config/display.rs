@@ -34,10 +34,6 @@ impl Display {
         self.dir_marker
     }
 
-    // pub fn borders(&self) -> &BorderStyle {
-    //     &self.borders
-    // }
-
     pub fn is_unified(&self) -> bool {
         matches!(self.borders, BorderStyle::Unified)
     }
@@ -93,9 +89,9 @@ impl Default for Display {
             separators: true,
             origin: false,
             preview: true,
-            origin_ratio: 25,
-            main_ratio: 50,
-            preview_ratio: 50,
+            origin_ratio: 20,
+            main_ratio: 40,
+            preview_ratio: 40,
             preview_underline: false,
             scroll_padding: 5,
         }

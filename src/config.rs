@@ -5,7 +5,6 @@
 //!
 //! Each config struct corresponds to a top-level key in the `runner.toml`.
 
-// This tells Rust to look for src/config/display.rs, etc.
 pub mod display;
 pub mod input;
 pub mod theme;
@@ -231,7 +230,7 @@ dirs_first = true
 show_hidden = false
 
 [display]
-origin = true
+origin = false
 preview = true
 
 [editor]
