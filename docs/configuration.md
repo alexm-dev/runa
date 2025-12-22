@@ -71,7 +71,7 @@ preview_underline = true
 # Enable independent color for the preview underline.
 # If true, uses the color defined in [theme.underline].
 # If false, the underline color is inherited from [theme.selection].
-preview_underline_color = true
+preview_underline_color = false
 
 # Scroll padding of the main pane
 scroll_padding = 5
