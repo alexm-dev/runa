@@ -122,7 +122,7 @@ impl Default for Display {
         Display {
             selection_marker: true,
             dir_marker: true,
-            borders: BorderStyle::None,
+            borders: BorderStyle::Split,
             titles: false,
             separators: true,
             parent: true,

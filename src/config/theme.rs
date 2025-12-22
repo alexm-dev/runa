@@ -113,13 +113,16 @@ impl Default for Theme {
             selection: ColorPair::default(),
             underline: ColorPair::default(),
             entry: ColorPair::default(),
-            directory: ColorPair::default(),
+            directory: ColorPair {
+                fg: Color::Cyan,
+                ..ColorPair::default()
+            },
             separator: ColorPair::default(),
             selection_icon: "> ".into(),
             parent: ColorPair::default(),
             preview: ColorPair::default(),
             path: ColorPair {
-                fg: Color::Cyan,
+                fg: Color::Magenta,
                 ..ColorPair::default()
             },
         }

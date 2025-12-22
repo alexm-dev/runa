@@ -65,11 +65,11 @@ fn print_config_help() {
 runner - Full Configuration Guide (runner.toml)
 
 # General Settings
-  dirs_first        (bool)  Sort directories before files
-  show_hidden       (bool)  Show hidden files (dotfiles)
-  show_system       (bool)  Show system/protected files
-  case_insensitive  (bool)  Ignore case when searching/sorting
-  always_show       (list)  List of hidden names to always show
+  dirs_first              (bool)  Sort directories before files
+  show_hidden             (bool)  Show hidden files (dotfiles)
+  show_system             (bool)  Show system/protected files
+  case_insensitive        (bool)  Ignore case when searching/sorting
+  always_show             (list)  List of hidden names to always show
 
 [display]
   selection_marker        (bool)  Show the cursor marker
@@ -89,35 +89,36 @@ runner - Full Configuration Guide (runner.toml)
   main                    (u16)   Width % of the center pane
   preview                 (u16)   Width % of the preview pane
 
-
 [theme]
-  selection_icon    (str)   The cursor string (e.g., "> ")
+  selection_icon          (str)   The cursor string (e.g., "> ")
 
-# Theme sections    (Each supports "fg" and "bg" keys,)
-[theme.selection]    Selection bar colors    fg (str), bg (str)
-[theme.accent]       Border/title accents    fg (str), bg (str)
-[theme.entry]        Standard entry colors   fg (str), bg (str)
-[theme.directory]    Directory entry colors  fg (str), bg (str)
-[theme.separator]    Vertical line colors    fg (str), bg (str)
-[theme.parent]       Parent pane text        fg (str), bg (str)
-[theme.preview]      Preview pane text       fg (str), bg (str)
-[theme.path]         Path bar colors         fg (str), bg (str)
-[theme.underline]    Underline colors        fg (str), bg (str)
+# Theme sections          (Each supports "fg" and "bg" keys,)
+[theme.selection]         Selection bar colors    fg (str), bg (str)
+[theme.accent]            Border/title accents    fg (str), bg (str)
+[theme.entry]             Standard entry colors   fg (str), bg (str)
+[theme.directory]         Directory entry colors  fg (str), bg (str)
+[theme.separator]         Vertical line colors    fg (str), bg (str)
+[theme.parent]            Parent pane text        fg (str), bg (str)
+[theme.preview]           Preview pane text       fg (str), bg (str)
+[theme.path]              Path bar colors         fg (str), bg (str)
+[theme.underline]         Underline colors        fg (str), bg (str)
 
 [editor]
-  cmd               (str)   Command to open files (e.g., "nvim")
+  cmd                    (str)   Command to open files (e.g., "nvim")
 
 [keys]
-  open_file         (list)  e.g., ["Enter"]
-  go_up             (list)  e.g., ["k", "Up Arrow"]
-  go_down           (list)  e.g., ["j", "Down Arrow"]
-  go_origin         (list)  e.g., ["h", "Left Arrow", "Backspace"]
-  go_into_dir       (list)  e.g., ["l", "Right Arrow"]
-  quit              (list)  e.g., ["q", "Esc"]
+  open_file              (list)  e.g., ["Enter"]
+  go_up                  (list)  e.g., ["k", "Up Arrow"]
+  go_down                (list)  e.g., ["j", "Down Arrow"]
+  go_origin              (list)  e.g., ["h", "Left Arrow", "Backspace"]
+  go_into_dir            (list)  e.g., ["l", "Right Arrow"]
+  quit                   (list)  e.g., ["q", "Esc"]
 
 EXAMPLES:
   borders = "split"
-  main_ratio = 40
+
+  [display.layout]
+  main = 40
 
   [theme.accent]
   fg = "#00ff00"

@@ -1,5 +1,14 @@
 # Changelog
 
+## [v0.2.11] - 2025-12-22
+
+### Changed
+- **Default config**: Changed the `--init` config to generate a default `runner signature` theme instead of internal defaults. Note: This is the first of many themes.
+
+### Fixed
+- **UI Stability**: Hardened the padding logic with a match guard to prevent invalid or negative spacing values.
+
+
 ## [v0.2.10] - 2025-12-22
 
 ### Fixed

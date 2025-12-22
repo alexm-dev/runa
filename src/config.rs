@@ -148,9 +148,11 @@ impl Config {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
-        let full_toml = r#"# runner.toml - default configuration for runner
+        let full_toml = r##"# runner.toml - default configuration for runner
 
-# Note: All values below are the defaults.
+# Note:
+# Commented values are the internal defaults of runner
+# Use hex codes (eg. "#333333") or terminal colors ("cyan")
 
 # General behavior
 dirs_first = true
@@ -162,30 +164,30 @@ case_insensitive = true
 [display]
 # selection_marker = true
 # dir_marker = true
-# borders = "none"
+borders = "split"
 # titles = false
 separators = true
 parent = true
 preview = true
 preview_underline = true
 # preview_underline_color = false
-# entry_padding = 0
+entry_padding = 1
 # scroll_padding = 5
 
-[display.layout]
-parent = 20
-main = 40
-preview = 40
+# [display.layout]
+# parent = 20
+# main = 40
+# preview = 40
 
 [theme]
-selection_icon = "> "
+selection_icon = ""
 
 [theme.selection]
-fg = "default"
-bg = "default"
-
-# [theme.accent]
 # fg = "default"
+bg = "#333333"
+
+[theme.accent]
+fg = "#353536"
 # bg = "default"
 
 # [theme.entry]
@@ -230,9 +232,9 @@ cmd = "nvim"
 # go_parent = ["h", "Left Arrow", "Backspace"]
 # go_into_dir = ["l", "Right Arrow"]
 # quit = ["q", "Esc"]
-"#;
+"##;
 
-        let minimal_toml = r#"# runner.toml - minimal configuration
+        let minimal_toml = r##"# runner.toml - minimal configuration
 # Only the essentials. The rest uses internal defaults.
 
 dirs_first = true
@@ -248,7 +250,7 @@ selection_icon = "> "
 
 [editor]
 cmd = "nvim"
-"#;
+"##;
 
         let content = if minimal { minimal_toml } else { full_toml };
 

@@ -16,7 +16,7 @@ runner is under active development and options may change over time.
 
 If you don't have a config file yet, you can generate one automatically:
 
-- `rn --init`: Generates the full configuration with all default options.
+- `rn --init`: Generates the full configuration.
 - `rn --init-minimal`: Generates a minimal, clean config file, with some common overrides
 - `rn --config-help`: Displays all configuration options.
 
@@ -51,7 +51,7 @@ selection_marker = true
 dir_marker = true
 
 ## Border style for the application: "none", "unified", or "split"
-borders = "none"
+borders = "split"
 
 # Show pane titles at the top (e.g., "Main", "Preview")
 titles = false
@@ -60,7 +60,7 @@ titles = false
 separators = true
 
 # Show the parent directory pane (left)
-parent = false
+parent = true
 
 # Show the file preview pane (right)
 preview = true
@@ -75,7 +75,7 @@ preview_underline_color = false
 
 # Pads the gap between the entry and the pane edge.
 # From 0 to 4.
-entry_padding = 0
+entry_padding = 1
 
 # Scroll padding of the main pane
 scroll_padding = 5
@@ -114,7 +114,7 @@ bg = "default"
 
 # Colors for the directory entries in all panes
 [theme.directory]
-fg = "default"
+fg = "cyan"
 bg = "default"
 
 # Color for the separator lines
@@ -150,7 +150,7 @@ bg = "default"
 
 # Colors for the path view at the top of the UI
 [theme.path]
-fg = "cyan"
+fg = "magenta"
 bg = "default"
 
 [editor]
