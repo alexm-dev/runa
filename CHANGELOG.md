@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.2.8] - 2025-12-22
+## Changed
+- Updated Cargo release profiles in `Cargo.toml` for optimized builds.
+
+
+---
+
+
 ## [v0.2.7] - 2025-12-22
 ## Added
 - **Preview underline theming**: Added `[theme.underline]` section to customize underline colors.
