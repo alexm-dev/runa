@@ -23,6 +23,8 @@ If you don't have a config file yet, you can generate one automatically:
 ## General Settings
 ```toml
 
+# Default settings used by runner
+
 # Sort directories before files
 dirs_first = true
 
