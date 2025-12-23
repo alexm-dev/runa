@@ -490,7 +490,7 @@ dependencies = [
 
 [[package]]
 name = "runa-tui"
-version = "0.2.13"
+version = "0.2.14"
 dependencies = [
  "crossbeam-channel",
  "crossterm 0.29.0",
