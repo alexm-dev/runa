@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.12] - 2025-12-23
+### Added
+- **Empty Directories indicator**: Now shows `[Empty]` when a directory is empty, in the main and preview pane.
+
+### Fixed
+- **Entry coloring**: Fixed/Added a entry coloring fallback to `[theme.entry]` instead of internal default.
+
+
 ## [v0.2.11] - 2025-12-22
 
 ### Changed

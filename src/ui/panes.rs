@@ -60,7 +60,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let show_marker = app.config().display().dir_marker();
     let selected_idx = app.visible_selected();
 
-    let items: Vec<ListItem> = app
+    let mut items: Vec<ListItem> = app
         .visible_entries()
         .iter()
         .enumerate()
@@ -78,6 +78,12 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
             ListItem::new(line).style(style)
         })
         .collect();
+
+    if items.is_empty() {
+        let style = context.styles.item;
+        let line = Line::from(vec![Span::raw(context.padding_str), Span::raw("[Empty]")]);
+        items.push(ListItem::new(line).style(style));
+    }
 
     let mut state = ListState::default();
     if app.has_visible_entries() {
@@ -118,7 +124,20 @@ pub fn draw_preview(
 
         PreviewData::Directory(entries) => {
             if entries.is_empty() {
-                frame.render_widget(Paragraph::new("").block(context.block), context.area);
+                let style = context.styles.item;
+                let line = Line::from(vec![Span::raw(context.padding_str), Span::raw("[Empty]")]);
+
+                let items = vec![ListItem::new(line).style(style)];
+                let mut state = ListState::default();
+                frame.render_stateful_widget(
+                    List::new(items)
+                        .block(context.block.border_style(context.accent_style))
+                        .highlight_style(Style::default())
+                        .highlight_symbol(context.highlight_symbol),
+                    context.area,
+                    &mut state,
+                );
+
                 return;
             }
 
@@ -176,7 +195,7 @@ pub fn draw_preview(
     }
 }
 
-pub fn draw_origin(
+pub fn draw_parent(
     frame: &mut Frame,
     context: PaneContext,
     entries: &[FileEntry],

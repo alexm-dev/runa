@@ -103,7 +103,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
 
     // PARENT PANE
     if display_cfg.parent() && pane_idx < chunks.len() {
-        panes::draw_origin(
+        panes::draw_parent(
             frame,
             PaneContext {
                 area: chunks[pane_idx],
