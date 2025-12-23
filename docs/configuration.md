@@ -107,7 +107,7 @@ bg = "default"
 fg = "default"
 bg = "default"
 
-# Colors for the entries (of the main pane)
+# Colors for the entries shown in all of the panes.
 [theme.entry]
 fg = "default"
 bg = "default"
@@ -125,7 +125,7 @@ bg = "default"
 
 # Colors for the parent pane
 [theme.parent]
-# Changes the pane entry color entirely
+# Changes the pane entry color entirely and overrides the [theme.entry] color option.
 fg = "default"
 bg = "default"
 # Changes the selection line for the pane
@@ -135,7 +135,7 @@ selection_bg = "default"
 
 # Colors for the preview pane
 [theme.preview]
-# Changes the pane entry color entirely
+# Changes the pane entry color entirely and overrides the [theme.entry] color option.
 fg = "default"
 bg = "default"
 # Will overwrite the [theme.selection] configuration.
