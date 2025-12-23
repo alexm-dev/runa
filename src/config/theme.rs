@@ -60,6 +60,20 @@ impl ColorPair {
         style
     }
 
+    pub fn effective_style(&self, fallback: &ColorPair) -> Style {
+        let fg = if self.fg == Color::Reset {
+            fallback.fg
+        } else {
+            self.fg
+        };
+        let bg = if self.bg == Color::Reset {
+            fallback.bg
+        } else {
+            self.bg
+        };
+        Style::default().fg(fg).bg(bg)
+    }
+
     pub fn fg(&self) -> Color {
         self.fg
     }

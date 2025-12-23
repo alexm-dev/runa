@@ -64,7 +64,7 @@ pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
         let (is_hidden, is_system) = {
             use std::os::unix::ffi::OsStrExt;
             // Native byte check: no string conversion needed
-            let is_hidden = name.as_bytes().get(0) == Some(&b'.');
+            let is_hidden = name.as_bytes().first() == Some(&b'.');
             (is_hidden, false)
         };
 

@@ -110,7 +110,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
                 block: widgets::get_pane_block("Parent", app),
                 accent_style,
                 styles: PaneStyles {
-                    item: theme_cfg.parent().as_style(),
+                    item: theme_cfg.parent().effective_style(&theme_cfg.entry()),
                     dir: theme_cfg.directory().as_style(),
                     selection: theme_cfg.parent().selection_style(selection_style),
                 },
@@ -199,7 +199,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
                 block: widgets::get_pane_block("Preview", app),
                 accent_style,
                 styles: PaneStyles {
-                    item: theme_cfg.preview().as_style(),
+                    item: theme_cfg.parent().effective_style(&theme_cfg.entry()),
                     dir: theme_cfg.directory().as_style(),
                     selection: theme_cfg.preview().selection_style(selection_style),
                 },
