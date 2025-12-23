@@ -1,8 +1,6 @@
-<<<<<<< HEAD
 # `rn - runner`
-=======
+
 > ⚠️ Note: This crate is deprecated. Please use [`runa`](https://crates.io/crates/runa-tui) for all new installations.
->>>>>>> ce03427 (chore: deprecate runner-tui in favor of runa-tui)
 
 # ⚠️ DEPRECATED: runner is renamed to runa
 
