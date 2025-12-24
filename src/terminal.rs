@@ -37,8 +37,7 @@ fn event_loop<B: ratatui::backend::Backend>(
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    let key_str = ui::widgets::keycode_to_str(&key.code);
-                    let result = app.handle_keypress(key_str);
+                    let result = app.handle_keypress(key);
 
                     match result {
                         KeypressResult::Quit => break,

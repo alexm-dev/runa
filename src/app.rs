@@ -1,3 +1,5 @@
+pub mod actions;
+mod handlers;
 mod nav;
 mod parent;
 mod preview;
@@ -6,16 +8,18 @@ pub use nav::NavState;
 pub use parent::ParentState;
 pub use preview::{PreviewData, PreviewState};
 
+use crate::app::actions::ActionContext;
 use crate::config::Config;
 use crate::file_manager::FileEntry;
-use crate::keymap::{Action, Keymap};
-use crate::utils::open_in_editor;
+use crate::keymap::{Action, Keymap, SystemAction};
 use crate::worker::{WorkerResponse, WorkerTask, start_worker};
 use crossbeam_channel::{Receiver, Sender, unbounded};
+use crossterm::event::KeyEvent;
 use std::sync::Arc;
 
 pub enum KeypressResult {
     Continue,
+    Consumed,
     Quit,
     OpenedEditor,
 }
@@ -46,6 +50,7 @@ pub struct AppState<'a> {
     pub metrics: LayoutMetrics,
 
     pub nav: NavState,
+    pub actions: ActionContext,
     pub preview: PreviewState,
     pub parent: ParentState,
 
@@ -67,6 +72,7 @@ impl<'a> AppState<'a> {
             keymap: Keymap::from_config(config),
             metrics: LayoutMetrics::default(),
             nav: NavState::new(current_dir),
+            actions: ActionContext::new(),
             preview: PreviewState::new(),
             parent: ParentState::new(),
             worker_tx,
@@ -152,6 +158,19 @@ impl<'a> AppState<'a> {
                 WorkerResponse::PreviewLoaded { lines, request_id } => {
                     self.preview.update_content(lines, request_id);
                 }
+
+                WorkerResponse::OperationComplete {
+                    message: _,
+                    request_id: _,
+                    need_reload,
+                    focus,
+                } => {
+                    if need_reload {
+                        self.request_dir_load(focus);
+                        self.request_parent_content();
+                    }
+                }
+
                 WorkerResponse::Error(e) => {
                     self.preview.set_error(e);
                 }
@@ -160,65 +179,19 @@ impl<'a> AppState<'a> {
         changed
     }
 
-    //  Action handlers
-    pub fn handle_keypress(&mut self, key: &str) -> KeypressResult {
-        match self.keymap.lookup(key) {
-            Some(Action::GoUp) => {
-                if self.nav.move_up() {
-                    self.preview.mark_pending();
-                }
-                KeypressResult::Continue
+    pub fn handle_keypress(&mut self, key: KeyEvent) -> KeypressResult {
+        if self.actions.is_input_mode() {
+            return self.handle_input_mode(key);
+        }
+
+        if let Some(action) = self.keymap.lookup(key) {
+            match action {
+                Action::System(SystemAction::Quit) => return KeypressResult::Quit,
+                Action::Nav(nav_act) => return self.handle_nav_action(nav_act),
+                Action::File(file_act) => return self.handle_file_action(file_act),
             }
-            Some(Action::GoDown) => {
-                if self.nav.move_down() {
-                    self.preview.mark_pending();
-                }
-                KeypressResult::Continue
-            }
-            Some(Action::GoParent) => self.handle_go_parent(),
-            Some(Action::GoIntoDir) => self.handle_go_into_dir(),
-            Some(Action::Open) => self.handle_open_file(),
-            Some(Action::Quit) => KeypressResult::Quit,
-            _ => KeypressResult::Continue,
         }
-    }
 
-    fn handle_open_file(&mut self) -> KeypressResult {
-        if let Some(entry) = self.nav.selected_entry() {
-            let path = self.nav.current_dir().join(entry.name());
-            if let Err(e) = open_in_editor(self.config.editor(), &path) {
-                eprintln!("Error: {}", e);
-            }
-            return KeypressResult::OpenedEditor;
-        }
-        KeypressResult::Continue
-    }
-
-    fn handle_go_into_dir(&mut self) -> KeypressResult {
-        if let Some(entry) = self.nav.selected_entry()
-            && entry.is_dir()
-        {
-            let new_path = self.nav.current_dir().join(entry.name());
-            self.nav.save_position();
-            self.nav.set_path(new_path);
-
-            self.request_dir_load(None);
-            self.request_parent_content();
-        }
-        KeypressResult::Continue
-    }
-
-    fn handle_go_parent(&mut self) -> KeypressResult {
-        if let Some(parent) = self.nav.current_dir().parent() {
-            let exited_name = self.nav.current_dir().file_name().map(|n| n.to_os_string());
-            let parent_path = parent.to_path_buf();
-
-            self.nav.save_position();
-            self.nav.set_path(parent_path);
-
-            self.request_dir_load(exited_name);
-            self.request_parent_content();
-        }
         KeypressResult::Continue
     }
 

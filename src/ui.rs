@@ -3,7 +3,10 @@ pub mod widgets;
 
 use self::panes::PaneContext;
 use crate::{
-    app::AppState,
+    app::{
+        AppState,
+        actions::{ActionMode, InputMode},
+    },
     ui::panes::{PaneStyles, PreviewOptions},
 };
 use ratatui::{
@@ -220,6 +223,50 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             },
         );
     }
+
+    if let ActionMode::Input { mode, prompt } = &app.actions.mode {
+        if *mode != InputMode::ConfirmDelete {
+            let width = 10;
+            let height = 5;
+
+            let area = centered_rect(width, height, frame.area());
+
+            frame.render_widget(ratatui::widgets::Clear, area);
+
+            let block = Block::default()
+                .title(format!(" {} ", prompt))
+                .borders(Borders::ALL)
+                .border_style(accent_style);
+
+            let input_text = app.actions.input_buffer.as_str();
+            let p = Paragraph::new(input_text).block(block);
+
+            frame.render_widget(p, area);
+
+            // Make the cursor visible
+            frame.set_cursor_position((area.x + input_text.len() as u16 + 1, area.y + 1));
+        }
+    }
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
+    let popup_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage((100 - percent_y) / 2),
+            Constraint::Percentage(percent_y),
+            Constraint::Percentage((100 - percent_y) / 2),
+        ])
+        .split(r);
+
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage((100 - percent_x) / 2),
+            Constraint::Percentage(percent_x),
+            Constraint::Percentage((100 - percent_x) / 2),
+        ])
+        .split(popup_layout[1])[1]
 }
 
 pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {

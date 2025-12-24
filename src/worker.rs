@@ -30,6 +30,28 @@ pub enum WorkerTask {
         pane_width: usize,
         request_id: u64,
     },
+    FileOp {
+        op: FileOperation,
+        request_id: u64,
+    },
+}
+
+pub enum FileOperation {
+    Delete(Vec<PathBuf>),
+    Rename {
+        old: PathBuf,
+        new: PathBuf,
+    },
+    Copy {
+        src: Vec<PathBuf>,
+        dest: PathBuf,
+        cut: bool,
+        focus: Option<OsString>,
+    },
+    Create {
+        path: PathBuf,
+        is_dir: bool,
+    },
 }
 
 pub enum WorkerResponse {
@@ -42,6 +64,12 @@ pub enum WorkerResponse {
     PreviewLoaded {
         lines: Vec<String>,
         request_id: u64,
+    },
+    OperationComplete {
+        message: String,
+        request_id: u64,
+        need_reload: bool,
+        focus: Option<OsString>,
     },
     Error(String),
 }
@@ -90,6 +118,69 @@ pub fn start_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                 } => {
                     let lines = safe_read_preview(&path, max_lines, pane_width);
                     let _ = res_tx.send(WorkerResponse::PreviewLoaded { lines, request_id });
+                }
+                WorkerTask::FileOp { op, request_id } => {
+                    let mut focus_target: Option<OsString> = None;
+                    let result: Result<String, String> = match op {
+                        FileOperation::Delete(paths) => {
+                            for p in paths {
+                                let _ = if p.is_dir() {
+                                    std::fs::remove_dir_all(p)
+                                } else {
+                                    std::fs::remove_file(p)
+                                };
+                            }
+                            Ok("Items deleted".to_string())
+                        }
+                        FileOperation::Rename { old, new } => {
+                            focus_target = new.file_name().map(|n| n.to_os_string());
+                            std::fs::rename(old, new)
+                                .map(|_| "Renamed".into())
+                                .map_err(|e| e.to_string())
+                        }
+                        FileOperation::Create { path, is_dir } => {
+                            focus_target = path.file_name().map(|n| n.to_os_string());
+                            let res = if is_dir {
+                                std::fs::create_dir_all(&path)
+                            } else {
+                                std::fs::File::create(&path).map(|_| ())
+                            };
+                            res.map(|_| "Created".into()).map_err(|e| e.to_string())
+                        }
+                        FileOperation::Copy {
+                            src,
+                            dest,
+                            cut,
+                            focus,
+                        } => {
+                            focus_target = focus;
+                            for s in src {
+                                if let Some(name) = s.file_name() {
+                                    let target = dest.join(name);
+                                    let _ = if cut {
+                                        std::fs::rename(s, target)
+                                    } else {
+                                        std::fs::copy(s, target).map(|_| ())
+                                    };
+                                }
+                            }
+                            Ok("Pasted".into())
+                        }
+                    };
+
+                    match result {
+                        Ok(msg) => {
+                            let _ = res_tx.send(WorkerResponse::OperationComplete {
+                                message: msg,
+                                request_id,
+                                need_reload: true,
+                                focus: focus_target, // CRITICA:
+                            });
+                        }
+                        Err(e) => {
+                            let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e)));
+                        }
+                    }
                 }
             }
         }

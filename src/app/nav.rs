@@ -1,5 +1,5 @@
 use crate::file_manager::FileEntry;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
@@ -8,6 +8,8 @@ pub struct NavState {
     entries: Vec<FileEntry>,
     selected: usize,
     positions: HashMap<PathBuf, usize>,
+    markers: HashSet<PathBuf>,
+    filter: String,
     request_id: u64,
 }
 
@@ -18,6 +20,8 @@ impl NavState {
             entries: Vec::new(),
             selected: 0,
             positions: HashMap::new(),
+            markers: HashSet::new(),
+            filter: String::new(),
             request_id: 0,
         }
     }
@@ -28,6 +32,13 @@ impl NavState {
     pub fn entries(&self) -> &[FileEntry] {
         &self.entries
     }
+    pub fn markers(&self) -> &HashSet<PathBuf> {
+        &self.markers
+    }
+    pub fn filer(&self) -> &str {
+        &self.filter
+    }
+
     pub fn selected_idx(&self) -> usize {
         self.selected
     }
@@ -104,7 +115,52 @@ impl NavState {
             self.selected = self.positions.get(&self.current_dir).cloned().unwrap_or(0);
         }
 
-        // Safety check with saturating_sub to avoid panic on empty dirs
         self.selected = self.selected.min(self.entries.len().saturating_sub(1));
+    }
+
+    pub fn toggle_marker(&mut self) {
+        if let Some(entry) = self.selected_entry() {
+            let path = self.current_dir().join(entry.name());
+            if !self.markers.remove(&path) {
+                self.markers.insert(path);
+            }
+        }
+    }
+
+    pub fn clear_markers(&mut self) {
+        self.markers.clear();
+    }
+
+    pub fn get_action_targets(&self) -> HashSet<PathBuf> {
+        if self.markers.is_empty() {
+            self.selected_entry()
+                .map(|e| self.current_dir.join(e.name()))
+                .into_iter()
+                .collect()
+        } else {
+            self.markers.iter().cloned().collect()
+        }
+    }
+
+    pub fn filtered_entries(&self) -> Vec<&FileEntry> {
+        if self.filter.is_empty() {
+            self.entries.iter().collect()
+        } else {
+            let filter_lower = self.filter.to_lowercase();
+            self.entries
+                .iter()
+                .filter(|e| {
+                    e.name()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .contains(&filter_lower)
+                })
+                .collect()
+        }
+    }
+
+    pub fn set_filter(&mut self, filter: String) {
+        self.filter = filter;
+        self.selected = 0;
     }
 }

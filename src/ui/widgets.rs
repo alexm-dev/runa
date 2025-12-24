@@ -1,11 +1,15 @@
 use crate::app::AppState;
-use crossterm::event::KeyCode;
 use ratatui::{
     Frame,
-    layout::Rect,
+    layout::{Constraint, Direction, Layout, Rect},
     style::Style,
-    widgets::{Block, Borders},
+    widgets::{Block, Borders, Paragraph},
 };
+
+pub enum InputKey {
+    Char(char),
+    Name(&'static str),
+}
 
 pub fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
     let mut b = Block::default();
@@ -27,20 +31,35 @@ pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
     );
 }
 
-pub fn keycode_to_str(key: &KeyCode) -> &'static str {
-    match key {
-        KeyCode::Char('j') => "j",
-        KeyCode::Char('k') => "k",
-        KeyCode::Char('h') => "h",
-        KeyCode::Char('l') => "l",
-        KeyCode::Char('q') => "q",
-        KeyCode::Enter => "Enter",
-        KeyCode::Up => "Up Arrow",
-        KeyCode::Down => "Down Arrow",
-        KeyCode::Left => "Left Arrow",
-        KeyCode::Right => "Right Arrow",
-        KeyCode::Esc => "Esc",
-        KeyCode::Backspace => "Backspace",
-        _ => "",
-    }
+pub fn draw_confirm_popup(frame: &mut Frame, area: Rect, prompt: &str) {
+    let vertical_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Percentage(40),
+            Constraint::Percentage(20),
+            Constraint::Percentage(40),
+        ])
+        .split(area);
+
+    let popup_area = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(30),
+            Constraint::Percentage(40),
+            Constraint::Percentage(30),
+        ])
+        .split(vertical_chunks[1])[1];
+
+    frame.render_widget(ratatui::widgets::Clear, popup_area);
+
+    let block = Block::default()
+        .title(" Confirm Delete ")
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(ratatui::style::Color::Red));
+
+    let text = Paragraph::new(format!("\n{}", prompt))
+        .block(block)
+        .alignment(ratatui::layout::Alignment::Center);
+
+    frame.render_widget(text, popup_area);
 }

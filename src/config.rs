@@ -232,6 +232,14 @@ cmd = "nvim"
 # go_parent = ["h", "Left Arrow", "Backspace"]
 # go_into_dir = ["l", "Right Arrow"]
 # quit = ["q", "Esc"]
+# delete = ["d"]
+# copy = ["y"]
+# cut = ["x"]
+# paste = ["p"]
+# rename = ["r"]
+# create = ["n"]
+# filter = ["/"]
+# toggle_marker = [" "]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration

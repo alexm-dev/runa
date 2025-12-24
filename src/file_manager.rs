@@ -1,6 +1,7 @@
 use std::ffi::OsString;
 use std::fs;
 
+#[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
     name_str: String,
@@ -33,7 +34,6 @@ impl FileEntry {
     pub fn is_system(&self) -> bool {
         self.is_system
     }
-
     pub fn set_display_name(&mut self, new_name: String) {
         self.display_name = new_name;
     }
