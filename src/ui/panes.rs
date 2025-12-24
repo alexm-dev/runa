@@ -59,6 +59,10 @@ pub struct PreviewOptions {
 pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let show_marker = app.config().display().dir_marker();
     let selected_idx = app.visible_selected();
+    let marker_theme = app.config().theme().marker();
+    let marker_icon = marker_theme.icon();
+    let marker_pad = " ".repeat(unicode_width::UnicodeWidthStr::width(marker_icon));
+    let entry_padding = context.entry_padding as usize;
 
     let mut items: Vec<ListItem> = app
         .nav
@@ -69,7 +73,6 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
             let is_selected = Some(i) == selected_idx;
             let path = app.nav.current_dir().join(e.name());
             let is_marked = app.nav.markers().contains(&path);
-            let marker_str = if is_marked { "*" } else { " " }; // You can use "●" or any symbol you like
 
             let name_str = if e.is_dir() && show_marker {
                 e.display_name()
@@ -77,12 +80,34 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 e.name_str()
             };
 
-            let text = format!("{}{}", marker_str, name_str);
-            let style = context.styles.get_style(e.is_dir(), is_selected);
+            let entry_style = context.styles.get_style(e.is_dir(), is_selected);
+            let mut spans = Vec::with_capacity(4);
 
-            let line = Line::from(vec![Span::raw(context.padding_str), Span::raw(text)]);
+            // Want marker icon to be INSIDE the provided left padding (replacing the first padding space)
+            // For padding == 0, just render name.
+            if entry_padding == 0 {
+                spans.push(Span::raw(name_str));
+            } else {
+                // Marker - replace the first padding character
+                let mut marker_style = marker_theme.color().as_style();
+                if is_selected {
+                    marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
+                }
+                if is_marked {
+                    spans.push(Span::styled(marker_icon, marker_style));
+                } else {
+                    spans.push(Span::styled(&marker_pad, marker_style));
+                }
+                // The rest of the padding, if any, after marker (padding-1)
+                if entry_padding > 1 {
+                    spans.push(Span::raw(" ".repeat(entry_padding - 1)));
+                }
+                // File name
+                spans.push(Span::raw(name_str));
+            }
 
-            ListItem::new(line).style(style)
+            let line = Line::from(spans);
+            ListItem::new(line).style(entry_style)
         })
         .collect();
 

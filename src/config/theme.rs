@@ -15,6 +15,37 @@ pub struct ColorPair {
     selection_bg: Option<Color>,
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct MarkerTheme {
+    #[serde(default)]
+    icon: String,
+    #[serde(flatten)]
+    color: ColorPair,
+}
+
+impl MarkerTheme {
+    pub fn icon(&self) -> &str {
+        &self.icon
+    }
+    pub fn color(&self) -> &ColorPair {
+        &self.color
+    }
+}
+
+impl Default for MarkerTheme {
+    fn default() -> Self {
+        MarkerTheme {
+            icon: "*".to_string(),
+            color: ColorPair {
+                fg: Color::Yellow,
+                bg: Color::Reset,
+                selection_fg: None,
+                selection_bg: None,
+            },
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Theme {
@@ -28,6 +59,7 @@ pub struct Theme {
     parent: ColorPair,
     preview: ColorPair,
     path: ColorPair,
+    marker: MarkerTheme,
 }
 
 impl Default for ColorPair {
@@ -118,6 +150,9 @@ impl Theme {
     pub fn path(&self) -> ColorPair {
         self.path
     }
+    pub fn marker(&self) -> &MarkerTheme {
+        &self.marker
+    }
 }
 
 impl Default for Theme {
@@ -139,6 +174,7 @@ impl Default for Theme {
                 fg: Color::Magenta,
                 ..ColorPair::default()
             },
+            marker: MarkerTheme::default(),
         }
     }
 }
