@@ -61,16 +61,23 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let selected_idx = app.visible_selected();
 
     let mut items: Vec<ListItem> = app
-        .visible_entries()
+        .nav
+        .filtered_entries()
         .iter()
         .enumerate()
         .map(|(i, e)| {
             let is_selected = Some(i) == selected_idx;
-            let text = if e.is_dir() && show_marker {
+            let path = app.nav.current_dir().join(e.name());
+            let is_marked = app.nav.markers().contains(&path);
+            let marker_str = if is_marked { "*" } else { " " }; // You can use "●" or any symbol you like
+
+            let name_str = if e.is_dir() && show_marker {
                 e.display_name()
             } else {
                 e.name_str()
             };
+
+            let text = format!("{}{}", marker_str, name_str);
             let style = context.styles.get_style(e.is_dir(), is_selected);
 
             let line = Line::from(vec![Span::raw(context.padding_str), Span::raw(text)]);
@@ -85,13 +92,13 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         items.push(ListItem::new(line).style(style));
     }
 
-    let mut state = ListState::default();
+    let mut state = ratatui::widgets::ListState::default();
     if app.has_visible_entries() {
         state.select(selected_idx);
     }
 
     frame.render_stateful_widget(
-        List::new(items)
+        ratatui::widgets::List::new(items)
             .block(context.block.border_style(context.accent_style))
             .highlight_style(Style::default())
             .highlight_symbol(context.highlight_symbol)

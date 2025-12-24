@@ -67,9 +67,10 @@ impl ActionContext {
     }
 
     pub fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
-        let targets = nav.get_action_targets();
-        if !targets.is_empty() {
-            self.clipboard = Some(targets);
+        if let Some(entry) = nav.selected_entry() {
+            let mut set = HashSet::new();
+            set.insert(nav.current_dir().join(entry.name()));
+            self.clipboard = Some(set);
             self.is_cut = is_cut;
         }
     }
@@ -94,6 +95,7 @@ impl ActionContext {
             if self.is_cut {
                 self.clipboard = None;
             }
+            nav.clear_markers();
         }
     }
 
