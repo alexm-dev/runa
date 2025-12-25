@@ -35,7 +35,7 @@ impl NavState {
     pub fn markers(&self) -> &HashSet<PathBuf> {
         &self.markers
     }
-    pub fn filer(&self) -> &str {
+    pub fn filter(&self) -> &str {
         &self.filter
     }
 

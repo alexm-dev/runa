@@ -214,7 +214,7 @@ impl<'a> AppState<'a> {
     }
 
     fn prompt_filter(&mut self) {
-        let current_filter = self.nav.filer().to_string();
+        let current_filter = self.nav.filter().to_string();
         self.enter_input_mode(
             InputMode::Filter,
             "Filter: ".to_string(),
