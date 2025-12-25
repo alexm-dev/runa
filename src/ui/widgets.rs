@@ -8,7 +8,8 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
-use serde::Deserialize;
+use serde::de::Error;
+use serde::{Deserialize, Deserializer};
 use std::time::Instant;
 use unicode_width::UnicodeWidthStr;
 
@@ -17,23 +18,106 @@ pub enum InputKey {
     Name(&'static str),
 }
 
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug)]
 pub enum PopupPosition {
     Center,
     Top,
     Bottom,
     Left,
     Right,
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
     Custom(u16, u16),
 }
 
+// Deserialize so that the runa.toml custom position and size can be made simpler instead of just
+// standard serde [derive(Deserialize)]
+// Examples of accepted values for `position` in config:
+// position = "top_left"
+// position = "bottomright"
+// position = [25, 60]
+// position = { x = 42, y = 80 }
+impl<'de> Deserialize<'de> for PopupPosition {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Helper {
+            Str(String),
+            Arr([u16; 2]),
+            XY { x: u16, y: u16 },
+        }
+
+        match Helper::deserialize(deserializer)? {
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("center") => Ok(PopupPosition::Center),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("top") => Ok(PopupPosition::Top),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("bottom") => Ok(PopupPosition::Bottom),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("left") => Ok(PopupPosition::Left),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("right") => Ok(PopupPosition::Right),
+            Helper::Str(ref s)
+                if s.eq_ignore_ascii_case("top_left") || s.eq_ignore_ascii_case("topleft") =>
+            {
+                Ok(PopupPosition::TopLeft)
+            }
+            Helper::Str(ref s)
+                if s.eq_ignore_ascii_case("top_right") || s.eq_ignore_ascii_case("topright") =>
+            {
+                Ok(PopupPosition::TopRight)
+            }
+            Helper::Str(ref s)
+                if s.eq_ignore_ascii_case("bottom_left")
+                    || s.eq_ignore_ascii_case("bottomleft") =>
+            {
+                Ok(PopupPosition::BottomLeft)
+            }
+            Helper::Str(ref s)
+                if s.eq_ignore_ascii_case("bottom_right")
+                    || s.eq_ignore_ascii_case("bottomright") =>
+            {
+                Ok(PopupPosition::BottomRight)
+            }
+            Helper::Str(s) => Err(D::Error::custom(format!("invalid PopupPosition: '{}'", s))),
+            Helper::Arr([x, y]) => Ok(PopupPosition::Custom(x, y)),
+            Helper::XY { x, y } => Ok(PopupPosition::Custom(x, y)),
+        }
+    }
+}
+
 /// Preset popup sizes.
-#[derive(Clone, Copy, Debug, Deserialize)]
+#[derive(Clone, Copy, Debug)]
 pub enum PopupSize {
     Small,
     Medium,
     Large,
     Custom(u16, u16),
+}
+
+impl<'de> Deserialize<'de> for PopupSize {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Helper {
+            Str(String),
+            Arr([u16; 2]),
+            Obj { w: u16, h: u16 },
+        }
+
+        match Helper::deserialize(deserializer)? {
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("small") => Ok(PopupSize::Small),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("medium") => Ok(PopupSize::Medium),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("large") => Ok(PopupSize::Large),
+            Helper::Str(s) => Err(D::Error::custom(format!("invalid PopupSize: '{}'", s))),
+            Helper::Arr([w, h]) => Ok(PopupSize::Custom(w, h)),
+            Helper::Obj { w, h } => Ok(PopupSize::Custom(w, h)),
+        }
+    }
 }
 
 impl PopupSize {
@@ -100,6 +184,30 @@ pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
         PopupPosition::Right => Rect {
             x: area.x + area.width - w,
             y: area.y + (area.height - h) / 2,
+            width: w,
+            height: h,
+        },
+        PopupPosition::TopLeft => Rect {
+            x: area.x,
+            y: area.y,
+            width: w,
+            height: h,
+        },
+        PopupPosition::TopRight => Rect {
+            x: area.x + area.width - w,
+            y: area.y,
+            width: w,
+            height: h,
+        },
+        PopupPosition::BottomLeft => Rect {
+            x: area.x,
+            y: area.y + area.height - h,
+            width: w,
+            height: h,
+        },
+        PopupPosition::BottomRight => Rect {
+            x: area.x + area.width - w,
+            y: area.y + area.height - h,
             width: w,
             height: h,
         },
