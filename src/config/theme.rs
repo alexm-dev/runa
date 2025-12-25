@@ -1,4 +1,7 @@
-use crate::utils::parse_color;
+use crate::{
+    ui::widgets::{PopupPosition, PopupSize},
+    utils::parse_color,
+};
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
 
@@ -98,6 +101,59 @@ impl Default for MarkerTheme {
     }
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct WidgetTheme {
+    color: ColorPair,
+    border: ColorPair,
+    position: Option<PopupPosition>,
+    size: Option<PopupSize>,
+}
+
+impl WidgetTheme {
+    pub fn position(&self) -> &Option<PopupPosition> {
+        &self.position
+    }
+
+    pub fn size(&self) -> &Option<PopupSize> {
+        &self.size
+    }
+
+    pub fn border_or(&self, fallback: Style) -> Style {
+        if self.border.fg() == Color::Reset {
+            fallback
+        } else {
+            Style::default().fg(self.border.fg())
+        }
+    }
+
+    pub fn fg_or(&self, fallback: Style) -> Style {
+        if self.color.fg() == Color::Reset {
+            fallback
+        } else {
+            Style::default().fg(self.color.fg())
+        }
+    }
+
+    pub fn bg_or(&self, fallback: Style) -> Style {
+        if self.color.bg() == Color::Reset {
+            fallback
+        } else {
+            Style::default().bg(self.color.bg())
+        }
+    }
+}
+
+impl Default for WidgetTheme {
+    fn default() -> Self {
+        WidgetTheme {
+            color: ColorPair::default(),
+            border: ColorPair::default(),
+            position: Some(PopupPosition::Center),
+            size: Some(PopupSize::Medium),
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Theme {
@@ -112,45 +168,56 @@ pub struct Theme {
     preview: ColorPair,
     path: ColorPair,
     marker: MarkerTheme,
-    notification: ColorPair,
+    widget: WidgetTheme,
 }
 
 impl Theme {
     pub fn accent(&self) -> ColorPair {
         self.accent
     }
+
     pub fn selection(&self) -> ColorPair {
         self.selection
     }
+
     pub fn underline(&self) -> ColorPair {
         self.underline
     }
+
     pub fn entry(&self) -> ColorPair {
         self.entry
     }
+
     pub fn directory(&self) -> ColorPair {
         self.directory
     }
+
     pub fn separator(&self) -> ColorPair {
         self.separator
     }
+
     pub fn selection_icon(&self) -> &str {
         &self.selection_icon
     }
+
     pub fn parent(&self) -> ColorPair {
         self.parent
     }
+
     pub fn preview(&self) -> ColorPair {
         self.preview
     }
+
     pub fn path(&self) -> ColorPair {
         self.path
     }
+
     pub fn marker(&self) -> &MarkerTheme {
         &self.marker
     }
-    pub fn notification(&self) -> ColorPair {
-        self.notification
+
+    pub fn widget(&self) -> &WidgetTheme {
+        &self.widget
     }
 }
 
@@ -174,7 +241,7 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             marker: MarkerTheme::default(),
-            notification: ColorPair::default(),
+            widget: WidgetTheme::default(),
         }
     }
 }

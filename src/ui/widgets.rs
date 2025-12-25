@@ -8,6 +8,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
+use serde::Deserialize;
 use std::time::Instant;
 use unicode_width::UnicodeWidthStr;
 
@@ -16,23 +17,23 @@ pub enum InputKey {
     Name(&'static str),
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub enum PopupPosition {
     Center,
     Top,
     Bottom,
     Left,
     Right,
-    Custom(u16, u16), // (x%, y%)
+    Custom(u16, u16),
 }
 
 /// Preset popup sizes.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Deserialize)]
 pub enum PopupSize {
     Small,
     Medium,
     Large,
-    Custom(u16, u16), // (w%, h%)
+    Custom(u16, u16),
 }
 
 impl PopupSize {
@@ -50,7 +51,8 @@ pub struct PopupStyle {
     pub border: Borders,
     pub border_style: Style,
     pub bg: Style,
-    pub title: Option<String>,
+    pub fg: Style,
+    pub title: Option<Span<'static>>,
 }
 
 impl Default for PopupStyle {
@@ -59,6 +61,7 @@ impl Default for PopupStyle {
             border: Borders::ALL,
             border_style: Style::default().fg(Color::White),
             bg: Style::default().bg(Color::Black),
+            fg: Style::default().fg(Color::Reset),
             title: None,
         }
     }
@@ -143,16 +146,16 @@ pub fn draw_popup(
 }
 
 pub fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
-    let mut b = Block::default();
+    let mut block = Block::default();
     if app.config().display().is_split() {
-        b = b
+        block = block
             .borders(Borders::ALL)
             .border_style(app.config().theme().accent().as_style());
         if app.config().display().titles() {
-            b = b.title(title.to_string());
+            block = block.title(title.to_string());
         }
     }
-    b
+    block
 }
 
 pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
@@ -197,6 +200,9 @@ pub fn draw_confirm_popup(frame: &mut Frame, area: Rect, prompt: &str) {
 
 pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
+        let widget = app.config().theme().widget();
+        let posititon = widget.position().unwrap_or(PopupPosition::Center);
+        let size = widget.size().unwrap_or(PopupSize::Medium);
         if *mode == InputMode::ConfirmDelete {
             let action_targets = app.nav().get_action_targets();
             let targets: Vec<String> = action_targets
@@ -225,15 +231,16 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
 
             let popup_style = PopupStyle {
                 border: Borders::ALL,
-                border_style: Style::default().fg(ratatui::style::Color::Red),
-                bg: app.config().theme().notification().as_style(),
+                border_style: widget.border_or(Style::default().fg(Color::Red)),
+                bg: widget.bg_or(Style::default().bg(Color::Reset)),
+                fg: widget.fg_or(Style::default().fg(Color::Reset)),
                 title: Some(" Confirm Delete ".into()),
             };
             draw_popup(
                 frame,
                 frame.area(),
-                PopupPosition::Center,
-                PopupSize::Medium,
+                posititon,
+                size,
                 &popup_style,
                 format!("{prompt}{preview}"),
                 Some(Alignment::Left),
@@ -241,15 +248,19 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
         } else {
             let popup_style = PopupStyle {
                 border: Borders::ALL,
-                border_style: accent_style,
-                bg: app.config().theme().notification().as_style(),
-                title: Some(format!(" {} ", prompt)),
+                border_style: widget.border_or(accent_style),
+                bg: widget.bg_or(Style::default().bg(Color::Reset)),
+                fg: widget.fg_or(Style::default().fg(Color::Reset)),
+                title: Some(Span::styled(
+                    format!(" {} ", prompt),
+                    widget.fg_or(Style::default().fg(Color::Reset)),
+                )),
             };
             draw_popup(
                 frame,
                 frame.area(),
-                PopupPosition::Center,
-                PopupSize::Medium,
+                posititon,
+                size,
                 &popup_style,
                 app.actions().input_buffer(),
                 Some(Alignment::Left),
