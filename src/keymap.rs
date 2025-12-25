@@ -23,7 +23,6 @@ pub enum FileAction {
     Delete,
     Copy,
     Open,
-    Cut,
     Paste,
     Rename,
     Create,
@@ -116,7 +115,6 @@ impl Keymap {
         bind(keys.open_file(), Action::File(FileAction::Open));
         bind(keys.delete(), Action::File(FileAction::Delete));
         bind(keys.copy(), Action::File(FileAction::Copy));
-        bind(keys.cut(), Action::File(FileAction::Cut));
         bind(keys.paste(), Action::File(FileAction::Paste));
         bind(keys.rename(), Action::File(FileAction::Rename));
         bind(keys.create(), Action::File(FileAction::Create));

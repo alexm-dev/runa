@@ -167,7 +167,6 @@ impl<'a> AppState<'a> {
                 self.actions.action_copy(&self.nav, false);
                 self.notification_time = Some(Instant::now() + Duration::from_secs(2));
             }
-            FileAction::Cut => self.actions.action_copy(&self.nav, true),
             FileAction::Paste => self.actions.action_paste(&mut self.nav, &self.worker_tx),
             FileAction::Rename => self.prompt_rename(),
             FileAction::Create => self.prompt_create_file(),
