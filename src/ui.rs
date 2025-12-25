@@ -92,7 +92,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             .split(root_area);
         frame.render_widget(
             Paragraph::new(Line::from(vec![Span::styled(
-                format!("   {} ", path_str),
+                format!("{} ", path_str),
                 path_style,
             )])),
             header_layout[0],
