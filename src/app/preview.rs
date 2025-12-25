@@ -1,7 +1,6 @@
+use crate::file_manager::FileEntry;
 use std::path::PathBuf;
 use std::time::Instant;
-
-use crate::file_manager::FileEntry;
 
 pub enum PreviewData {
     Directory(Vec<FileEntry>),

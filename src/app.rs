@@ -93,24 +93,31 @@ impl<'a> AppState<'a> {
     pub fn config(&self) -> &Config {
         self.config
     }
+
     pub fn metrics(&self) -> &LayoutMetrics {
         &self.metrics
     }
+
     pub fn metrics_mut(&mut self) -> &mut LayoutMetrics {
         &mut self.metrics
     }
+
     pub fn nav(&self) -> &NavState {
         &self.nav
     }
+
     pub fn actions(&self) -> &ActionContext {
         &self.actions
     }
+
     pub fn preview(&self) -> &PreviewState {
         &self.preview
     }
+
     pub fn parent(&self) -> &ParentState {
         &self.parent
     }
+
     pub fn notification_time(&self) -> &Option<Instant> {
         &self.notification_time
     }
