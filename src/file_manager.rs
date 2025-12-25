@@ -13,27 +13,36 @@ pub struct FileEntry {
 }
 
 impl FileEntry {
+    // Getters / accessors
     pub fn name(&self) -> &OsString {
         &self.name
     }
+
     pub fn name_str(&self) -> &str {
         &self.name_str
     }
+
     pub fn lowercase_name(&self) -> &str {
         &self.lowercase_name
     }
+
     pub fn display_name(&self) -> &str {
         &self.display_name
     }
+
     pub fn is_dir(&self) -> bool {
         self.is_dir
     }
+
     pub fn is_hidden(&self) -> bool {
         self.is_hidden
     }
+
     pub fn is_system(&self) -> bool {
         self.is_system
     }
+
+    // Setters
     pub fn set_display_name(&mut self, new_name: String) {
         self.display_name = new_name;
     }

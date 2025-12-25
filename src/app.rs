@@ -75,9 +75,9 @@ impl<'a> AppState<'a> {
             keymap: Keymap::from_config(config),
             metrics: LayoutMetrics::default(),
             nav: NavState::new(current_dir),
-            actions: ActionContext::new(),
-            preview: PreviewState::new(),
-            parent: ParentState::new(),
+            actions: ActionContext::default(),
+            preview: PreviewState::default(),
+            parent: ParentState::default(),
             worker_tx,
             response_rx,
             is_loading: false,
@@ -89,8 +89,7 @@ impl<'a> AppState<'a> {
         Ok(app)
     }
 
-    // Accessors
-
+    // Getters/ accessors
     pub fn config(&self) -> &Config {
         self.config
     }
@@ -116,7 +115,7 @@ impl<'a> AppState<'a> {
         &self.notification_time
     }
 
-    // entries
+    // mutators
 
     pub fn visible_entries(&self) -> &[FileEntry] {
         self.nav.entries()
@@ -208,6 +207,7 @@ impl<'a> AppState<'a> {
         changed
     }
 
+    // Central key handlers
     pub fn handle_keypress(&mut self, key: KeyEvent) -> KeypressResult {
         if self.actions.is_input_mode() {
             return self.handle_input_mode(key);
@@ -224,7 +224,7 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
-    // Worker request
+    // Worker requests functions
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();

@@ -10,15 +10,6 @@ pub struct ParentState {
 }
 
 impl ParentState {
-    pub fn new() -> Self {
-        Self {
-            entries: Vec::new(),
-            selected_idx: None,
-            last_path: None,
-            request_id: 0,
-        }
-    }
-
     pub fn request_id(&self) -> u64 {
         self.request_id
     }
@@ -67,6 +58,11 @@ impl ParentState {
 
 impl Default for ParentState {
     fn default() -> Self {
-        Self::new()
+        Self {
+            entries: Vec::new(),
+            selected_idx: None,
+            last_path: None,
+            request_id: 0,
+        }
     }
 }

@@ -83,12 +83,9 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
             let entry_style = context.styles.get_style(e.is_dir(), is_selected);
             let mut spans = Vec::with_capacity(4);
 
-            // Want marker icon to be INSIDE the provided left padding (replacing the first padding space)
-            // For padding == 0, just render name.
             if entry_padding == 0 {
                 spans.push(Span::raw(name_str));
             } else {
-                // Marker - replace the first padding character
                 let mut marker_style = marker_theme.color().as_style();
                 if is_selected {
                     marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
@@ -98,7 +95,6 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 } else {
                     spans.push(Span::styled(&marker_pad, marker_style));
                 }
-                // The rest of the padding, if any, after marker (padding-1)
                 if entry_padding > 1 {
                     spans.push(Span::raw(" ".repeat(entry_padding - 1)));
                 }

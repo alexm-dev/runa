@@ -19,17 +19,7 @@ pub struct PreviewState {
 }
 
 impl PreviewState {
-    pub fn new() -> Self {
-        Self {
-            data: PreviewData::Empty,
-            selected_idx: 0,
-            current_path: None,
-            request_id: 0,
-            pending: false,
-            last_input_time: Instant::now(),
-        }
-    }
-
+    // Getters/ Accessors
     pub fn data(&self) -> &PreviewData {
         &self.data
     }
@@ -42,6 +32,7 @@ impl PreviewState {
         self.request_id
     }
 
+    // Setters / mutators
     pub fn set_selected_idx(&mut self, idx: usize) {
         let len = match &self.data {
             PreviewData::Directory(entries) => entries.len(),
@@ -112,6 +103,13 @@ impl PreviewData {
 
 impl Default for PreviewState {
     fn default() -> Self {
-        Self::new()
+        Self {
+            data: PreviewData::Empty,
+            selected_idx: 0,
+            current_path: None,
+            request_id: 0,
+            pending: false,
+            last_input_time: Instant::now(),
+        }
     }
 }

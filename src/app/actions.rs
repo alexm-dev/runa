@@ -29,29 +29,24 @@ pub struct ActionContext {
 }
 
 impl ActionContext {
-    pub fn new() -> Self {
-        Self {
-            mode: ActionMode::Normal,
-            input_buffer: String::new(),
-            clipboard: None,
-            is_cut: false,
-        }
-    }
-
-    // Accessors
+    // Getters/ accessors
 
     pub fn mode(&self) -> &ActionMode {
         &self.mode
     }
+
     pub fn input_buffer(&self) -> &str {
         &self.input_buffer
     }
+
     pub fn input_buffer_mut(&mut self) -> &mut String {
         &mut self.input_buffer
     }
+
     pub fn clipboard(&self) -> &Option<HashSet<PathBuf>> {
         &self.clipboard
     }
+
     pub fn is_cut(&self) -> bool {
         self.is_cut
     }
@@ -69,6 +64,8 @@ impl ActionContext {
         self.mode = ActionMode::Normal;
         self.input_buffer.clear();
     }
+
+    // Actions
 
     pub fn action_delete(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
         let targets = nav.get_action_targets();
@@ -162,5 +159,16 @@ impl ActionContext {
             request_id: nav.prepare_new_request(),
         });
         self.exit_mode();
+    }
+}
+
+impl Default for ActionContext {
+    fn default() -> Self {
+        Self {
+            mode: ActionMode::Normal,
+            input_buffer: String::new(),
+            clipboard: None,
+            is_cut: false,
+        }
     }
 }

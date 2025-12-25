@@ -1,5 +1,4 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use std::borrow::Cow;
 use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -134,28 +133,5 @@ impl Keymap {
             modifiers: key.modifiers,
         };
         self.map.get(&k).copied()
-    }
-
-    pub fn keycode_to_str(code: &KeyCode) -> Cow<'static, str> {
-        match code {
-            KeyCode::Char(c) => Cow::Owned(c.to_string()),
-            KeyCode::Enter => Cow::Borrowed("Enter"),
-            KeyCode::Esc => Cow::Borrowed("Esc"),
-            KeyCode::Backspace => Cow::Borrowed("Backspace"),
-            KeyCode::Tab => Cow::Borrowed("Tab"),
-            KeyCode::Delete => Cow::Borrowed("Delete"),
-            KeyCode::Up => Cow::Borrowed("Up"),
-            KeyCode::Down => Cow::Borrowed("Down"),
-            KeyCode::Left => Cow::Borrowed("Left"),
-            KeyCode::Right => Cow::Borrowed("Right"),
-            KeyCode::Home => Cow::Borrowed("Home"),
-            KeyCode::End => Cow::Borrowed("End"),
-            KeyCode::PageUp => Cow::Borrowed("PageUp"),
-            KeyCode::PageDown => Cow::Borrowed("PageDown"),
-            KeyCode::F(n) => Cow::Owned(format!("F{}", n)),
-            KeyCode::Null => Cow::Borrowed("Null"),
-            KeyCode::Insert => Cow::Borrowed("Insert"),
-            other => Cow::Owned(format!("{:?}", other)),
-        }
     }
 }

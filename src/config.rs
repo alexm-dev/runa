@@ -92,6 +92,8 @@ impl Config {
         }
     }
 
+    // Getters
+
     pub fn dirs_first(&self) -> bool {
         self.dirs_first
     }

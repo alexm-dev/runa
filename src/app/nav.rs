@@ -26,23 +26,28 @@ impl NavState {
         }
     }
 
-    // Accessors
+    // Getters / Accessors
 
     pub fn current_dir(&self) -> &Path {
         &self.current_dir
     }
+
     pub fn entries(&self) -> &[FileEntry] {
         &self.entries
     }
+
     pub fn markers(&self) -> &HashSet<PathBuf> {
         &self.markers
     }
+
     pub fn filter(&self) -> &str {
         &self.filter
     }
+
     pub fn selected_idx(&self) -> usize {
         self.selected
     }
+
     pub fn request_id(&self) -> u64 {
         self.request_id
     }
@@ -50,6 +55,8 @@ impl NavState {
     pub fn selected_entry(&self) -> Option<&FileEntry> {
         self.entries.get(self.selected)
     }
+
+    // Nav functions
 
     pub fn prepare_new_request(&mut self) -> u64 {
         self.request_id += 1;
