@@ -153,15 +153,15 @@ impl<'a> AppState<'a> {
     }
 
     fn handle_go_into_dir(&mut self) -> KeypressResult {
-        if let Some(entry) = self.nav.selected_entry() {
-            if entry.is_dir() {
-                let new_path = self.nav.current_dir().join(entry.name());
-                self.nav.save_position();
-                self.nav.set_path(new_path);
+        if let Some(entry) = self.nav.selected_entry()
+            && entry.is_dir()
+        {
+            let new_path = self.nav.current_dir().join(entry.name());
+            self.nav.save_position();
+            self.nav.set_path(new_path);
 
-                self.request_dir_load(None);
-                self.request_parent_content();
-            }
+            self.request_dir_load(None);
+            self.request_parent_content();
         }
         KeypressResult::Continue
     }
