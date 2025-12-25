@@ -16,6 +16,7 @@ use crate::worker::{WorkerResponse, WorkerTask, start_worker};
 use crossbeam_channel::{Receiver, Sender, unbounded};
 use crossterm::event::KeyEvent;
 use std::sync::Arc;
+use std::time::Instant;
 
 pub enum KeypressResult {
     Continue,
@@ -57,6 +58,8 @@ pub struct AppState<'a> {
     worker_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
     is_loading: bool,
+
+    notification_time: Option<Instant>,
 }
 
 impl<'a> AppState<'a> {
@@ -78,6 +81,7 @@ impl<'a> AppState<'a> {
             worker_tx,
             response_rx,
             is_loading: false,
+            notification_time: None,
         };
 
         app.request_dir_load(None);
@@ -107,6 +111,9 @@ impl<'a> AppState<'a> {
     }
     pub fn parent(&self) -> &ParentState {
         &self.parent
+    }
+    pub fn notification_time(&self) -> &Option<Instant> {
+        &self.notification_time
     }
 
     // entries

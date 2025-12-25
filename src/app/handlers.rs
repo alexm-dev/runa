@@ -2,6 +2,7 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, KeypressResult, NavState};
 use crate::keymap::{FileAction, NavAction};
 use crossterm::event::{KeyCode::*, KeyEvent};
+use std::time::{Duration, Instant};
 
 impl<'a> AppState<'a> {
     // Handlers for app.rs
@@ -162,7 +163,10 @@ impl<'a> AppState<'a> {
         match action {
             FileAction::Open => return self.handle_open_file(),
             FileAction::Delete => self.prompt_delete(),
-            FileAction::Copy => self.actions.action_copy(&self.nav, false),
+            FileAction::Copy => {
+                self.actions.action_copy(&self.nav, false);
+                self.notification_time = Some(Instant::now() + Duration::from_secs(2));
+            }
             FileAction::Cut => self.actions.action_copy(&self.nav, true),
             FileAction::Paste => self.actions.action_paste(&mut self.nav, &self.worker_tx),
             FileAction::Rename => self.prompt_rename(),

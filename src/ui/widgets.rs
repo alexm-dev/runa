@@ -1,18 +1,21 @@
 use crate::app::AppState;
+use crate::ui::{ActionMode, InputMode};
 use crate::ui::{Constraint, Direction, Layout};
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
     style::{Color, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, Clear, Paragraph},
 };
+use std::time::Instant;
+use unicode_width::UnicodeWidthStr;
 
 pub enum InputKey {
     Char(char),
     Name(&'static str),
 }
 
-/// Preset popup positions.
 #[derive(Clone, Copy)]
 pub enum PopupPosition {
     Center,
@@ -20,7 +23,7 @@ pub enum PopupPosition {
     Bottom,
     Left,
     Right,
-    Custom(u16, u16), // (x%, y%) from top-left
+    Custom(u16, u16), // (x%, y%)
 }
 
 /// Preset popup sizes.
@@ -43,7 +46,6 @@ impl PopupSize {
     }
 }
 
-/// Customizable popup style.
 pub struct PopupStyle {
     pub border: Borders,
     pub border_style: Style,
@@ -62,7 +64,6 @@ impl Default for PopupStyle {
     }
 }
 
-/// Bounds-safe area calculation for any position or size
 pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
     let (w_pct, h_pct) = size.percentages();
     let w = (area.width * w_pct / 100).max(1).min(area.width);
@@ -113,7 +114,6 @@ pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
     }
 }
 
-/// Use this to render any popup, fully customizable, at runtime
 pub fn draw_popup(
     frame: &mut Frame,
     area: Rect,
@@ -193,4 +193,113 @@ pub fn draw_confirm_popup(frame: &mut Frame, area: Rect, prompt: &str) {
         .alignment(ratatui::layout::Alignment::Center);
 
     frame.render_widget(text, popup_area);
+}
+
+pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
+        if *mode == InputMode::ConfirmDelete {
+            let action_targets = app.nav().get_action_targets();
+            let targets: Vec<String> = action_targets
+                .iter()
+                .map(|p| {
+                    p.file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default()
+                })
+                .collect();
+            let preview = if targets.len() == 1 {
+                format!("\nFile to delete: {}", targets[0])
+            } else if targets.len() > 1 {
+                format!(
+                    "\nFiles to delete ({}):\n{}",
+                    targets.len(),
+                    targets
+                        .iter()
+                        .map(|n| format!("  - {}", n))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                )
+            } else {
+                String::new()
+            };
+
+            let popup_style = PopupStyle {
+                border: Borders::ALL,
+                border_style: Style::default().fg(ratatui::style::Color::Red),
+                bg: app.config().theme().notification().as_style(),
+                title: Some(" Confirm Delete ".into()),
+            };
+            draw_popup(
+                frame,
+                frame.area(),
+                PopupPosition::Center,
+                PopupSize::Medium,
+                &popup_style,
+                format!("{prompt}{preview}"),
+                Some(Alignment::Left),
+            );
+        } else {
+            let popup_style = PopupStyle {
+                border: Borders::ALL,
+                border_style: accent_style,
+                bg: app.config().theme().notification().as_style(),
+                title: Some(format!(" {} ", prompt)),
+            };
+            draw_popup(
+                frame,
+                frame.area(),
+                PopupPosition::Center,
+                PopupSize::Medium,
+                &popup_style,
+                app.actions().input_buffer(),
+                Some(Alignment::Left),
+            );
+
+            let input_text = app.actions().input_buffer();
+            let x_offset = UnicodeWidthStr::width(input_text) as u16;
+            let popup_area = popup_area(frame.area(), PopupSize::Medium, PopupPosition::Center);
+            frame.set_cursor_position((popup_area.x + 1 + x_offset, popup_area.y + 1));
+        }
+    }
+}
+
+pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
+    let area = frame.area();
+
+    let (count, is_cut) = match app.actions().clipboard() {
+        Some(set) => (set.len(), app.actions().is_cut()),
+        None => (0, false),
+    };
+    let filter = app.nav().filter();
+    let now = Instant::now();
+
+    let msg = if let Some(until) = app.notification_time() {
+        if until > &now && count > 0 {
+            if is_cut {
+                format!("Cut: {count}")
+            } else {
+                format!("Yanked files: {count}")
+            }
+        } else if !filter.is_empty() {
+            format!("Filter: \"{filter}\"")
+        } else {
+            String::new()
+        }
+    } else if !filter.is_empty() {
+        format!("Filter: \"{filter}\"")
+    } else {
+        String::new()
+    };
+
+    if !msg.is_empty() {
+        let rect = Rect {
+            x: area.x,
+            y: area.y,
+            width: area.width,
+            height: 1,
+        };
+        let line = Line::from(Span::styled(msg, Style::default().fg(Color::Gray)));
+        let paragraph = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
+        frame.render_widget(paragraph, rect);
+    }
 }
