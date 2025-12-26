@@ -5,7 +5,8 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::Terminal;
+use ratatui::backend::{Backend, CrosstermBackend};
 use std::{io, time::Duration};
 
 pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
@@ -24,7 +25,10 @@ pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
 fn event_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut AppState,
-) -> io::Result<()> {
+) -> io::Result<()>
+where
+    io::Error: From<<B as Backend>::Error>,
+{
     loop {
         // App Tick
         // If tick returns true, something changed internally that needs a redraw.

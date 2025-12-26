@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.2] - 2025-12-26
+
+### Internal
+- **Terminal backend update**: Updated `ratatui` from `0.29.0` to `0.30.0`
+
+
+---
+
+
+## [0.3.1] - 2025-12-26
+
+### Changed
+- **README image scaling**: Fixed image sizing so screenshots render correctly for github and crates.io
+
+
+---
+
+
 ## [0.3.0] - 2025-12-26
 
 The first release under the name of `runa` :D
