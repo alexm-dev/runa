@@ -8,13 +8,15 @@ pub struct LayoutConfig {
 }
 
 impl LayoutConfig {
-    pub fn parent_ratio(&self) -> u16 {
+    fn parent_ratio(&self) -> u16 {
         self.parent
     }
-    pub fn main_ratio(&self) -> u16 {
+
+    fn main_ratio(&self) -> u16 {
         self.main
     }
-    pub fn preview_ratio(&self) -> u16 {
+
+    fn preview_ratio(&self) -> u16 {
         self.preview
     }
 }

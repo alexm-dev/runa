@@ -65,17 +65,6 @@ impl<'a> AppState<'a> {
 
     // Input proccess handlers
 
-    pub fn process_enter_input(&mut self, kind: &InputMode) {
-        match kind {
-            InputMode::NewFile => self.create_file(),
-            InputMode::NewFolder => self.create_folder(),
-            InputMode::Rename => self.rename_entry(),
-            InputMode::Filter => self.apply_filter(),
-            InputMode::ConfirmDelete => self.confirm_delete(),
-        }
-        self.exit_input_mode();
-    }
-
     pub fn process_confirm_delete_char(&mut self, c: char) {
         if matches!(c, 'y' | 'Y') {
             self.confirm_delete();

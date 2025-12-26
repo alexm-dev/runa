@@ -10,7 +10,6 @@ pub use preview::{PreviewData, PreviewState};
 
 use crate::app::actions::ActionContext;
 use crate::config::Config;
-use crate::file_manager::FileEntry;
 use crate::keymap::{Action, Keymap, SystemAction};
 use crate::worker::{WorkerResponse, WorkerTask, start_worker};
 use crossbeam_channel::{Receiver, Sender, unbounded};
@@ -94,10 +93,6 @@ impl<'a> AppState<'a> {
         self.config
     }
 
-    pub fn metrics(&self) -> &LayoutMetrics {
-        &self.metrics
-    }
-
     pub fn metrics_mut(&mut self) -> &mut LayoutMetrics {
         &mut self.metrics
     }
@@ -124,9 +119,6 @@ impl<'a> AppState<'a> {
 
     // mutators
 
-    pub fn visible_entries(&self) -> &[FileEntry] {
-        self.nav.entries()
-    }
     pub fn visible_selected(&self) -> Option<usize> {
         if self.nav.entries().is_empty() {
             None
