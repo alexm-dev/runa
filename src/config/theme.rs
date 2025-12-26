@@ -168,7 +168,7 @@ impl Default for WidgetTheme {
             color: ColorPair::default(),
             border: ColorPair::default(),
             position: Some(PopupPosition::Center),
-            size: Some(PopupSize::Small),
+            size: Some(PopupSize::Medium),
             confirm_size: Some(PopupSize::Large),
         }
     }

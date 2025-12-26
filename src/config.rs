@@ -230,7 +230,7 @@ fg = "magenta"
 # bg = "default"
 
 # [theme.widget]
-# size = "small"            # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
+# size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
 # position = "center"       # "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 # confirm_size = "large"
 
