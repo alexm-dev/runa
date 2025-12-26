@@ -83,7 +83,6 @@ preview = 40
 ```
 
 
----
 
 
 ## Theme Configuration
@@ -167,7 +166,7 @@ bg = "default"
 ```
 
 
----
+
 
 ## Editor
 
@@ -179,7 +178,6 @@ cmd = "nvim"
 ```
 
 
----
 
 
 ## Key Bindings
