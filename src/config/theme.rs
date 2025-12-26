@@ -112,6 +112,8 @@ pub struct WidgetTheme {
     position: Option<PopupPosition>,
     #[serde(default)]
     size: Option<PopupSize>,
+    #[serde(default)]
+    confirm_size: Option<PopupSize>,
 }
 
 impl WidgetTheme {
@@ -121,6 +123,18 @@ impl WidgetTheme {
 
     pub fn size(&self) -> &Option<PopupSize> {
         &self.size
+    }
+
+    pub fn confirm_size(&self) -> &Option<PopupSize> {
+        &self.confirm_size
+    }
+
+    pub fn confirm_size_or(&self, fallback: PopupSize) -> PopupSize {
+        self.confirm_size()
+            .as_ref()
+            .or_else(|| self.size().as_ref())
+            .copied()
+            .unwrap_or(fallback)
     }
 
     pub fn border_or(&self, fallback: Style) -> Style {
@@ -154,7 +168,8 @@ impl Default for WidgetTheme {
             color: ColorPair::default(),
             border: ColorPair::default(),
             position: Some(PopupPosition::Center),
-            size: Some(PopupSize::Medium),
+            size: Some(PopupSize::Small),
+            confirm_size: Some(PopupSize::Large),
         }
     }
 }

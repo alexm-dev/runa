@@ -309,7 +309,8 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
         let widget = app.config().theme().widget();
         let posititon = widget.position().unwrap_or(PopupPosition::Center);
         let size = widget.size().unwrap_or(PopupSize::Small);
-        let size_delete = widget.size().unwrap_or(PopupSize::Large);
+        let confirm_size = widget.confirm_size_or(PopupSize::Large);
+
         if *mode == InputMode::ConfirmDelete {
             let action_targets = app.nav().get_action_targets();
             let targets: Vec<String> = action_targets
@@ -347,7 +348,7 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                 frame,
                 frame.area(),
                 posititon,
-                size_delete,
+                confirm_size,
                 &popup_style,
                 format!("{prompt}{preview}"),
                 Some(Alignment::Left),
@@ -392,7 +393,7 @@ pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
     let now = Instant::now();
 
     let mut parts = Vec::new();
-    if count > 0 && (app.notification_time().map_or(false, |until| until > now)) {
+    if count > 0 && (app.notification_time().is_some_and(|until| until > now)) {
         let yank_msg = { format!("Yanked files: {count}") };
         parts.push(yank_msg);
     }
