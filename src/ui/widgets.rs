@@ -121,7 +121,7 @@ impl<'de> Deserialize<'de> for PopupSize {
 impl PopupSize {
     pub fn percentages(&self) -> (u16, u16) {
         match self {
-            PopupSize::Small => (24, 10),
+            PopupSize::Small => (24, 7),
             PopupSize::Medium => (32, 14),
             PopupSize::Large => (32, 40),
             PopupSize::Custom(w, h) => (*w, *h),
