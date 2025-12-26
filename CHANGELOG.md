@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.3] - 2025-12-26
+
+### Internal
+- **Dependency update**: Updated `unicode-width` from `0.2.0` to `0.2.2`
+
+
+---
+
+
 ## [0.3.2] - 2025-12-26
 
 ### Internal
