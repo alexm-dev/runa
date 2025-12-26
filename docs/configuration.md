@@ -127,6 +127,11 @@ bg = "default"
 selection_fg = "default"
 selection_bg = "default"
 
+[theme.marker]        # Multi-select marker
+icon = "*"
+fg = "yellow"
+bg = "default"
+
 [theme.underline]     # Underline colors (if enabled)
 fg = "default"
 bg = "default"
