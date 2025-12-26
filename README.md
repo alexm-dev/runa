@@ -89,13 +89,13 @@ Future releases will focus on expanding functionality while keeping it fast and 
 
 - [ ] Search & Discovery: Integrated fuzzy finding and fast directory traversal.  
 
-- [ ] Content Search: Text search and filtering.  
-
-- [ ] File Operations: Copy, move, delete, and rename from within the UI.  
-
 - [ ] Image Previews: Support for Sixel/Kitty graphics protocols.  
 
 ### Completed
+
+- [x] File Operations: Copy, move, delete, and rename from within the UI.  ( Completed in 0.3.0 )  
+
+- [x] Content Search: Text search and filtering.  (Completed in 0.3.0)  
 
 - [x] Performance: Reactive rendering (Completed in 0.2.0).
 
