@@ -23,13 +23,13 @@ pub fn handle_args() -> CliAction {
             CliAction::Exit
         }
         "--init" => {
-            if let Err(e) = Config::generate_default(&config_path, false) {
+            if let Err(e) = Config::generate_default(&config_path, true) {
                 eprintln!("Error: {}", e);
             }
             CliAction::Exit
         }
-        "--init-minimal" => {
-            if let Err(e) = Config::generate_default(&config_path, true) {
+        "--init-full" => {
+            if let Err(e) = Config::generate_default(&config_path, false) {
                 eprintln!("Error: {}", e);
             }
             CliAction::Exit

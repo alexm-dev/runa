@@ -265,18 +265,29 @@ fg = "magenta"
 # Only the essentials. The rest uses internal defaults.
 
 dirs_first = true
+show_hidden = false
+
+[display]
+borders = "split"
+entry_padding = 1
+
+[theme]
+selection_icon = ""
+
+[theme.selection]
+bg = "#333333"
+
+[theme.accent]
+fg = "#353536"
 
 [theme.directory]
-fg = "cyan"
+fg = "blue"
 
 [theme.path]
 fg = "magenta"
 
-[theme]
-selection_icon = ">"
-
 [editor]
-cmd = "nvim"
+# cmd = "nvim"
 "##;
 
         let content = if minimal { minimal_toml } else { full_toml };
