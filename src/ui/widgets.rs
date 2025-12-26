@@ -10,7 +10,7 @@ use ratatui::{
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use std::time::Instant;
-use unicode_width::UnicodeWidthStr;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 pub enum InputKey {
     Char(char),
@@ -122,7 +122,7 @@ impl PopupSize {
     pub fn percentages(&self) -> (u16, u16) {
         match self {
             PopupSize::Small => (24, 7),
-            PopupSize::Medium => (32, 14),
+            PopupSize::Medium => (26, 14),
             PopupSize::Large => (32, 40),
             PopupSize::Custom(w, h) => (*w, *h),
         }
@@ -330,20 +330,37 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                     widget.fg_or(Style::default().fg(Color::Reset)),
                 )),
             };
+            let input_text = app.actions().input_buffer();
+            let popup_area = popup_area(frame.area(), size, posititon);
+            let visible_width = popup_area.width.saturating_sub(2) as usize;
+            let input_width = input_text.width();
+            let display_input = if input_width > visible_width {
+                let mut current_w = 0;
+                let mut start = input_text.len();
+                for (idx, ch) in input_text.char_indices().rev() {
+                    current_w += ch.width().unwrap_or(0);
+                    if current_w > visible_width {
+                        start = idx + ch.len_utf8();
+                        break;
+                    }
+                }
+                &input_text[start..]
+            } else {
+                input_text
+            };
+
             draw_popup(
                 frame,
                 frame.area(),
                 posititon,
                 size,
                 &popup_style,
-                app.actions().input_buffer(),
+                display_input,
                 Some(Alignment::Left),
             );
 
-            let input_text = app.actions().input_buffer();
-            let x_offset = UnicodeWidthStr::width(input_text) as u16;
-            let popup_area = popup_area(frame.area(), size, posititon);
-            frame.set_cursor_position((popup_area.x + 1 + x_offset, popup_area.y + 1));
+            let cursor_offset = display_input.width() as u16;
+            frame.set_cursor_position((popup_area.x + 1 + cursor_offset, popup_area.y + 1));
         }
     }
 }
