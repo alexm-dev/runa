@@ -21,36 +21,34 @@ If you don't have a config file yet, you can generate one automatically:
 - `rn --config-help`: Displays all configuration options.
 
 ## General Settings
+
 ```toml
-
-# Default settings used by runa
-
-# ANY unused / default options can be removed from the runa.toml
+# ANY unused / default options can be removed from runa.toml.
 # Removed / unused options will default to the internal defaults as seen below.
 
 # Sort directories before files
 dirs_first = true
 
-# Shows hidden files (dotfiles)
+# Show hidden files (dotfiles)
 show_hidden = false
 
-# Shows hidden system files (Mostly useful for Windows)
+# Show hidden system files (mostly for Windows)
 show_system = false
 
 # Ignore case sensitivity when searching or sorting
 case_insensitive = true
 
-# Set directories to be always shown, ignoring the show_hidden option. Example: always_show = [".config", "..."]
+# Always show these directories, even if 'show_hidden' is false. Example: always_show = [".config", "Downloads"]
 always_show = []
 
 [display]
-# Shows the selection icon next to the file/directory name
+# Show the selection icon next to the file/directory name
 selection_marker = true
 
-# Shows the default '/' symbol next to the directory name
+# Show the default '/' symbol next to directory names
 dir_marker = true
 
-## Border style for the application: "none", "unified", or "split"
+# Border style: "none", "unified", or "split"
 borders = "split"
 
 # Show pane titles at the top (e.g., "Main", "Preview")
@@ -65,105 +63,166 @@ parent = true
 # Show the file preview pane (right)
 preview = true
 
-# Option to enable the underline in the preview pane
+# Enable underline in the preview pane
 preview_underline = true
 
-# Enable independent color for the preview underline.
-# If true, uses the color defined in [theme.underline].
-# If false, the underline color is inherited from [theme.preview_underline].selection_fg and .selection_bg.
+# Use independent color for the preview underline
 preview_underline_color = false
 
-# Pads the gap between the entry and the pane edge.
-# From 0 to 4.
+# Padding from entry to pane edge (0–4)
 entry_padding = 1
 
 # Scroll padding of the main pane
 scroll_padding = 5
 
-# The display ratio of each pane
-# Will always be automatically calculated to scale to 100%. Meaning it can be parent = 50, main = 50, preview = 50.
 [display.layout]
+# Display ratios for panes (will be scaled to 100%)
 parent = 20
 main = 40
 preview = 40
+```
 
+
+---
+
+
+## Theme Configuration
+
+```toml
 [theme]
-# The symbol used to indicate the current selection. "" or " " to disable.
-selection_icon = "> "
+# The symbol for the current selection. Use "" or " " to disable.
+selection_icon = ">"
 
-# Theme colors can be changed with either Hex "#RRGGBB" (or #RGB) colors, terminal colors "Red", "Blue" "etc.." or "default"
-# "default" sets the colors to the internal defaults
-# Sections can be removed in the config if not needed.
-# Example: fg = "#FFFFFF", fg = "#FFF" or fg "cyan"
+# Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
 
-# Color pairs for the entry selection color (The cursor and not all entries)
-[theme.selection]
+# Each [theme.*] section supports keys: fg (foreground), bg (background)
+[theme.selection]     # Selection bar colors
 fg = "default"
 bg = "default"
 
-# Color pair for the accents.
-# Changes the coloring of the borders. If borders are "none", then this is ignored.
-[theme.accent]
+[theme.accent]        # Borders/titles
 fg = "default"
 bg = "default"
 
-# Colors for the entries shown in all of the panes.
-[theme.entry]
+[theme.entry]         # Normal entries
 fg = "default"
 bg = "default"
 
-# Colors for the directory entries in all panes
-[theme.directory]
+[theme.directory]     # Directory entries
 fg = "cyan"
 bg = "default"
 
-# Color for the separator lines
-# If separators are disabled, then this section is ignored.
-[theme.separator]
+[theme.separator]     # Vertical separators
 fg = "default"
 bg = "default"
 
-# Colors for the parent pane
-[theme.parent]
-# Changes the pane entry color entirely and overrides the [theme.entry] color option.
+[theme.parent]        # Parent pane text
 fg = "default"
 bg = "default"
-# Changes the selection line for the pane
-# Will overwrite the [theme.selection] configuration.
 selection_fg = "default"
 selection_bg = "default"
 
-# Colors for the preview pane
-[theme.preview]
-# Changes the pane entry color entirely and overrides the [theme.entry] color option.
+[theme.preview]       # Preview pane text
 fg = "default"
 bg = "default"
-# Will overwrite the [theme.selection] configuration.
 selection_fg = "default"
 selection_bg = "default"
 
-# These colors are used when `preview_underline_color = true`
-# If preview_underline_color = true, these colors override the standard selection colors for the underline
-[theme.underline]
+[theme.underline]     # Underline colors (if enabled)
 fg = "default"
 bg = "default"
 
-# Colors for the path view at the top of the UI
-[theme.path]
+[theme.path]          # Path bar at the top
 fg = "magenta"
 bg = "default"
 
-[editor]
-# Change the default editor to open files with
-# "code" ("code.cmd" on windows)
-cmd = "nvim"
+# Full widget/popup theming: position, size, and colors
 
+[theme.widget]
+# Popup position: choose one of the following styles
+#   - Preset string:    "center", "top_left", "bottom_right", etc. Also possible to write "topleft", "bottomright", etc..
+#   - List:             [x, y]             # percent of screen, e.g., [38, 32]
+#   - Table/object:     { x = 25, y = 60 } # percent of screen
+position = "center"
+
+# Popup size: choose one of
+#   - Preset string:    "small", "medium", "large"
+#   - List:             [width, height]    # percent, e.g., [38, 32]
+#   - Table/object:     { w = 38, h = 32 } # percent
+size = "medium"
+
+# Confirmation popup size (for confirmations like deleting files):
+#   - Preset string, list, or table, just like "size" above.
+#   - Leave blank or omit to use the regular `size`.
+# Example: confirm_size = "large"
+# confirm_size = ""
+
+[theme.widget.color]   # Popup/widget colors
+fg = "white"
+bg = "black"
+
+[theme.widget.border]  # Popup/widget border colors
+fg = "magenta"
+bg = "default"
+```
+
+
+---
+
+## Editor
+
+```toml
+[editor]
+# Command to open files (e.g., "nvim", "code", etc.)
+# "code.cmd" on windows
+cmd = "nvim"
+```
+
+
+---
+
+
+## Key Bindings
+
+All values are lists (multiple shortcuts per action). Use "Shift+x", "Ctrl+x" as needed. `" "` means space bar.
+
+```toml
 [keys]
-# List of keys mapped to specific actions
-open_file   = ["Enter"]
-go_up       = ["k", "Up Arrow"]
-go_down     = ["j", "Down Arrow"]
-go_parent   = ["h", "Left Arrow", "Backspace"]
-go_into_dir = ["l", "Right Arrow"]
-quit        = ["q", "Esc"]
+open_file           = ["Enter"]
+go_up               = ["k", "Up"]
+go_down             = ["j", "Down"]
+go_parent           = ["h", "Left", "Backspace"]
+go_into_dir         = ["l", "Right"]
+quit                = ["q", "Esc"]
+delete              = ["d"]
+copy                = ["y"]
+paste               = ["p"]
+rename              = ["r"]
+create              = ["n"]
+create_directory    = ["Shift+n"]
+filter              = ["f"]
+toggle_marker       = [" "]     # space bar
+```
+
+You may remove any binding to let it fall back to the default.
+
+
+---
+
+
+## EXAMPLES
+
+```toml
+borders = "split"
+
+[display.layout]
+main = 40
+
+[theme.accent]
+fg = "#00ff00"
+bg = "default"
+
+[theme.widget]
+position = [25, 60]
+size = { w = 36, h = 20 }
 ```
