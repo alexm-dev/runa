@@ -233,40 +233,50 @@ pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
     let mut constraints = Vec::new();
     let show_sep = cfg.separators() && !cfg.is_split();
 
-    let parent = if cfg.parent() { cfg.parent_ratio() } else { 1 };
-    let preview = if cfg.preview() {
-        cfg.preview_ratio()
+    let parent = if cfg.parent() {
+        cfg.parent_ratio() as u32
     } else {
         0
     };
-    let main = cfg.main_ratio();
-
-    let total = parent + preview + main;
-
-    let factor = if total > 100 {
-        100.0 / total as f32
+    let main = cfg.main_ratio() as u32;
+    let preview = if cfg.preview() {
+        cfg.preview_ratio() as u32
     } else {
-        1.0
+        0
     };
 
-    if cfg.parent() {
-        constraints.push(Constraint::Percentage((parent as f32 * factor) as u16));
-        if show_sep {
-            constraints.push(Constraint::Length(1));
-        }
-    }
+    let enabled = [
+        (parent, cfg.parent()),
+        (main, true),
+        (preview, cfg.preview()),
+    ];
 
-    if total > 100 {
-        constraints.push(Constraint::Percentage((main as f32 * factor) as u16));
-    } else {
-        constraints.push(Constraint::Fill(1));
-    }
+    let total: u32 = enabled
+        .iter()
+        .filter(|e| e.1)
+        .map(|e| e.0)
+        .sum::<u32>()
+        .max(1);
 
-    if cfg.preview() {
-        if show_sep {
-            constraints.push(Constraint::Length(1));
+    let mut sum_pct: u16 = 0;
+    let pane_count = enabled.iter().filter(|e| e.1).count();
+    let mut pane_added = 0;
+
+    for &(val, enabled) in &enabled {
+        if enabled {
+            pane_added += 1;
+            let pct = if pane_added == pane_count {
+                100 - sum_pct
+            } else {
+                let pct = ((val as f32 / total as f32) * 100.0).round() as u16;
+                sum_pct += pct;
+                pct
+            };
+            constraints.push(Constraint::Percentage(pct));
+            if show_sep && pane_added < pane_count {
+                constraints.push(Constraint::Length(1));
+            }
         }
-        constraints.push(Constraint::Percentage((preview as f32 * factor) as u16));
     }
 
     Layout::default()
