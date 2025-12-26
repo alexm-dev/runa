@@ -197,7 +197,7 @@ fg = "#353536"
 # bg = "default"
 
 [theme.directory]
-fg = "cyan"
+fg = "blue"
 # bg = "default"
 
 # [theme.separator]
@@ -224,24 +224,25 @@ fg = "cyan"
 fg = "magenta"
 # bg = "default"
 
-[theme.marker]
-icon = "*"
-fg = "default"
-bg = "default"
+# [theme.marker]
+# icon = "*"
+# fg = "default"
+# bg = "default"
 
-[theme.widget]
-size= "medium"
+# [theme.widget]
+# size = "small", "medium", "larger" or [w ,h] or { w = 30, y = 30 }.
+# position: "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 
-[theme.widget.color]
-fg = "white"
-bg = "black"
+# [theme.widget.color]
+# fg = "default"
+# bg = "default"
 
-[theme.widget.border]
-fg = "magenta"
-bg = "default"
+# [theme.widget.border]
+# fg = "default"
+# bg = "default"
 
 [editor]
-cmd = "nvim"
+# cmd = "nvim"
 
 # [keys]
 # open_file = ["Enter"]
@@ -257,7 +258,7 @@ cmd = "nvim"
 # create = ["n"]
 # create_directory = ["Shift+n"]
 # filter = ["f"]
-# toggle_marker = [" "]
+# toggle_marker = [" "]     # " " - indicates space bar
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
@@ -272,7 +273,7 @@ fg = "cyan"
 fg = "magenta"
 
 [theme]
-selection_icon = "> "
+selection_icon = ">"
 
 [editor]
 cmd = "nvim"

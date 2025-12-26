@@ -102,17 +102,33 @@ runa - Full Configuration Guide (runa.toml)
 [theme.preview]           Preview pane text       fg (str), bg (str)
 [theme.path]              Path bar colors         fg (str), bg (str)
 [theme.underline]         Underline colors        fg (str), bg (str)
+[theme.widget]            Popup/widget settings:
+  position                (str/list/table)  "center", "top_left", "bottom_right", [38, 32], { x = 25, y = 60 }
+  size                    (str/list/table)  "small", "medium", "large", [38, 32], { w = 38, h = 32 }
+[theme.widget.color]      fg/bg for popups/widgets  fg (str), bg (str)
+[theme.widget.border]     fg/bg for popup borders   fg (str), bg (str)
+
 
 [editor]
   cmd                    (str)   Command to open files (e.g., "nvim")
 
 [keys]
   open_file              (list)  e.g., ["Enter"]
-  go_up                  (list)  e.g., ["k", "Up Arrow"]
-  go_down                (list)  e.g., ["j", "Down Arrow"]
-  go_origin              (list)  e.g., ["h", "Left Arrow", "Backspace"]
-  go_into_dir            (list)  e.g., ["l", "Right Arrow"]
+  go_up                  (list)  e.g., ["k", "Up"]
+  go_down                (list)  e.g., ["j", "Down"]
+  go_parent              (list)  e.g., ["h", "Left", "Backspace"]
+  go_into_dir            (list)  e.g., ["l", "Right"]
   quit                   (list)  e.g., ["q", "Esc"]
+  delete                 (list)  e.g., ["d"]
+  copy                   (list)  e.g., ["y"]
+  paste                  (list)  e.g., ["p"]
+  rename                 (list)  e.g., ["r"]
+  create                 (list)  e.g., ["n"]
+  create_directory       (list)  e.g., ["Shift+n"]
+  filter                 (list)  e.g., ["f"]
+  toggle_marker          (list)  e.g., [" "]
+
+Use 'Shift+x' or 'Ctrl+x' as needed. " " means space bar.
 
 EXAMPLES:
   borders = "split"

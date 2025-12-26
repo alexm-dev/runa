@@ -136,7 +136,7 @@ impl Default for Display {
             },
             preview_underline: true,
             preview_underline_color: false,
-            entry_padding: 0,
+            entry_padding: 1,
             scroll_padding: 5,
         }
     }

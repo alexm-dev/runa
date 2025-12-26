@@ -253,7 +253,7 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             separator: ColorPair::default(),
-            selection_icon: "> ".into(),
+            selection_icon: ">".into(),
             parent: ColorPair::default(),
             preview: ColorPair::default(),
             path: ColorPair {
