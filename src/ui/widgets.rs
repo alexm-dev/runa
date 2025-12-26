@@ -34,7 +34,6 @@ pub enum PopupPosition {
 
 // Deserialize so that the runa.toml custom position and size can be made simpler instead of just
 // standard serde [derive(Deserialize)]
-// Examples of accepted values for `position` in config:
 // position = "top_left"
 // position = "bottomright"
 // position = [25, 60]
@@ -123,9 +122,9 @@ impl<'de> Deserialize<'de> for PopupSize {
 impl PopupSize {
     pub fn percentages(&self) -> (u16, u16) {
         match self {
-            PopupSize::Small => (32, 10),
-            PopupSize::Medium => (48, 14),
-            PopupSize::Large => (80, 20),
+            PopupSize::Small => (22, 10),
+            PopupSize::Medium => (36, 12),
+            PopupSize::Large => (38, 30),
             PopupSize::Custom(w, h) => (*w, *h),
         }
     }
@@ -212,7 +211,6 @@ pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
             height: h,
         },
         PopupPosition::Custom(xp, yp) => {
-            // Clamp custom offset so popup always fits
             let x = area.x + ((area.width - w) * xp / 100).min(area.width - w);
             let y = area.y + ((area.height - h) * yp / 100).min(area.height - h);
             Rect {
@@ -310,7 +308,8 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
     if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
         let widget = app.config().theme().widget();
         let posititon = widget.position().unwrap_or(PopupPosition::Center);
-        let size = widget.size().unwrap_or(PopupSize::Medium);
+        let size = widget.size().unwrap_or(PopupSize::Small);
+        let size_delete = widget.size().unwrap_or(PopupSize::Large);
         if *mode == InputMode::ConfirmDelete {
             let action_targets = app.nav().get_action_targets();
             let targets: Vec<String> = action_targets
@@ -348,7 +347,7 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                 frame,
                 frame.area(),
                 posititon,
-                size,
+                size_delete,
                 &popup_style,
                 format!("{prompt}{preview}"),
                 Some(Alignment::Left),
@@ -385,31 +384,23 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
 pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
     let area = frame.area();
 
-    let (count, is_cut) = match app.actions().clipboard() {
-        Some(set) => (set.len(), app.actions().is_cut()),
-        None => (0, false),
+    let count = match app.actions().clipboard() {
+        Some(set) => set.len(),
+        None => 0,
     };
     let filter = app.nav().filter();
     let now = Instant::now();
 
-    let msg = if let Some(until) = app.notification_time() {
-        if until > &now && count > 0 {
-            if is_cut {
-                format!("Cut: {count}")
-            } else {
-                format!("Yanked files: {count}")
-            }
-        } else if !filter.is_empty() {
-            format!("Filter: \"{filter}\"")
-        } else {
-            String::new()
-        }
-    } else if !filter.is_empty() {
-        format!("Filter: \"{filter}\"")
-    } else {
-        String::new()
-    };
+    let mut parts = Vec::new();
+    if count > 0 && (app.notification_time().map_or(false, |until| until > now)) {
+        let yank_msg = { format!("Yanked files: {count}") };
+        parts.push(yank_msg);
+    }
+    if !filter.is_empty() {
+        parts.push(format!("Filter: \"{filter}\""));
+    }
 
+    let msg = parts.join(" | ");
     if !msg.is_empty() {
         let rect = Rect {
             x: area.x,

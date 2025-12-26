@@ -81,6 +81,8 @@ impl ActionContext {
         nav.clear_markers();
     }
 
+    // Currently, cut/move is not implemented yet. Only copy/yank is used.
+    // This allows for easy addition of a cut/move feature in the future.
     pub fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
         let mut set = HashSet::new();
         if !nav.markers().is_empty() {
