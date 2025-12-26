@@ -103,8 +103,6 @@ Future releases will focus on expanding functionality while keeping it fast and 
 
 - [x] Navigation Context: Persistent Parent (Origin) and Preview panes (Completed in 0.2.0)  
 
----
-
 
 <img width="1899" height="985" alt="runa_default_3" src="https://github.com/user-attachments/assets/778b80cc-3e6f-45ab-a770-e4d88059995a" />
 
