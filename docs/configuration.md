@@ -140,7 +140,7 @@ bg = "default"
 fg = "magenta"
 bg = "default"
 
-# Full widget/popup theming: position, size, and colors
+# Full widget/dialog theming: position, size, and colors
 
 [theme.widget]
 # Leave blank or omit to use the regular defaults.
@@ -156,7 +156,7 @@ position = "center"
 #   - Table/object:     { w = 38, h = 32 } # percent
 size = "medium"
 
-# Confirmation popup size (for confirmations like deleting files):
+# Confirmation dialog size (for confirmations like deleting files):
 #   - Preset string, list, or table, just like "size" above.
 #   - Leave blank or omit to use the regular `size`.
 confirm_size = "large"
