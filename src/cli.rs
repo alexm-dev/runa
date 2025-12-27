@@ -1,3 +1,10 @@
+//! Command-line argument parsing and help for runa.
+//!
+//! This module handles all CLI flag parsing used for config initialization and help.
+//! It recognizes args/flags such: --help, --init, --init-full and --config-help
+//!
+//! When invoked with no args/flags (rn), runa simply launches the TUI
+
 use crate::config::Config;
 
 pub enum CliAction {

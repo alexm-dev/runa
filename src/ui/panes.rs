@@ -1,3 +1,10 @@
+//! UI pane drawing module for runa.
+//!
+//! This module provides renderes/drawers for the parent, main and preview panes.
+//! All layout and highlighting logic for items, cursor and file type coloring is handled here.
+//!
+//! Used internally by [ui::render]
+
 use crate::app::{AppState, PreviewData};
 use crate::file_manager::FileEntry;
 use ratatui::{
@@ -56,6 +63,9 @@ pub struct PreviewOptions {
     pub underline_style: Style,
 }
 
+/// Draws the main file list pane in the UI
+///
+/// Highlights selection, markers and directories and handles styling for items.
 pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let show_marker = app.config().display().dir_marker();
     let selected_idx = app.visible_selected();
@@ -90,11 +100,13 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 if is_selected {
                     marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
                 }
+
                 if is_marked {
                     spans.push(Span::styled(marker_icon, marker_style));
                 } else {
                     spans.push(Span::styled(&marker_pad, marker_style));
                 }
+
                 if entry_padding > 1 {
                     spans.push(Span::raw(" ".repeat(entry_padding - 1)));
                 }
@@ -129,6 +141,9 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     );
 }
 
+/// Draws the preview pane, showing either the file content or directory listing
+///
+/// Also applies underline/selection styles and manages cursor position
 pub fn draw_preview(
     frame: &mut Frame,
     context: PaneContext,
@@ -223,6 +238,7 @@ pub fn draw_preview(
     }
 }
 
+/// Draws the parent directory of the current working directory.
 pub fn draw_parent(
     frame: &mut Frame,
     context: PaneContext,

@@ -151,7 +151,7 @@ impl<'a> AppState<'a> {
         &self.notification_time
     }
 
-    /// Entry functions
+    // Entry functions
 
     pub fn visible_selected(&self) -> Option<usize> {
         if self.nav.entries().is_empty() {
@@ -263,7 +263,7 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
-    /// Worker requests functions for directory loading, preview and parent pane content
+    // Worker requests functions for directory loading, preview and parent pane content
 
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
