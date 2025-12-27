@@ -32,8 +32,28 @@ impl<'a> AppState<'a> {
                 KeypressResult::Consumed
             }
 
+            Left => {
+                self.actions.action_move_cursor_left();
+                KeypressResult::Consumed
+            }
+
+            Right => {
+                self.actions.action_move_cursor_right();
+                KeypressResult::Consumed
+            }
+
+            Home => {
+                self.actions.action_cursor_home();
+                KeypressResult::Consumed
+            }
+
+            End => {
+                self.actions.action_cursor_end();
+                KeypressResult::Consumed
+            }
+
             Backspace => {
-                self.actions.input_buffer_mut().pop();
+                self.actions.action_backspace_at_cursor();
                 if matches!(mode, InputMode::Filter) {
                     self.apply_filter();
                 }
@@ -46,12 +66,12 @@ impl<'a> AppState<'a> {
                     KeypressResult::Consumed
                 }
                 InputMode::Filter => {
-                    self.actions.input_buffer_mut().push(c);
+                    self.actions.action_insert_at_cursor(c);
                     self.apply_filter();
                     KeypressResult::Consumed
                 }
                 InputMode::Rename | InputMode::NewFile | InputMode::NewFolder => {
-                    self.actions.input_buffer_mut().push(c);
+                    self.actions.action_insert_at_cursor(c);
                     if matches!(mode, InputMode::Filter) {
                         self.apply_filter();
                     }

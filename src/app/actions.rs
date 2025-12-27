@@ -24,6 +24,7 @@ pub enum InputMode {
 pub struct ActionContext {
     mode: ActionMode,
     input_buffer: String,
+    input_cursor_pos: usize,
     clipboard: Option<HashSet<PathBuf>>,
     is_cut: bool,
 }
@@ -37,6 +38,14 @@ impl ActionContext {
 
     pub fn input_buffer(&self) -> &str {
         &self.input_buffer
+    }
+
+    pub fn input_cursor_pos(&self) -> usize {
+        self.input_cursor_pos
+    }
+
+    pub fn input_cursor_pos_mut(&mut self) -> &mut usize {
+        &mut self.input_cursor_pos
     }
 
     pub fn input_buffer_mut(&mut self) -> &mut String {
@@ -58,6 +67,7 @@ impl ActionContext {
     pub fn enter_mode(&mut self, mode: ActionMode, initial_value: String) {
         self.mode = mode;
         self.input_buffer = initial_value;
+        self.input_cursor_pos = self.input_buffer.len();
     }
 
     pub fn exit_mode(&mut self) {
@@ -162,6 +172,54 @@ impl ActionContext {
         });
         self.exit_mode();
     }
+
+    // Cursor actions
+
+    pub fn action_move_cursor_left(&mut self) {
+        if self.input_cursor_pos > 0 {
+            self.input_cursor_pos -= 1;
+        }
+    }
+
+    pub fn action_move_cursor_right(&mut self) {
+        if self.input_cursor_pos < self.input_buffer.len() {
+            self.input_cursor_pos += 1;
+        }
+    }
+
+    pub fn action_insert_at_cursor(&mut self, ch: char) {
+        self.input_buffer.insert(self.input_cursor_pos, ch);
+        self.input_cursor_pos += ch.len_utf8();
+    }
+
+    pub fn action_backspace_at_cursor(&mut self) {
+        if self.input_cursor_pos > 0
+            && let Some((previous, _)) = self.input_buffer[..self.input_cursor_pos]
+                .char_indices()
+                .next_back()
+        {
+            self.input_buffer.remove(previous);
+            self.input_cursor_pos = previous;
+        }
+    }
+
+    pub fn action_delete_at_cursor(&mut self) {
+        if self.input_cursor_pos < self.input_buffer.len() {
+            let off = self.input_cursor_pos;
+            let mut ch_iter = self.input_buffer[off..].char_indices();
+            if let Some((_, _)) = ch_iter.next() {
+                self.input_buffer.remove(off);
+            }
+        }
+    }
+
+    pub fn action_cursor_home(&mut self) {
+        self.input_cursor_pos = 0;
+    }
+
+    pub fn action_cursor_end(&mut self) {
+        self.input_cursor_pos = self.input_buffer.len();
+    }
 }
 
 impl Default for ActionContext {
@@ -169,6 +227,7 @@ impl Default for ActionContext {
         Self {
             mode: ActionMode::Normal,
             input_buffer: String::new(),
+            input_cursor_pos: 0,
             clipboard: None,
             is_cut: false,
         }

@@ -222,6 +222,7 @@ pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
     }
 }
 
+/// Draws the popup widgets
 pub fn draw_popup(
     frame: &mut Frame,
     area: Rect,
@@ -270,6 +271,9 @@ pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
     );
 }
 
+/// Draws the input popup for all types of actions with input fields
+/// Either for ConfirmDelete or for anything else that requires input.
+/// For other than ConfirmDelete, calculates the exact input field.
 pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
         let widget = app.config().theme().widget();
@@ -330,24 +334,14 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                     widget.fg_or(Style::default().fg(Color::Reset)),
                 )),
             };
+
             let input_text = app.actions().input_buffer();
+            let cursor_pos = app.actions().input_cursor_pos();
             let popup_area = popup_area(frame.area(), size, posititon);
             let visible_width = popup_area.width.saturating_sub(2) as usize;
-            let input_width = input_text.width();
-            let display_input = if input_width > visible_width {
-                let mut current_w = 0;
-                let mut start = input_text.len();
-                for (idx, ch) in input_text.char_indices().rev() {
-                    current_w += ch.width().unwrap_or(0);
-                    if current_w > visible_width {
-                        start = idx + ch.len_utf8();
-                        break;
-                    }
-                }
-                &input_text[start..]
-            } else {
-                input_text
-            };
+
+            let (display_input, cursor_offset) =
+                input_field_view(input_text, cursor_pos, visible_width);
 
             draw_popup(
                 frame,
@@ -359,12 +353,13 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                 Some(Alignment::Left),
             );
 
-            let cursor_offset = display_input.width() as u16;
-            frame.set_cursor_position((popup_area.x + 1 + cursor_offset, popup_area.y + 1));
+            frame.set_cursor_position((popup_area.x + 1 + cursor_offset as u16, popup_area.y + 1));
         }
     }
 }
 
+/// Draw the status line at the top right
+/// Used for indication of number of copied/yanked files and the current applied filter
 pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
     let area = frame.area();
 
@@ -395,5 +390,38 @@ pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
         let line = Line::from(Span::styled(msg, Style::default().fg(Color::Gray)));
         let paragraph = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
         frame.render_widget(paragraph, rect);
+    }
+}
+
+/// Helper function to calculate cursor offset for cursor moving
+/// Handles horizontal truncation, variable width with unicode_width and clamps cursor to buffer.
+/// Is used for draw widgets/popups with input fields.
+fn input_field_view(input_text: &str, cursor_pos: usize, visible_width: usize) -> (&str, usize) {
+    let cursor_pos = cursor_pos.min(input_text.len());
+    let input_width = input_text.width();
+    if input_width <= visible_width {
+        let cursor_offset =
+            unicode_width::UnicodeWidthStr::width(&input_text[..cursor_pos.min(input_text.len())]);
+        (input_text, cursor_offset)
+    } else {
+        let mut current_w = 0;
+        let mut start = input_text.len();
+        for (idx, ch) in input_text.char_indices().rev() {
+            current_w += ch.width().unwrap_or(0);
+            if current_w > visible_width {
+                start = idx + ch.len_utf8();
+                break;
+            }
+        }
+
+        let cursor_offset = if cursor_pos < start {
+            0
+        } else {
+            unicode_width::UnicodeWidthStr::width(
+                &input_text[start..cursor_pos.min(input_text.len())],
+            )
+        };
+
+        (&input_text[start..], cursor_offset)
     }
 }
