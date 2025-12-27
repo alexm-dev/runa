@@ -8,7 +8,7 @@ use crate::{
         actions::{ActionMode, InputMode},
     },
     ui::panes::{PaneStyles, PreviewOptions},
-    ui::widgets::{draw_input_popup, draw_status_line},
+    ui::widgets::{draw_input_dialog, draw_status_line},
 };
 use ratatui::{
     Frame,
@@ -225,7 +225,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
     draw_status_line(frame, app);
-    draw_input_popup(frame, app, accent_style);
+    draw_input_dialog(frame, app, accent_style);
 }
 
 pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {

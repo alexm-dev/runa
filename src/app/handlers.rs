@@ -1,3 +1,8 @@
+//! Input action handler methods for runa.
+//!
+//! This module implements [AppState] methods that process key events, file/nav actions,
+//! and input modes (rename, filter, etc).
+
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, KeypressResult, NavState};
 use crate::keymap::{FileAction, NavAction};
@@ -138,6 +143,10 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
+    /// Calls the provided function to move navigation if possible.
+    ///
+    /// If the movement was successful (f returns true), marks the preview as pending refresh.
+    /// Used to encapsulate common logic for nav actions that change selection or directory.
     fn move_nav_if_possible<F>(&mut self, f: F)
     where
         F: FnOnce(&mut NavState) -> bool,
@@ -207,7 +216,7 @@ impl<'a> AppState<'a> {
         }
     }
 
-    // Action prompts
+    // Prompt functions for actions
 
     fn prompt_delete(&mut self) {
         let targets = self.nav.get_action_targets();
@@ -245,6 +254,8 @@ impl<'a> AppState<'a> {
             Some(current_filter),
         );
     }
+
+    // Mode function
 
     pub fn enter_input_mode(&mut self, mode: InputMode, prompt: String, initial: Option<String>) {
         let buffer = initial.unwrap_or_default();

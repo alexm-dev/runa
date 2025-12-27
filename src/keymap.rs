@@ -1,6 +1,12 @@
+//! Key mapping and action dispatch system for runa
+//!
+//! Defines key to an action, parsing from the config, and enum variants
+//! for all navigation, file and actions used by runa.
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
 
+/// Represents any action in the app: navigation, file, or system.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Action {
     Nav(NavAction),
@@ -8,6 +14,7 @@ pub enum Action {
     System(SystemAction),
 }
 
+/// Navigation actions (move, into_parent, markers, etc.)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum NavAction {
     GoParent,
@@ -17,6 +24,7 @@ pub enum NavAction {
     ToggleMarker,
 }
 
+/// File actions (delete, copy, open, paste, etc.)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum FileAction {
     Delete,
@@ -29,17 +37,20 @@ pub enum FileAction {
     Filter,
 }
 
+/// System actions (quit)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum SystemAction {
     Quit,
 }
 
+/// Key + modifiers as used in keybind/keymap
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
 pub struct Key {
     pub code: KeyCode,
     pub modifiers: KeyModifiers,
 }
 
+/// Stores the mapping from Key to action, which is built in the config
 pub struct Keymap {
     map: HashMap<Key, Action>,
 }

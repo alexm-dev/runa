@@ -1,3 +1,19 @@
+//! Application State and main controller module for runa.
+//!
+//! This module defines the overall [AppState] struct, which holds all major application
+//! information and passes it to relevant UI/Terminal functions
+//! - Configuration (loaded from config files)
+//! - Pane view models for navigation, preview and parent states.
+//! - Action context for relevant inputs
+//! - Current layout metrics
+//! - Communication with worker threads via crossbeam_channel
+//! - Notification and message handling
+//!
+//! This module coordinates user input processing, keybindings, state mutation,
+//! pane switching and communication with worder tasks
+//!
+//! This is the primary context/state object passed to most UI/Terminal event logic.
+
 pub mod actions;
 mod handlers;
 mod nav;
@@ -17,6 +33,9 @@ use crossterm::event::KeyEvent;
 use std::sync::Arc;
 use std::time::Instant;
 
+/// Enumeration for each individual keypress result processed.
+///
+/// Is used to process action logic correctly.
 pub enum KeypressResult {
     Continue,
     Consumed,
@@ -24,6 +43,7 @@ pub enum KeypressResult {
     OpenedEditor,
 }
 
+/// Enumeration which holds the metrics of the layout of the TUI
 #[derive(Debug, Clone, Copy)]
 pub struct LayoutMetrics {
     pub parent_width: usize,
@@ -43,6 +63,19 @@ impl Default for LayoutMetrics {
     }
 }
 
+/// Main struct which holds the central Application state of runa
+///
+/// AppState holds all the persisten state for the application while it is running
+///
+/// Includes:
+/// - References to configuration settings and the keymaps.
+/// - Models for navigation, actions, file previews, and parent directory pane
+/// - Live layout information
+/// - crossbeam channels for communication with background worker threads
+/// - Notification timing and loading indicators
+///
+/// Functions are provided for the core event loop, input handling, file navigationm
+/// worker requests and Notification management.
 pub struct AppState<'a> {
     config: &'a Config,
     keymap: Keymap,
@@ -89,6 +122,7 @@ impl<'a> AppState<'a> {
     }
 
     // Getters/ accessors
+
     pub fn config(&self) -> &Config {
         self.config
     }
@@ -117,7 +151,7 @@ impl<'a> AppState<'a> {
         &self.notification_time
     }
 
-    // mutators
+    /// Entry functions
 
     pub fn visible_selected(&self) -> Option<usize> {
         if self.nav.entries().is_empty() {
@@ -131,6 +165,10 @@ impl<'a> AppState<'a> {
     }
 
     /// The heart of the app: updates state and handles worker messages
+    ///
+    /// Is used by the main event loop to update the application state.
+    /// Returns a bool to determine if the AppState needs reloading
+    /// and sets it to true if a WorkerResponse was made or if a preview should be triggered.
     pub fn tick(&mut self) -> bool {
         let mut changed = false;
 
@@ -206,7 +244,9 @@ impl<'a> AppState<'a> {
         changed
     }
 
-    // Central key handlers
+    /// Central key handlers
+    ///
+    /// Coordinates the action and handler module functions.
     pub fn handle_keypress(&mut self, key: KeyEvent) -> KeypressResult {
         if self.actions.is_input_mode() {
             return self.handle_input_mode(key);
@@ -223,7 +263,8 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
-    // Worker requests functions
+    /// Worker requests functions for directory loading, preview and parent pane content
+
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();

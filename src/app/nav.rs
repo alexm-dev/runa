@@ -1,8 +1,14 @@
+//! Navigation state and file list logic for runa.
+//!
+//! Manages the current directory, file entries, selection, markers and filters.
+//! Provides helpers for pane navigation, selection, filtering, and bulk actions.
+
 use crate::file_manager::FileEntry;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+/// Holds the navigation, selection and file list state of a pane.
 pub struct NavState {
     current_dir: PathBuf,
     entries: Vec<FileEntry>,
@@ -56,7 +62,7 @@ impl NavState {
         self.entries.get(self.selected)
     }
 
-    // Nav functions
+    // Navigation functions
 
     pub fn prepare_new_request(&mut self) -> u64 {
         self.request_id += 1;

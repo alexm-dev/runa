@@ -1,3 +1,8 @@
+//! Display configuration options for runa
+//!
+//! This module defines the display configuration options which are read from the runa.toml
+//! configuration file.
+
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]

@@ -1,3 +1,18 @@
+//! Worker thread for the runa core operations.
+//!
+//! Handles directory reads, previews and file operatios on a background thread.
+//! All results and errors are sent back via channels.
+//! Small changes here can have big effects since this module is tightly integrated with every part
+//! of runa.
+//!
+//! Requests [WorkerTask] are sent from the app/UI to the worker via channels,
+//! and results or errors [WorkerResponse] are sent back the same way. All work
+//! (including filesystem IO and preview logic) is executed on this background thread.
+//!
+//! # Caution:
+//! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
+//! may require corresponding changes throughout state, response-handling code and UI.
+
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::File;
@@ -12,6 +27,9 @@ use unicode_width::UnicodeWidthChar;
 use crate::file_manager::{FileEntry, browse_dir};
 use crate::formatter::Formatter;
 
+/// Tasks sent to the worker thread via channel.
+///
+/// Each variant describes a filesystem or a preview operation to perform.
 pub enum WorkerTask {
     LoadDirectory {
         path: PathBuf,
@@ -36,6 +54,7 @@ pub enum WorkerTask {
     },
 }
 
+/// Supported file system operations the worker can perform.
 pub enum FileOperation {
     Delete(Vec<PathBuf>),
     Rename {
@@ -54,6 +73,9 @@ pub enum FileOperation {
     },
 }
 
+/// Responses sent form the worker thread back to the main thread via the channel
+///
+/// Each variant delivers the result or error from a request taks.
 pub enum WorkerResponse {
     DirectoryLoaded {
         path: PathBuf,
@@ -74,6 +96,7 @@ pub enum WorkerResponse {
     Error(String),
 }
 
+/// Starts the worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
 pub fn start_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
@@ -224,6 +247,7 @@ fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
     out
 }
 
+/// Loads a fixed-width preview of a directory entries
 fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     match browse_dir(path) {
         Ok(entries) => {
@@ -271,6 +295,9 @@ fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
     }
 }
 
+/// Loads a preview for any path (directory or file), returning an error or a padded lines for
+/// display.
+/// large binaries/unreadable and unsupported files are replaced with a notice.
 fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     let max_lines = std::cmp::max(max_lines, 3);
 

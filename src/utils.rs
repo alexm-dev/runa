@@ -1,7 +1,12 @@
+//! Misc utilits functions for color parsing and external editor for opening files with.
+
 use crate::config::Editor;
 use ratatui::style::Color;
 use std::io;
 
+/// Parses a string (color name or hex) into a ratatui::style::color
+///
+/// Supports standard names (red, green, etc.) as well as hex values (#RRGGBB or #RGB)
 pub fn parse_color(s: &str) -> Color {
     match s.to_lowercase().as_str() {
         "default" | "reset" => Color::Reset,
@@ -47,6 +52,10 @@ pub fn parse_color(s: &str) -> Color {
     }
 }
 
+/// Opens a specified path/file in the configured editor ("nvim" or "vim" etc.).
+///
+/// Temporary disables raw mode and exits alternate sceen while the editor runs.
+/// On return, restores raw mode and alternate sceen.
 pub fn open_in_editor(editor: &Editor, file_path: &std::path::Path) -> std::io::Result<()> {
     use crossterm::{
         execute,

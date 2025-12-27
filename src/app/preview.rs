@@ -1,13 +1,23 @@
+//! State and helpers for displaying and managing the preview pane in runa.
+//!
+//! Tracks the state of the file/directory preview for the UI, including loaded preview
+//! data, debounce for background rendering, selection within the preview and request tracking
+
 use crate::file_manager::FileEntry;
 use std::path::PathBuf;
 use std::time::Instant;
 
+/// Preview content for the preview pane
+///
+/// Holds loaded lines for file preview, directory entries for folder preview or empty if nothing.
+/// Used to display or render file/folder content in the preview pane
 pub enum PreviewData {
     Directory(Vec<FileEntry>),
     File(Vec<String>),
     Empty,
 }
 
+/// State and helpers for managing the preview pane.
 pub struct PreviewState {
     data: PreviewData,
     selected_idx: usize,
@@ -19,6 +29,7 @@ pub struct PreviewState {
 
 impl PreviewState {
     // Getters/ Accessors
+
     pub fn data(&self) -> &PreviewData {
         &self.data
     }
@@ -32,6 +43,7 @@ impl PreviewState {
     }
 
     // Setters / mutators
+
     pub fn set_selected_idx(&mut self, idx: usize) {
         let len = match &self.data {
             PreviewData::Directory(entries) => entries.len(),

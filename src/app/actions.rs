@@ -1,3 +1,8 @@
+//! Action context and input mode logic for runa.
+//!
+//! Contains the [ActionContext] struct, tracking user input state, clipboard, and action modes.
+//! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
+
 use crate::app::nav::NavState;
 use crate::keymap::FileAction;
 use crate::worker::{FileOperation, WorkerTask};
@@ -5,6 +10,9 @@ use crossbeam_channel::Sender;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
+/// Describes the current mode for action handling/input.
+///
+/// Used to determine which UI overlays, prompts, or context actions should be active.
 #[derive(Clone, PartialEq)]
 pub enum ActionMode {
     Normal,
@@ -12,6 +20,9 @@ pub enum ActionMode {
     Confim { prompt: String, action: FileAction },
 }
 
+/// Enumerates all the available input field modes
+///
+/// Used to select the prompts, behavior and the style of the input dialog.
 #[derive(Clone, Copy, PartialEq)]
 pub enum InputMode {
     Rename,
@@ -21,6 +32,10 @@ pub enum InputMode {
     ConfirmDelete,
 }
 
+/// Tracks current user action and input buffer state for file operations and commands.
+///
+/// Stores the current mode/prompt, input buffer, cursor, and clipboard (for copy/yank) status.
+/// Handles mutation for input, clipboard & command responses.
 pub struct ActionContext {
     mode: ActionMode,
     input_buffer: String,
@@ -30,7 +45,7 @@ pub struct ActionContext {
 }
 
 impl ActionContext {
-    // Getters/ accessors
+    // Getters / accessors
 
     pub fn mode(&self) -> &ActionMode {
         &self.mode
@@ -60,6 +75,8 @@ impl ActionContext {
         self.is_cut
     }
 
+    // Mode functions
+
     pub fn is_input_mode(&self) -> bool {
         matches!(self.mode, ActionMode::Input { .. })
     }
@@ -75,7 +92,7 @@ impl ActionContext {
         self.input_buffer.clear();
     }
 
-    // Actions
+    // Actions for inputs
 
     pub fn action_delete(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
         let targets = nav.get_action_targets();
