@@ -16,7 +16,7 @@
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
@@ -299,7 +299,16 @@ fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
 /// display.
 /// large binaries/unreadable and unsupported files are replaced with a notice.
 fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
-    let max_lines = std::cmp::max(max_lines, 3);
+    // Minimum number of lines shown in any preview
+    const MIN_PREVIEW_LINES: usize = 3;
+    // Maximum file size allowed for preview (10mb)
+    const MAX_PREVIEW_SIZE: u64 = 10 * 1024 * 1024;
+    // Number of bytes to peek from file start for header checks (eg. PNG, ZIP, etc..)
+    const HEADER_PEEK_BYTES: usize = 8;
+    // Bytes to peek for null bytes in binary detections
+    const BINARY_PEEK_BYTES: usize = 1024;
+
+    let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
     // Metadata check
     let Ok(meta) = std::fs::metadata(path) else {
@@ -314,7 +323,6 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
     }
 
     // Size Check
-    const MAX_PREVIEW_SIZE: u64 = 10 * 1024 * 1024;
     if meta.len() > MAX_PREVIEW_SIZE {
         return vec![sanitize_to_exact_width(
             "[File too large for preview]",
@@ -329,8 +337,18 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
     // File Read and binary Check
     match File::open(path) {
         Ok(mut file) => {
-            // First, peek for null bytes to detect binary files
-            let mut buffer = [0u8; 1024];
+            // Peek for the first 8 bytes to handle edge cases
+            let mut header = [0u8; HEADER_PEEK_BYTES];
+            let read_bytes = file.read(&mut header).unwrap_or(0);
+            if read_bytes >= 5 && &header[..5] == b"%PDF-" {
+                return vec![sanitize_to_exact_width(
+                    "[Binary file - preview hidden]",
+                    pane_width,
+                )];
+            }
+
+            // Peek for null bytes to detect binary files
+            let mut buffer = [0u8; BINARY_PEEK_BYTES];
             let n = file.read(&mut buffer).unwrap_or(0);
             if buffer[..n].contains(&0) {
                 return vec![sanitize_to_exact_width(
@@ -359,9 +377,18 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
 
             preview_lines
         }
-        Err(e) => vec![sanitize_to_exact_width(
-            &format!("[Error reading file: {}]", e),
-            pane_width,
-        )],
+        Err(e) => {
+            let msg = match e.kind() {
+                ErrorKind::PermissionDenied => "[Error: Permission Denied]",
+                ErrorKind::NotFound => "[Error: File Not Found]",
+                _ => {
+                    return vec![sanitize_to_exact_width(
+                        &format!("[Error reading file: {}]", e),
+                        pane_width,
+                    )];
+                }
+            };
+            vec![sanitize_to_exact_width(msg, pane_width)]
+        }
     }
 }
