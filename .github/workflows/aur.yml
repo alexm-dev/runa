@@ -41,17 +41,24 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      - name: Commit and Force Push
+      - name: Sync and Force Push
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
 
-          git config --global user.name "Runa CI"
-          git config --global user.email "runa-ci@proton.me"
-
-          git add .SRCINFO
-          git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
-          git push --force "ssh://aur@aur.archlinux.org/runa.git" HEAD:master
+          git clone "ssh://aur@aur.archlinux.org/runa.git" aur_clone
+          cp PKGBUILD .SRCINFO aur_clone/
+          cd aur_clone
+          git config user.name "runa CI"
+          git config user.email "runa-ci@proton.me"
+          git add PKGBUILD .SRCINFO
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes detected."
+          else
+            git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
+            # Since we cloned the AUR repo, this is now a standard, non-shallow push
+            git push origin master
+          fi
 
       - name: Final Cleanup
         if: always()
