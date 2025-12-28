@@ -1,3 +1,8 @@
+//! Terminal rendering and event loop for runa.
+//!
+//! Handles setup/teardown of raw mode, alternate screen, redraws,
+//! and events (keypress, resize) to app logic.
+
 use crate::app::{AppState, KeypressResult};
 use crate::ui;
 use crossterm::{
@@ -9,6 +14,10 @@ use ratatui::Terminal;
 use ratatui::backend::{Backend, CrosstermBackend};
 use std::{io, time::Duration};
 
+/// Initializes the terminal in raw mode and alternate sceen and runs the main event loop.
+///
+/// Blocks until quit. Handles all input and UI rendering.
+/// Returns a error if terminal setup or teardown fails
 pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -22,6 +31,8 @@ pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
     result
 }
 
+/// Main event loop of runa: draws UI, polls for events and dispatches them to the app.
+/// Returns on quit
 fn event_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut AppState,

@@ -1,3 +1,9 @@
+//! Sorting, filtering, and display formatting for file entries in runa.
+//!
+//! The [Formatter] struct holds pane width and rules for sorting and filtering entries,
+//! based on user preferences from the runa.toml configuration.
+//! Used to prepare file lists for display in each pane.
+
 use crate::file_manager::FileEntry;
 use std::collections::HashSet;
 use std::ffi::OsString;

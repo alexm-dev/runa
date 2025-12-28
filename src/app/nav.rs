@@ -1,8 +1,14 @@
+//! Navigation state and file list logic for runa.
+//!
+//! Manages the current directory, file entries, selection, markers and filters.
+//! Provides helpers for pane navigation, selection, filtering, and bulk actions.
+
 use crate::file_manager::FileEntry;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+/// Holds the navigation, selection and file list state of a pane.
 pub struct NavState {
     current_dir: PathBuf,
     entries: Vec<FileEntry>,
@@ -53,10 +59,10 @@ impl NavState {
     }
 
     pub fn selected_entry(&self) -> Option<&FileEntry> {
-        self.entries.get(self.selected)
+        self.selected_shown_entry()
     }
 
-    // Nav functions
+    // Navigation functions
 
     pub fn prepare_new_request(&mut self) -> u64 {
         self.request_id += 1;
@@ -88,8 +94,10 @@ impl NavState {
     }
 
     pub fn save_position(&mut self) {
-        self.positions
-            .insert(self.current_dir.clone(), self.selected);
+        if !self.entries.is_empty() {
+            self.positions
+                .insert(self.current_dir.clone(), self.selected);
+        }
     }
 
     pub fn get_position(&self) -> &HashMap<PathBuf, usize> {
@@ -97,10 +105,13 @@ impl NavState {
     }
 
     pub fn set_path(&mut self, path: PathBuf) {
+        self.save_position();
+
         self.current_dir = path;
         self.entries.clear();
         self.selected = 0;
-        // instantly kills all pending messages from the previous directory.
+        self.clear_filters();
+        // instantly ends all pending messages from the previous directory.
         self.request_id += 1;
     }
 
@@ -152,34 +163,17 @@ impl NavState {
 
     // Filter functions
 
-    pub fn filtered_entries(&self) -> Vec<&FileEntry> {
-        if self.filter.is_empty() {
-            self.entries.iter().collect()
-        } else {
-            let filter_lower = self.filter.to_lowercase();
-            self.entries
-                .iter()
-                .filter(|e| {
-                    e.name()
-                        .to_string_lossy()
-                        .to_lowercase()
-                        .contains(&filter_lower)
-                })
-                .collect()
-        }
-    }
-
     pub fn shown_entries(&self) -> Box<dyn Iterator<Item = &FileEntry> + '_> {
         if self.filter.is_empty() {
             Box::new(self.entries.iter())
         } else {
             let filter_lower = self.filter.to_lowercase();
-            Box::new(self.entries.iter().filter(move |e| {
-                e.name()
-                    .to_string_lossy()
-                    .to_lowercase()
-                    .contains(&filter_lower)
-            }))
+
+            Box::new(
+                self.entries
+                    .iter()
+                    .filter(move |e| e.lowercase_name().contains(&filter_lower)),
+            )
         }
     }
 
@@ -190,12 +184,7 @@ impl NavState {
             let filter_lower = self.filter.to_lowercase();
             self.entries
                 .iter()
-                .filter(|e| {
-                    e.name()
-                        .to_string_lossy()
-                        .to_lowercase()
-                        .contains(&filter_lower)
-                })
+                .filter(|e| e.lowercase_name().contains(&filter_lower))
                 .count()
         }
     }
@@ -205,8 +194,22 @@ impl NavState {
     }
 
     pub fn set_filter(&mut self, filter: String) {
+        if self.filter == filter {
+            return;
+        }
+
+        let target_name = self.selected_shown_entry().map(|e| e.name().to_os_string());
+
         self.filter = filter;
-        self.selected = 0;
+
+        let new_idx = if let Some(ref name) = target_name {
+            self.shown_entries()
+                .position(|e| e.name() == name.as_os_str())
+        } else {
+            None
+        };
+
+        self.selected = new_idx.unwrap_or(0);
     }
 
     pub fn clear_filters(&mut self) {

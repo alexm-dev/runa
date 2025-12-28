@@ -1,7 +1,10 @@
-use crate::{
-    ui::widgets::{PopupPosition, PopupSize},
-    utils::parse_color,
-};
+//! Theme configuration options for runa
+//!
+//! This module defines the theme configuration options which are read from the runa.toml
+//! configuration file.
+
+use crate::ui::widgets::{DialogPosition, DialogSize};
+use crate::utils::parse_color;
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
 
@@ -109,27 +112,27 @@ pub struct WidgetTheme {
     #[serde(default)]
     border: ColorPair,
     #[serde(default)]
-    position: Option<PopupPosition>,
+    position: Option<DialogPosition>,
     #[serde(default)]
-    size: Option<PopupSize>,
+    size: Option<DialogSize>,
     #[serde(default)]
-    confirm_size: Option<PopupSize>,
+    confirm_size: Option<DialogSize>,
 }
 
 impl WidgetTheme {
-    pub fn position(&self) -> &Option<PopupPosition> {
+    pub fn position(&self) -> &Option<DialogPosition> {
         &self.position
     }
 
-    pub fn size(&self) -> &Option<PopupSize> {
+    pub fn size(&self) -> &Option<DialogSize> {
         &self.size
     }
 
-    pub fn confirm_size(&self) -> &Option<PopupSize> {
+    pub fn confirm_size(&self) -> &Option<DialogSize> {
         &self.confirm_size
     }
 
-    pub fn confirm_size_or(&self, fallback: PopupSize) -> PopupSize {
+    pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
         self.confirm_size()
             .as_ref()
             .or_else(|| self.size().as_ref())
@@ -167,9 +170,9 @@ impl Default for WidgetTheme {
         WidgetTheme {
             color: ColorPair::default(),
             border: ColorPair::default(),
-            position: Some(PopupPosition::Center),
-            size: Some(PopupSize::Medium),
-            confirm_size: Some(PopupSize::Large),
+            position: Some(DialogPosition::Center),
+            size: Some(DialogSize::Medium),
+            confirm_size: Some(DialogSize::Large),
         }
     }
 }

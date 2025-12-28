@@ -1,3 +1,8 @@
+//! Input configuration options for runa
+//!
+//! This module defines the input configuration options which are read from the runa.toml
+//! configuration file.
+
 use serde::Deserialize;
 use std::vec;
 

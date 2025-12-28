@@ -1,3 +1,6 @@
+//! main.rs
+//! Entry point for runa
+
 use runa_tui::app;
 use runa_tui::cli::{CliAction, handle_args};
 use runa_tui::config::Config;

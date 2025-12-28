@@ -1,7 +1,22 @@
+//! Worker thread for the runa core operations.
+//!
+//! Handles directory reads, previews and file operatios on a background thread.
+//! All results and errors are sent back via channels.
+//! Small changes here can have big effects since this module is tightly integrated with every part
+//! of runa.
+//!
+//! Requests [WorkerTask] are sent from the app/UI to the worker via channels,
+//! and results or errors [WorkerResponse] are sent back the same way. All work
+//! (including filesystem IO and preview logic) is executed on this background thread.
+//!
+//! # Caution:
+//! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
+//! may require corresponding changes throughout state, response-handling code and UI.
+
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read, Seek};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::thread;
@@ -11,7 +26,11 @@ use unicode_width::UnicodeWidthChar;
 
 use crate::file_manager::{FileEntry, browse_dir};
 use crate::formatter::Formatter;
+use crate::utils::get_unused_path;
 
+/// Tasks sent to the worker thread via channel.
+///
+/// Each variant describes a filesystem or a preview operation to perform.
 pub enum WorkerTask {
     LoadDirectory {
         path: PathBuf,
@@ -36,6 +55,7 @@ pub enum WorkerTask {
     },
 }
 
+/// Supported file system operations the worker can perform.
 pub enum FileOperation {
     Delete(Vec<PathBuf>),
     Rename {
@@ -54,6 +74,9 @@ pub enum FileOperation {
     },
 }
 
+/// Responses sent form the worker thread back to the main thread via the channel
+///
+/// Each variant delivers the result or error from a request taks.
 pub enum WorkerResponse {
     DirectoryLoaded {
         path: PathBuf,
@@ -74,6 +97,7 @@ pub enum WorkerResponse {
     Error(String),
 }
 
+/// Starts the worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
 pub fn start_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
@@ -133,17 +157,32 @@ pub fn start_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                             Ok("Items deleted".to_string())
                         }
                         FileOperation::Rename { old, new } => {
-                            focus_target = new.file_name().map(|n| n.to_os_string());
-                            std::fs::rename(old, new)
-                                .map(|_| "Renamed".into())
-                                .map_err(|e| e.to_string())
+                            let target = new;
+
+                            if target.exists() {
+                                Err(format!(
+                                    "Rename failed: '{}' already exists",
+                                    target.file_name().unwrap_or_default().to_string_lossy()
+                                ))
+                            } else {
+                                focus_target = target.file_name().map(|n| n.to_os_string());
+                                std::fs::rename(old, &target)
+                                    .map(|_| "Renamed".into())
+                                    .map_err(|e| e.to_string())
+                            }
                         }
                         FileOperation::Create { path, is_dir } => {
-                            focus_target = path.file_name().map(|n| n.to_os_string());
+                            let target = get_unused_path(&path);
+                            focus_target = target.file_name().map(|n| n.to_os_string());
+
                             let res = if is_dir {
-                                std::fs::create_dir_all(&path)
+                                std::fs::create_dir_all(&target)
                             } else {
-                                std::fs::File::create(&path).map(|_| ())
+                                std::fs::OpenOptions::new()
+                                    .write(true)
+                                    .create_new(true)
+                                    .open(&target)
+                                    .map(|_| ())
                             };
                             res.map(|_| "Created".into()).map_err(|e| e.to_string())
                         }
@@ -156,11 +195,18 @@ pub fn start_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                             focus_target = focus;
                             for s in src {
                                 if let Some(name) = s.file_name() {
-                                    let target = dest.join(name);
+                                    let target = get_unused_path(&dest.join(name));
+
+                                    if let Some(ref ft) = focus_target
+                                        && ft == name
+                                    {
+                                        focus_target = target.file_name().map(|n| n.to_os_string());
+                                    }
+
                                     let _ = if cut {
-                                        std::fs::rename(s, target)
+                                        std::fs::rename(s, &target)
                                     } else {
-                                        std::fs::copy(s, target).map(|_| ())
+                                        std::fs::copy(s, &target).map(|_| ())
                                     };
                                 }
                             }
@@ -224,6 +270,7 @@ fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
     out
 }
 
+/// Loads a fixed-width preview of a directory entries
 fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     match browse_dir(path) {
         Ok(entries) => {
@@ -271,8 +318,20 @@ fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
     }
 }
 
+/// Loads a preview for any path (directory or file), returning an error or a padded lines for
+/// display.
+/// large binaries/unreadable and unsupported files are replaced with a notice.
 fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
-    let max_lines = std::cmp::max(max_lines, 3);
+    // Minimum number of lines shown in any preview
+    const MIN_PREVIEW_LINES: usize = 3;
+    // Maximum file size allowed for preview (10mb)
+    const MAX_PREVIEW_SIZE: u64 = 10 * 1024 * 1024;
+    // Number of bytes to peek from file start for header checks (eg. PNG, ZIP, etc..)
+    const HEADER_PEEK_BYTES: usize = 8;
+    // Bytes to peek for null bytes in binary detections
+    const BINARY_PEEK_BYTES: usize = 1024;
+
+    let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
     // Metadata check
     let Ok(meta) = std::fs::metadata(path) else {
@@ -287,7 +346,6 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
     }
 
     // Size Check
-    const MAX_PREVIEW_SIZE: u64 = 10 * 1024 * 1024;
     if meta.len() > MAX_PREVIEW_SIZE {
         return vec![sanitize_to_exact_width(
             "[File too large for preview]",
@@ -302,8 +360,18 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
     // File Read and binary Check
     match File::open(path) {
         Ok(mut file) => {
-            // First, peek for null bytes to detect binary files
-            let mut buffer = [0u8; 1024];
+            // Peek for the first 8 bytes to handle edge cases
+            let mut header = [0u8; HEADER_PEEK_BYTES];
+            let read_bytes = file.read(&mut header).unwrap_or(0);
+            if read_bytes >= 5 && &header[..5] == b"%PDF-" {
+                return vec![sanitize_to_exact_width(
+                    "[Binary file - preview hidden]",
+                    pane_width,
+                )];
+            }
+
+            // Peek for null bytes to detect binary files
+            let mut buffer = [0u8; BINARY_PEEK_BYTES];
             let n = file.read(&mut buffer).unwrap_or(0);
             if buffer[..n].contains(&0) {
                 return vec![sanitize_to_exact_width(
@@ -332,9 +400,18 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
 
             preview_lines
         }
-        Err(e) => vec![sanitize_to_exact_width(
-            &format!("[Error reading file: {}]", e),
-            pane_width,
-        )],
+        Err(e) => {
+            let msg = match e.kind() {
+                ErrorKind::PermissionDenied => "[Error: Permission Denied]",
+                ErrorKind::NotFound => "[Error: File Not Found]",
+                _ => {
+                    return vec![sanitize_to_exact_width(
+                        &format!("[Error reading file: {}]", e),
+                        pane_width,
+                    )];
+                }
+            };
+            vec![sanitize_to_exact_width(msg, pane_width)]
+        }
     }
 }

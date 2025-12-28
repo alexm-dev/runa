@@ -1,3 +1,10 @@
+//! Command-line argument parsing and help for runa.
+//!
+//! This module handles all CLI flag parsing used for config initialization and help.
+//! It recognizes args/flags such: --help, --init, --init-full and --config-help
+//!
+//! When invoked with no args/flags (rn), runa simply launches the TUI
+
 use crate::config::Config;
 
 pub enum CliAction {
@@ -102,11 +109,11 @@ runa - Full Configuration Guide (runa.toml)
 [theme.preview]           Preview pane text       fg (str), bg (str)
 [theme.path]              Path bar colors         fg (str), bg (str)
 [theme.underline]         Underline colors        fg (str), bg (str)
-[theme.widget]            Popup/widget settings:
+[theme.widget]            Dialog/widget settings:
   position                (str/list/table)  "center", "top_left", "bottom_right", [38, 32], { x = 25, y = 60 }
   size                    (str/list/table)  "small", "medium", "large", [38, 32], { w = 38, h = 32 }
-[theme.widget.color]      fg/bg for popups/widgets  fg (str), bg (str)
-[theme.widget.border]     fg/bg for popup borders   fg (str), bg (str)
+[theme.widget.color]      fg/bg for dialog/widgets  fg (str), bg (str)
+[theme.widget.border]     fg/bg for dialog borders   fg (str), bg (str)
 
 
 [editor]

@@ -92,6 +92,8 @@ Future releases will focus on expanding functionality while keeping it fast and 
 
 - [ ] Image Previews: Support for Sixel/Kitty graphics protocols.  
 
+- [ ] Syntax Highlighting: Treesitter integration for the preview pane.  
+
 ### Completed
 
 - [x] File Operations: Copy, move, delete, and rename from within the UI.  ( Completed in 0.3.0 )  

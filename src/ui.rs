@@ -1,3 +1,16 @@
+//! Terminal User Interface rendering logic.
+//!
+//! This module handles all layout, pane arrangement, and rendering for the main file manager UI.
+//! It coordinates drawing of the parent, main, and preview panes, as well as input dialogs and the status bar.
+//!
+//! UI configuration is driven by the applications display/theme settings and adapts to different layouts: unified, split, or normal views.
+//!
+//! Functions:
+//! - render: Main entry point for rendering the entire UI to a frame.
+//! - layout_chunks: Utility for calculating pane positions and widths based on config.
+//!
+//! See submodules [panes] and [widgets] for detailed drawing functions.
+
 pub mod panes;
 pub mod widgets;
 
@@ -8,7 +21,7 @@ use crate::{
         actions::{ActionMode, InputMode},
     },
     ui::panes::{PaneStyles, PreviewOptions},
-    ui::widgets::{draw_input_popup, draw_status_line},
+    ui::widgets::{draw_input_dialog, draw_status_line},
 };
 use ratatui::{
     Frame,
@@ -17,6 +30,11 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
+/// Render function which renders the entire terminal UI for runa on each frame.
+/// Handles layout, pane rendering, borders, headers and coordinates all widgets.
+/// # Params:
+/// - frame: the drawing frame from ratatui::frame
+/// - app: runa's shared state, mutated as needed to display metrics
 pub fn render(frame: &mut Frame, app: &mut AppState) {
     let mut root_area = frame.area();
     {
@@ -225,9 +243,13 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
     draw_status_line(frame, app);
-    draw_input_popup(frame, app, accent_style);
+    draw_input_dialog(frame, app, accent_style);
 }
 
+/// Returns the rectangular areas for all active panes, given the current configuration
+///
+/// The result is used for positioning file navigation, parent and preview panes in the layout.
+/// Handles separators and dynamic ratios.
 pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
     let cfg = app.config().display();
     let mut constraints = Vec::new();

@@ -1,3 +1,13 @@
+//! runa TUI widget module
+//!
+//! Provides reusable UI components for widgets, panes, separator lines, and status lines,
+//! as well as helpers to correctly render and position the input fields of these widgets.
+//!
+//! Module contains:
+//! - Rendering of input dialogs/widgets and confirm dialogs.
+//! - General pane blocks, separators and the status line.
+//! - Configurable dialog/widget style, position and style
+
 use crate::app::AppState;
 use crate::ui::{ActionMode, InputMode};
 use ratatui::{
@@ -12,13 +22,20 @@ use serde::{Deserialize, Deserializer};
 use std::time::Instant;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+/// Input keys used to input events.
+///
+/// Used to determine over character keys and named keys.
 pub enum InputKey {
     Char(char),
     Name(&'static str),
 }
 
+/// Specifies possible dialog positions within the TUI frame.
+/// Also possible to customize the position via the runa.toml
+///
+/// Is used to determine where dialog/widgets such as dialogs and input boxes are rendered.
 #[derive(Clone, Copy, Debug)]
-pub enum PopupPosition {
+pub enum DialogPosition {
     Center,
     Top,
     Bottom,
@@ -31,13 +48,13 @@ pub enum PopupPosition {
     Custom(u16, u16),
 }
 
-// Deserialize so that the runa.toml custom position and size can be made simpler instead of just
-// standard serde [derive(Deserialize)]
-// position = "top_left"
-// position = "bottomright"
-// position = [25, 60]
-// position = { x = 42, y = 80 }
-impl<'de> Deserialize<'de> for PopupPosition {
+/// Deserialize so that the runa.toml custom position and size can be made simpler instead of just
+/// standard serde [derive(Deserialize)]
+/// position = "top_left"
+/// position = "bottomright"
+/// position = [25, 60]
+/// position = { x = 42, y = 80 }
+impl<'de> Deserialize<'de> for DialogPosition {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -51,50 +68,56 @@ impl<'de> Deserialize<'de> for PopupPosition {
         }
 
         match Helper::deserialize(deserializer)? {
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("center") => Ok(PopupPosition::Center),
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("top") => Ok(PopupPosition::Top),
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("bottom") => Ok(PopupPosition::Bottom),
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("left") => Ok(PopupPosition::Left),
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("right") => Ok(PopupPosition::Right),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("center") => Ok(DialogPosition::Center),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("top") => Ok(DialogPosition::Top),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("bottom") => Ok(DialogPosition::Bottom),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("left") => Ok(DialogPosition::Left),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("right") => Ok(DialogPosition::Right),
             Helper::Str(ref s)
                 if s.eq_ignore_ascii_case("top_left") || s.eq_ignore_ascii_case("topleft") =>
             {
-                Ok(PopupPosition::TopLeft)
+                Ok(DialogPosition::TopLeft)
             }
             Helper::Str(ref s)
                 if s.eq_ignore_ascii_case("top_right") || s.eq_ignore_ascii_case("topright") =>
             {
-                Ok(PopupPosition::TopRight)
+                Ok(DialogPosition::TopRight)
             }
             Helper::Str(ref s)
                 if s.eq_ignore_ascii_case("bottom_left")
                     || s.eq_ignore_ascii_case("bottomleft") =>
             {
-                Ok(PopupPosition::BottomLeft)
+                Ok(DialogPosition::BottomLeft)
             }
             Helper::Str(ref s)
                 if s.eq_ignore_ascii_case("bottom_right")
                     || s.eq_ignore_ascii_case("bottomright") =>
             {
-                Ok(PopupPosition::BottomRight)
+                Ok(DialogPosition::BottomRight)
             }
-            Helper::Str(s) => Err(D::Error::custom(format!("invalid PopupPosition: '{}'", s))),
-            Helper::Arr([x, y]) => Ok(PopupPosition::Custom(x, y)),
-            Helper::XY { x, y } => Ok(PopupPosition::Custom(x, y)),
+            Helper::Str(s) => Err(D::Error::custom(format!("invalid DialogPosition: '{}'", s))),
+            Helper::Arr([x, y]) => Ok(DialogPosition::Custom(x, y)),
+            Helper::XY { x, y } => Ok(DialogPosition::Custom(x, y)),
         }
     }
 }
 
-/// Preset popup sizes.
+/// Preset for all dialogs/widgets sizes as well as a customized size via the runa.toml
 #[derive(Clone, Copy, Debug)]
-pub enum PopupSize {
+pub enum DialogSize {
     Small,
     Medium,
     Large,
     Custom(u16, u16),
 }
 
-impl<'de> Deserialize<'de> for PopupSize {
+/// Deserializer so that the runa.toml configuration can be made simpler to configure the size of
+/// dialogs/widgets
+///
+/// size = "small"
+/// size = [10, 10]
+/// size = { w = 10, h = 20 }
+impl<'de> Deserialize<'de> for DialogSize {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -108,28 +131,34 @@ impl<'de> Deserialize<'de> for PopupSize {
         }
 
         match Helper::deserialize(deserializer)? {
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("small") => Ok(PopupSize::Small),
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("medium") => Ok(PopupSize::Medium),
-            Helper::Str(ref s) if s.eq_ignore_ascii_case("large") => Ok(PopupSize::Large),
-            Helper::Str(s) => Err(D::Error::custom(format!("invalid PopupSize: '{}'", s))),
-            Helper::Arr([w, h]) => Ok(PopupSize::Custom(w, h)),
-            Helper::Obj { w, h } => Ok(PopupSize::Custom(w, h)),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("small") => Ok(DialogSize::Small),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("medium") => Ok(DialogSize::Medium),
+            Helper::Str(ref s) if s.eq_ignore_ascii_case("large") => Ok(DialogSize::Large),
+            Helper::Str(s) => Err(D::Error::custom(format!("invalid DialogSize: '{}'", s))),
+            Helper::Arr([w, h]) => Ok(DialogSize::Custom(w, h)),
+            Helper::Obj { w, h } => Ok(DialogSize::Custom(w, h)),
         }
     }
 }
 
-impl PopupSize {
+impl DialogSize {
+    /// preset for dialog size percentages
+    ///
+    /// Returns the (width, height) -percentages of the dialog
     pub fn percentages(&self) -> (u16, u16) {
         match self {
-            PopupSize::Small => (24, 7),
-            PopupSize::Medium => (26, 14),
-            PopupSize::Large => (32, 40),
-            PopupSize::Custom(w, h) => (*w, *h),
+            DialogSize::Small => (24, 7),
+            DialogSize::Medium => (26, 14),
+            DialogSize::Large => (32, 40),
+            DialogSize::Custom(w, h) => (*w, *h),
         }
     }
 }
 
-pub struct PopupStyle {
+/// Struct to hold the dialog style.
+///
+/// Includes the dialog border, border_style, the background/foreground and the title.
+pub struct DialogStyle {
     pub border: Borders,
     pub border_style: Style,
     pub bg: Style,
@@ -137,7 +166,7 @@ pub struct PopupStyle {
     pub title: Option<Span<'static>>,
 }
 
-impl Default for PopupStyle {
+impl Default for DialogStyle {
     fn default() -> Self {
         Self {
             border: Borders::ALL,
@@ -149,67 +178,70 @@ impl Default for PopupStyle {
     }
 }
 
-pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
+/// Function to correctly calculate the area of the dialog
+///
+/// Returns the Rect of the calculated are of the dialog
+pub fn dialog_area(area: Rect, size: DialogSize, pos: DialogPosition) -> Rect {
     let (w_pct, h_pct) = size.percentages();
     let w = (area.width * w_pct / 100).max(1).min(area.width);
     let h = (area.height * h_pct / 100).max(1).min(area.height);
 
     match pos {
-        PopupPosition::Center => Rect {
+        DialogPosition::Center => Rect {
             x: area.x + (area.width - w) / 2,
             y: area.y + (area.height - h) / 2,
             width: w,
             height: h,
         },
-        PopupPosition::Top => Rect {
+        DialogPosition::Top => Rect {
             x: area.x + (area.width - w) / 2,
             y: area.y,
             width: w,
             height: h,
         },
-        PopupPosition::Bottom => Rect {
+        DialogPosition::Bottom => Rect {
             x: area.x + (area.width - w) / 2,
             y: area.y + area.height - h,
             width: w,
             height: h,
         },
-        PopupPosition::Left => Rect {
+        DialogPosition::Left => Rect {
             x: area.x,
             y: area.y + (area.height - h) / 2,
             width: w,
             height: h,
         },
-        PopupPosition::Right => Rect {
+        DialogPosition::Right => Rect {
             x: area.x + area.width - w,
             y: area.y + (area.height - h) / 2,
             width: w,
             height: h,
         },
-        PopupPosition::TopLeft => Rect {
+        DialogPosition::TopLeft => Rect {
             x: area.x,
             y: area.y,
             width: w,
             height: h,
         },
-        PopupPosition::TopRight => Rect {
+        DialogPosition::TopRight => Rect {
             x: area.x + area.width - w,
             y: area.y,
             width: w,
             height: h,
         },
-        PopupPosition::BottomLeft => Rect {
+        DialogPosition::BottomLeft => Rect {
             x: area.x,
             y: area.y + area.height - h,
             width: w,
             height: h,
         },
-        PopupPosition::BottomRight => Rect {
+        DialogPosition::BottomRight => Rect {
             x: area.x + area.width - w,
             y: area.y + area.height - h,
             width: w,
             height: h,
         },
-        PopupPosition::Custom(xp, yp) => {
+        DialogPosition::Custom(xp, yp) => {
             let x = area.x + ((area.width - w) * xp / 100).min(area.width - w);
             let y = area.y + ((area.height - h) * yp / 100).min(area.height - h);
             Rect {
@@ -222,18 +254,20 @@ pub fn popup_area(area: Rect, size: PopupSize, pos: PopupPosition) -> Rect {
     }
 }
 
-pub fn draw_popup(
+/// Draws the dialog widgets
+/// Takes the frame area as a rect, sets the position of the dialog and the overall style.
+pub fn draw_dialog(
     frame: &mut Frame,
     area: Rect,
-    pos: PopupPosition,
-    size: PopupSize,
-    style: &PopupStyle,
+    pos: DialogPosition,
+    size: DialogSize,
+    style: &DialogStyle,
     content: impl Into<String>,
     alignment: Option<Alignment>,
 ) {
-    let popup = popup_area(area, size, pos);
+    let dialog = dialog_area(area, size, pos);
 
-    frame.render_widget(Clear, popup);
+    frame.render_widget(Clear, dialog);
 
     let mut block = Block::default()
         .borders(style.border)
@@ -247,9 +281,10 @@ pub fn draw_popup(
     let para = Paragraph::new(content.into())
         .block(block)
         .alignment(alignment.unwrap_or(Alignment::Left));
-    frame.render_widget(para, popup);
+    frame.render_widget(para, dialog);
 }
 
+/// Getter for the overall pane block,
 pub fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
     let mut block = Block::default();
     if app.config().display().is_split() {
@@ -263,6 +298,7 @@ pub fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
     block
 }
 
+/// Draws the seperator line when enabled inside runa.toml
 pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
     frame.render_widget(
         Block::default().borders(Borders::LEFT).border_style(style),
@@ -270,12 +306,15 @@ pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
     );
 }
 
-pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) {
+/// Draws the input dialog for all types of actions with input fields
+/// Either for ConfirmDelete or for anything else that requires input.
+/// For other than ConfirmDelete, calculates the exact input field.
+pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
         let widget = app.config().theme().widget();
-        let posititon = widget.position().unwrap_or(PopupPosition::Center);
-        let size = widget.size().unwrap_or(PopupSize::Small);
-        let confirm_size = widget.confirm_size_or(PopupSize::Large);
+        let posititon = widget.position().unwrap_or(DialogPosition::Center);
+        let size = widget.size().unwrap_or(DialogSize::Small);
+        let confirm_size = widget.confirm_size_or(DialogSize::Large);
 
         if *mode == InputMode::ConfirmDelete {
             let action_targets = app.nav().get_action_targets();
@@ -303,24 +342,24 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                 String::new()
             };
 
-            let popup_style = PopupStyle {
+            let dialog_style = DialogStyle {
                 border: Borders::ALL,
                 border_style: widget.border_or(Style::default().fg(Color::Red)),
                 bg: widget.bg_or(Style::default().bg(Color::Reset)),
                 fg: widget.fg_or(Style::default().fg(Color::Reset)),
                 title: Some(" Confirm Delete ".into()),
             };
-            draw_popup(
+            draw_dialog(
                 frame,
                 frame.area(),
                 posititon,
                 confirm_size,
-                &popup_style,
+                &dialog_style,
                 format!("{prompt}{preview}"),
                 Some(Alignment::Left),
             );
         } else {
-            let popup_style = PopupStyle {
+            let dialog_style = DialogStyle {
                 border: Borders::ALL,
                 border_style: widget.border_or(accent_style),
                 bg: widget.bg_or(Style::default().bg(Color::Reset)),
@@ -330,41 +369,33 @@ pub fn draw_input_popup(frame: &mut Frame, app: &AppState, accent_style: Style) 
                     widget.fg_or(Style::default().fg(Color::Reset)),
                 )),
             };
-            let input_text = app.actions().input_buffer();
-            let popup_area = popup_area(frame.area(), size, posititon);
-            let visible_width = popup_area.width.saturating_sub(2) as usize;
-            let input_width = input_text.width();
-            let display_input = if input_width > visible_width {
-                let mut current_w = 0;
-                let mut start = input_text.len();
-                for (idx, ch) in input_text.char_indices().rev() {
-                    current_w += ch.width().unwrap_or(0);
-                    if current_w > visible_width {
-                        start = idx + ch.len_utf8();
-                        break;
-                    }
-                }
-                &input_text[start..]
-            } else {
-                input_text
-            };
 
-            draw_popup(
+            let input_text = app.actions().input_buffer();
+            let cursor_pos = app.actions().input_cursor_pos();
+            let dialog_area = dialog_area(frame.area(), size, posititon);
+            let visible_width = dialog_area.width.saturating_sub(2) as usize;
+
+            let (display_input, cursor_offset) =
+                input_field_view(input_text, cursor_pos, visible_width);
+
+            draw_dialog(
                 frame,
                 frame.area(),
                 posititon,
                 size,
-                &popup_style,
+                &dialog_style,
                 display_input,
                 Some(Alignment::Left),
             );
 
-            let cursor_offset = display_input.width() as u16;
-            frame.set_cursor_position((popup_area.x + 1 + cursor_offset, popup_area.y + 1));
+            frame
+                .set_cursor_position((dialog_area.x + 1 + cursor_offset as u16, dialog_area.y + 1));
         }
     }
 }
 
+/// Draw the status line at the top right
+/// Used for indication of number of copied/yanked files and the current applied filter
 pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
     let area = frame.area();
 
@@ -395,5 +426,38 @@ pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
         let line = Line::from(Span::styled(msg, Style::default().fg(Color::Gray)));
         let paragraph = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
         frame.render_widget(paragraph, rect);
+    }
+}
+
+/// Helper function to calculate cursor offset for cursor moving
+/// Handles horizontal truncation, variable width with unicode_width and clamps cursor to buffer.
+/// Is used for draw widgets/dialogs with input fields.
+fn input_field_view(input_text: &str, cursor_pos: usize, visible_width: usize) -> (&str, usize) {
+    let cursor_pos = cursor_pos.min(input_text.len());
+    let input_width = input_text.width();
+    if input_width <= visible_width {
+        let cursor_offset =
+            unicode_width::UnicodeWidthStr::width(&input_text[..cursor_pos.min(input_text.len())]);
+        (input_text, cursor_offset)
+    } else {
+        let mut current_w = 0;
+        let mut start = input_text.len();
+        for (idx, ch) in input_text.char_indices().rev() {
+            current_w += ch.width().unwrap_or(0);
+            if current_w > visible_width {
+                start = idx + ch.len_utf8();
+                break;
+            }
+        }
+
+        let cursor_offset = if cursor_pos < start {
+            0
+        } else {
+            unicode_width::UnicodeWidthStr::width(
+                &input_text[start..cursor_pos.min(input_text.len())],
+            )
+        };
+
+        (&input_text[start..], cursor_offset)
     }
 }

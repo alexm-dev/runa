@@ -1,6 +1,11 @@
+//! File and directory browsing logic for runa.
+//!
+//! Provides the FileEntry struct which is used throughout runa.
+
 use std::ffi::OsString;
 use std::fs;
 
+/// Represents a single entry in a directory listing
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
@@ -14,6 +19,7 @@ pub struct FileEntry {
 
 impl FileEntry {
     // Getters / accessors
+
     pub fn name(&self) -> &OsString {
         &self.name
     }
@@ -43,11 +49,13 @@ impl FileEntry {
     }
 
     // Setters
+
     pub fn set_display_name(&mut self, new_name: String) {
         self.display_name = new_name;
     }
 }
 
+/// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
 pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
     let mut entries = Vec::with_capacity(256);
     for entry in fs::read_dir(path)? {
