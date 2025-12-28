@@ -14,6 +14,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
+use std::collections::HashSet;
 
 pub struct PaneStyles {
     pub item: Style,
@@ -69,61 +70,80 @@ pub struct PreviewOptions {
 pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let show_marker = app.config().display().dir_marker();
     let selected_idx = app.visible_selected();
+    let markers = app.nav().markers();
     let marker_theme = app.config().theme().marker();
     let marker_icon = marker_theme.icon();
     let marker_pad = " ".repeat(unicode_width::UnicodeWidthStr::width(marker_icon));
     let entry_padding = context.entry_padding as usize;
+    let current_dir = app.nav().current_dir();
 
-    let mut items: Vec<ListItem> = app
-        .nav()
-        .filtered_entries()
-        .iter()
-        .enumerate()
-        .map(|(i, e)| {
-            let is_selected = Some(i) == selected_idx;
-            let path = app.nav().current_dir().join(e.name());
-            let is_marked = app.nav().markers().contains(&path);
+    let padding_str = if entry_padding > 1 {
+        " ".repeat(entry_padding - 1)
+    } else {
+        String::new()
+    };
 
-            let name_str = if e.is_dir() && show_marker {
-                e.display_name()
-            } else {
-                e.name_str()
-            };
+    let local_markers: HashSet<&std::ffi::OsStr> = if markers.is_empty() {
+        HashSet::new()
+    } else {
+        markers
+            .iter()
+            .filter(|path| path.parent() == Some(current_dir))
+            .map(|path| path.file_name().unwrap_or_default())
+            .collect()
+    };
 
-            let entry_style = context.styles.get_style(e.is_dir(), is_selected);
-            let mut spans = Vec::with_capacity(4);
+    if !app.has_visible_entries() {
+        let style = context.styles.item;
+        let line = Line::from(vec![
+            Span::raw(context.padding_str),
+            Span::styled("[Empty]", style),
+        ]);
 
-            if entry_padding == 0 {
-                spans.push(Span::raw(name_str));
-            } else {
-                let mut marker_style = marker_theme.color().as_style();
-                if is_selected {
-                    marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
-                }
+        frame.render_widget(
+            Paragraph::new(line).block(context.block.border_style(context.accent_style)),
+            context.area,
+        );
+        return;
+    }
 
-                if is_marked {
-                    spans.push(Span::styled(marker_icon, marker_style));
-                } else {
-                    spans.push(Span::styled(&marker_pad, marker_style));
-                }
+    let items = app.nav().shown_entries().enumerate().map(|(idx, entry)| {
+        let is_selected = Some(idx) == selected_idx;
+        let is_marked = local_markers.contains(entry.name().as_os_str());
 
-                if entry_padding > 1 {
-                    spans.push(Span::raw(" ".repeat(entry_padding - 1)));
-                }
-                // File name
-                spans.push(Span::raw(name_str));
+        let name_str = if entry.is_dir() && show_marker {
+            entry.display_name()
+        } else {
+            entry.name_str()
+        };
+
+        let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
+        let mut spans = Vec::with_capacity(4);
+
+        if entry_padding == 0 {
+            spans.push(Span::raw(name_str));
+        } else {
+            let mut marker_style = marker_theme.color().as_style();
+            if is_selected {
+                marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
             }
 
-            let line = Line::from(spans);
-            ListItem::new(line).style(entry_style)
-        })
-        .collect();
+            if is_marked {
+                spans.push(Span::styled(marker_icon, marker_style));
+            } else {
+                spans.push(Span::styled(&marker_pad, marker_style));
+            }
 
-    if items.is_empty() {
-        let style = context.styles.item;
-        let line = Line::from(vec![Span::raw(context.padding_str), Span::raw("[Empty]")]);
-        items.push(ListItem::new(line).style(style));
-    }
+            if entry_padding > 1 {
+                spans.push(Span::raw(&padding_str));
+            }
+            // File name
+            spans.push(Span::raw(name_str));
+        }
+
+        let line = Line::from(spans);
+        ListItem::new(line).style(entry_style)
+    });
 
     let mut state = ratatui::widgets::ListState::default();
     if app.has_visible_entries() {
@@ -157,7 +177,7 @@ pub fn draw_preview(
         }
 
         PreviewData::File(lines) => {
-            let text = lines.join("\n");
+            let text: Vec<Line> = lines.iter().map(|s| Line::from(s.as_str())).collect();
 
             frame.render_widget(
                 Paragraph::new(text).block(context.block.border_style(context.accent_style)),
@@ -184,44 +204,33 @@ pub fn draw_preview(
                 return;
             }
 
-            let items: Vec<ListItem> = entries
-                .iter()
-                .enumerate()
-                .map(|(i, e)| {
-                    let is_selected = Some(i) == selected_idx;
-                    let mut style = context.styles.get_style(e.is_dir(), is_selected);
+            let items = entries.iter().enumerate().map(|(idx, entry)| {
+                let is_selected = Some(idx) == selected_idx;
+                let mut style = context.styles.get_style(entry.is_dir(), is_selected);
 
-                    if !is_selected || !opts.use_underline {
-                        let line = Line::from(vec![
-                            Span::styled(context.padding_str, style),
-                            Span::styled(e.display_name(), style),
-                        ]);
-                        return ListItem::new(line);
-                    }
-
+                if is_selected && opts.use_underline {
                     style = style.add_modifier(Modifier::UNDERLINED);
-
                     if let Some(color) = opts.underline_style.fg {
                         style = style.underline_color(color);
-
                         if opts.underline_match_text {
                             style = style.fg(color);
-
-                            if let Some(bg) = opts.underline_style.bg.filter(|&c| c != Color::Reset)
-                            {
-                                style = style.bg(bg);
-                            }
                         }
                     }
+                    if let Some(bg) = opts
+                        .underline_style
+                        .bg
+                        .filter(|&color| color != Color::Reset)
+                    {
+                        style = style.bg(bg);
+                    }
+                }
 
-                    let line = Line::from(vec![
-                        Span::raw(context.padding_str),
-                        Span::raw(e.display_name()),
-                    ]);
-
-                    ListItem::new(line).style(style)
-                })
-                .collect();
+                let line = Line::from(vec![
+                    Span::raw(context.padding_str),
+                    Span::raw(entry.display_name()),
+                ]);
+                ListItem::new(line).style(style)
+            });
 
             let mut state = ListState::default();
             state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
@@ -246,24 +255,24 @@ pub fn draw_parent(
     selected_idx: Option<usize>,
 ) {
     if entries.is_empty() {
-        frame.render_widget(Paragraph::new("").block(context.block), context.area);
+        // No extra args: if it's empty, we assume/render root indicator
+        let line = Line::from(vec![
+            Span::raw(context.padding_str),
+            Span::styled("/", context.styles.dir),
+        ]);
+        frame.render_widget(Paragraph::new(line).block(context.block), context.area);
         return;
     }
 
-    let items: Vec<ListItem> = entries
-        .iter()
-        .enumerate()
-        .map(|(i, e)| {
-            let is_selected = Some(i) == selected_idx;
-            // Use metadata from FileEntry to apply correct coloring
-            let style = context.styles.get_style(e.is_dir(), is_selected);
-            let line = Line::from(vec![
-                Span::raw(context.padding_str),
-                Span::raw(e.display_name()),
-            ]);
-            ListItem::new(line).style(style)
-        })
-        .collect();
+    let items = entries.iter().enumerate().map(|(idx, entry)| {
+        let is_selected = Some(idx) == selected_idx;
+        let style = context.styles.get_style(entry.is_dir(), is_selected);
+        let line = Line::from(vec![
+            Span::raw(context.padding_str),
+            Span::raw(entry.display_name()),
+        ]);
+        ListItem::new(line).style(style)
+    });
 
     let mut state = ListState::default();
     state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
