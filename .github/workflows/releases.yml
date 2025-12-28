@@ -132,27 +132,3 @@ jobs:
             gh release create "$TAG" --title "runa $TAG" --notes-file release_notes.md
           fi
           gh release upload "$TAG" dist/* --clobber
-
-  publish_aur:
-    name: Publish to AUR
-    needs: checksums_and_archives
-    runs-on: ubuntu-latest
-    if: github.actor == 'alexm-dev'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Generate .SRCINFO
-        run: |
-          docker run --rm -v ".:/pkg" -w /pkg archlinux:latest bash -c "
-            pacman -Sy --noconfirm pacman-contrib &&
-            makepkg --printsrcinfo > .SRCINFO"
-
-      - name: Publish to AUR
-        uses: ksxpc/github-actions-deploy-aur@v3
-        with:
-          pkgname: runa
-          pkgbuild: ./PKGBUILD
-          commit_username: runa
-          commit_email: runa-dev@proton.me
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: "Update to ${{ github.event.inputs.tag }}"

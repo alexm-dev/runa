@@ -1,0 +1,31 @@
+name: Push to AUR
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version to push (e.g., v0.3.4)'
+        required: true
+
+jobs:
+  publish_aur:
+    runs-on: ubuntu-latest
+    if: github.actor == 'alexm-dev'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate .SRCINFO
+        run: |
+          docker run --rm -v ".:/pkg" -w /pkg archlinux:latest bash -c "
+            pacman -Sy --noconfirm pacman-contrib &&
+            makepkg --printsrcinfo > .SRCINFO"
+
+      - name: Publish to AUR
+        uses: ksxpc/github-actions-deploy-aur@v3
+        with:
+          pkgname: runa
+          pkgbuild: ./PKGBUILD
+          commit_username: runa
+          commit_email: runa-dev@proton.me
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "Update to ${{ github.event.inputs.tag }}"
