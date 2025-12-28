@@ -28,7 +28,7 @@ For a detailed list of changes and release notes, see [CHANGELOG.md](./CHANGELOG
 
 ## Installation
 
-### Installation via cargo:
+### Cargo:
 
 ```bash
 cargo install runa-tui
@@ -67,8 +67,11 @@ cargo build --release
 
 ### Usage
 
-Run runa with:
-`rn`
+Run runa with:  
+
+```bash
+rn
+```
 
 ## Configuration
 
