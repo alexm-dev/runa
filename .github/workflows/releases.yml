@@ -60,17 +60,17 @@ jobs:
         run: |
           mkdir -p dist
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cp target/${{ matrix.target }}/release/rn.exe dist/rn-${{ matrix.platform }}.exe
+            cp target/${{ matrix.target }}/release/rn.exe dist/rn.exe
           else
-            cp target/${{ matrix.target }}/release/rn dist/rn-${{ matrix.platform }}
-            chmod +x dist/rn-${{ matrix.platform }}
+            cp target/${{ matrix.target }}/release/rn dist/rn
+            chmod +x dist/rn
           fi
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.platform }}
-          path: dist/rn-*
+          path: dist/rn*
 
   checksums_and_archives:
     if: github.actor == 'alexm-dev'
@@ -82,25 +82,25 @@ jobs:
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
-          path: dist
-          merge-multiple: true
+          path: artifacts
 
       - name: Create archives
         run: |
-          cd dist
-          for f in rn-*; do
-            if [[ $f == *.exe ]]; then
-              zip "${f%.exe}.zip" "$f"
+          mkdir dist
+          for dir in artifacts/bin-*; do
+            platform=${dir#artifacts/bin-}
+            if [ -f "$dir/rn.exe" ]; then
+              zip -j "dist/rn-$platform.zip" "$dir/rn.exe"
             else
-              tar -czvf "$f.tar.gz" "$f"
-              zip "$f.zip" "$f"
+              tar -czvf "dist/rn-$platform.tar.gz" -C "$dir" rn
+              zip -j "dist/rn-$platform.zip" "$dir/rn"
             fi
           done
 
       - name: Calculate SHA256SUMS
         run: |
           cd dist
-          sha256sum rn-* > SHA256SUMS.txt
+          sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - name: Extract Changelog Section
@@ -108,16 +108,15 @@ jobs:
         shell: bash
         run: |
           VERSION=$(echo "${{ github.event.inputs.tag }}" | sed 's/^v//')
-          # This extracts only the section for your specific version
-          # Stops at '---' or the next version header
           awk -v ver="[$VERSION]" '
-            $0 ~ "^#+ " ver { p=1; next }
-            $0 ~ "^---" || $0 ~ "^#+ \\[" { p=0 }
+            index($0, ver) && /^#+/ { p=1; next }
+            /^---/ || (/^#+/ && p) { p=0 }
             p { print }
           ' CHANGELOG.md > release_notes.md
 
           if [ ! -s release_notes.md ]; then
-            echo "No specific notes found in CHANGELOG.md for version $VERSION" > release_notes.md
+            echo "Error: Could not find section for $VERSION in CHANGELOG.md"
+            exit 1
           fi
 
       - name: Create or Update Release and Upload
@@ -126,18 +125,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag }}
         run: |
-          # Handle Release Creation/Update
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists. Syncing notes..."
             gh release edit "$TAG" --notes-file release_notes.md
           else
-            echo "Creating new release $TAG..."
-            gh release create "$TAG" \
-              --title "Release $TAG" \
-              --notes-file release_notes.md \
-              --draft=false
+            gh release create "$TAG" --title "Release $TAG" --notes-file release_notes.md --draft=false
           fi
-
-          # Upload all assets (binaries, zips, and checksums)
-          # --clobber ensures it overwrites existing files if you rerun the job
           gh release upload "$TAG" dist/* --clobber
