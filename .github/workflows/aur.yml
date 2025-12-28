@@ -27,10 +27,10 @@ jobs:
             echo 'builduser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
             chown -R builduser:builduser /pkg
             sudo -u builduser makepkg --printsrcinfo > .SRCINFO
-            chown -R root:root /pkg
+            chown -R $(id -u):$(id -g) /pkg
           "
 
-      - name: Setup SSH key for AUR
+      - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
@@ -42,15 +42,16 @@ jobs:
           mkdir -p ~/.gnupg
           echo "$CI_GPG_KEY" | gpg --batch --import
           echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          chmod 700 ~/.gnupg
 
       - name: Configure Git for signing
         run: |
-          git config user.name "alexm-dev"
-          git config user.email "runa-dev@proton.me"
-          git config commit.gpgsign true
-          git config gpg.program gpg
+          git config --global user.name "Runa CI"
+          git config --global user.email "runa-ci@proton.me"
+          git config --global commit.gpgsign true
+          git config --global gpg.program gpg
 
-      - name: Commit and Publish to AUR
+      - name: Commit changes
         run: |
           git add .SRCINFO
           git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
@@ -62,8 +63,8 @@ jobs:
         with:
           pkgname: runa
           pkgbuild: ./PKGBUILD
-          commit_username: alexm-dev
-          commit_email: runa-dev@proton.me
+          commit_username: "Runa CI"
+          commit_email: "runa-ci@proton.me"
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
 
