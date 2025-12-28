@@ -4,9 +4,7 @@
 
 ### Added
 - **Input polish**: Added cursor movement within input fields.
-- **Nav persistence**: The cursor now follows the file name when filtering. No more jumping back to the top when you type.
 - **File collision**: Added `get_unused_path` to utils.rs. It now becomes `test_1.txt` instead of colliding.
-
 
 ### Fixed
 - **Nav persistence**: The cursor now follows the file name when filtering. No more jumping back to the top when you type.
@@ -14,7 +12,7 @@
 ### Internal
 - **Hardened NavState**: Threw 1 million iterations at the navigation math. It’s rock solid now.
 - **Refactoring**: Renamed `popup` to `dialog` across codebose for better naming. (Just feels better).
-- **Testing***: Added a bunch more of tests.
+- **Testing**: Added a bunch more of unit tests.
 - **Documentation**: Added some documentation of code and modules. Still working on more...
 
 ---
