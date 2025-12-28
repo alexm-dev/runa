@@ -221,7 +221,11 @@ impl<'a> AppState<'a> {
                     }
                 }
                 WorkerResponse::PreviewLoaded { lines, request_id } => {
-                    self.preview.update_content(lines, request_id);
+                    if request_id == self.preview.request_id()
+                        && self.preview.dir_generation() == self.nav.request_id()
+                    {
+                        self.preview.update_content(lines, request_id);
+                    }
                 }
 
                 WorkerResponse::OperationComplete {
@@ -285,6 +289,7 @@ impl<'a> AppState<'a> {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
+            self.preview.set_dir_generation(self.nav().request_id());
 
             if entry.is_dir() {
                 let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
