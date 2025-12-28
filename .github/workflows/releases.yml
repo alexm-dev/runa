@@ -1,0 +1,93 @@
+name: Release Cross-Platform Rust Binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to upload binaries'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            artifact_name: rn-linux
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            artifact_name: rn-windows.exe
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            artifact_name: rn-macos
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Prepare Binary
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "target/${{ matrix.target }}/release/rn.exe" "dist/${{ matrix.artifact_name }}"
+          else
+            cp "target/${{ matrix.target }}/release/rn" "dist/${{ matrix.artifact_name }}"
+          fi
+
+      - name: Make Unix binaries executable
+        if: runner.os != 'Windows'
+        run: chmod +x dist/${{ matrix.artifact_name }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}
+
+  checksums:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List all files to be released
+        run: ls -lh dist
+
+      - name: Make Unix binaries executable (safety net)
+        run: |
+          chmod +x dist/rn-linux || true
+          chmod +x dist/rn-macos || true
+
+      - name: Calculate SHA256SUMS
+        run: |
+          cd dist
+          sha256sum rn-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload binaries and checksums to release
+        run: |
+          gh release upload "${{ github.event.inputs.tag }}" dist/rn-* dist/SHA256SUMS.txt --clobber
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Print final asset list (debug)
+        run: ls -lh dist/
