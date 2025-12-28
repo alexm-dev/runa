@@ -3,6 +3,7 @@
 [![Build Status](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=flat-square&logo=github&label=build)](https://github.com/alexm-dev/runa/actions)
 [![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=release)](https://github.com/alexm-dev/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
+[![AUR](https://img.shields.io/aur/version/runa?color=blue&style=flat-square)](https://aur.archlinux.org/packages/runa)
 [![Language](https://img.shields.io/badge/language-Rust-DEA584?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![License](https://img.shields.io/github/license/alexm-dev/runa?style=flat-square&color=3498db)](LICENSE)
 
@@ -33,9 +34,17 @@ For a detailed list of changes and release notes, see [CHANGELOG.md](./CHANGELOG
 cargo install runa-tui
 ```
 
+### Arch Linux (AUR)
+
+You can install runa from the [AUR](https://aur.archlinux.org/packages/runa) using an AUR helper like `paru` or `yay`:
+
+```bash
+yay -S runa
+```
+
 ### Pre-compiled Binaries
 
-If you'd like to download Pre-compiled binaries instead of isntalling runa as a crate in cargo,
+If you'd like to download Pre-compiled binaries instead of isntalling runa as a crate in cargo or via the AUR,
 you can grab the latest binaries for Linux, Windows and macOS form the [Release](https://github.com/alexm-dev/runa/releases) page.
 
 > [!TIP]
