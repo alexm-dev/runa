@@ -32,7 +32,7 @@ jobs:
         with:
           pkgname: runa
           pkgbuild: ./PKGBUILD
-          commit_username: runa
+          commit_username: alexm-dev
           commit_email: runa-dev@proton.me
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: "Update to ${{ github.event.inputs.tag }}"
