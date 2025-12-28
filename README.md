@@ -1,10 +1,10 @@
 # `runa - rn`
 
-[![Build](https://github.com/alexm-dev/runa/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/alexm-dev/runa/actions)
-[![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=for-the-badge&color=8839ef)](https://github.com/alexm-dev/runa/releases)
-[![Crates.io](https://img.shields.io/crates/v/runa-tui.svg)](https://crates.io/crates/runa-tui)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=for-the-badge&logo=github&label=Build)](https://github.com/alexm-dev/runa/actions)
+[![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=for-the-badge&color=8839ef&label=Release)](https://github.com/alexm-dev/runa/releases)
+[![Crates.io](https://img.shields.io/crates/v/runa-tui?style=for-the-badge&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![Language](https://img.shields.io/badge/language-Rust-DEA584?style=for-the-badge&logo=rust)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License](https://img.shields.io/github/license/alexm-dev/runa?style=for-the-badge&color=3498db)](LICENSE)
 
 **Documentation**
 - [Configuration](docs/configuration.md)
