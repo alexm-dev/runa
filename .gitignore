@@ -5,3 +5,5 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 runner.toml
+runa.toml
+/secrets
