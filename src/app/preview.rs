@@ -18,6 +18,15 @@ pub enum PreviewData {
 }
 
 /// State and helpers for managing the preview pane.
+///
+/// Holds:
+/// - PreviewData
+/// - the selected index
+/// - the current path
+/// - the workers request_id
+/// - a pending flag to indicate if a preview request is pending
+/// - a Directory generation int to correctly sync preview data with directory nav
+/// - and the last input time to handle status notifaction.
 pub struct PreviewState {
     data: PreviewData,
     selected_idx: usize,
