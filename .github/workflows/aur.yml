@@ -10,65 +10,60 @@ on:
 jobs:
   publish_aur:
     runs-on: ubuntu-latest
-    if: github.actor == 'alexm-dev' && startsWith(github.event.inputs.tag, 'v')
-    env:
-      CI_GPG_KEY: ${{ secrets.RUNA_CI_GPG_KEY }}
+    if: github.repository == 'alexm-dev/runa' && github.actor == 'alexm-dev' && startsWith(github.event.inputs.tag, 'v')
+
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Generate .SRCINFO
+      - name: Generate .SRCINFO in Docker
         run: |
-          docker run --rm -v ".:/pkg" -w /pkg archlinux:latest bash -c "
+          docker run --rm -v "$PWD:/pkg" -w /pkg archlinux:latest bash -c "
             set -e
             pacman -Sy --noconfirm pacman-contrib sudo
             useradd -m builduser
             echo 'builduser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
             chown -R builduser:builduser /pkg
             sudo -u builduser makepkg --printsrcinfo > .SRCINFO
-            chown -R $(id -u):$(id -g) /pkg
+            chown -R 1001:1001 /pkg
           "
 
-      - name: Setup SSH key
+      - name: Setup Secure Environments
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+          SSH_DIR=$(mktemp -d)
+          GPG_DIR=$(mktemp -d)
 
-      - name: Import CI GPG key
-        run: |
-          mkdir -p ~/.gnupg
-          echo "$CI_GPG_KEY" | gpg --batch --import
-          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
-          chmod 700 ~/.gnupg
+          echo "${{ secrets.AUR_SSH_PRIVATE_KEY }}" > "$SSH_DIR/id_rsa"
+          chmod 600 "$SSH_DIR/id_rsa"
+          ssh-keyscan aur.archlinux.org >> "$SSH_DIR/known_hosts"
 
-      - name: Configure Git for signing
+          export GNUPGHOME="$GPG_DIR"
+          echo "${{ secrets.RUNA_CI_GPG_KEY }}" | gpg --batch --import
+          echo "pinentry-mode loopback" >> "$GPG_DIR/gpg.conf"
+          KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | head -n1 | awk '{print $2}' | cut -d'/' -f2)
+
+          echo "GNUPGHOME=$GPG_DIR" >> $GITHUB_ENV
+          echo "SSH_DIR=$SSH_DIR" >> $GITHUB_ENV
+          echo "GPG_KEY_ID=$KEY_ID" >> $GITHUB_ENV
+          echo "GIT_SSH_COMMAND=ssh -i $SSH_DIR/id_rsa -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$SSH_DIR/known_hosts" >> $GITHUB_ENV
+
+      - name: Configure Git
         run: |
           git config --global user.name "Runa CI"
           git config --global user.email "runa-ci@proton.me"
           git config --global commit.gpgsign true
-          git config --global gpg.program gpg
+          git config --global user.signingkey "$GPG_KEY_ID"
+          git config --global gpg.program "gpg --homedir $GNUPGHOME"
 
-      - name: Commit changes
+      - name: Commit and Push
         run: |
           git add .SRCINFO
           git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
-        env:
-          CI_GPG_KEY: ${{ secrets.RUNA_CI_GPG_KEY }}
+          git push "ssh://aur@aur.archlinux.org/runa.git" HEAD:master
 
-      - name: Push to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@v4.1.1
-        with:
-          pkgname: runa
-          pkgbuild: ./PKGBUILD
-          commit_username: "Runa CI"
-          commit_email: "runa-ci@proton.me"
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
-
-      - name: Cleanup
+      - name: Post-Job Cleanup
+        if: always()
         run: |
-          rm -rf ~/.ssh/id_rsa
-          rm -rf ~/.gnupg
+          [ -n "${{ env.SSH_DIR }}" ] && rm -rf "${{ env.SSH_DIR }}"
+          [ -n "${{ env.GNUPGHOME }}" ] && rm -rf "${{ env.GNUPGHOME }}"
