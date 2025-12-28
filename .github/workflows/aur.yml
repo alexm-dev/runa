@@ -60,7 +60,7 @@ jobs:
         run: |
           git add .SRCINFO
           git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
-          git push "ssh://aur@aur.archlinux.org/runa.git" HEAD:master
+          git push  --force "ssh://aur@aur.archlinux.org/runa.git" HEAD:master
 
       - name: Post-Job Cleanup
         if: always()
