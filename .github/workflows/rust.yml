@@ -45,4 +45,11 @@ jobs:
         run: cargo build --release
 
       - name: Test
-        run: cargo test --all --release --verbose
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            cargo test --all --release --verbose
+          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+            cargo test --all --verbose
+          else
+            echo "Skipping test on ${{ matrix.os }} for non-main branch."
+          fi
