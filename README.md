@@ -50,9 +50,18 @@ you can grab the latest binaries for Linux, Windows and macOS form the [Release]
 After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to your system `PATH` to use runa from your terminal.
 
 > [!TIP]
-> **Checksum Check:** You can verify the integrity of the release binaries using the `SHA256SUMS.txt` file in the [Release](https://github.com/alexm-dev/runa/releases) page.
+> **Checksum Check:** You can verify the integrity of the release archives using the `SHA256SUMS.txt` file in the [Release](https://github.com/alexm-dev/runa/releases) page.
+>
+> Unix
 > ```bash
 > sha256sum -c SHA256SUMS.txt
+> ```
+>
+> Windows
+> ```powershell
+> Get-FileHash runa-windows-x86_64.zip -Algorithm SHA256
+> ```
+> Compare the output with the corresponding entry in `SHA256SUMS.txt`.
 > ```
 
 ### Build from source
