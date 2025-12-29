@@ -49,7 +49,7 @@ jobs:
           git clone "ssh://aur@aur.archlinux.org/runa.git" aur_clone
           cp PKGBUILD .SRCINFO aur_clone/
           cd aur_clone
-          git config user.name "runa CI"
+          git config user.name "runa CI (CI automation)"
           git config user.email "runa-ci@proton.me"
           git add PKGBUILD .SRCINFO
           if git diff --quiet && git diff --staged --quiet; then
@@ -59,10 +59,3 @@ jobs:
             # Since we cloned the AUR repo, this is now a standard, non-shallow push
             git push origin master
           fi
-
-      - name: Final Cleanup
-        if: always()
-        run: |
-          ssh-agent -k || pkill ssh-agent || true
-          rm -rf ~/.ssh ~/.gnupg
-          truncate -s 0 "$GITHUB_ENV" || true
