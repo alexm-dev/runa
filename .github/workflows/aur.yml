@@ -45,17 +45,13 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-
-          git clone "ssh://aur@aur.archlinux.org/runa.git" aur_clone
-          cp PKGBUILD .SRCINFO aur_clone/
-          cd aur_clone
+          mkdir aur_upload
+          cp PKGBUILD .SRCINFO aur_upload/
+          cd aur_upload
+          git init -b master
           git config user.name "runa CI (CI automation)"
           git config user.email "runa-ci@proton.me"
+          git remote add origin "ssh://aur@aur.archlinux.org/runa.git"
           git add PKGBUILD .SRCINFO
-          if git diff --quiet && git diff --staged --quiet; then
-            echo "No changes detected."
-          else
-            git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
-            # Since we cloned the AUR repo, this is now a standard, non-shallow push
-            git push origin master
-          fi
+          git commit -S -m "Initial release of runa ${{ github.event.inputs.tag }}"
+          git push origin master --force
