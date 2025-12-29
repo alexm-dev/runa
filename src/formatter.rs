@@ -4,9 +4,10 @@
 //! based on user preferences from the runa.toml configuration.
 //! Used to prepare file lists for display in each pane.
 
-use crate::file_manager::FileEntry;
+use crate::file_manager::{FileEntry, FileType};
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::fs::Permissions;
 use std::sync::Arc;
 
 pub struct Formatter {
@@ -110,3 +111,38 @@ impl Formatter {
         self.format(entries);
     }
 } // impl Formatter
+
+pub fn format_permission(perm: &Permissions) -> String {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mode = perm.mode();
+        let chars = |shift| {
+            [
+                if (mode >> (shift + 2)) & 1 != 0 {
+                    'r'
+                } else {
+                    '-'
+                },
+                if (mode >> (shift + 1)) & 1 != 0 {
+                    'w'
+                } else {
+                    '-'
+                },
+                if (mode >> shift) & 1 != 0 { 'x' } else { '-' },
+            ]
+        };
+        let (ur, uw, ux) = (chars(6)[0], chars(6)[1], chars(6)[2]);
+        let (gr, gw, gx) = (chars(3)[0], chars(3)[1], chars(3)[2]);
+        let (or, ow, ox) = (chars(0)[0], chars(0)[1], chars(0)[2]);
+        format!("{}{}{}{}{}{}{}", ur, uw, ux, gr, gw, gx, or, ow, ox)
+    }
+    #[cfg(not(unix))]
+    {
+        if perm.readonly() {
+            "readonly".to_string()
+        } else {
+            "rw".to_string()
+        }
+    }
+}
