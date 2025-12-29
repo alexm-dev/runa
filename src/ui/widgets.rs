@@ -476,8 +476,47 @@ pub fn draw_show_info_dialog(
     info: &FileInfo,
 ) {
     let widget = app.config().theme().widget();
-    let position = DialogPosition::BottomLeft;
-    let size = DialogSize::Custom(20, 14);
+    let info_cfg = &app.config().display().info();
+    let position = info_cfg.position().unwrap_or(DialogPosition::BottomLeft);
+
+    let mut lines = Vec::new();
+    if info_cfg.name() {
+        lines.push(format!("Name:      {}", info.name().to_string_lossy()));
+    }
+    if info_cfg.file_type() {
+        lines.push(format!("Type:      {}", format_file_type(info.file_type())));
+    }
+    if info_cfg.size() {
+        lines.push(format!(
+            "Size:      {}",
+            format_file_size(*info.size(), info.file_type() == &FileType::Directory)
+        ));
+    }
+    if info_cfg.modified() {
+        lines.push(format!("Modified:  {}", format_file_time(*info.modified())));
+    }
+    if info_cfg.perms() {
+        lines.push(format!("Perms:     {}", info.attributes()));
+    }
+    if lines.is_empty() {
+        return;
+    }
+
+    let content_width = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
+    let min_width = 27;
+    let border_pad = 2;
+    let right_pad = 2;
+    let width = (content_width + right_pad).max(min_width) + border_pad;
+    let area = frame.area();
+
+    // Clamp to frame area
+    let width = width.min(area.width as usize);
+    let height = (lines.len() + border_pad).min(area.height as usize);
+
+    // Convert dialog size percantes to cell positions.
+    let w_pct = ((width as f32 / area.width as f32) * 100.0).ceil() as u16;
+    let h_pct = ((height as f32 / area.height as f32) * 100.0).ceil() as u16;
+    let dialog_size = DialogSize::Custom(w_pct, h_pct);
 
     let dialog_style = DialogStyle {
         border: Borders::ALL,
@@ -490,25 +529,13 @@ pub fn draw_show_info_dialog(
         )),
     };
 
-    let lines = [
-        format!("Name:      {}", info.name().to_string_lossy()),
-        format!("Type:      {}", format_file_type(info.file_type())),
-        format!(
-            "Size:      {}",
-            format_file_size(*info.size(), info.file_type() == &FileType::Directory)
-        ),
-        format!("Modified:  {}", format_file_time(*info.modified())),
-        format!("Perms:     {}", info.attributes()),
-    ];
-    let content = lines.join("\n");
-
     draw_dialog(
         frame,
-        frame.area(),
+        area,
         position,
-        size,
+        dialog_size,
         &dialog_style,
-        content,
+        lines.join("\n"),
         Some(Alignment::Left),
     );
 }

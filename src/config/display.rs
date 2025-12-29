@@ -3,6 +3,7 @@
 //! This module defines the display configuration options which are read from the runa.toml
 //! configuration file.
 
+use crate::ui::widgets::DialogPosition;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -28,6 +29,56 @@ impl LayoutConfig {
 
 #[derive(Deserialize, Debug)]
 #[serde(default)]
+pub struct ShowInfoOptions {
+    name: bool,
+    file_type: bool,
+    size: bool,
+    modified: bool,
+    perms: bool,
+    position: Option<DialogPosition>,
+}
+
+impl ShowInfoOptions {
+    pub fn name(&self) -> bool {
+        self.name
+    }
+
+    pub fn file_type(&self) -> bool {
+        self.file_type
+    }
+
+    pub fn size(&self) -> bool {
+        self.size
+    }
+
+    pub fn modified(&self) -> bool {
+        self.modified
+    }
+
+    pub fn perms(&self) -> bool {
+        self.perms
+    }
+
+    pub fn position(&self) -> &Option<DialogPosition> {
+        &self.position
+    }
+}
+
+impl Default for ShowInfoOptions {
+    fn default() -> Self {
+        ShowInfoOptions {
+            name: true,
+            file_type: true,
+            size: true,
+            modified: false,
+            perms: false,
+            position: None,
+        }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(default)]
 pub struct Display {
     selection_marker: bool,
     dir_marker: bool,
@@ -41,6 +92,7 @@ pub struct Display {
     preview_underline_color: bool,
     entry_padding: u8,
     scroll_padding: usize,
+    info: ShowInfoOptions,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -112,6 +164,10 @@ impl Display {
         self.scroll_padding
     }
 
+    pub fn info(&self) -> &ShowInfoOptions {
+        &self.info
+    }
+
     pub fn padding_str(&self) -> &'static str {
         // ASCII whitespaces
         match self.entry_padding {
@@ -143,6 +199,7 @@ impl Default for Display {
             preview_underline_color: false,
             entry_padding: 1,
             scroll_padding: 5,
+            info: ShowInfoOptions::default(),
         }
     }
 }
