@@ -20,8 +20,10 @@ use crate::{
         AppState,
         actions::{ActionMode, InputMode},
     },
-    ui::panes::{PaneStyles, PreviewOptions},
-    ui::widgets::{draw_input_dialog, draw_status_line},
+    ui::{
+        panes::{PaneStyles, PreviewOptions},
+        widgets::{draw_input_dialog, draw_show_info_dialog, draw_status_line},
+    },
 };
 use ratatui::{
     Frame,
@@ -243,6 +245,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
     draw_status_line(frame, app);
+    draw_show_info_dialog(frame, app, accent_style);
     draw_input_dialog(frame, app, accent_style);
 }
 

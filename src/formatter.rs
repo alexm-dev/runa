@@ -5,9 +5,12 @@
 //! Used to prepare file lists for display in each pane.
 
 use crate::file_manager::{FileEntry, FileType};
+use chrono::{DateTime, Local};
+use humansize::{DECIMAL, format_size};
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 pub struct Formatter {
     dirs_first: bool,
@@ -140,4 +143,32 @@ pub fn format_permissions(perm: &std::fs::Permissions) -> String {
             "rw".to_string()
         }
     }
+}
+
+pub fn format_file_type(file_type: &FileType) -> &'static str {
+    match file_type {
+        FileType::File => "File",
+        FileType::Directory => "Directory",
+        FileType::Symlink => "Symlink",
+        FileType::Other => "Other",
+    }
+}
+
+pub fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
+    if is_dir {
+        "-".into()
+    } else if let Some(sz) = size {
+        format_size(sz, DECIMAL)
+    } else {
+        "-".to_string()
+    }
+}
+
+pub fn format_file_time(modified: Option<SystemTime>) -> String {
+    modified
+        .map(|mtime| {
+            let dt: DateTime<Local> = DateTime::from(mtime);
+            dt.format("%Y-%m-%d %H:%M:%S").to_string()
+        })
+        .unwrap_or_else(|| "-".to_string())
 }

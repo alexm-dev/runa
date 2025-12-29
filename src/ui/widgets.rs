@@ -9,6 +9,8 @@
 //! - Configurable dialog/widget style, position and style
 
 use crate::app::AppState;
+use crate::file_manager::{FileInfo, FileType};
+use crate::formatter::{format_file_size, format_file_time, format_file_type, format_permissions};
 use crate::ui::{ActionMode, InputMode};
 use ratatui::{
     Frame,
@@ -459,5 +461,52 @@ fn input_field_view(input_text: &str, cursor_pos: usize, visible_width: usize) -
         };
 
         (&input_text[start..], cursor_offset)
+    }
+}
+
+pub fn draw_show_info_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    if let ActionMode::ShowInfo { info } = app.actions().mode() {
+        let widget = app.config().theme().widget();
+        let position = DialogPosition::BottomLeft;
+        let size = DialogSize::Medium;
+
+        let dialog_style = DialogStyle {
+            border: Borders::ALL,
+            border_style: widget.border_or(accent_style),
+            bg: widget.bg_or(Style::default().bg(Color::Reset)),
+            fg: widget.fg_or(Style::default().fg(Color::Reset)),
+            title: Some(Span::styled(
+                " File Info ",
+                widget.fg_or(Style::default().fg(Color::Reset)),
+            )),
+        };
+
+        let lines = vec![
+            format!("Name:      {}", info.name().to_string_lossy()),
+            format!("Type:      {}", format_file_type(info.file_type())),
+            format!(
+                "Size:      {}",
+                format_file_size(*info.size(), info.file_type() == &FileType::Directory)
+            ),
+            format!("Modified:  {}", format_file_time(*info.modified())),
+            format!(
+                "Perms:     {}",
+                info.permissions()
+                    .as_ref()
+                    .map(format_permissions)
+                    .unwrap_or_else(|| "-".to_string())
+            ),
+        ];
+        let content = lines.join("\n");
+
+        draw_dialog(
+            frame,
+            frame.area(),
+            position,
+            size,
+            &dialog_style,
+            content,
+            Some(Alignment::Left),
+        );
     }
 }
