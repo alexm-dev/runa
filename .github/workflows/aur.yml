@@ -41,17 +41,20 @@ jobs:
           git_user_signingkey: true
           git_commit_gpgsign: true
 
-      - name: Sync and Force Push
+      - name: Sync and Push
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-          mkdir aur_upload
-          cp PKGBUILD .SRCINFO aur_upload/
-          cd aur_upload
-          git init -b master
+
+          git clone "ssh://aur@aur.archlinux.org/runa.git" aur_clone
+          cp PKGBUILD .SRCINFO aur_clone/
+          cd aur_clone
           git config user.name "runa CI (CI automation)"
           git config user.email "runa-ci@proton.me"
-          git remote add origin "ssh://aur@aur.archlinux.org/runa.git"
           git add PKGBUILD .SRCINFO
-          git commit -S -m "Initial release of runa ${{ github.event.inputs.tag }}"
-          git push origin master --force
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes detected."
+          else
+            git commit -S -m "Update to ${{ github.event.inputs.tag }} via GitHub Actions"
+            git push origin master
+          fi
