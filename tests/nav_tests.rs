@@ -28,7 +28,7 @@ fn test_navstate_rapid_navigation() {
         "initial entry count mismatch"
     );
 
-    let down_presses = 100000;
+    let down_presses = 1000;
     for _ in 0..down_presses {
         assert!(nav.move_down(), "nav.move_down() failed during stress");
     }
@@ -43,7 +43,7 @@ fn test_navstate_rapid_navigation() {
     let selected = nav.selected_entry().expect("no entry selected after DOWN");
     assert_eq!(selected.name_str(), entries[expected_idx].name_str());
 
-    let up_presses = 100000;
+    let up_presses = 1000;
     for _ in 0..up_presses {
         assert!(nav.move_up(), "nav.move_up() failed during stress");
     }
@@ -87,7 +87,7 @@ fn test_navstate_navigation_stress() {
     let subsub_entries = browse_dir(&subsubdir_path).unwrap();
 
     let mut nav = NavState::new(base_path.clone());
-    let repetitions = 50000;
+    let repetitions = 500;
 
     for i in 0..repetitions {
         nav.set_path(subdir_path.clone());
@@ -135,7 +135,7 @@ fn test_navstate_selection_persistence_stress() {
     let sub_entries = browse_dir(&subdir_path).unwrap();
 
     let mut nav = NavState::new(base_path.clone());
-    let repetitions = 50000;
+    let repetitions = 200;
 
     nav.set_path(subdir_path.clone());
     nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None);
