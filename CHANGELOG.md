@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.8] - 2025-12-30
+
+Quick integration test patch for a more robust testing of runa with `cargo test`.
+
+### Internal
+**Testing**: Improved error handling and sandboxing of `nav_tests`, `utils_tests`, `worker_tests`, and `ui_tests`
+
+
+---
+
+
 ## [0.3.7] - 2025-12-30
 
 Quick patch to fix the cli message to show the correct cli args.
