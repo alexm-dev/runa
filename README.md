@@ -4,7 +4,7 @@
 [![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=release)](https://github.com/alexm-dev/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?color=blue&style=flat-square)](https://aur.archlinux.org/packages/runa)
-[![Language](https://img.shields.io/github/languages/top/alexm-dev/runa?style=flat-square&logo=rust)](https://github.com/alexm-dev/runa)
+[![Language](https://img.shields.io/github/languages/top/alexm-dev/runa?style=flat-square&logo=rust&color=%23FFA500)](https://github.com/alexm-dev/runa)
 [![License](https://img.shields.io/github/license/alexm-dev/runa?style=flat-square&color=3498db)](LICENSE)
 
 **Documentation**
