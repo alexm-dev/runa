@@ -4,21 +4,24 @@
 [![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=release)](https://github.com/alexm-dev/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?color=blue&style=flat-square)](https://aur.archlinux.org/packages/runa)
-[![Language](https://img.shields.io/badge/language-Rust-DEA584?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+[![Language](https://img.shields.io/github/languages/top/alexm-dev/runa?style=flat-square&logo=rust)](https://github.com/alexm-dev/runa)
 [![License](https://img.shields.io/github/license/alexm-dev/runa?style=flat-square&color=3498db)](LICENSE)
 
 **Documentation**
 - [Configuration](docs/configuration.md)
 
 
+
 <img src="https://github.com/user-attachments/assets/22663c5a-3fbb-4480-856e-4a1efa4bd5b6" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
+
 
 
 A fast and lightweight console file browser written in Rust
 
-**rn - runa** is a minimalist terminal file manager focused on speed and simplicity.  
+**runa - rn** is a minimalist terminal file manager focused on speed and simplicity.  
 It allows you to navigate directories, view file listings, and perform typical file browser actions.  
 
+**runa** is very customizable, checkout the [Configuration](docs/configuration.md) docs for all the available options.
 
 > [!IMPORTANT]
 > **runa** is a work in progress. It is being actively developed and features may change over time.
