@@ -73,9 +73,7 @@ impl Config {
 
         if !path.exists() {
             eprintln!("No config file found at {:?}", path);
-            eprintln!(
-                "Tip: Run 'runa --init' or '--init-full' to generate a default configuration."
-            );
+            eprintln!("Tip: Run 'rn --init' or '--init-full' to generate a default configuration.");
             eprintln!("Starting with internal defaults...\n");
             return Self::default();
         }
