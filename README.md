@@ -1,6 +1,6 @@
 # `runa - rn`
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=flat-square&logo=rust&label=Build%20Status)](https://github.com/alexm-dev/runa/actions/workflows/rust.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=flat-square&logo=github&label=Build%20Status)](https://github.com/alexm-dev/runa/actions/workflows/rust.yml)
 [![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=release)](https://github.com/alexm-dev/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?color=blue&style=flat-square)](https://aur.archlinux.org/packages/runa)
@@ -10,10 +10,9 @@
 **Documentation**
 - [Configuration](docs/configuration.md)
 
-
+<br><br>
 
 <img src="https://github.com/user-attachments/assets/22663c5a-3fbb-4480-856e-4a1efa4bd5b6" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
-
 
 <br><br>
 
