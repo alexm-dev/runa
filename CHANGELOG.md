@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.9] - 2025-12-30
+
+Changed internal default colors for a more pleasant "out-of-the-box" experience.
+
+### Changed
+**Internal default colors**: Changed internal default colors of `border`, `selection`, `titles` and `directory`.
+**show_hidden**: Enabled `show_hidden` by default and is set to enabled internally.
+**
+
+---
+
+
+### Changed
+
 ## [0.3.8] - 2025-12-30
 
 Quick integration test patch for a more robust testing of runa with `cargo test`.
