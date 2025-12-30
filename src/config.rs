@@ -156,7 +156,7 @@ impl Config {
 
 # General behavior
 dirs_first = true
-show_hidden = false
+show_hidden = true
 # show_system = false
 case_insensitive = true
 # always_show = []
@@ -164,7 +164,7 @@ case_insensitive = true
 [display]
 # selection_marker = true
 # dir_marker = true
-borders = "split"
+borders = "unified"
 # border_shape = "square"
 # titles = false
 separators = true
@@ -182,20 +182,20 @@ entry_padding = 1
 
 # [display.info]
 # name = true
-# file_type = true
+# file_type = false
 # size = true
 # modified = true
-# perms = true
+# perms = false
 
 [theme]
 selection_icon = ""
 
 [theme.selection]
 # fg = "default"
-bg = "#333333"
+# bg = "#333333"
 
 [theme.accent]
-fg = "#353536"
+# fg = "#353536"
 # bg = "default"
 
 # [theme.entry]
@@ -203,7 +203,7 @@ fg = "#353536"
 # bg = "default"
 
 [theme.directory]
-fg = "blue"
+# fg = "blue"
 # bg = "default"
 
 # [theme.separator]
@@ -282,26 +282,26 @@ fg = "magenta"
 # Only the essentials. The rest uses internal defaults.
 
 dirs_first = true
-show_hidden = false
+show_hidden = true
 
 [display]
-borders = "split"
+borders = "unified"
 entry_padding = 1
 
 [theme]
 selection_icon = ""
 
-[theme.selection]
-bg = "#333333"
+# [theme.selection]
+# bg = "#333333"
 
-[theme.accent]
-fg = "#353536"
+# [theme.accent]
+# fg = "#353536"
 
-[theme.directory]
-fg = "blue"
+# [theme.directory]
+# fg = "blue"
 
-[theme.path]
-fg = "magenta"
+# [theme.path]
+# fg = "magenta"
 
 [editor]
 # cmd = "nvim"
