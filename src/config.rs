@@ -167,6 +167,7 @@ case_insensitive = true
 # selection_marker = true
 # dir_marker = true
 borders = "split"
+# border_shape = "square"
 # titles = false
 separators = true
 parent = true
@@ -180,6 +181,13 @@ entry_padding = 1
 # parent = 20
 # main = 40
 # preview = 40
+
+# [display.info]
+# name = true
+# file_type = true
+# size = true
+# modified = true
+# perms = true
 
 [theme]
 selection_icon = ""
@@ -233,14 +241,23 @@ fg = "magenta"
 # size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
 # position = "center"       # "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 # confirm_size = "large"
+# color.fg = "default"
+# color.bg = "default"
+# border.fg = "default"
+# border.bg = "default"
 
-# [theme.widget.color]
+# [theme.status_line]
 # fg = "default"
 # bg = "default"
 
-# [theme.widget.border]
-# fg = "default"
-# bg = "default"
+# [theme.info]
+# color.fg = "default"
+# color.bg = "default"
+# border.fg = "default"
+# border.bg = "default"
+# title.fg = "default"
+# title.bg = "default"
+# position = "bottom_left"
 
 [editor]
 # cmd = "nvim"
@@ -260,6 +277,7 @@ fg = "magenta"
 # create_directory = ["Shift+n"]
 # filter = ["f"]
 # toggle_marker = [" "]     # " " - indicates space bar
+# info = ["i"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration

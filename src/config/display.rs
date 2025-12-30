@@ -108,7 +108,7 @@ pub enum BorderStyle {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum BorderShape {
-    Plain,
+    Square,
     Rounded,
     Double,
 }
@@ -116,7 +116,7 @@ pub enum BorderShape {
 impl BorderShape {
     pub fn as_border_type(&self) -> BorderType {
         match self {
-            BorderShape::Plain => BorderType::Plain,
+            BorderShape::Square => BorderType::Plain,
             BorderShape::Rounded => BorderType::Rounded,
             BorderShape::Double => BorderType::Double,
         }
@@ -210,7 +210,7 @@ impl Default for Display {
             selection_marker: true,
             dir_marker: true,
             borders: BorderStyle::Split,
-            border_shape: BorderShape::Plain,
+            border_shape: BorderShape::Square,
             titles: false,
             separators: true,
             parent: true,

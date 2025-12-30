@@ -218,6 +218,8 @@ pub struct Theme {
     status_line: ColorPair,
     marker: MarkerTheme,
     widget: WidgetTheme,
+    /// info does not honor the .size field from widget.
+    /// info gets auto-sized based on attributes enabled.
     info: WidgetTheme,
 }
 
