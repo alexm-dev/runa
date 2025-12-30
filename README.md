@@ -11,7 +11,7 @@
 - [Configuration](docs/configuration.md)
 
 
-<img src="https://github.com/user-attachments/assets/202ec419-80fe-427f-975b-0ef1d31d501a" alt="runa_default" width="100%" style="max-width: 1274px; height: auto;" />
+<img src="https://github.com/user-attachments/assets/22663c5a-3fbb-4480-856e-4a1efa4bd5b6" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 
 
 A fast and lightweight console file browser written in Rust
