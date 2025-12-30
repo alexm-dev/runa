@@ -6,6 +6,7 @@ Quick patch to fix the cli message to show the correct cli args.
 
 ### Fixed
 - **CLI message**: Fixed cli initial message to correctly show the cli args. `--init-minimal` to `--init-full`
+- **Formatter** Fixed `formatter.rs` warning showing unused import for unix in `format_attributes`.
 
 ### Changed
 - **Widget Size Default**: Adjusted the default for dialog widgets to DialogSize::Small.
