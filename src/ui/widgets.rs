@@ -577,12 +577,12 @@ pub fn draw_show_info_dialog(
 
 /// Helper function to make adjusted dialog positions for unified borders
 /// Returns a dialog position adjusted for unified borders (app-wide title/status).
-fn adjusted_dialog_position(pos: &DialogPosition, is_unified: bool) -> DialogPosition {
+fn adjusted_dialog_position(pos: DialogPosition, is_unified: bool) -> DialogPosition {
     match (is_unified, pos) {
         (true, DialogPosition::TopRight) => DialogPosition::Custom(100, 3),
         (true, DialogPosition::TopLeft) => DialogPosition::Custom(0, 3),
-        (true, DialogPosition::Custom(x, 0)) => DialogPosition::Custom(*x, 3),
-        _ => pos.clone(),
+        (true, DialogPosition::Custom(x, 0)) => DialogPosition::Custom(x, 3),
+        _ => pos,
     }
 }
 
@@ -595,5 +595,5 @@ fn dialog_position_unified(
 ) -> DialogPosition {
     let display_cfg = app.config().display();
     let base = configured.unwrap_or(fallback);
-    adjusted_dialog_position(&base, display_cfg.is_unified())
+    adjusted_dialog_position(base, display_cfg.is_unified())
 }
