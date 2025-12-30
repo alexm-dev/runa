@@ -196,7 +196,7 @@ impl Default for WidgetTheme {
             border: ColorPair::default(),
             title: ColorPair::default(),
             position: Some(DialogPosition::Center),
-            size: Some(DialogSize::Medium),
+            size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),
         }
     }
