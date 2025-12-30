@@ -165,14 +165,14 @@ case_insensitive = true
 # selection_marker = true
 # dir_marker = true
 borders = "unified"
-# border_shape = "square"
-# titles = false
-separators = true
-parent = true
-preview = true
+border_shape = "square"
+# titles = true
+# separators = true
+# parent = true
+# preview = true
 preview_underline = true
 # preview_underline_color = false
-entry_padding = 1
+# entry_padding = 1
 # scroll_padding = 5
 
 # [display.layout]
@@ -190,11 +190,11 @@ entry_padding = 1
 [theme]
 selection_icon = ""
 
-[theme.selection]
+# [theme.selection]
 # fg = "default"
 # bg = "#333333"
 
-[theme.accent]
+# [theme.accent]
 # fg = "#353536"
 # bg = "default"
 
@@ -202,7 +202,7 @@ selection_icon = ""
 # fg = "default"
 # bg = "default"
 
-[theme.directory]
+# [theme.directory]
 # fg = "blue"
 # bg = "default"
 
@@ -226,8 +226,8 @@ selection_icon = ""
 # fg = "default"
 # bg = "default"
 
-[theme.path]
-fg = "magenta"
+# [theme.path]
+# fg = "magenta"
 # bg = "default"
 
 # [theme.marker]
@@ -257,7 +257,7 @@ fg = "magenta"
 # title.bg = "default"
 # position = "bottom_left"
 
-[editor]
+# [editor]
 # cmd = "nvim"
 
 # [keys]
