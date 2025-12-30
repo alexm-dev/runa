@@ -5,7 +5,7 @@
 Quick configuration generation patch when `runa.toml` is generated with `rn --init-full`
 
 ### Fixed
-**Initial configuration**: Fixed full `runa.toml` initial config generation made by cli arg `rn --init-full`. Now generates the correct configuration and honors the internal defaults.
+- **Initial configuration**: Fixed full `runa.toml` initial config generation made by cli arg `rn --init-full`. Now generates the correct configuration and honors the internal defaults.
 
 
 ---
