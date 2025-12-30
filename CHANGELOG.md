@@ -6,9 +6,9 @@
 - **Path string**: Display `~` for the home directory at the top of the TUI instead of the full absolute path.
 
 ### Changed
-**Internal default colors**: Changed internal default colors of `border`, `selection`, `titles` and `directory`.
+- **Internal default colors**: Changed internal default colors of `border`, `selection`, `titles` and `directory`.
 **show_hidden**: Enabled `show_hidden` by default and is set to enabled internally.
-**
+- **Parent Pane**: Removed root indicator `/` in the parent pane, since `path_str` handles that in `ui.rs`.
 
 
 ---
