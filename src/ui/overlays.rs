@@ -34,6 +34,10 @@ impl OverlayStack {
     pub fn top(&self) -> Option<&Overlay> {
         self.overlays.last()
     }
+
+    pub fn top_mut(&mut self) -> Option<&mut Overlay> {
+        self.overlays.last_mut()
+    }
 }
 
 impl Default for OverlayStack {

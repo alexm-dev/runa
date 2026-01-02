@@ -8,10 +8,10 @@ use crate::ui;
 use crossterm::{
     event::{self, Event, KeyEventKind},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::Terminal;
 use ratatui::backend::{Backend, CrosstermBackend};
+use ratatui::Terminal;
 use std::{io, time::Duration};
 
 /// Initializes the terminal in raw mode and alternate sceen and runs the main event loop.

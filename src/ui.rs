@@ -24,7 +24,7 @@ use crate::{
     ui::{
         overlays::Overlay,
         panes::{PaneStyles, PreviewOptions},
-        widgets::{draw_input_dialog, draw_show_info_dialog, draw_status_line},
+        widgets::{draw_find_dialog, draw_input_dialog, draw_show_info_dialog, draw_status_line},
     },
     utils::shorten_home_path,
 };
@@ -257,7 +257,14 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
     }
 
     draw_status_line(frame, app);
-    draw_input_dialog(frame, app, accent_style);
+
+    if let ActionMode::Input { mode, .. } = app.actions().mode() {
+        if *mode != InputMode::Find {
+            draw_input_dialog(frame, app, accent_style);
+        } else {
+            draw_find_dialog(frame, app, accent_style);
+        }
+    }
 
     if let Some(Overlay::ShowInfo { info }) = app.overlays().top() {
         draw_show_info_dialog(frame, app, accent_style, info);

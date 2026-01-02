@@ -24,6 +24,7 @@ pub struct Keys {
     filter: Vec<String>,
     toggle_marker: Vec<String>,
     show_info: Vec<String>,
+    find: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -92,6 +93,10 @@ impl Keys {
     pub fn show_info(&self) -> &Vec<String> {
         &self.show_info
     }
+
+    pub fn find(&self) -> &Vec<String> {
+        &self.find
+    }
 }
 
 impl Default for Keys {
@@ -113,6 +118,7 @@ impl Default for Keys {
             filter: vec!["f".into()],
             toggle_marker: vec![" ".into()],
             show_info: vec!["i".into()],
+            find: vec!["o".into()],
         }
     }
 }

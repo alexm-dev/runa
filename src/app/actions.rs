@@ -4,7 +4,7 @@
 //! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
 
 use crate::app::nav::NavState;
-use crate::file_manager::FileInfo;
+use crate::file_manager::{FileEntry, FileInfo};
 use crate::keymap::FileAction;
 use crate::worker::{FileOperation, WorkerTask};
 use crossbeam_channel::Sender;
@@ -32,6 +32,7 @@ pub enum InputMode {
     NewFolder,
     Filter,
     ConfirmDelete,
+    Find,
 }
 
 /// Tracks current user action and input buffer state for file operations and commands.
@@ -44,6 +45,7 @@ pub struct ActionContext {
     input_cursor_pos: usize,
     clipboard: Option<HashSet<PathBuf>>,
     is_cut: bool,
+    find_cache: Vec<(FileEntry, i64)>,
 }
 
 impl ActionContext {
@@ -77,6 +79,14 @@ impl ActionContext {
         self.is_cut
     }
 
+    pub fn find_result(&self) -> &[(FileEntry, i64)] {
+        &self.find_cache
+    }
+
+    pub fn find_result_mut(&mut self) -> &mut Vec<(FileEntry, i64)> {
+        &mut self.find_cache
+    }
+
     // Mode functions
 
     pub fn is_input_mode(&self) -> bool {
@@ -92,6 +102,7 @@ impl ActionContext {
     pub fn exit_mode(&mut self) {
         self.mode = ActionMode::Normal;
         self.input_buffer.clear();
+        self.find_cache.clear();
     }
 
     // Actions for inputs
@@ -249,6 +260,7 @@ impl Default for ActionContext {
             input_cursor_pos: 0,
             clipboard: None,
             is_cut: false,
+            find_cache: Vec::new(),
         }
     }
 }

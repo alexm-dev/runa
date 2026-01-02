@@ -36,6 +36,7 @@ pub enum FileAction {
     CreateDirectory,
     Filter,
     ShowInfo,
+    FuzzyFind,
 }
 
 /// System actions (quit)
@@ -129,6 +130,7 @@ impl Keymap {
         bind(keys.filter(), Action::File(FileAction::Filter));
         bind(keys.quit(), Action::System(SystemAction::Quit));
         bind(keys.show_info(), Action::File(FileAction::ShowInfo));
+        bind(keys.find(), Action::File(FileAction::FuzzyFind));
 
         Keymap { map }
     }

@@ -4,6 +4,7 @@ pub mod config;
 pub mod file_manager;
 pub mod formatter;
 pub mod keymap;
+pub mod search;
 pub mod terminal;
 pub mod ui;
 pub mod utils;

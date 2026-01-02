@@ -597,3 +597,66 @@ fn dialog_position_unified(
     let base = configured.unwrap_or(fallback);
     adjusted_dialog_position(base, display_cfg.is_unified())
 }
+
+pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    let widget = app.config().theme().widget();
+    let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
+    let size = DialogSize::Medium;
+    let border_type = app.config().display().border_shape().as_border_type();
+
+    let input_text = app.actions().input_buffer();
+    let cursor_pos = app.actions().input_cursor_pos();
+    let results = app.actions().find_result();
+
+    let area = frame.area();
+    let dialog_rect = dialog_area(area, size, position);
+
+    let mut lines = vec![format!("{}", input_text)];
+    lines.push(String::new());
+
+    if results.is_empty() {
+        lines.push("  No matches".to_string());
+    } else {
+        for (idx, (entry, score)) in results.iter().enumerate() {
+            let marker = if idx == 0 { "›" } else { " " };
+            lines.push(format!(
+                " {} {} ({})",
+                marker,
+                entry.name().to_string_lossy(),
+                score
+            ));
+        }
+    }
+
+    let content = lines.join("\n");
+
+    let dialog_style = DialogStyle {
+        border: Borders::ALL,
+        border_style: widget.border_style_or(accent_style),
+        bg: widget.bg_or(Style::default().bg(Color::Reset)),
+        fg: widget.fg_or(Style::default().fg(Color::Reset)),
+        title: Some(Span::styled(
+            " Find ",
+            widget.title_style_or(Style::default()),
+        )),
+    };
+
+    let dialog_layout = DialogLayout {
+        area,
+        position,
+        size,
+    };
+
+    draw_dialog(
+        frame,
+        dialog_layout,
+        border_type,
+        &dialog_style,
+        content,
+        Some(Alignment::Left),
+    );
+
+    let visible_text = &input_text[..cursor_pos.min(input_text.len())];
+    let cursor_offset = visible_text.width();
+    frame.set_cursor_position((dialog_rect.x + 1 + cursor_offset as u16, dialog_rect.y + 1));
+}

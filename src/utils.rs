@@ -19,6 +19,8 @@ pub fn parse_color(s: &str) -> Color {
         "cyan" => Color::Cyan,
         "white" => Color::White,
         "black" => Color::Black,
+        "gray" => Color::Gray,
+        "darkgray" => Color::DarkGray,
         _ => {
             if let Some(color) = s.strip_prefix('#') {
                 match color.len() {

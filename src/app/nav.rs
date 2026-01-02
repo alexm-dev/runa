@@ -115,6 +115,17 @@ impl NavState {
         self.request_id += 1;
     }
 
+    pub fn set_selected(&mut self, idx: usize) {
+        let max = self.shown_entries_len();
+        self.selected = if max == 0 {
+            0
+        } else if idx >= max {
+            max - 1
+        } else {
+            idx
+        };
+    }
+
     pub fn update_from_worker(
         &mut self,
         path: PathBuf,

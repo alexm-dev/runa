@@ -29,6 +29,7 @@ impl<'a> AppState<'a> {
                     InputMode::Rename => self.rename_entry(),
                     InputMode::Filter => self.apply_filter(),
                     InputMode::ConfirmDelete => self.confirm_delete(),
+                    InputMode::Find => self.handle_find(),
                 }
                 self.exit_input_mode();
                 KeypressResult::Consumed
@@ -64,6 +65,9 @@ impl<'a> AppState<'a> {
                 if matches!(mode, InputMode::Filter) {
                     self.apply_filter();
                 }
+                if matches!(mode, InputMode::Find) {
+                    self.update_find_results();
+                }
                 KeypressResult::Consumed
             }
 
@@ -82,6 +86,11 @@ impl<'a> AppState<'a> {
                     if matches!(mode, InputMode::Filter) {
                         self.apply_filter();
                     }
+                    KeypressResult::Consumed
+                }
+                InputMode::Find => {
+                    self.actions.action_insert_at_cursor(c);
+                    self.update_find_results();
                     KeypressResult::Consumed
                 }
             },
@@ -217,6 +226,7 @@ impl<'a> AppState<'a> {
             FileAction::CreateDirectory => self.prompt_create_folder(),
             FileAction::Filter => self.prompt_filter(),
             FileAction::ShowInfo => self.toggle_file_info(),
+            FileAction::FuzzyFind => self.prompt_find_find(),
         }
         KeypressResult::Continue
     }
@@ -230,6 +240,41 @@ impl<'a> AppState<'a> {
             KeypressResult::OpenedEditor
         } else {
             KeypressResult::Continue
+        }
+    }
+
+    // Handle find actions
+
+    fn handle_find(&mut self) {
+        if let Some((entry, _)) = self.actions.find_result().first()
+            && let Some(idx) = self
+                .nav
+                .entries()
+                .iter()
+                .position(|e| e.name() == entry.name())
+        {
+            self.nav.set_selected(idx);
+        }
+    }
+
+    fn update_find_results(&mut self) {
+        let query = self.actions.input_buffer().to_string();
+
+        self.actions.find_result_mut().clear();
+
+        if !query.is_empty() {
+            use fuzzy_matcher::FuzzyMatcher;
+            let matcher = fuzzy_matcher::skim::SkimMatcherV2::default();
+
+            for entry in self.nav.entries() {
+                let name = entry.name().to_string_lossy();
+                if let Some(score) = matcher.fuzzy_match(&name, &query) {
+                    self.actions.find_result_mut().push((entry.clone(), score));
+                }
+            }
+
+            self.actions.find_result_mut().sort_by(|a, b| b.1.cmp(&a.1));
+            self.actions.find_result_mut().truncate(10);
         }
     }
 
@@ -270,6 +315,10 @@ impl<'a> AppState<'a> {
             "Filter: ".to_string(),
             Some(current_filter),
         );
+    }
+
+    fn prompt_find_find(&mut self) {
+        self.enter_input_mode(InputMode::Find, "".to_string(), None);
     }
 
     // ShowInfo handlers helpers for correct toggle and showing of FileInfo

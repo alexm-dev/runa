@@ -24,6 +24,26 @@ pub struct FileEntry {
 }
 
 impl FileEntry {
+    pub fn new(
+        name: OsString,
+        name_str: String,
+        lowercase_name: String,
+        display_name: String,
+        is_dir: bool,
+        is_hidden: bool,
+        is_system: bool,
+    ) -> Self {
+        FileEntry {
+            name,
+            name_str,
+            lowercase_name,
+            display_name,
+            is_dir,
+            is_hidden,
+            is_system,
+        }
+    }
+
     // Getters / accessors
 
     pub fn name(&self) -> &OsString {
