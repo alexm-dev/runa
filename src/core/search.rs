@@ -6,7 +6,7 @@ use std::io;
 use std::path::Path;
 use walkdir::WalkDir;
 
-pub fn find_find(root: &Path, query: &str, results: &mut Vec<(FileEntry, i64)>) -> io::Result<()> {
+pub fn find(root: &Path, query: &str, results: &mut Vec<(FileEntry, i64)>) -> io::Result<()> {
     let matcher = SkimMatcherV2::default();
 
     for entry in WalkDir::new(root).follow_links(false) {

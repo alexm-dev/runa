@@ -598,6 +598,9 @@ fn dialog_position_unified(
     adjusted_dialog_position(base, display_cfg.is_unified())
 }
 
+/// Draws the fuzzy find dialog widget
+///
+/// draws the input field and the result field as one widget
 pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let widget = app.config().theme().widget();
     let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
@@ -615,12 +618,12 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
     lines.push(String::new());
 
     if results.is_empty() {
-        lines.push("  No matches".to_string());
+        lines.push("No matches".to_string());
     } else {
         for (idx, (entry, score)) in results.iter().enumerate() {
             let marker = if idx == 0 { "›" } else { " " };
             lines.push(format!(
-                " {} {} ({})",
+                "{} {} ({})",
                 marker,
                 entry.name().to_string_lossy(),
                 score

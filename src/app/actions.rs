@@ -63,20 +63,8 @@ impl ActionContext {
         self.input_cursor_pos
     }
 
-    pub fn input_cursor_pos_mut(&mut self) -> &mut usize {
-        &mut self.input_cursor_pos
-    }
-
-    pub fn input_buffer_mut(&mut self) -> &mut String {
-        &mut self.input_buffer
-    }
-
     pub fn clipboard(&self) -> &Option<HashSet<PathBuf>> {
         &self.clipboard
-    }
-
-    pub fn is_cut(&self) -> bool {
-        self.is_cut
     }
 
     pub fn find_result(&self) -> &[(FileEntry, i64)] {

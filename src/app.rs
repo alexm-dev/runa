@@ -4,12 +4,12 @@
 //! to user input.
 
 pub mod actions;
-pub mod handlers;
-pub mod keymap;
+mod handlers;
+mod keymap;
 mod nav;
 mod parent;
 mod preview;
-pub mod state;
+mod state;
 
 pub use nav::NavState;
 pub use parent::ParentState;

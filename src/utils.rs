@@ -4,5 +4,7 @@ pub mod cli;
 pub mod formatter;
 pub mod helpers;
 
-pub use formatter::*;
-pub use helpers::*;
+pub use formatter::{
+    Formatter, format_attributes, format_file_size, format_file_time, format_file_type,
+};
+pub use helpers::{get_unused_path, open_in_editor, parse_color, shorten_home_path};
