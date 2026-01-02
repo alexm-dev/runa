@@ -100,7 +100,8 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
     if display_cfg.is_unified() {
         let mut outer_block = Block::default()
             .borders(Borders::ALL)
-            .border_style(accent_style);
+            .border_style(accent_style)
+            .border_type(border_type);
         if display_cfg.titles() {
             outer_block = outer_block.title(Line::from(vec![Span::styled(
                 format!(" {} ", path_str),
@@ -108,7 +109,10 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             )]));
         }
         frame.render_widget(outer_block, root_area);
-        root_area = Block::default().borders(Borders::ALL).inner(root_area);
+        root_area = Block::default()
+            .borders(Borders::ALL)
+            .border_type(border_type)
+            .inner(root_area);
     } else {
         let header_layout = Layout::default()
             .direction(Direction::Vertical)
