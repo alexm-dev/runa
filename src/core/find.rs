@@ -1,5 +1,5 @@
-use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use ignore::WalkBuilder;
 use num_cpus;
 use std::cmp::Ordering;
@@ -89,21 +89,19 @@ pub fn find_recursive(
                 let rel_path = entry.path().strip_prefix(&root_ref).unwrap_or(entry.path());
                 let rel_str = rel_path.to_string_lossy();
 
-                if let Some(score) = matcher.fuzzy_match(&rel_str, &query) {
-                    if let Ok(mut guard) = results.lock() {
-                        if guard.len() < MAX_FIND_RESULTS
-                            || score > guard.peek().map(|(s, _, _)| *s).unwrap_or(0)
-                        {
-                            guard.push((
-                                score,
-                                entry.path().to_path_buf(),
-                                entry.file_type().map(|f| f.is_dir()).unwrap_or(false),
-                            ));
+                if let Some(score) = matcher.fuzzy_match(&rel_str, &query)
+                    && let Ok(mut guard) = results.lock()
+                    && (guard.len() < MAX_FIND_RESULTS
+                        || score > guard.peek().map(|(s, _, _)| *s).unwrap_or(0))
+                {
+                    guard.push((
+                        score,
+                        entry.path().to_path_buf(),
+                        entry.file_type().map(|f| f.is_dir()).unwrap_or(false),
+                    ));
 
-                            if guard.len() > MAX_FIND_RESULTS {
-                                guard.pop();
-                            }
-                        }
+                    if guard.len() > MAX_FIND_RESULTS {
+                        guard.pop();
                     }
                 }
                 ignore::WalkState::Continue
@@ -111,9 +109,9 @@ pub fn find_recursive(
         });
 
     let heap = Arc::try_unwrap(results)
-        .map_err(|_| io::Error::new(io::ErrorKind::Other, "Thread synchronization failed"))?
+        .map_err(|_| io::Error::other("Thread synchronization failed"))?
         .into_inner()
-        .map_err(|_| io::Error::new(io::ErrorKind::Other, "Mutex poisoned by a panicked thread"))?;
+        .map_err(|_| io::Error::other("Mutex poisoned by a panicked thread"))?;
 
     let mut raw_results: Vec<_> = heap.into_vec();
 

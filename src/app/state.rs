@@ -185,7 +185,6 @@ impl<'a> AppState<'a> {
             changed = true;
         }
 
-        // Optimized tick() loop
         let current_selection_path = self
             .nav
             .selected_entry()
@@ -196,15 +195,14 @@ impl<'a> AppState<'a> {
             mode: InputMode::Find,
             ..
         } = self.actions.mode()
+            && let Some(query) = self.actions.take_query()
         {
-            if let Some(query) = self.actions.take_query() {
-                if query.is_empty() {
-                    self.actions.clear_find_results();
-                } else {
-                    self.request_find(query);
-                }
-                changed = true;
+            if query.is_empty() {
+                self.actions.clear_find_results();
+            } else {
+                self.request_find(query);
             }
+            changed = true;
         }
 
         // Process worker response

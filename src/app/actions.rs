@@ -92,9 +92,7 @@ impl FindState {
     }
 
     fn take_query(&mut self, current_query: &str) -> Option<String> {
-        let Some(until) = self.debounce else {
-            return None;
-        };
+        let until = self.debounce?;
         if Instant::now() < until {
             return None;
         }

@@ -608,7 +608,7 @@ fn dialog_position_unified(
 pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let widget = app.config().theme().widget();
     let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
-    let size = DialogSize::Large;
+    let size = DialogSize::Medium;
     let border_type = app.config().display().border_shape().as_border_type();
 
     let input_text = app.actions().input_buffer();
