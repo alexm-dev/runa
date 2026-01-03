@@ -14,16 +14,16 @@
 //!
 //! This is the primary context/state object passed to most UI/Terminal event logic.
 
-use crate::app::actions::ActionContext;
+use crate::app::actions::{ActionContext, ActionMode, InputMode};
 use crate::app::keymap::{Action, Keymap, SystemAction};
 use crate::app::{NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::worker::{WorkerResponse, WorkerTask, start_worker};
+use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::OverlayStack;
 
-use crossbeam_channel::{Receiver, Sender, unbounded};
 use crossterm::event::KeyEvent;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Instant;
 
 /// Enumeration for each individual keypress result processed.
@@ -81,8 +81,7 @@ pub struct AppState<'a> {
     pub(super) preview: PreviewState,
     pub(super) parent: ParentState,
 
-    pub(super) worker_tx: Sender<WorkerTask>,
-    pub(super) response_rx: Receiver<WorkerResponse>,
+    pub(super) workers: Workers,
     pub(super) is_loading: bool,
 
     pub(super) notification_time: Option<Instant>,
@@ -91,11 +90,8 @@ pub struct AppState<'a> {
 
 impl<'a> AppState<'a> {
     pub fn new(config: &'a Config) -> std::io::Result<Self> {
-        let (worker_tx, task_rx) = unbounded::<WorkerTask>();
-        let (res_tx, response_rx) = unbounded::<WorkerResponse>();
+        let workers = Workers::spawn();
         let current_dir = std::env::current_dir()?;
-
-        start_worker(task_rx, res_tx);
 
         let mut app = Self {
             config,
@@ -105,8 +101,7 @@ impl<'a> AppState<'a> {
             actions: ActionContext::default(),
             preview: PreviewState::default(),
             parent: ParentState::default(),
-            worker_tx,
-            response_rx,
+            workers,
             is_loading: false,
             notification_time: None,
             overlays: OverlayStack::new(),
@@ -159,10 +154,6 @@ impl<'a> AppState<'a> {
         &mut self.overlays
     }
 
-    pub fn worker_tx(&self) -> &Sender<WorkerTask> {
-        &self.worker_tx
-    }
-
     pub fn set_notification_time(&mut self, t: Option<Instant>) {
         self.notification_time = t;
     }
@@ -200,8 +191,24 @@ impl<'a> AppState<'a> {
             .selected_entry()
             .map(|entry| self.nav.current_dir().join(entry.name()));
 
+        // Find handling with debounce
+        if let ActionMode::Input {
+            mode: InputMode::Find,
+            ..
+        } = self.actions.mode()
+        {
+            if let Some(query) = self.actions.take_query() {
+                if query.is_empty() {
+                    self.actions.clear_find_results();
+                } else {
+                    self.request_find(query);
+                }
+                changed = true;
+            }
+        }
+
         // Process worker response
-        while let Ok(response) = self.response_rx.try_recv() {
+        while let Ok(response) = self.workers.response_rx().try_recv() {
             changed = true;
             match response {
                 WorkerResponse::DirectoryLoaded {
@@ -263,6 +270,18 @@ impl<'a> AppState<'a> {
                     }
                 }
 
+                WorkerResponse::FindResults {
+                    root,
+                    results,
+                    request_id,
+                } => {
+                    if root == self.nav.current_dir()
+                        && request_id == self.actions.find_request_id()
+                    {
+                        self.actions.set_find_results(results);
+                    }
+                }
+
                 WorkerResponse::Error(e) => {
                     self.preview.set_error(e);
                 }
@@ -295,7 +314,7 @@ impl<'a> AppState<'a> {
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
-        let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
+        let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
             dirs_first: self.config.dirs_first(),
@@ -315,7 +334,7 @@ impl<'a> AppState<'a> {
             // Set the directory generation for the preview to the request_id for WorkerResponse
 
             if entry.is_dir() {
-                let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
+                let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
                     path,
                     focus: None,
                     dirs_first: self.config.dirs_first(),
@@ -327,7 +346,7 @@ impl<'a> AppState<'a> {
                     request_id: req_id,
                 });
             } else {
-                let _ = self.worker_tx.send(WorkerTask::LoadPreview {
+                let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
                     path,
                     max_lines: self.metrics.preview_height,
                     pane_width: self.metrics.preview_width,
@@ -344,7 +363,7 @@ impl<'a> AppState<'a> {
             if self.parent.should_request(&parent_path_buf) {
                 let req_id = self.parent.prepare_new_request(parent_path_buf.clone());
 
-                let _ = self.worker_tx.send(WorkerTask::LoadDirectory {
+                let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
                     path: parent_path_buf,
                     focus: None,
                     dirs_first: self.config.dirs_first(),
@@ -360,5 +379,23 @@ impl<'a> AppState<'a> {
             // at root.
             self.parent.clear();
         }
+    }
+
+    pub fn request_find(&mut self, query: String) {
+        self.actions.cancel_find();
+
+        let request_id = self.actions.next_find_request_id();
+        let cancel_token = Arc::new(AtomicBool::new(false));
+
+        self.actions
+            .set_cancel_find_token(Arc::clone(&cancel_token));
+
+        let _ = self.workers.find_tx().send(WorkerTask::FindRecursive {
+            root: self.nav.current_dir().to_path_buf(),
+            query,
+            max_results: 15,
+            request_id,
+            cancel: cancel_token,
+        });
     }
 }

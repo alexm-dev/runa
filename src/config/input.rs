@@ -118,7 +118,7 @@ impl Default for Keys {
             filter: vec!["f".into()],
             toggle_marker: vec![" ".into()],
             show_info: vec!["i".into()],
-            find: vec!["o".into()],
+            find: vec!["s".into()],
         }
     }
 }

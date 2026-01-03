@@ -19,13 +19,66 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 
-use crossbeam_channel::{Receiver, Sender};
+use crossbeam_channel::{Receiver, Sender, unbounded};
 use unicode_width::UnicodeWidthChar;
 
+use crate::core::find::{FindResult, find_recursive};
 use crate::core::{FileEntry, file_manager::browse_dir};
 use crate::utils::{Formatter, get_unused_path};
+
+pub struct Workers {
+    io_tx: Sender<WorkerTask>,
+    find_tx: Sender<WorkerTask>,
+    preview_tx: Sender<WorkerTask>,
+    fileop_tx: Sender<WorkerTask>,
+    response_rx: Receiver<WorkerResponse>,
+}
+
+impl Workers {
+    pub fn spawn() -> Self {
+        let (io_tx, io_rx) = unbounded::<WorkerTask>();
+        let (preview_tx, preview_rx) = unbounded::<WorkerTask>();
+        let (find_tx, find_rx) = unbounded::<WorkerTask>();
+        let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
+        let (res_tx, response_rx) = unbounded::<WorkerResponse>();
+
+        start_worker(io_rx, res_tx.clone());
+        start_preview_worker(preview_rx, res_tx.clone());
+        start_find_worker(find_rx, res_tx.clone());
+        start_fileop_worker(fileop_rx, res_tx.clone());
+
+        Self {
+            io_tx,
+            preview_tx,
+            find_tx,
+            fileop_tx,
+            response_rx,
+        }
+    }
+
+    pub fn io_tx(&self) -> &Sender<WorkerTask> {
+        &self.io_tx
+    }
+
+    pub fn preview_tx(&self) -> &Sender<WorkerTask> {
+        &self.preview_tx
+    }
+
+    pub fn find_tx(&self) -> &Sender<WorkerTask> {
+        &self.find_tx
+    }
+
+    pub fn fileop_tx(&self) -> &Sender<WorkerTask> {
+        &self.fileop_tx
+    }
+
+    pub fn response_rx(&self) -> &Receiver<WorkerResponse> {
+        &self.response_rx
+    }
+}
 
 /// Tasks sent to the worker thread via channel.
 ///
@@ -50,6 +103,13 @@ pub enum WorkerTask {
     },
     FileOp {
         op: FileOperation,
+        request_id: u64,
+    },
+    FindRecursive {
+        root: PathBuf,
+        query: String,
+        max_results: usize,
+        cancel: Arc<AtomicBool>,
         request_id: u64,
     },
 }
@@ -93,6 +153,11 @@ pub enum WorkerResponse {
         need_reload: bool,
         focus: Option<OsString>,
     },
+    FindResults {
+        root: PathBuf,
+        results: Vec<FindResult>,
+        request_id: u64,
+    },
     Error(String),
 }
 
@@ -133,99 +198,192 @@ pub fn start_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                         let _ = res_tx.send(WorkerResponse::Error(format!("I/O Error: {}", e)));
                     }
                 },
-                WorkerTask::LoadPreview {
-                    path,
-                    max_lines,
-                    pane_width,
-                    request_id,
-                } => {
-                    let lines = safe_read_preview(&path, max_lines, pane_width);
-                    let _ = res_tx.send(WorkerResponse::PreviewLoaded { lines, request_id });
+                WorkerTask::LoadPreview { .. } => {
+                    // Preview tasks are handled in a separate thread
                 }
-                WorkerTask::FileOp { op, request_id } => {
-                    let mut focus_target: Option<OsString> = None;
-                    let result: Result<String, String> = match op {
-                        FileOperation::Delete(paths) => {
-                            for p in paths {
-                                let _ = if p.is_dir() {
-                                    std::fs::remove_dir_all(p)
-                                } else {
-                                    std::fs::remove_file(p)
-                                };
-                            }
-                            Ok("Items deleted".to_string())
-                        }
-                        FileOperation::Rename { old, new } => {
-                            let target = new;
+                WorkerTask::FileOp { .. } => {
+                    // File operations are handled in a separate thread
+                }
+                // Find operations are handled in a separate thread
+                WorkerTask::FindRecursive { .. } => {}
+            }
+        }
+    });
+}
 
-                            if target.exists() {
-                                Err(format!(
-                                    "Rename failed: '{}' already exists",
-                                    target.file_name().unwrap_or_default().to_string_lossy()
-                                ))
-                            } else {
-                                focus_target = target.file_name().map(|n| n.to_os_string());
-                                std::fs::rename(old, &target)
-                                    .map(|_| "Renamed".into())
-                                    .map_err(|e| e.to_string())
-                            }
-                        }
-                        FileOperation::Create { path, is_dir } => {
-                            let target = get_unused_path(&path);
-                            focus_target = target.file_name().map(|n| n.to_os_string());
+fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(task) = task_rx.recv() {
+            let WorkerTask::LoadPreview {
+                mut path,
+                mut max_lines,
+                mut pane_width,
+                mut request_id,
+            } = task
+            else {
+                continue;
+            };
 
-                            let res = if is_dir {
-                                std::fs::create_dir_all(&target)
-                            } else {
-                                std::fs::OpenOptions::new()
-                                    .write(true)
-                                    .create_new(true)
-                                    .open(&target)
-                                    .map(|_| ())
-                            };
-                            res.map(|_| "Created".into()).map_err(|e| e.to_string())
-                        }
-                        FileOperation::Copy {
-                            src,
-                            dest,
-                            cut,
-                            focus,
-                        } => {
-                            focus_target = focus;
-                            for s in src {
-                                if let Some(name) = s.file_name() {
-                                    let target = get_unused_path(&dest.join(name));
+            // Coalesce multiple LoadPreview tasks to only process the latest
+            while let Ok(next) = task_rx.try_recv() {
+                if let WorkerTask::LoadPreview {
+                    path: p,
+                    max_lines: m,
+                    pane_width: w,
+                    request_id: id,
+                } = next
+                {
+                    path = p;
+                    max_lines = m;
+                    pane_width = w;
+                    request_id = id;
+                }
+            }
 
-                                    if let Some(ref ft) = focus_target
-                                        && ft == name
-                                    {
-                                        focus_target = target.file_name().map(|n| n.to_os_string());
-                                    }
+            let lines = safe_read_preview(&path, max_lines, pane_width);
+            let _ = res_tx.send(WorkerResponse::PreviewLoaded { lines, request_id });
+        }
+    });
+}
 
-                                    let _ = if cut {
-                                        std::fs::rename(s, &target)
-                                    } else {
-                                        std::fs::copy(s, &target).map(|_| ())
-                                    };
-                                }
-                            }
-                            Ok("Pasted".into())
-                        }
+pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(task) = task_rx.recv() {
+            let WorkerTask::FindRecursive {
+                mut root,
+                mut query,
+                mut max_results,
+                mut request_id,
+                mut cancel,
+            } = task
+            else {
+                continue;
+            };
+
+            while let Ok(next) = task_rx.try_recv() {
+                if let WorkerTask::FindRecursive {
+                    root: r,
+                    query: q,
+                    max_results: max,
+                    request_id: id,
+                    cancel: c,
+                } = next
+                {
+                    root = r;
+                    query = q;
+                    max_results = max;
+                    request_id = id;
+                    cancel = c;
+                }
+            }
+
+            let mut results = Vec::new();
+            let _ = find_recursive(&root, &query, &mut results, Arc::clone(&cancel));
+            if results.len() > max_results {
+                results.truncate(max_results);
+            }
+
+            if cancel.load(Ordering::Relaxed) {
+                drop(results);
+                continue;
+            }
+
+            let _ = res_tx.send(WorkerResponse::FindResults {
+                root,
+                results,
+                request_id,
+            });
+        }
+    });
+}
+
+pub fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(task) = task_rx.recv() {
+            let WorkerTask::FileOp { op, request_id } = task else {
+                continue;
+            };
+            let mut focus_target: Option<OsString> = None;
+            let result: Result<String, String> = match op {
+                FileOperation::Delete(paths) => {
+                    for p in paths {
+                        let _ = if p.is_dir() {
+                            std::fs::remove_dir_all(p)
+                        } else {
+                            std::fs::remove_file(p)
+                        };
+                    }
+                    Ok("Items deleted".to_string())
+                }
+                FileOperation::Rename { old, new } => {
+                    let target = new;
+
+                    if target.exists() {
+                        Err(format!(
+                            "Rename failed: '{}' already exists",
+                            target.file_name().unwrap_or_default().to_string_lossy()
+                        ))
+                    } else {
+                        focus_target = target.file_name().map(|n| n.to_os_string());
+                        std::fs::rename(old, &target)
+                            .map(|_| "Renamed".into())
+                            .map_err(|e| e.to_string())
+                    }
+                }
+                FileOperation::Create { path, is_dir } => {
+                    let target = get_unused_path(&path);
+                    focus_target = target.file_name().map(|n| n.to_os_string());
+
+                    let res = if is_dir {
+                        std::fs::create_dir_all(&target)
+                    } else {
+                        std::fs::OpenOptions::new()
+                            .write(true)
+                            .create_new(true)
+                            .open(&target)
+                            .map(|_| ())
                     };
+                    res.map(|_| "Created".into()).map_err(|e| e.to_string())
+                }
+                FileOperation::Copy {
+                    src,
+                    dest,
+                    cut,
+                    focus,
+                } => {
+                    focus_target = focus;
+                    for s in src {
+                        if let Some(name) = s.file_name() {
+                            let target = get_unused_path(&dest.join(name));
 
-                    match result {
-                        Ok(msg) => {
-                            let _ = res_tx.send(WorkerResponse::OperationComplete {
-                                message: msg,
-                                request_id,
-                                need_reload: true,
-                                focus: focus_target, // CRITICA:
-                            });
-                        }
-                        Err(e) => {
-                            let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e)));
+                            if let Some(ref ft) = focus_target
+                                && ft == name
+                            {
+                                focus_target = target.file_name().map(|n| n.to_os_string());
+                            }
+
+                            let _ = if cut {
+                                std::fs::rename(s, &target)
+                            } else {
+                                std::fs::copy(s, &target).map(|_| ())
+                            };
                         }
                     }
+                    Ok("Pasted".into())
+                }
+            };
+
+            match result {
+                Ok(msg) => {
+                    let _ = res_tx.send(WorkerResponse::OperationComplete {
+                        message: msg,
+                        request_id,
+                        need_reload: true,
+                        focus: focus_target, // CRITICA:
+                    });
+                }
+                Err(e) => {
+                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e)));
                 }
             }
         }

@@ -9,7 +9,7 @@
 //! Most callers will import [browse_dir], [FileEntry], and [FileInfo] from this module.
 
 pub mod file_manager;
-pub mod search;
+pub mod find;
 pub mod terminal;
 pub mod worker;
 

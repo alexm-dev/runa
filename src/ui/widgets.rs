@@ -16,8 +16,8 @@ use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
-    style::{Color, Style},
-    text::{Line, Span},
+    style::{Color, Modifier, Style},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Clear, Paragraph},
 };
 use serde::de::Error;
@@ -268,14 +268,16 @@ pub fn dialog_area(area: Rect, size: DialogSize, pos: DialogPosition) -> Rect {
 
 /// Draws the dialog widgets
 /// Takes the frame area as a rect, sets the position of the dialog and the overall style.
-pub fn draw_dialog(
+pub fn draw_dialog<'a, T>(
     frame: &mut Frame,
     layout: DialogLayout,
     border: BorderType,
     style: &DialogStyle,
-    content: impl Into<String>,
+    content: T,
     alignment: Option<Alignment>,
-) {
+) where
+    T: Into<Text<'a>>,
+{
     let dialog = dialog_area(layout.area, layout.size, layout.position);
 
     frame.render_widget(Clear, dialog);
@@ -290,10 +292,12 @@ pub fn draw_dialog(
         block = block.title(title.clone());
     }
 
+    // Now uses T: Into<Text>, which is way faster for Vec<Line>
     let para = Paragraph::new(content.into())
         .block(block)
         .alignment(alignment.unwrap_or(Alignment::Left))
         .style(style.fg);
+
     frame.render_widget(para, dialog);
 }
 
@@ -608,30 +612,39 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
     let border_type = app.config().display().border_shape().as_border_type();
 
     let input_text = app.actions().input_buffer();
-    let cursor_pos = app.actions().input_cursor_pos();
-    let results = app.actions().find_result();
-
+    let results = app.actions().find_results();
     let area = frame.area();
     let dialog_rect = dialog_area(area, size, position);
 
-    let mut lines = vec![format!("{}", input_text)];
-    lines.push(String::new());
+    let mut display_lines = Vec::with_capacity(results.len() + 2);
+
+    display_lines.push(Line::from(vec![Span::styled(
+        input_text,
+        Style::default().add_modifier(Modifier::BOLD),
+    )]));
+
+    display_lines.push(Line::from(""));
 
     if results.is_empty() {
-        lines.push("No matches".to_string());
+        display_lines.push(Line::from(Span::styled(
+            " No matches",
+            Style::default().fg(Color::DarkGray),
+        )));
     } else {
-        for (idx, (entry, score)) in results.iter().enumerate() {
-            let marker = if idx == 0 { "›" } else { " " };
-            lines.push(format!(
-                "{} {} ({})",
-                marker,
-                entry.name().to_string_lossy(),
-                score
-            ));
+        for (idx, r) in results.iter().enumerate() {
+            let marker = if idx == 0 { "› " } else { "  " };
+            let marker_style = if idx == 0 {
+                accent_style
+            } else {
+                Style::default()
+            };
+
+            display_lines.push(Line::from(vec![
+                Span::styled(marker, marker_style),
+                Span::raw(r.relative()),
+            ]));
         }
     }
-
-    let content = lines.join("\n");
 
     let dialog_style = DialogStyle {
         border: Borders::ALL,
@@ -644,22 +657,22 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
         )),
     };
 
-    let dialog_layout = DialogLayout {
-        area,
-        position,
-        size,
-    };
-
     draw_dialog(
         frame,
-        dialog_layout,
+        DialogLayout {
+            area,
+            position,
+            size,
+        },
         border_type,
         &dialog_style,
-        content,
+        display_lines,
         Some(Alignment::Left),
     );
 
-    let visible_text = &input_text[..cursor_pos.min(input_text.len())];
-    let cursor_offset = visible_text.width();
-    frame.set_cursor_position((dialog_rect.x + 1 + cursor_offset as u16, dialog_rect.y + 1));
+    let visible_text = &input_text[..app.actions().input_cursor_pos().min(input_text.len())];
+    frame.set_cursor_position((
+        dialog_rect.x + 1 + visible_text.width() as u16,
+        dialog_rect.y + 1,
+    ));
 }

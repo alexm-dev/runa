@@ -67,7 +67,7 @@ impl<'a> AppState<'a> {
                     self.apply_filter();
                 }
                 if matches!(mode, InputMode::Find) {
-                    self.update_find_results();
+                    self.actions.find_debounce(Duration::from_millis(90));
                 }
                 KeypressResult::Consumed
             }
@@ -84,14 +84,11 @@ impl<'a> AppState<'a> {
                 }
                 InputMode::Rename | InputMode::NewFile | InputMode::NewFolder => {
                     self.actions.action_insert_at_cursor(c);
-                    if matches!(mode, InputMode::Filter) {
-                        self.apply_filter();
-                    }
                     KeypressResult::Consumed
                 }
                 InputMode::Find => {
                     self.actions.action_insert_at_cursor(c);
-                    self.update_find_results();
+                    self.actions.find_debounce(Duration::from_millis(90));
                     KeypressResult::Consumed
                 }
             },
@@ -133,13 +130,16 @@ impl<'a> AppState<'a> {
                 self.actions.action_copy(&self.nav, false);
                 self.notification_time = Some(Instant::now() + Duration::from_secs(2));
             }
-            FileAction::Paste => self.actions.action_paste(&mut self.nav, &self.worker_tx),
+            FileAction::Paste => {
+                let fileop_tx = self.workers.fileop_tx();
+                self.actions.action_paste(&mut self.nav, fileop_tx);
+            }
             FileAction::Rename => self.prompt_rename(),
             FileAction::Create => self.prompt_create_file(),
             FileAction::CreateDirectory => self.prompt_create_folder(),
             FileAction::Filter => self.prompt_filter(),
             FileAction::ShowInfo => self.toggle_file_info(),
-            FileAction::FuzzyFind => self.prompt_find_find(),
+            FileAction::FuzzyFind => self.prompt_find(),
         }
         KeypressResult::Continue
     }
@@ -205,15 +205,28 @@ impl<'a> AppState<'a> {
     }
 
     fn handle_find(&mut self) {
-        if let Some((entry, _)) = self.actions.find_result().first()
-            && let Some(idx) = self
-                .nav
-                .entries()
-                .iter()
-                .position(|e| e.name() == entry.name())
-        {
-            self.nav.set_selected(idx);
+        let Some(r) = self.actions.find_results().first() else {
+            return;
+        };
+        let path = r.path();
+
+        if r.is_dir() {
+            self.nav.save_position();
+            self.nav.set_path(path.to_path_buf());
+            self.request_dir_load(None);
+            self.request_parent_content();
+            return;
         }
+
+        let Some(parent) = path.parent() else {
+            return;
+        };
+        let focus = path.file_name().map(|n| n.to_os_string());
+
+        self.nav.save_position();
+        self.nav.set_path(parent.to_path_buf());
+        self.request_dir_load(focus);
+        self.request_parent_content();
     }
 
     // Input processes
@@ -231,20 +244,21 @@ impl<'a> AppState<'a> {
 
     fn create_file(&mut self) {
         if !self.actions.input_buffer().is_empty() {
-            self.actions
-                .action_create(&mut self.nav, false, &self.worker_tx);
+            let fileop_tx = self.workers.fileop_tx();
+            self.actions.action_create(&mut self.nav, false, fileop_tx);
         }
     }
 
     fn create_folder(&mut self) {
         if !self.actions.input_buffer().is_empty() {
-            self.actions
-                .action_create(&mut self.nav, true, &self.worker_tx);
+            let fileop_tx = self.workers.fileop_tx();
+            self.actions.action_create(&mut self.nav, true, fileop_tx);
         }
     }
 
     fn rename_entry(&mut self) {
-        self.actions.action_rename(&mut self.nav, &self.worker_tx);
+        let fileop_tx = self.workers.fileop_tx();
+        self.actions.action_rename(&mut self.nav, fileop_tx);
     }
 
     fn apply_filter(&mut self) {
@@ -253,28 +267,8 @@ impl<'a> AppState<'a> {
     }
 
     fn confirm_delete(&mut self) {
-        self.actions.action_delete(&mut self.nav, &self.worker_tx);
-    }
-
-    fn update_find_results(&mut self) {
-        let query = self.actions.input_buffer().to_string();
-
-        self.actions.find_result_mut().clear();
-
-        if !query.is_empty() {
-            use fuzzy_matcher::FuzzyMatcher;
-            let matcher = fuzzy_matcher::skim::SkimMatcherV2::default();
-
-            for entry in self.nav.entries() {
-                let name = entry.name().to_string_lossy();
-                if let Some(score) = matcher.fuzzy_match(&name, &query) {
-                    self.actions.find_result_mut().push((entry.clone(), score));
-                }
-            }
-
-            self.actions.find_result_mut().sort_by(|a, b| b.1.cmp(&a.1));
-            self.actions.find_result_mut().truncate(10);
-        }
+        let fileop_tx = self.workers.fileop_tx();
+        self.actions.action_delete(&mut self.nav, fileop_tx);
     }
 
     // Prompt functions
@@ -316,7 +310,7 @@ impl<'a> AppState<'a> {
         );
     }
 
-    fn prompt_find_find(&mut self) {
+    fn prompt_find(&mut self) {
         self.enter_input_mode(InputMode::Find, "".to_string(), None);
     }
 

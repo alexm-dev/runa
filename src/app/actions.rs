@@ -3,13 +3,18 @@
 //! Contains the [ActionContext] struct, tracking user input state, clipboard, and action modes.
 //! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
 
+use crate::app::find_state::FindState;
 use crate::app::keymap::FileAction;
 use crate::app::nav::NavState;
+use crate::core::FileInfo;
+use crate::core::find::FindResult;
 use crate::core::worker::{FileOperation, WorkerTask};
-use crate::core::{FileEntry, FileInfo};
 use crossbeam_channel::Sender;
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::time::Duration;
 
 /// Describes the current mode for action handling/input.
 ///
@@ -45,7 +50,7 @@ pub struct ActionContext {
     input_cursor_pos: usize,
     clipboard: Option<HashSet<PathBuf>>,
     is_cut: bool,
-    find_cache: Vec<(FileEntry, i64)>,
+    find: FindState,
 }
 
 impl ActionContext {
@@ -67,12 +72,40 @@ impl ActionContext {
         &self.clipboard
     }
 
-    pub fn find_result(&self) -> &[(FileEntry, i64)] {
-        &self.find_cache
+    pub fn find_results(&self) -> &[FindResult] {
+        self.find.results()
     }
 
-    pub fn find_result_mut(&mut self) -> &mut Vec<(FileEntry, i64)> {
-        &mut self.find_cache
+    pub fn set_find_results(&mut self, results: Vec<FindResult>) {
+        self.find.set_results(results)
+    }
+
+    pub fn clear_find_results(&mut self) {
+        self.find.clear_results()
+    }
+
+    pub fn find_request_id(&self) -> u64 {
+        self.find.request_id()
+    }
+
+    pub fn next_find_request_id(&mut self) -> u64 {
+        self.find.next_request_id()
+    }
+
+    pub fn take_query(&mut self) -> Option<String> {
+        self.find.take_query(&self.input_buffer)
+    }
+
+    pub fn find_debounce(&mut self, delay: Duration) {
+        self.find.set_debounce(delay);
+    }
+
+    pub fn cancel_find(&mut self) {
+        self.find.cancel_current();
+    }
+
+    pub fn set_cancel_find_token(&mut self, token: Arc<AtomicBool>) {
+        self.find.set_cancel(token);
     }
 
     // Mode functions
@@ -90,7 +123,7 @@ impl ActionContext {
     pub fn exit_mode(&mut self) {
         self.mode = ActionMode::Normal;
         self.input_buffer.clear();
-        self.find_cache.clear();
+        self.find.reset();
     }
 
     // Actions for inputs
@@ -248,7 +281,7 @@ impl Default for ActionContext {
             input_cursor_pos: 0,
             clipboard: None,
             is_cut: false,
-            find_cache: Vec::new(),
+            find: FindState::default(),
         }
     }
 }
