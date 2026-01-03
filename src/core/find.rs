@@ -1,5 +1,5 @@
-use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use ignore::WalkBuilder;
 use num_cpus;
 use std::cmp::Ordering;
@@ -67,7 +67,7 @@ pub fn find_recursive(
 
     WalkBuilder::new(root)
         .standard_filters(true)
-        .threads(num_cpus::get())
+        .threads(num_cpus::get().saturating_sub(1).max(1))
         .build_parallel()
         .run(|| {
             let results = Arc::clone(&results);
@@ -88,9 +88,8 @@ pub fn find_recursive(
 
                 let rel_path = entry.path().strip_prefix(&root_ref).unwrap_or(entry.path());
                 let rel_str = rel_path.to_string_lossy();
-                let match_target = rel_str.replace(['/', '\\'], "");
 
-                if let Some(score) = matcher.fuzzy_match(&match_target, &query) {
+                if let Some(score) = matcher.fuzzy_match(&rel_str, &query) {
                     if let Ok(mut guard) = results.lock() {
                         if guard.len() < MAX_FIND_RESULTS
                             || score > guard.peek().map(|(s, _, _)| *s).unwrap_or(0)

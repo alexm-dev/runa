@@ -4,7 +4,6 @@
 //! to user input.
 
 pub mod actions;
-pub mod find_state;
 mod handlers;
 mod keymap;
 mod nav;

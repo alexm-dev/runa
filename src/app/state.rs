@@ -384,7 +384,7 @@ impl<'a> AppState<'a> {
     pub fn request_find(&mut self, query: String) {
         self.actions.cancel_find();
 
-        let request_id = self.actions.next_find_request_id();
+        let request_id = self.actions.prepare_new_find_request();
         let cancel_token = Arc::new(AtomicBool::new(false));
 
         self.actions

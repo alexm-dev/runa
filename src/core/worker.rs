@@ -284,7 +284,6 @@ pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             }
 
             if cancel.load(Ordering::Relaxed) {
-                drop(results);
                 continue;
             }
 
