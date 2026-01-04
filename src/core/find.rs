@@ -13,6 +13,7 @@ use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -60,7 +61,7 @@ pub fn find_recursive(
     base_dir: &Path,
     query: &str,
     out: &mut Vec<FindResult>,
-    cancel: Arc<std::sync::atomic::AtomicBool>,
+    cancel: Arc<AtomicBool>,
     max_results: usize,
 ) -> io::Result<()> {
     out.clear();

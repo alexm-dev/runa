@@ -384,7 +384,7 @@ pub fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerR
                         message: msg,
                         request_id,
                         need_reload: true,
-                        focus: focus_target, // CRITICA:
+                        focus: focus_target,
                     });
                 }
                 Err(e) => {
