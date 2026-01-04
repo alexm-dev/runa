@@ -1,3 +1,10 @@
+//! The (fuzzy) find module for the find function in runa
+//!
+//! This module implements the [find_recursive()] function and the [FindResult].
+//!
+//! The [FindResult] struct is used to correctly dispaly the calculated results of the
+//! find_recursive function. It is used mainly by ui/actions
+
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 use ignore::WalkBuilder;
@@ -46,26 +53,28 @@ impl FindResult {
     }
 }
 
+/// Performs a fuzzy, parallel filesystem search at root.
+///
+/// Returns up to max_results best matches in out which is sorted by a score.
 pub fn find_recursive(
-    root: &Path,
+    base_dir: &Path,
     query: &str,
     out: &mut Vec<FindResult>,
     cancel: Arc<std::sync::atomic::AtomicBool>,
+    max_results: usize,
 ) -> io::Result<()> {
     out.clear();
     if query.is_empty() {
         return Ok(());
     }
 
-    const MAX_FIND_RESULTS: usize = 15;
-
     let results: Arc<Mutex<BinaryHeap<(i64, PathBuf, bool)>>> =
-        Arc::new(Mutex::new(BinaryHeap::with_capacity(MAX_FIND_RESULTS + 1)));
+        Arc::new(Mutex::new(BinaryHeap::with_capacity(max_results + 1)));
 
     let query_str = query.to_owned();
-    let root_buf = root.to_path_buf();
+    let root_buf = base_dir.to_path_buf();
 
-    WalkBuilder::new(root)
+    WalkBuilder::new(base_dir)
         .standard_filters(true)
         .threads(num_cpus::get().saturating_sub(1).max(1))
         .build_parallel()
@@ -91,7 +100,7 @@ pub fn find_recursive(
 
                 if let Some(score) = matcher.fuzzy_match(&rel_str, &query)
                     && let Ok(mut guard) = results.lock()
-                    && (guard.len() < MAX_FIND_RESULTS
+                    && (guard.len() < max_results
                         || score > guard.peek().map(|(s, _, _)| *s).unwrap_or(0))
                 {
                     guard.push((
@@ -100,7 +109,7 @@ pub fn find_recursive(
                         entry.file_type().map(|f| f.is_dir()).unwrap_or(false),
                     ));
 
-                    if guard.len() > MAX_FIND_RESULTS {
+                    if guard.len() > max_results {
                         guard.pop();
                     }
                 }

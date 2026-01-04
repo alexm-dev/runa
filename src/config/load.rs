@@ -10,6 +10,8 @@
 use crate::config::Display;
 use crate::config::Theme;
 use crate::config::{Editor, Keys};
+use crate::utils::DEFAULT_FIND_RESULTS;
+use crate::utils::helpers::clamp_find_results;
 
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -24,6 +26,8 @@ pub struct RawConfig {
     show_hidden: bool,
     show_system: bool,
     case_insensitive: bool,
+    #[serde(default = "default_find_results")]
+    max_find_results: usize,
     always_show: Vec<String>,
     display: Display,
     theme: Theme,
@@ -38,6 +42,7 @@ pub struct Config {
     show_system: bool,
     case_insensitive: bool,
     always_show: Arc<HashSet<OsString>>,
+    max_find_results: usize,
     display: Display,
     theme: Theme,
     editor: Editor,
@@ -51,6 +56,7 @@ impl From<RawConfig> for Config {
             show_hidden: raw.show_hidden,
             show_system: raw.show_system,
             case_insensitive: raw.case_insensitive,
+            max_find_results: clamp_find_results(raw.max_find_results),
             always_show: Arc::new(
                 raw.always_show
                     .into_iter()
@@ -110,6 +116,10 @@ impl Config {
         &self.always_show
     }
 
+    pub fn max_find_results(&self) -> usize {
+        self.max_find_results
+    }
+
     pub fn display(&self) -> &Display {
         &self.display
     }
@@ -158,6 +168,7 @@ show_hidden = true
 # show_system = false
 case_insensitive = true
 # always_show = []
+# max_find_results = 2000
 
 [display]
 # selection_marker = true
@@ -237,6 +248,7 @@ selection_icon = ""
 # size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
 # position = "center"       # "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 # confirm_size = "large"
+# find_size = "medium"
 # color.fg = "default"
 # color.bg = "default"
 # border.fg = "default"
@@ -324,6 +336,7 @@ impl Default for Config {
             show_hidden: true,
             show_system: false,
             case_insensitive: true,
+            max_find_results: DEFAULT_FIND_RESULTS,
             always_show: Arc::new(HashSet::new()),
             display: Display::default(),
             theme: Theme::default(),
@@ -331,4 +344,8 @@ impl Default for Config {
             keys: Keys::default(),
         }
     }
+}
+
+fn default_find_results() -> usize {
+    DEFAULT_FIND_RESULTS
 }

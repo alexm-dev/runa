@@ -1,7 +1,19 @@
+//! Helpers for runa
+//!
+//! Holds the min, default and the max find result numbers which is uses throughout runa.
+
 use crate::config::Editor;
 use ratatui::style::Color;
 use std::io;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
+
+/// The minimum results which is set to if the maximum is overset in the runa.toml.
+pub const MIN_FIND_RESULTS: usize = 15;
+/// The default find results. Can be overwritten in the runa.toml.
+pub const DEFAULT_FIND_RESULTS: usize = 2000;
+/// The maximum find result limit which is possible.
+/// Can be set higher, but better to set it to a big limit instead of usize::MAX
+pub const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
 
 /// Parses a string (color name or hex) into a ratatui::style::color
 ///
@@ -126,4 +138,19 @@ pub fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
         }
     }
     path.display().to_string()
+}
+
+/// Safely clamp the find result numbers.
+///
+/// If the clamped value does not match the set [MAX_FIND_RESULTS_LIMIT] then its invalid and its
+/// set to the [MIN_FIND_RESULTS] instead.
+pub fn clamp_find_results(value: usize) -> usize {
+    let clamped = value.clamp(MIN_FIND_RESULTS, MAX_FIND_RESULTS_LIMIT);
+    if clamped != value {
+        eprintln!(
+            "[Warning] max_find_results={} out of range ({}..={}), clamped to {}",
+            value, MIN_FIND_RESULTS, MAX_FIND_RESULTS_LIMIT, clamped
+        );
+    }
+    clamped
 }

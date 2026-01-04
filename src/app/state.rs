@@ -269,11 +269,11 @@ impl<'a> AppState<'a> {
                 }
 
                 WorkerResponse::FindResults {
-                    root,
+                    base_dir,
                     results,
                     request_id,
                 } => {
-                    if root == self.nav.current_dir()
+                    if base_dir == self.nav.current_dir()
                         && request_id == self.actions.find_request_id()
                     {
                         self.actions.set_find_results(results);
@@ -389,9 +389,9 @@ impl<'a> AppState<'a> {
             .set_cancel_find_token(Arc::clone(&cancel_token));
 
         let _ = self.workers.find_tx().send(WorkerTask::FindRecursive {
-            root: self.nav.current_dir().to_path_buf(),
+            base_dir: self.nav.current_dir().to_path_buf(),
             query,
-            max_results: 15,
+            max_results: self.config().max_find_results(),
             request_id,
             cancel: cancel_token,
         });

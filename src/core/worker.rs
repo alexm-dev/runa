@@ -106,7 +106,7 @@ pub enum WorkerTask {
         request_id: u64,
     },
     FindRecursive {
-        root: PathBuf,
+        base_dir: PathBuf,
         query: String,
         max_results: usize,
         cancel: Arc<AtomicBool>,
@@ -154,7 +154,7 @@ pub enum WorkerResponse {
         focus: Option<OsString>,
     },
     FindResults {
-        root: PathBuf,
+        base_dir: PathBuf,
         results: Vec<FindResult>,
         request_id: u64,
     },
@@ -250,7 +250,7 @@ pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::FindRecursive {
-                mut root,
+                mut base_dir,
                 mut query,
                 mut max_results,
                 mut request_id,
@@ -262,14 +262,14 @@ pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
 
             while let Ok(next) = task_rx.try_recv() {
                 if let WorkerTask::FindRecursive {
-                    root: r,
+                    base_dir: base,
                     query: q,
                     max_results: max,
                     request_id: id,
                     cancel: c,
                 } = next
                 {
-                    root = r;
+                    base_dir = base;
                     query = q;
                     max_results = max;
                     request_id = id;
@@ -278,7 +278,13 @@ pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             }
 
             let mut results = Vec::new();
-            let _ = find_recursive(&root, &query, &mut results, Arc::clone(&cancel));
+            let _ = find_recursive(
+                &base_dir,
+                &query,
+                &mut results,
+                Arc::clone(&cancel),
+                max_results,
+            );
             if results.len() > max_results {
                 results.truncate(max_results);
             }
@@ -288,7 +294,7 @@ pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             }
 
             let _ = res_tx.send(WorkerResponse::FindResults {
-                root,
+                base_dir,
                 results,
                 request_id,
             });

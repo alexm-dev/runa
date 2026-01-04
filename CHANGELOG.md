@@ -8,10 +8,11 @@ New feature update
 - **Find function**: Added a new (fuzzy) find function to quickly search your directories and files.
 - **Scrollable find result list**: Added a scrollable find result list to the new find function to scroll through the results in the widget.
 - **Persistent filters**: Made filters persist for each directory it is applied to.
+- **Configurable maximum find results**: Added a new configuration to change the internal defaults for the new find function. (Internal defaul is 20000).
 
 ### Internal
 - **Code file structure**: Refactored modules and sub-modules for better maintainability. In example: Moved **core** runa modules, like `file_manager`, `worker`, etc. into `core`.
-- **Worker seperation**: Seperated worker threads to individual lines for better performance. FileOp, Nav, Find and IO have each their own worker now.
+- **Worker thread seperation**: Seperated worker threads to individual lines for better performance. FileOp, Nav, Find and IO have each their own worker now.
 
 
 ---
