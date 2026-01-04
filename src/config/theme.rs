@@ -119,6 +119,8 @@ pub struct WidgetTheme {
     size: Option<DialogSize>,
     #[serde(default)]
     confirm_size: Option<DialogSize>,
+    #[serde(default)]
+    find_size: Option<DialogSize>,
 }
 
 impl WidgetTheme {
@@ -136,6 +138,14 @@ impl WidgetTheme {
 
     pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
         self.confirm_size()
+            .as_ref()
+            .or_else(|| self.size().as_ref())
+            .copied()
+            .unwrap_or(fallback)
+    }
+
+    pub fn find_size_or(&self, fallback: DialogSize) -> DialogSize {
+        self.find_size
             .as_ref()
             .or_else(|| self.size().as_ref())
             .copied()
@@ -198,6 +208,7 @@ impl Default for WidgetTheme {
             position: Some(DialogPosition::Center),
             size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),
+            find_size: Some(DialogSize::Medium),
         }
     }
 }

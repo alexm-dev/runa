@@ -63,6 +63,8 @@ impl FindState {
         self.selected
     }
 
+    // Find functions
+
     fn cancel_current(&mut self) {
         if let Some(token) = self.cancel.take() {
             token.store(true, Ordering::Relaxed);

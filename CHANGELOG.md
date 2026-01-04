@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.0] - TDB
+
+New feature update
+
+### Added
+- **Find function**: Added a new (fuzzy) find function to quickly search your directories and files.
+- **Scrollable find result list**: Added a scrollable find result list to the new find function to scroll through the results in the widget.
+- **Persistent filters**: Made filters persist for each directory it is applied to.
+
+### Internal
+- **Code file structure**: Refactored modules and sub-modules for better maintainability. In example: Moved **core** runa modules, like `file_manager`, `worker`, etc. into `core`.
+- **Worker seperation**: Seperated worker threads to individual lines for better performance. FileOp, Nav, Find and IO have each their own worker now.
+
+
+---
+
+
 ## [0.3.10] - 2025-12-30
 
 Quick configuration generation patch when `runa.toml` is generated with `rn --init-full`

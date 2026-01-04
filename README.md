@@ -123,13 +123,13 @@ Future releases will focus on expanding functionality while keeping it fast and 
 
 ### Planned features
 
-- [ ] Search & Discovery: Integrated fuzzy finding and fast directory traversal.  
-
 - [ ] Image Previews: Support for Sixel/Kitty graphics protocols.  
 
 - [ ] Syntax Highlighting: Treesitter integration for the preview pane.  
 
 ### Completed
+
+- [x] Search & Discovery: Integrated fuzzy finding and fast directory traversal.  
 
 - [x] File Operations: Copy, move, delete, and rename from within the UI.  ( Completed in 0.3.0 )  
 
