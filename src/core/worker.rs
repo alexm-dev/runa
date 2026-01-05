@@ -136,6 +136,7 @@ pub enum FileOperation {
 /// Responses sent form the worker thread back to the main thread via the channel
 ///
 /// Each variant delivers the result or error from a request taks.
+#[derive(Debug)]
 pub enum WorkerResponse {
     DirectoryLoaded {
         path: PathBuf,

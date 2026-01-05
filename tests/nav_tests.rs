@@ -72,7 +72,7 @@ fn test_navstate_rapid_navigation() -> Result<(), Box<dyn error::Error>> {
 }
 
 #[test]
-fn test_navstate_navigation_stress() -> Result<(), Box<dyn error::Error>> {
+fn test_navstate_navigation() -> Result<(), Box<dyn error::Error>> {
     let base = tempdir()?;
     let base_path = base.path().to_path_buf();
     let subdir_path = base_path.join("subdir");
@@ -124,7 +124,7 @@ fn test_navstate_navigation_stress() -> Result<(), Box<dyn error::Error>> {
 }
 
 #[test]
-fn test_navstate_selection_persistence_stress() -> Result<(), Box<dyn error::Error>> {
+fn test_navstate_selection_persistence() -> Result<(), Box<dyn error::Error>> {
     let base = tempdir()?;
     let base_path = base.path().to_path_buf();
     let subdir_path = base_path.join("subdir");

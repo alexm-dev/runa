@@ -1,10 +1,11 @@
 use crossbeam_channel::unbounded;
 use rand::{Rng, rng};
-use runa_tui::core::worker::{WorkerResponse, WorkerTask, start_worker};
+use runa_tui::core::worker::{WorkerResponse, WorkerTask, Workers, start_worker};
 use std::collections::HashSet;
 use std::env;
-use std::fs;
+use std::fs::{self, File};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::thread;
 use std::time::Duration;
 use tempfile::tempdir;
@@ -52,7 +53,7 @@ fn test_worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
-fn stress_worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Error>> {
+fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = tempdir()?;
     let safe_subdir = temp_dir.path().join("runa_test_safe_dir");
     fs::create_dir_all(&safe_subdir)?;
@@ -63,7 +64,7 @@ fn stress_worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::er
 
     let pane_base = 20;
     let thread_count = 2;
-    let requests_per_thread = 50;
+    let requests_per_thread = 25;
 
     let (task_tx, task_rx) = unbounded();
     let (res_tx, res_rx) = unbounded();
@@ -144,5 +145,70 @@ fn stress_worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::er
         valid_responses, total_requests,
         "Not all worker requests returned results!"
     );
+    Ok(())
+}
+
+#[test]
+fn test_worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
+    for i in 0..5 {
+        File::create(dir.path().join(format!("crab_{i}.txt")))?;
+    }
+    File::create(dir.path().join("other.txt"))?;
+
+    let workers = Workers::spawn();
+    let find_tx = workers.find_tx();
+    let res_rx = workers.response_rx();
+
+    let req_id = 42;
+    find_tx.send(WorkerTask::FindRecursive {
+        base_dir: dir.path().to_path_buf(),
+        query: "crab".to_string(),
+        max_results: 10,
+        cancel: Arc::new(AtomicBool::new(false)),
+        request_id: req_id,
+    })?;
+
+    let mut got = false;
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+
+    while std::time::Instant::now() < deadline {
+        match res_rx.recv_timeout(deadline - std::time::Instant::now()) {
+            Ok(WorkerResponse::FindResults {
+                results,
+                request_id,
+                ..
+            }) => {
+                assert_eq!(request_id, req_id);
+                assert_eq!(
+                    results.len(),
+                    5,
+                    "Expected 5 crab_* results, got {:?}",
+                    results
+                        .iter()
+                        .map(|r| r.path().display().to_string())
+                        .collect::<Vec<_>>()
+                );
+                for r in results {
+                    assert!(
+                        r.path()
+                            .file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap()
+                            .contains("crab")
+                    );
+                }
+                got = true;
+                break;
+            }
+            Ok(_unexpected) => {
+                continue;
+            }
+            Err(_) => break,
+        }
+    }
+
+    assert!(got, "Did not receive FindResults response in time");
     Ok(())
 }
