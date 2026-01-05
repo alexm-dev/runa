@@ -78,6 +78,7 @@ pub fn find_recursive(
 
     WalkBuilder::new(base_dir)
         .standard_filters(true)
+        .hidden(false)
         .threads(num_cpus::get().saturating_sub(1).max(1))
         .build_parallel()
         .run(|| {
