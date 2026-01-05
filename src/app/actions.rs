@@ -82,6 +82,7 @@ impl FindState {
 
     fn clear_results(&mut self) {
         self.cache.clear();
+        self.cache.shrink_to_fit();
     }
 
     fn prepare_new_request(&mut self) -> u64 {
@@ -113,6 +114,7 @@ impl FindState {
     fn reset(&mut self) {
         self.cancel_current();
         self.cache.clear();
+        self.cache.shrink_to_fit();
         self.debounce = None;
         self.last_query.clear();
     }
