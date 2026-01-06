@@ -14,7 +14,7 @@ New feature update: The fuzzy finder.
 
 ### Fixed
 - **Parent pane**: Fixed a stale parent content request after initial startup of runa.
-- **Pane Requests**: Request ids are more robust now.
+- **Pane Requests**: Improved ID handling for pane requests, making request IDs more robust and reliable.
 
 ### Internal
 - **Code file structure**: Refactored modules and sub-modules for better maintainability. In example: Moved **core** runa modules, like `file_manager`, `worker`, etc. into `core`.
