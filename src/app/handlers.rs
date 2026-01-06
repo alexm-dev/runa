@@ -146,7 +146,7 @@ impl<'a> AppState<'a> {
             FileAction::Delete => self.prompt_delete(),
             FileAction::Copy => {
                 self.actions.action_copy(&self.nav, false);
-                self.notification_time = Some(Instant::now() + Duration::from_secs(2));
+                self.handle_timed_message(Duration::from_secs(2));
             }
             FileAction::Paste => {
                 let fileop_tx = self.workers.fileop_tx();
@@ -251,6 +251,10 @@ impl<'a> AppState<'a> {
         self.request_parent_content();
     }
 
+    pub fn handle_timed_message(&mut self, duration: Duration) {
+        self.notification_time = Some(Instant::now() + duration);
+    }
+
     // Input processes
 
     pub fn process_confirm_delete_char(&mut self, c: char) {
@@ -333,22 +337,31 @@ impl<'a> AppState<'a> {
     }
 
     fn prompt_find(&mut self) {
+        if which::which("fd").is_err() {
+            self.push_overlay_message(
+                "Fuzzy Find requires the `fd` tool.".to_string(),
+                Duration::from_secs(5),
+            );
+            return;
+        }
         self.enter_input_mode(InputMode::Find, "".to_string(), None);
     }
 
     // Helpers
 
-    /// Helper function to determine if ShowInfo is triggered
-    /// If ShowInfo is not open, does nothing.
     pub fn refresh_show_info_if_open(&mut self) {
-        if let Some(Overlay::ShowInfo { .. }) = self.overlays().top()
+        let maybe_idx = self
+            .overlays()
+            .find_index(|o| matches!(o, Overlay::ShowInfo { .. }));
+
+        if let Some(i) = maybe_idx
             && let Some(entry) = self.nav.selected_shown_entry()
         {
             let path = self.nav.current_dir().join(entry.name());
-            if let Ok(file_info) = FileInfo::get_file_info(&path) {
-                self.overlays_mut().pop();
-                self.overlays_mut()
-                    .push(Overlay::ShowInfo { info: file_info });
+            if let Ok(file_info) = FileInfo::get_file_info(&path)
+                && let Some(Overlay::ShowInfo { info }) = self.overlays_mut().get_mut(i)
+            {
+                *info = file_info;
             }
         }
     }
@@ -364,10 +377,26 @@ impl<'a> AppState<'a> {
     }
 
     fn toggle_file_info(&mut self) {
-        if let Some(Overlay::ShowInfo { .. }) = self.overlays().top() {
-            self.overlays_mut().pop();
+        let is_open = self
+            .overlays()
+            .iter()
+            .any(|o| matches!(o, Overlay::ShowInfo { .. }));
+
+        if is_open {
+            self.overlays_mut()
+                .retain(|o| !matches!(o, Overlay::ShowInfo { .. }));
         } else {
             self.show_file_info();
         }
+    }
+
+    pub fn push_overlay_message(&mut self, text: String, duration: Duration) {
+        self.notification_time = Some(Instant::now() + duration);
+
+        if matches!(self.overlays.top(), Some(Overlay::Message { .. })) {
+            self.overlays_mut().pop();
+        }
+
+        self.overlays_mut().push(Overlay::Message { text });
     }
 }

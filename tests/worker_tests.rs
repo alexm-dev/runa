@@ -148,8 +148,16 @@ fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
+fn fd_available() -> bool {
+    which::which("fd").is_ok()
+}
+
 #[test]
 fn test_worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
+    if !fd_available() {
+        return Ok(());
+    }
+
     let dir = tempdir()?;
     for i in 0..5 {
         File::create(dir.path().join(format!("crab_{i}.txt")))?;
@@ -171,6 +179,7 @@ fn test_worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut got = false;
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let expected_files: HashSet<_> = (0..5).map(|i| format!("crab_{i}.txt")).collect();
 
     while std::time::Instant::now() < deadline {
         match res_rx.recv_timeout(deadline - std::time::Instant::now()) {
@@ -180,25 +189,34 @@ fn test_worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
                 ..
             }) => {
                 assert_eq!(request_id, req_id);
-                assert_eq!(
-                    results.len(),
-                    5,
-                    "Expected 5 crab_* results, got {:?}",
-                    results
-                        .iter()
-                        .map(|r| r.path().display().to_string())
-                        .collect::<Vec<_>>()
-                );
-                for r in results {
+
+                let found_files: HashSet<_> = results
+                    .iter()
+                    .filter_map(|r| r.path().file_name())
+                    .filter_map(|os| os.to_str())
+                    .filter(|name| name.contains("crab"))
+                    .map(|s| s.to_string())
+                    .collect();
+
+                for fname in &expected_files {
                     assert!(
-                        r.path()
-                            .file_name()
-                            .unwrap()
-                            .to_str()
-                            .unwrap()
-                            .contains("crab")
+                        found_files.contains(fname),
+                        "Expected {fname:?} in results: {:?}",
+                        found_files
                     );
                 }
+
+                for r in &results {
+                    let name = r.path().file_name().unwrap().to_str().unwrap();
+                    if name.contains("crab") {
+                        assert!(
+                            expected_files.contains(name),
+                            "Unexpected crab result: {}",
+                            name
+                        );
+                    }
+                }
+
                 got = true;
                 break;
             }

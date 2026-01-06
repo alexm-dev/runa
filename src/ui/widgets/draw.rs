@@ -16,7 +16,7 @@ use ratatui::{
     Frame,
     layout::{Alignment, Rect},
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph},
 };
 use std::time::Instant;
@@ -134,7 +134,7 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
 
 /// Draw the status line at the top right
 /// Used for indication of number of copied/yanked files and the current applied filter
-pub fn draw_status_line(frame: &mut Frame, app: &crate::app::AppState) {
+pub fn draw_status_line(frame: &mut Frame, app: &AppState) {
     let area = frame.area();
 
     let count = match app.actions().clipboard() {
@@ -219,44 +219,53 @@ pub fn draw_show_info_dialog(
     let position = dialog_position_unified(info_cfg.position(), app, DialogPosition::BottomLeft);
     let border_type = app.config().display().border_shape().as_border_type();
 
-    let mut lines = Vec::new();
+    let mut lines: Vec<Line> = Vec::with_capacity(5);
+
     if info_cfg.name() {
-        lines.push(format!("Name:      {}", info.name().to_string_lossy()));
+        lines.push(Line::from(format!(
+            "Name:      {}",
+            info.name().to_string_lossy()
+        )));
     }
     if info_cfg.file_type() {
-        lines.push(format!("Type:      {}", format_file_type(info.file_type())));
+        lines.push(Line::from(format!(
+            "Type:      {}",
+            format_file_type(info.file_type())
+        )));
     }
     if info_cfg.size() {
-        lines.push(format!(
+        lines.push(Line::from(format!(
             "Size:      {}",
             format_file_size(*info.size(), info.file_type() == &FileType::Directory)
-        ));
+        )));
     }
     if info_cfg.modified() {
-        lines.push(format!("Modified:  {}", format_file_time(*info.modified())));
+        lines.push(Line::from(format!(
+            "Modified:  {}",
+            format_file_time(*info.modified())
+        )));
     }
     if info_cfg.perms() {
-        lines.push(format!("Perms:     {}", info.attributes()));
+        lines.push(Line::from(format!("Perms:     {}", info.attributes())));
     }
+
     if lines.is_empty() {
         return;
     }
 
-    let content_width = lines.iter().map(|s| s.chars().count()).max().unwrap_or(0);
+    let max_width = lines.iter().map(|l| l.width()).max().unwrap_or(0);
+
     let min_width = 27;
     let border_pad = 2;
     let right_pad = 2;
-    let width = (content_width + right_pad).max(min_width) + border_pad;
+    let width = (max_width + right_pad).max(min_width) + border_pad;
     let area = frame.area();
 
-    // Clamp to frame area
     let width = width.min(area.width as usize);
     let height = (lines.len() + border_pad).min(area.height as usize);
 
-    // Convert dialog size percantes to cell positions.
     let w_pct = ((width as f32 / area.width as f32) * 100.0).ceil() as u16;
     let h_pct = ((height as f32 / area.height as f32) * 100.0).ceil() as u16;
-    let dialog_size = DialogSize::Custom(w_pct, h_pct);
 
     let dialog_style = DialogStyle {
         border: Borders::ALL,
@@ -272,7 +281,7 @@ pub fn draw_show_info_dialog(
     let dialog_layout = DialogLayout {
         area,
         position,
-        size: dialog_size,
+        size: DialogSize::Custom(w_pct, h_pct),
     };
 
     draw_dialog(
@@ -280,7 +289,7 @@ pub fn draw_show_info_dialog(
         dialog_layout,
         border_type,
         &dialog_style,
-        lines.join("\n"),
+        Text::from(lines),
         Some(Alignment::Left),
     );
 }
@@ -424,6 +433,58 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
         Some(Alignment::Left),
     );
     frame.set_cursor_position((dialog_rect.x + 1 + cursor_x as u16, dialog_rect.y + 1));
+}
+
+pub fn draw_message_overlay(frame: &mut Frame, app: &AppState, accent_style: Style, text: &str) {
+    let widget = app.config().theme().widget();
+    let position = DialogPosition::BottomRight;
+    let border_type = app.config().display().border_shape().as_border_type();
+
+    let mut max_line_width = 0;
+    let mut line_count = 0;
+    for line in text.lines() {
+        max_line_width = max_line_width.max(line.len());
+        line_count += 1;
+    }
+
+    let min_width = 27;
+    let border_pad = 2;
+    let right_pad = 2;
+    let width = (max_line_width + right_pad).max(min_width) + border_pad;
+    let area = frame.area();
+
+    let width = width.min(area.width as usize);
+    let height = (line_count + border_pad).min(area.height as usize);
+
+    let w_pct = ((width as f32 / area.width as f32) * 100.0).ceil() as u16;
+    let h_pct = ((height as f32 / area.height as f32) * 100.0).ceil() as u16;
+    let dialog_size = DialogSize::Custom(w_pct, h_pct);
+
+    let dialog_style = DialogStyle {
+        border: Borders::ALL,
+        border_style: widget.border_style_or(accent_style),
+        bg: widget.bg_or(Style::default().bg(ratatui::style::Color::Reset)),
+        fg: widget.fg_or(Style::default().fg(ratatui::style::Color::Reset)),
+        title: Some(Span::styled(
+            " Message ",
+            widget.title_style_or(Style::default()),
+        )),
+    };
+
+    let dialog_layout = DialogLayout {
+        area,
+        position,
+        size: dialog_size,
+    };
+
+    draw_dialog(
+        frame,
+        dialog_layout,
+        border_type,
+        &dialog_style,
+        text,
+        Some(Alignment::Left),
+    );
 }
 
 /// Helper function to make adjusted dialog positions for unified borders

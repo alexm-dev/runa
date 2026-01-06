@@ -25,7 +25,7 @@ use std::thread;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use unicode_width::UnicodeWidthChar;
 
-use crate::core::find::{FindResult, find_recursive};
+use crate::core::find::{FindResult, find};
 use crate::core::{FileEntry, file_manager::browse_dir};
 use crate::utils::{Formatter, get_unused_path};
 
@@ -279,7 +279,7 @@ pub fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             }
 
             let mut results = Vec::new();
-            let _ = find_recursive(
+            let _ = find(
                 &base_dir,
                 &query,
                 &mut results,

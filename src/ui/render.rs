@@ -16,7 +16,7 @@ use crate::{
     ui::{
         overlays::Overlay,
         panes::{PaneContext, PaneStyles, PreviewOptions},
-        widgets::{draw_find_dialog, draw_input_dialog, draw_show_info_dialog, draw_status_line},
+        widgets::*,
     },
     utils::shorten_home_path,
 };
@@ -258,8 +258,15 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         }
     }
 
-    if let Some(Overlay::ShowInfo { info }) = app.overlays().top() {
-        draw_show_info_dialog(frame, app, accent_style, info);
+    for overlay in app.overlays().iter() {
+        match overlay {
+            Overlay::ShowInfo { info } => {
+                draw_show_info_dialog(frame, app, accent_style, info);
+            }
+            Overlay::Message { text } => {
+                draw_message_overlay(frame, app, accent_style, text);
+            }
+        }
     }
 }
 

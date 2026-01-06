@@ -19,7 +19,7 @@ use crate::app::keymap::{Action, Keymap, SystemAction};
 use crate::app::{NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
-use crate::ui::overlays::OverlayStack;
+use crate::ui::overlays::{Overlay, OverlayStack};
 
 use crossterm::event::KeyEvent;
 use std::sync::Arc;
@@ -178,6 +178,17 @@ impl<'a> AppState<'a> {
     /// and sets it to true if a WorkerResponse was made or if a preview should be triggered.
     pub fn tick(&mut self) -> bool {
         let mut changed = false;
+
+        if let Some(expiry) = self.notification_time
+            && Instant::now() >= expiry
+        {
+            self.notification_time = None;
+
+            self.overlays_mut()
+                .retain(|o| !matches!(o, Overlay::Message { .. }));
+
+            changed = true;
+        }
 
         // Handle preview debounc
         if self.preview.should_trigger() {
