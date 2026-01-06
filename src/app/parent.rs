@@ -45,7 +45,7 @@ impl ParentState {
 
     /// Prepares a request: increases the request_id, sets new path and returns the new request_id
     pub fn prepare_new_request(&mut self, path: PathBuf) -> u64 {
-        self.request_id += 1;
+        self.request_id = self.request_id.wrapping_add(1);
         self.last_path = Some(path);
         self.request_id
     }

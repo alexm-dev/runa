@@ -73,7 +73,7 @@ impl PreviewState {
     }
 
     pub fn prepare_new_request(&mut self, path: PathBuf) -> u64 {
-        self.request_id += 1;
+        self.request_id = self.request_id.wrapping_add(1);
         self.current_path = Some(path);
         self.pending = false;
         self.request_id

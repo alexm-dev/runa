@@ -67,7 +67,7 @@ impl NavState {
     // Navigation functions
 
     pub fn prepare_new_request(&mut self) -> u64 {
-        self.request_id += 1;
+        self.request_id = self.request_id.wrapping_add(1);
         self.request_id
     }
 
@@ -114,7 +114,7 @@ impl NavState {
         self.selected = 0;
         self.restore_filter_for_current_dir();
         // instantly ends all pending messages from the previous directory.
-        self.request_id += 1;
+        self.request_id = self.request_id.wrapping_add(1);
     }
 
     pub fn set_selected(&mut self, idx: usize) {
