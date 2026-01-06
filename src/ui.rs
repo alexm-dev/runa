@@ -1,6 +1,6 @@
 //! Terminal User Interface rendering logic.
 //!
-//! This module handles all layout, pane arrangement, and rendering for the main file manager UI.
+//! This module handles all layout, pane arrangement, and rendering for the runa UI.
 //! It coordinates drawing of the parent, main, and preview panes, as well as input dialogs and the status bar.
 //!
 //! UI configuration is driven by the applications display/theme settings and adapts to different layouts: unified, split, or normal views.

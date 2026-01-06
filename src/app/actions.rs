@@ -294,6 +294,10 @@ impl Default for ActionContext {
     }
 }
 
+/// Tracks the state of an ongoing fuzzy find operation.
+///
+/// It includes the cached results, request ID, debounce timer, last query,
+/// selected result index, and cancellation token.
 #[derive(Default)]
 pub struct FindState {
     cache: Vec<FindResult>,

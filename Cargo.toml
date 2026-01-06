@@ -27,9 +27,6 @@ unicode-width = "0.2.2"
 humansize = "2.1.3"
 chrono = "0.4"
 fuzzy-matcher = "0.3.7"
-ignore = "0.4"
-num_cpus = "1.0"
-parking_lot = "0.12"
 which = "8.0.0"
 
 [dev-dependencies]

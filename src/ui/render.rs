@@ -16,7 +16,6 @@ use crate::{
     ui::{
         overlays::Overlay,
         panes::{PaneContext, PaneStyles, PreviewOptions},
-        widgets::*,
     },
     utils::shorten_home_path,
 };
@@ -248,23 +247,25 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
 
-    draw_status_line(frame, app);
+    // Render Input / Find Dialogs
+
+    widgets::draw_status_line(frame, app);
 
     if let ActionMode::Input { mode, .. } = app.actions().mode() {
         if *mode != InputMode::Find {
-            draw_input_dialog(frame, app, accent_style);
+            widgets::draw_input_dialog(frame, app, accent_style);
         } else {
-            draw_find_dialog(frame, app, accent_style);
+            widgets::draw_find_dialog(frame, app, accent_style);
         }
     }
 
     for overlay in app.overlays().iter() {
         match overlay {
             Overlay::ShowInfo { info } => {
-                draw_show_info_dialog(frame, app, accent_style, info);
+                widgets::draw_show_info_dialog(frame, app, accent_style, info);
             }
             Overlay::Message { text } => {
-                draw_message_overlay(frame, app, accent_style, text);
+                widgets::draw_message_overlay(frame, app, accent_style, text);
             }
         }
     }

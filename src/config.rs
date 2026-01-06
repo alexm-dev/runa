@@ -1,9 +1,7 @@
 //! Configuration options for runa
 //!
-//! This module defines all configuration options and deserializes them
-//! from the runa.toml using serde.
-//!
-//! Each config struct corresponds to a top-level key in the runa.toml.
+//! This module holds the submodules and structs necessary to load and represent
+//! configuration options for runa, including display settings, input keybindings,
 
 pub mod display;
 pub mod input;

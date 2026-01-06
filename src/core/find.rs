@@ -14,6 +14,8 @@ use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
+/// A single result from the find function.
+/// It contains the path, whether it is a directory, and the score of the fuzzy match.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FindResult {
     path: PathBuf,
@@ -21,6 +23,7 @@ pub struct FindResult {
     score: i64,
 }
 
+/// Implement ordering for FindResult based on score (higher is better).
 impl Ord for FindResult {
     fn cmp(&self, other: &Self) -> Ordering {
         other.score.cmp(&self.score)
@@ -49,6 +52,7 @@ impl FindResult {
     }
 }
 
+/// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
 pub fn find(
     base_dir: &Path,
     query: &str,
@@ -72,7 +76,7 @@ pub fn find(
         Err(e) => {
             if e.kind() == io::ErrorKind::NotFound {
                 return Err(io::Error::other(
-                    "`fd` was not found in PATH. Please install `fd-find`",
+                    "fd was not found in PATH. Please install fd-find",
                 ));
             } else {
                 return Err(io::Error::other(format!("Failed to spawn fd: {}", e)));

@@ -157,7 +157,7 @@ impl<'a> AppState<'a> {
             FileAction::CreateDirectory => self.prompt_create_folder(),
             FileAction::Filter => self.prompt_filter(),
             FileAction::ShowInfo => self.toggle_file_info(),
-            FileAction::FuzzyFind => self.prompt_find(),
+            FileAction::Find => self.prompt_find(),
         }
         KeypressResult::Continue
     }

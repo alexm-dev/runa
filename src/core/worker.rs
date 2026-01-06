@@ -25,8 +25,7 @@ use std::thread;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use unicode_width::UnicodeWidthChar;
 
-use crate::core::find::{FindResult, find};
-use crate::core::{FileEntry, file_manager::browse_dir};
+use crate::core::{FileEntry, FindResult, file_manager::browse_dir, find};
 use crate::utils::{Formatter, get_unused_path};
 
 pub struct Workers {

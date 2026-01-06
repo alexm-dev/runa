@@ -45,14 +45,6 @@ impl OverlayStack {
         self.overlays.iter()
     }
 
-    pub fn len(&self) -> usize {
-        self.overlays.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.overlays.is_empty()
-    }
-
     pub fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&Overlay) -> bool,

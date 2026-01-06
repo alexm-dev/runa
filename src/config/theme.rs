@@ -2,6 +2,8 @@
 //!
 //! This module defines the theme configuration options which are read from the runa.toml
 //! configuration file.
+//!
+//! Also holds the internal themes and the logic to apply user overrides on top of them.
 
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::parse_color;
@@ -241,6 +243,51 @@ pub struct Theme {
     info: WidgetTheme,
 }
 
+impl Default for Theme {
+    fn default() -> Self {
+        Theme {
+            name: None,
+            accent: ColorPair {
+                fg: Color::Indexed(238),
+                ..ColorPair::default()
+            },
+            selection: ColorPair {
+                bg: Color::Indexed(236),
+                ..ColorPair::default()
+            },
+            underline: ColorPair::default(),
+            entry: ColorPair::default(),
+            directory: ColorPair {
+                fg: Color::Blue,
+                ..ColorPair::default()
+            },
+            separator: ColorPair {
+                fg: Color::Indexed(238),
+                ..ColorPair::default()
+            },
+            selection_icon: "".into(),
+            parent: ColorPair::default(),
+            preview: ColorPair::default(),
+            path: ColorPair {
+                fg: Color::Magenta,
+                ..ColorPair::default()
+            },
+            status_line: ColorPair::default(),
+            marker: MarkerTheme::default(),
+            widget: WidgetTheme::default(),
+            info: WidgetTheme {
+                title: ColorPair {
+                    fg: Color::Magenta,
+                    ..ColorPair::default()
+                },
+                ..WidgetTheme::default()
+            },
+        }
+    }
+}
+
+/// Macro to override a field in the target theme if it differs from the default theme.
+/// This is used to apply user-defined overrides on top of a preset theme.
 macro_rules! override_if_changed {
     ($target:ident, $user:ident, $default:ident, $field:ident) => {
         if $user.$field != $default.$field {
@@ -339,68 +386,25 @@ impl Theme {
     }
 
     fn apply_user_overrides(&mut self, user: Theme) {
-        let d = Theme::default();
+        let defaults = Theme::default();
 
-        override_if_changed!(self, user, d, accent);
-        override_if_changed!(self, user, d, selection);
-        override_if_changed!(self, user, d, underline);
-        override_if_changed!(self, user, d, entry);
-        override_if_changed!(self, user, d, directory);
-        override_if_changed!(self, user, d, separator);
-        override_if_changed!(self, user, d, parent);
-        override_if_changed!(self, user, d, preview);
-        override_if_changed!(self, user, d, path);
-        override_if_changed!(self, user, d, status_line);
-        override_if_changed!(self, user, d, selection_icon);
-        override_if_changed!(self, user, d, marker);
-        override_if_changed!(self, user, d, widget);
-        override_if_changed!(self, user, d, info);
+        override_if_changed!(self, user, defaults, accent);
+        override_if_changed!(self, user, defaults, selection);
+        override_if_changed!(self, user, defaults, underline);
+        override_if_changed!(self, user, defaults, entry);
+        override_if_changed!(self, user, defaults, directory);
+        override_if_changed!(self, user, defaults, separator);
+        override_if_changed!(self, user, defaults, parent);
+        override_if_changed!(self, user, defaults, preview);
+        override_if_changed!(self, user, defaults, path);
+        override_if_changed!(self, user, defaults, status_line);
+        override_if_changed!(self, user, defaults, selection_icon);
+        override_if_changed!(self, user, defaults, marker);
+        override_if_changed!(self, user, defaults, widget);
+        override_if_changed!(self, user, defaults, info);
 
         if user.name.is_some() {
             self.name = user.name.clone();
-        }
-    }
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        Theme {
-            name: None,
-            accent: ColorPair {
-                fg: Color::Indexed(238),
-                ..ColorPair::default()
-            },
-            selection: ColorPair {
-                bg: Color::Indexed(236),
-                ..ColorPair::default()
-            },
-            underline: ColorPair::default(),
-            entry: ColorPair::default(),
-            directory: ColorPair {
-                fg: Color::Blue,
-                ..ColorPair::default()
-            },
-            separator: ColorPair {
-                fg: Color::Indexed(238),
-                ..ColorPair::default()
-            },
-            selection_icon: "".into(),
-            parent: ColorPair::default(),
-            preview: ColorPair::default(),
-            path: ColorPair {
-                fg: Color::Magenta,
-                ..ColorPair::default()
-            },
-            status_line: ColorPair::default(),
-            marker: MarkerTheme::default(),
-            widget: WidgetTheme::default(),
-            info: WidgetTheme {
-                title: ColorPair {
-                    fg: Color::Magenta,
-                    ..ColorPair::default()
-                },
-                ..WidgetTheme::default()
-            },
         }
     }
 }
@@ -426,6 +430,11 @@ where
     }
 }
 
+/// Helper function to convert RGB tuples to [Color] instances.
+fn rgb(c: (u8, u8, u8)) -> Color {
+    Color::Rgb(c.0, c.1, c.2)
+}
+
 /// Palette struct to apply internal themes to the central [make_theme] function.
 pub struct Palette {
     pub base: (u8, u8, u8),
@@ -436,10 +445,7 @@ pub struct Palette {
     pub directory: (u8, u8, u8),
 }
 
-pub(crate) fn rgb(c: (u8, u8, u8)) -> Color {
-    Color::Rgb(c.0, c.1, c.2)
-}
-
+/// Centralized function to create a Theme from a Palette.
 pub fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
     let primary = rgb(palette.primary);
     let secondary = rgb(palette.secondary);
