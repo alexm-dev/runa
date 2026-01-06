@@ -167,13 +167,13 @@ If you enjoy using **runa**, you can help the project grow:
 * 🦀 **Contribute:** Pull requests are always welcome!
 
 
-## Built With
+## Credits & Ecosytem
 `runa` stands on the shoulders of these incredible Rust crates:
 
 - **TUI Framework:** [Ratatui](https://ratatui.rs) & [Crossterm](https://github.com/crossterm-rs/crossterm)
 - **Configuration:** [Serde](https://serde.rs) & [TOML](https://github.com/toml-rs/toml)
 - **System Integration:** [Dirs](https://github.com/dirs-dev/dirs-rs) (Standard config locations)
-- **External Integration:** [fd-find](https://github.com/sharkdp/fd) (Optional backend for fuzzy search)
+- **External Integration:** [fd-find](https://github.com/sharkdp/fd) (Optional backend for fuzzy find)
 - **Concurrency:** [Crossbeam-channel](https://github.com/crossbeam-rs/crossbeam)
 
 ## License
