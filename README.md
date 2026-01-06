@@ -129,7 +129,7 @@ Future releases will focus on expanding functionality while keeping it fast and 
 
 ### Completed
 
-- [x] Search & Discovery: Integrated fuzzy finding (fd support) (Completed in 0.4.0)
+- [x] Search & Discovery: Integrated fuzzy finding (fd support) (Completed in 0.4.0 - WIP)
 
 - [x] File Operations: Copy, move, delete, and rename from within the UI.  ( Completed in 0.3.0 )  
 
