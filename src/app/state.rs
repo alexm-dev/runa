@@ -369,6 +369,8 @@ impl<'a> AppState<'a> {
         if let Some(parent_path) = self.nav.current_dir().parent() {
             let parent_path_buf = parent_path.to_path_buf();
 
+            self.parent.clear();
+
             if self.parent.should_request(&parent_path_buf) {
                 let req_id = self.parent.prepare_new_request(parent_path_buf.clone());
 
