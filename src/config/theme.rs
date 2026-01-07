@@ -81,6 +81,8 @@ pub struct MarkerTheme {
     icon: String,
     #[serde(flatten)]
     color: ColorPair,
+    #[serde(default)]
+    clipboard: Option<ColorPair>,
 }
 
 impl MarkerTheme {
@@ -89,6 +91,9 @@ impl MarkerTheme {
     }
     pub fn color(&self) -> &ColorPair {
         &self.color
+    }
+    pub fn clipboard(&self) -> Option<&ColorPair> {
+        self.clipboard.as_ref()
     }
 }
 
@@ -102,6 +107,12 @@ impl Default for MarkerTheme {
                 selection_fg: None,
                 selection_bg: None,
             },
+            clipboard: Some(ColorPair {
+                fg: Color::Green,
+                bg: Color::Reset,
+                selection_fg: None,
+                selection_bg: None,
+            }),
         }
     }
 }
@@ -488,6 +499,10 @@ pub fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
                 fg: primary,
                 ..ColorPair::default()
             },
+            clipboard: Some(ColorPair {
+                fg: Color::Green,
+                ..ColorPair::default()
+            }),
         },
 
         widget: WidgetTheme {

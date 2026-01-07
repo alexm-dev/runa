@@ -78,6 +78,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let marker_pad = " ".repeat(unicode_width::UnicodeWidthStr::width(marker_icon));
     let entry_padding = context.entry_padding as usize;
     let current_dir = app.nav().current_dir();
+    let clipboard = app.actions().clipboard();
 
     let padding_str = if entry_padding > 1 {
         " ".repeat(entry_padding - 1)
@@ -112,6 +113,11 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let items = app.nav().shown_entries().enumerate().map(|(idx, entry)| {
         let is_selected = Some(idx) == selected_idx;
         let is_marked = local_markers.contains(entry.name().as_os_str());
+        let entry_path = current_dir.join(entry.name());
+        let is_copied = clipboard
+            .as_ref()
+            .map(|set| set.contains(&entry_path))
+            .unwrap_or(false);
 
         let name_str = if entry.is_dir() && show_marker {
             entry.display_name()
@@ -125,12 +131,20 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         if entry_padding == 0 {
             spans.push(Span::raw(name_str));
         } else {
-            let mut marker_style = marker_theme.color().as_style();
+            let mut marker_style = if is_copied {
+                marker_theme
+                    .clipboard()
+                    .map(|c| c.as_style())
+                    .unwrap_or_else(|| marker_theme.color().as_style())
+            } else {
+                marker_theme.color().as_style()
+            };
+
             if is_selected {
                 marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
             }
 
-            if is_marked {
+            if is_marked || is_copied {
                 spans.push(Span::styled(marker_icon, marker_style));
             } else {
                 spans.push(Span::styled(&marker_pad, marker_style));
