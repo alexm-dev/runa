@@ -89,12 +89,13 @@ pub struct Display {
     separators: bool,
     parent: bool,
     preview: bool,
-    layout: LayoutConfig,
     preview_underline: bool,
     preview_underline_color: bool,
     entry_padding: u8,
     scroll_padding: usize,
     toggle_marker_jump: bool,
+    instant_preview: bool,
+    layout: LayoutConfig,
     info: ShowInfoOptions,
 }
 
@@ -193,6 +194,10 @@ impl Display {
         self.toggle_marker_jump
     }
 
+    pub fn instant_preview(&self) -> bool {
+        self.instant_preview
+    }
+
     pub fn info(&self) -> &ShowInfoOptions {
         &self.info
     }
@@ -230,6 +235,7 @@ impl Default for Display {
             entry_padding: 1,
             scroll_padding: 5,
             toggle_marker_jump: false,
+            instant_preview: false,
             info: ShowInfoOptions::default(),
         }
     }

@@ -362,6 +362,8 @@ impl<'a> AppState<'a> {
                     request_id: req_id,
                 });
             }
+        } else {
+            self.preview.clear();
         }
     }
 

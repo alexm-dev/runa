@@ -138,6 +138,7 @@ impl<'a> AppState<'a> {
             NavAction::ToggleMarker => {
                 let marker_jump = self.config.display().toggle_marker_jump();
                 self.nav.toggle_marker_advance(marker_jump);
+                self.request_preview();
             }
         }
         KeypressResult::Continue
@@ -182,7 +183,11 @@ impl<'a> AppState<'a> {
         F: FnOnce(&mut NavState) -> bool,
     {
         if f(&mut self.nav) {
-            self.preview.mark_pending();
+            if self.config.display().instant_preview() {
+                self.request_preview();
+            } else {
+                self.preview.mark_pending();
+            }
         }
     }
 

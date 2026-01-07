@@ -99,6 +99,13 @@ impl PreviewState {
     pub fn set_error(&mut self, err: String) {
         self.data = PreviewData::File(vec![err]);
     }
+
+    pub fn clear(&mut self) {
+        self.data = PreviewData::Empty;
+        self.selected_idx = 0;
+        self.current_path = None;
+        self.pending = false;
+    }
 }
 
 impl PreviewData {
