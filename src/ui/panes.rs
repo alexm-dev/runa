@@ -16,6 +16,8 @@ use ratatui::{
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
 use std::collections::HashSet;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
 
 pub struct PaneStyles {
     pub item: Style,
@@ -64,6 +66,14 @@ pub struct PreviewOptions {
     pub use_underline: bool,
     pub underline_match_text: bool,
     pub underline_style: Style,
+}
+
+pub struct PaneMarkers<'a> {
+    pub markers: Option<HashSet<OsString>>,
+    pub clipboard: Option<HashSet<OsString>>,
+    pub marker_icon: &'a str,
+    pub marker_style: Style,
+    pub clipboard_style: Style,
 }
 
 /// Draws the main file list pane in the UI
@@ -191,6 +201,7 @@ pub fn draw_preview(
     preview: &PreviewData,
     selected_idx: Option<usize>,
     opts: PreviewOptions,
+    markers: &PaneMarkers,
 ) {
     match preview {
         PreviewData::Empty => {
@@ -221,37 +232,18 @@ pub fn draw_preview(
                     context.area,
                     &mut state,
                 );
-
                 return;
             }
 
-            let items = entries.iter().enumerate().map(|(idx, entry)| {
-                let is_selected = Some(idx) == selected_idx;
-                let mut style = context.styles.get_style(entry.is_dir(), is_selected);
-
-                if is_selected && opts.use_underline {
-                    style = style.add_modifier(Modifier::UNDERLINED);
-                    if let Some(color) = opts.underline_style.fg {
-                        style = style.underline_color(color);
-                        if opts.underline_match_text {
-                            style = style.fg(color);
-                        }
-                    }
-                    if let Some(bg) = opts
-                        .underline_style
-                        .bg
-                        .filter(|&color| color != Color::Reset)
-                    {
-                        style = style.bg(bg);
-                    }
-                }
-
-                let line = Line::from(vec![
-                    Span::raw(context.padding_str),
-                    Span::raw(entry.display_name()),
-                ]);
-                ListItem::new(line).style(style)
-            });
+            let items: Vec<ListItem> = entries
+                .iter()
+                .enumerate()
+                .map(|(idx, entry)| {
+                    let is_selected = Some(idx) == selected_idx;
+                    let style = context.styles.get_style(entry.is_dir(), is_selected);
+                    make_entry_row(entry, is_selected, style, &context, markers, Some(&opts))
+                })
+                .collect();
 
             let mut state = ListState::default();
             state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
@@ -279,21 +271,22 @@ pub fn draw_parent(
     context: PaneContext,
     entries: &[FileEntry],
     selected_idx: Option<usize>,
+    markers: &PaneMarkers,
 ) {
     if entries.is_empty() {
         frame.render_widget(Paragraph::new("").block(context.block), context.area);
         return;
     }
 
-    let items = entries.iter().enumerate().map(|(idx, entry)| {
-        let is_selected = Some(idx) == selected_idx;
-        let style = context.styles.get_style(entry.is_dir(), is_selected);
-        let line = Line::from(vec![
-            Span::raw(context.padding_str),
-            Span::raw(entry.display_name()),
-        ]);
-        ListItem::new(line).style(style)
-    });
+    let items: Vec<ListItem> = entries
+        .iter()
+        .enumerate()
+        .map(|(idx, entry)| {
+            let is_selected = Some(idx) == selected_idx;
+            let style = context.styles.get_style(entry.is_dir(), is_selected);
+            make_entry_row(entry, is_selected, style, &context, markers, None)
+        })
+        .collect();
 
     let mut state = ListState::default();
     state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
@@ -311,4 +304,110 @@ pub fn draw_parent(
         context.area,
         &mut state,
     );
+}
+
+/// Helper: Build marker & clipboard sets for a specific preview directory.
+/// Used to decorate the preview pane with marker/copy icons.
+pub fn pane_marker_sets(
+    nav_markers: &HashSet<PathBuf>,
+    clipboard: Option<&HashSet<PathBuf>>,
+    dir: Option<&Path>,
+) -> (Option<HashSet<OsString>>, Option<HashSet<OsString>>) {
+    match dir {
+        Some(dir) => {
+            let markers = nav_markers
+                .iter()
+                .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
+                .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+                .collect();
+            let clipboard = clipboard.map(|set| {
+                set.iter()
+                    .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
+                    .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+                    .collect()
+            });
+            (Some(markers), clipboard)
+        }
+        None => (None, None),
+    }
+}
+
+fn make_entry_row<'a>(
+    entry: &'a FileEntry,
+    is_selected: bool,
+    style: Style,
+    context: &PaneContext,
+    markers: &PaneMarkers,
+    opts: Option<&PreviewOptions>,
+) -> ListItem<'a> {
+    let is_marked = markers
+        .markers
+        .as_ref()
+        .map_or(false, |set| set.contains(entry.name()));
+
+    let is_copied = markers
+        .clipboard
+        .as_ref()
+        .map_or(false, |set| set.contains(entry.name()));
+
+    let mut icon_style = if is_copied {
+        markers.clipboard_style
+    } else {
+        markers.marker_style
+    };
+    if is_selected {
+        icon_style = icon_style.bg(style.bg.unwrap_or_default());
+    }
+
+    let mut row_style = style;
+    if let Some(opts) = opts {
+        if is_selected && opts.use_underline {
+            row_style = row_style.add_modifier(Modifier::UNDERLINED);
+            if let Some(color) = opts.underline_style.fg {
+                row_style = row_style.underline_color(color);
+                if opts.underline_match_text {
+                    row_style = row_style.fg(color);
+                }
+            }
+            if let Some(bg) = opts
+                .underline_style
+                .bg
+                .filter(|&color| color != Color::Reset)
+            {
+                row_style = row_style.bg(bg);
+            }
+        }
+    }
+
+    let pad = if is_marked || is_copied {
+        let mut pad = context.padding_str.to_owned();
+        if !pad.is_empty() {
+            pad.replace_range(0..1, &markers.marker_icon);
+        }
+        Span::styled(pad, icon_style)
+    } else {
+        Span::raw(context.padding_str)
+    };
+
+    let spans = vec![pad, Span::raw(entry.display_name())];
+    let line = Line::from(spans);
+    ListItem::new(line).style(row_style)
+}
+
+pub fn make_pane_markers<'a>(
+    nav_markers: &'a HashSet<PathBuf>,
+    clipboard: Option<&'a HashSet<PathBuf>>,
+    dir: Option<&'a Path>,
+    marker_icon: &'a str,
+    marker_style: Style,
+    clipboard_style: Style,
+) -> PaneMarkers<'a> {
+    let (markers, clipboard) = pane_marker_sets(nav_markers, clipboard, dir);
+    PaneMarkers {
+        markers,
+        clipboard,
+        marker_icon,
+        marker_style,
+        clipboard_style,
+    }
 }

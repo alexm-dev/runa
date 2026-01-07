@@ -17,6 +17,6 @@ pub use formatter::{
     Formatter, format_attributes, format_file_size, format_file_time, format_file_type,
 };
 pub use helpers::{
-    DEFAULT_FIND_RESULTS, copy_recursive, get_unused_path, open_in_editor, parse_color,
+    DEFAULT_FIND_RESULTS, as_path_op, copy_recursive, get_unused_path, open_in_editor, parse_color,
     shorten_home_path,
 };

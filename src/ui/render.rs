@@ -17,7 +17,7 @@ use crate::{
         overlays::Overlay,
         panes::{PaneContext, PaneStyles, PreviewOptions},
     },
-    utils::shorten_home_path,
+    utils::{as_path_op, shorten_home_path},
 };
 use ratatui::{
     Frame,
@@ -87,6 +87,16 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
     let padding_str = display_cfg.padding_str();
     let border_type = display_cfg.border_shape().as_border_type();
 
+    let markers = app.nav().markers();
+    let marker_theme = theme_cfg.marker();
+    let marker_icon = marker_theme.icon();
+    let marker_style = marker_theme.color().as_style();
+    let clipboard = app.actions().clipboard().as_ref();
+    let clipboard_style = marker_theme
+        .clipboard()
+        .map(|color| color.as_style())
+        .unwrap_or(marker_style);
+
     // Root Border / Header Logic
     if display_cfg.is_unified() {
         let mut outer_block = Block::default()
@@ -126,6 +136,16 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
 
     // PARENT PANE
     if display_cfg.parent() && pane_idx < chunks.len() {
+        let parent_dir = as_path_op(app.parent().last_path());
+        let parent_markers = panes::make_pane_markers(
+            markers,
+            clipboard,
+            parent_dir,
+            marker_icon,
+            marker_style,
+            clipboard_style,
+        );
+
         panes::draw_parent(
             frame,
             PaneContext {
@@ -144,6 +164,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             },
             app.parent().entries(),
             app.parent().selected_idx(),
+            &parent_markers,
         );
         pane_idx += 1;
         if show_separators && pane_idx < chunks.len() {
@@ -217,6 +238,16 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             .map(|e| e.is_dir())
             .unwrap_or(false);
 
+        let preview_dir = as_path_op(app.preview().current_path());
+        let preview_markers = panes::make_pane_markers(
+            markers,
+            clipboard,
+            preview_dir,
+            marker_icon,
+            marker_style,
+            clipboard_style,
+        );
+
         panes::draw_preview(
             frame,
             PaneContext {
@@ -244,6 +275,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
                 underline_match_text: display_cfg.preview_underline_color(),
                 underline_style: theme_cfg.underline().as_style(),
             },
+            &preview_markers,
         );
     }
 

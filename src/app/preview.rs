@@ -51,6 +51,10 @@ impl PreviewState {
         self.request_id
     }
 
+    pub fn current_path(&self) -> Option<&PathBuf> {
+        self.current_path.as_ref()
+    }
+
     // Setters / mutators
 
     pub fn set_selected_idx(&mut self, idx: usize) {

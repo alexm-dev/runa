@@ -33,6 +33,10 @@ impl ParentState {
         self.selected_idx
     }
 
+    pub fn last_path(&self) -> Option<&PathBuf> {
+        self.last_path.as_ref()
+    }
+
     /// Determines if a worker request should be issued for the given parent directory.
     ///
     /// Returns true if entries are empty or if the path has changed since the last refresh
