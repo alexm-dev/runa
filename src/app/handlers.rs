@@ -146,7 +146,7 @@ impl<'a> AppState<'a> {
             FileAction::Delete => self.prompt_delete(),
             FileAction::Copy => {
                 self.actions.action_copy(&self.nav, false);
-                self.handle_timed_message(Duration::from_secs(2));
+                self.handle_timed_message(Duration::from_secs(15));
             }
             FileAction::Paste => {
                 let fileop_tx = self.workers.fileop_tx();
