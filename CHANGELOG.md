@@ -6,9 +6,12 @@
 **Marker coloring**: Added a new `clipboard` config option to color the yanked and selected entries with a different marker color. Now its easier to indicate which entry was yanked.
 **Pane markers**: Added markers to panes. Now persistent markers will be shown/rendered in each preview and parent pane.
 **Toggle Marker jump**: Added `toggle_marker_jump` configuration option to theme.display to toggle if multiselect should jump to the first entry when the selection is at the last entry.
+**Instant Preview**: Added `instant_preview` configuration option to toggle between instant preview (requesting previews on every selection change) and pending previews. Off by default.
+**Empty filter**: Added a `No results for this filter` message when a filter applied shows no entries.
 
 ### Fixed
 **Directory copy**: Fixed directories being unable to be copied.
+**Filter preview update**: Fixed preview data not being cleared when a filter shows no entries.
 
 ### Internal
 **Find**: Optimization for the find feature. Now lists the results faster.
