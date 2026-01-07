@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.1] - TBD
+
+### Added
+**Marker coloring**: Added a new `clipboard` config option to color the yanked and selected entries with a different marker color. Now its easier to indicate which entry was yanked.
+**Pane markers**: Added markers to panes. Now persistent markers will be shown/rendered in each preview and parent pane.
+**Toggle Marker jump**: Added `toggle_marker_jump` configuration option to theme.display to toggle if multiselect should jump to the first entry when the selection is at the last entry.
+
+### Fixed
+**Directory copy**: Fixed directories being unable to be copied.
+
+### Internal
+**Find**: Optimization for the find feature. Now lists the results faster.
+
+
+---
+
+
 ## [0.4.0] - 2025-01-06
 
 New feature update: The fuzzy finder.
