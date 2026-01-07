@@ -163,6 +163,9 @@ pub fn clamp_find_results(value: usize) -> usize {
     clamped
 }
 
+/// Recursively copies files and directories from `src` to `dest`.
+///
+/// If `src` is a directory, it creates the directory at `dest` and copies all its contents recursively.
 pub fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     if src.is_dir() {
         fs::create_dir_all(dest)?;

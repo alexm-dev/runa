@@ -52,6 +52,11 @@ impl FindResult {
     }
 }
 
+struct RawResult {
+    relative: String,
+    score: i64,
+}
+
 /// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
 pub fn find(
     base_dir: &Path,
@@ -68,7 +73,17 @@ pub fn find(
     let mut cmd = Command::new("fd");
     cmd.arg(".")
         .arg(base_dir)
-        .args(["--type", "f", "--type", "d", "--hidden", "--color", "never"])
+        .args([
+            "--type",
+            "f",
+            "--type",
+            "d",
+            "--hidden",
+            "--color",
+            "never",
+            "--max-results",
+            &max_results.to_string(),
+        ])
         .stdout(Stdio::piped());
 
     let mut proc = match cmd.spawn() {
@@ -85,7 +100,9 @@ pub fn find(
     };
 
     let matcher = SkimMatcherV2::default();
-    let mut results = Vec::new();
+    let mut raw_results: Vec<RawResult> = Vec::with_capacity(max_results * 2);
+
+    let norm_query = normalize_separators(query);
 
     if let Some(stdout) = proc.stdout.take() {
         let reader = io::BufReader::new(stdout);
@@ -97,20 +114,30 @@ pub fn find(
             }
             let rel = line?;
             let rel = rel.trim();
-            let path = base_dir.join(rel);
-            let is_dir = path.is_dir();
-            if let Some(score) = matcher.fuzzy_match(rel, query) {
-                results.push(FindResult {
-                    path,
-                    is_dir,
+            let norm_rel = normalize_separators(rel);
+            if let Some(score) = matcher.fuzzy_match(&norm_rel, &norm_query) {
+                raw_results.push(RawResult {
+                    relative: rel.to_owned(),
                     score,
                 });
             }
         }
     }
 
-    results.sort_unstable_by(|a, b| b.score.cmp(&a.score));
-    results.truncate(max_results);
+    raw_results.sort_unstable_by(|a, b| b.score.cmp(&a.score));
+    raw_results.truncate(max_results);
+
+    let mut results = Vec::with_capacity(raw_results.len());
+    for raw in raw_results {
+        let path = base_dir.join(&raw.relative);
+        let is_dir = path.is_dir();
+        results.push(FindResult {
+            path,
+            is_dir,
+            score: raw.score,
+        });
+    }
+
     out.extend(results);
 
     Ok(())
@@ -126,4 +153,8 @@ fn normalize_relative_path(path: &Path) -> String {
     {
         rel
     }
+}
+
+fn normalize_separators(separator: &str) -> String {
+    separator.replace('\\', "/")
 }
