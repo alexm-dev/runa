@@ -191,6 +191,10 @@ If you enjoy using **runa**, you can help the project grow:
 * 🦀 **Contribute:** Pull requests are always welcome!
 
 
+## Special Thanks
+Many thanks to [@lmartinez-mirror](https://github.com/lmartinez-mirror), then maintainer of [runa-bin](https://aur.archlinux.org/packages/runa-bin), for maintaining the binary AUR package.
+
+
 ## Credits & Ecosystem
 `runa` stands on the shoulders of these incredible Rust crates:
 
