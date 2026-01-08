@@ -20,6 +20,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 /// Styles used for rendering items in a pane
+/// Includes styles for regular items, directories and selected items
 pub struct PaneStyles {
     pub item: Style,
     pub dir: Style,

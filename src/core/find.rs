@@ -1,18 +1,31 @@
 //! The (fuzzy) find module for the find function in runa
 //!
-//! This module implements the [find] function and the [FindResult].
+//! This module implements the [find] function, the [FindResult] and the [RawResult] structs.
 //!
 //! The [FindResult] struct is used to correctly display the calculated results of the
 //! find function. It is used mainly by ui/actions.
+//!
+//! The [RawResult] struct is an internal struct used to store intermediate results
+//! during the find process.
+//!
+//! The [find] function uses the fd command-line tool to perform a file search
+//! in the specified base directory. It then applies fuzzy matching using the
+//! fuzzy_matcher crate to filter and score the results based on the provided query.
+//! The results are returned as a vector of [FindResult] structs, sorted by their
+//! fuzzy match scores.
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+
+/// The size of the buffer reader used to read the output of fd
+const BUFREADER_SIZE: usize = 32768;
 
 /// A single result from the find function.
 /// It contains the path, whether it is a directory, and the score of the fuzzy match.
@@ -105,11 +118,12 @@ pub fn find(
     let norm_query = normalize_separators(query);
 
     if let Some(stdout) = proc.stdout.take() {
-        let reader = io::BufReader::new(stdout);
+        let reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
 
         for line in reader.lines() {
             if cancel.load(std::sync::atomic::Ordering::Relaxed) {
                 let _ = proc.kill();
+                let _ = proc.wait();
                 break;
             }
             let rel = line?;
@@ -117,32 +131,33 @@ pub fn find(
             let norm_rel = normalize_separators(rel);
             if let Some(score) = matcher.fuzzy_match(&norm_rel, &norm_query) {
                 raw_results.push(RawResult {
-                    relative: rel.to_owned(),
+                    relative: norm_rel.into_owned(),
                     score,
                 });
             }
         }
+        let _ = proc.wait();
     }
 
     raw_results.sort_unstable_by(|a, b| b.score.cmp(&a.score));
     raw_results.truncate(max_results);
 
-    let mut results = Vec::with_capacity(raw_results.len());
+    out.reserve(raw_results.len());
     for raw in raw_results {
         let path = base_dir.join(&raw.relative);
         let is_dir = path.is_dir();
-        results.push(FindResult {
+        out.push(FindResult {
             path,
             is_dir,
             score: raw.score,
         });
     }
-
-    out.extend(results);
-
     Ok(())
 }
 
+/// Helpers:
+///
+/// Normalize a relative path to use forward slashes for consistency across platforms.
 fn normalize_relative_path(path: &Path) -> String {
     let rel = path.to_string_lossy().into_owned();
     #[cfg(windows)]
@@ -155,6 +170,11 @@ fn normalize_relative_path(path: &Path) -> String {
     }
 }
 
-fn normalize_separators(separator: &str) -> String {
-    separator.replace('\\', "/")
+/// Normalize separators in a given string to use forward slashes.
+fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
+    if separator.contains('\\') {
+        Cow::Owned(separator.replace('\\', "/"))
+    } else {
+        Cow::Borrowed(separator)
+    }
 }

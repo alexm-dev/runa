@@ -438,6 +438,8 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
     frame.set_cursor_position((dialog_rect.x + 1 + cursor_x as u16, dialog_rect.y + 1));
 }
 
+/// Draws a simple message overlay dialog at the bottom right
+/// Used for notifications such as "fd is not available" etc.
 pub fn draw_message_overlay(frame: &mut Frame, app: &AppState, accent_style: Style, text: &str) {
     let widget = app.config().theme().widget();
     let position = DialogPosition::BottomRight;

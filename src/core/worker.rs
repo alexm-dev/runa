@@ -2,12 +2,12 @@
 //!
 //! Handles directory reads, previews and file operatios on a background thread.
 //! All results and errors are sent back via channels.
+//!
 //! Small changes here can have big effects since this module is tightly integrated with every part
 //! of runa.
 //!
-//! Requests [WorkerTask] are sent from the app/UI to the worker via channels,
-//! and results or errors [WorkerResponse] are sent back the same way. All work
-//! (including filesystem IO and preview logic) is executed on this background thread.
+//! Requests [WorkerTask] come in from the AppState or UI via channels, and results or errors
+//! [WorkerResponse] go back the same way. All filesystem I/O and previews happen on these threads
 //!
 //! # Caution:
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
@@ -46,7 +46,18 @@ pub struct Workers {
     response_rx: Receiver<WorkerResponse>,
 }
 
+/// Manages worker thread channels for different task types.
+///
+/// Each major operation (I/O, preview, find, file-ops) has its own dedicated worker thread.
+///
+/// The find worker uses a bounded channel of size 1: this design ensures that only the
+/// latest find request will be processed, automatically skipping obsolete queued requests
+/// from rapid-fire user input. This keeps search operations efficient, responsive, and
+/// guarantees only one concurrent find per application.
 impl Workers {
+    /// Create the worker set.
+    ///
+    /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub fn spawn() -> Self {
         let (io_tx, io_rx) = unbounded::<WorkerTask>();
         let (preview_tx, preview_rx) = unbounded::<WorkerTask>();

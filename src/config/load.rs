@@ -1,11 +1,10 @@
-//! The main config loading module for runa
+//! The main config loading module for runa.
 //!
-//! Loads and deserializes the configuration of runa.toml.
+//! Handles loading and deserializing settings from `runa.toml`.
 //!
-//! Holds and sets the central [Config] struct as well as the internal used [RawConfig] for
-//! internal logic.
+//! Provides and manages the main [Config] struct, as well as the internal [RawConfig] used for parsing and processing.
 //!
-//! Also implemenets the config initialization of default `runa.toml` configs
+//! Also implements default config initialization when `runa.toml` is not present.
 
 use crate::config::Display;
 use crate::config::Theme;

@@ -1,7 +1,8 @@
 //! Application module.
 //!
-//! Contains the main application controller and the logic that mutates it in response
-//! to user input.
+//! Defines the main application controller and the logic for mutating app state
+//! in response to user input. Submodules handle actions, navigation, key mapping,
+//! preview pane and parent pane requests.
 
 pub mod actions;
 mod handlers;

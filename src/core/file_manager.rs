@@ -12,6 +12,9 @@ use std::time::SystemTime;
 use crate::utils::format_attributes;
 
 /// Represents a single entry in a directory listing
+/// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
+/// Used throughout runa for directory browsing and file management.
+/// Created and populated by the browse_dir function.
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
