@@ -13,6 +13,14 @@
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
 //! may require corresponding changes throughout state, response-handling code and UI.
 
+use crate::app::preview_with_bat;
+use crate::config::display::PreviewMethod;
+use crate::core::{FileEntry, FindResult, file_manager::browse_dir, find};
+use crate::utils::{Formatter, copy_recursive, get_unused_path};
+
+use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
+use unicode_width::UnicodeWidthChar;
+
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::File;
@@ -21,12 +29,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-
-use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
-use unicode_width::UnicodeWidthChar;
-
-use crate::core::{FileEntry, FindResult, file_manager::browse_dir, find};
-use crate::utils::{Formatter, copy_recursive, get_unused_path};
 
 // Minimum number of lines shown in any preview
 const MIN_PREVIEW_LINES: usize = 3;
@@ -119,6 +121,8 @@ pub enum WorkerTask {
         path: PathBuf,
         max_lines: usize,
         pane_width: usize,
+        preview_method: PreviewMethod,
+        args: Vec<String>,
         request_id: u64,
     },
     FileOp {
@@ -182,7 +186,7 @@ pub enum WorkerResponse {
     Error(String),
 }
 
-/// Starts the worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
+/// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
 fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
@@ -240,6 +244,8 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                 mut path,
                 mut max_lines,
                 mut pane_width,
+                mut preview_method,
+                mut args,
                 mut request_id,
             } = task
             else {
@@ -252,17 +258,31 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                     path: p,
                     max_lines: m,
                     pane_width: w,
+                    preview_method: pm,
+                    args: a,
                     request_id: id,
                 } = next
                 {
                     path = p;
                     max_lines = m;
                     pane_width = w;
+                    preview_method = pm;
+                    args = a;
                     request_id = id;
                 }
             }
 
-            let lines = safe_read_preview(&path, max_lines, pane_width);
+            let lines = match preview_method {
+                // Use internal preview method
+                PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width),
+                PreviewMethod::Bat => match preview_with_bat(&path, max_lines, args.as_slice()) {
+                    // Bat preview succeeded
+                    // If bat fails, fallback to internal preview
+                    // If bat is not installed or returns error, we fallback to internal preview
+                    Ok(lines) => lines,
+                    Err(_) => safe_read_preview(&path, max_lines, pane_width),
+                },
+            };
             let _ = res_tx.send(WorkerResponse::PreviewLoaded { lines, request_id });
         }
     });

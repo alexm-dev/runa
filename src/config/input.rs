@@ -6,6 +6,7 @@
 use serde::Deserialize;
 use std::vec;
 
+/// Input configuration options of all actions
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Keys {
@@ -27,12 +28,14 @@ pub struct Keys {
     find: Vec<String>,
 }
 
+/// Editor configuration options
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Editor {
     cmd: String,
 }
 
+/// Public methods for accessing input configuration options
 impl Keys {
     pub fn open_file(&self) -> &Vec<String> {
         &self.open_file
@@ -99,6 +102,7 @@ impl Keys {
     }
 }
 
+/// Default input configuration options
 impl Default for Keys {
     fn default() -> Self {
         Keys {
@@ -123,12 +127,14 @@ impl Default for Keys {
     }
 }
 
+/// Public methods for accessing editor configuration options
 impl Editor {
     pub fn cmd(&self) -> &str {
         &self.cmd
     }
 }
 
+/// Default editor configuration options
 impl Default for Editor {
     fn default() -> Self {
         Editor { cmd: "nvim".into() }

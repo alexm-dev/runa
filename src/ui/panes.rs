@@ -7,6 +7,8 @@
 
 use crate::app::{AppState, PreviewData};
 use crate::core::FileEntry;
+use ansi_to_tui::IntoText;
+use ratatui::text::Text;
 use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
@@ -223,7 +225,8 @@ pub fn draw_preview(
         }
 
         PreviewData::File(lines) => {
-            let text: Vec<Line> = lines.iter().map(|s| Line::from(s.as_str())).collect();
+            let raw = lines.join("\n");
+            let text = raw.into_text().unwrap_or_else(|_| Text::from(raw));
 
             frame.render_widget(
                 Paragraph::new(text).block(context.block.border_style(context.accent_style)),

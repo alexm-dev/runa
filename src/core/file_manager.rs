@@ -3,13 +3,13 @@
 //! Provides the FileEntry struct which is used throughout runa.
 //! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
+use crate::utils::format_attributes;
+
 use std::ffi::OsString;
 use std::fs::{self, symlink_metadata};
 use std::io;
 use std::path::Path;
 use std::time::SystemTime;
-
-use crate::utils::format_attributes;
 
 /// Represents a single entry in a directory listing
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system

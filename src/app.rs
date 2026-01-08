@@ -9,10 +9,10 @@ mod handlers;
 mod keymap;
 mod nav;
 mod parent;
-mod preview;
+pub mod preview;
 mod state;
 
 pub use nav::NavState;
 pub use parent::ParentState;
-pub use preview::{PreviewData, PreviewState};
+pub use preview::{PreviewData, PreviewState, preview_with_bat};
 pub use state::{AppState, KeypressResult, LayoutMetrics};

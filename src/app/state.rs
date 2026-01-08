@@ -355,10 +355,14 @@ impl<'a> AppState<'a> {
                     request_id: req_id,
                 });
             } else {
+                let preview_options = self.config.display().preview_options();
+                let bat_args = self.config.bat_args_for_preview();
                 let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
                     path,
                     max_lines: self.metrics.preview_height,
                     pane_width: self.metrics.preview_width,
+                    preview_method: preview_options.method().clone(),
+                    args: bat_args,
                     request_id: req_id,
                 });
             }

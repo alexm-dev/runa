@@ -9,6 +9,7 @@ use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
 use crate::ui::overlays::Overlay;
+
 use crossterm::event::{KeyCode::*, KeyEvent};
 use std::time::{Duration, Instant};
 

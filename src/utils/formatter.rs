@@ -8,8 +8,10 @@
 
 use crate::core::FileEntry;
 use crate::core::file_manager::FileType;
+
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
+
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::Metadata;

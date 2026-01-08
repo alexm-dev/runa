@@ -7,77 +7,7 @@ use crate::ui::widgets::DialogPosition;
 use ratatui::widgets::BorderType;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug)]
-pub struct LayoutConfig {
-    parent: u16,
-    main: u16,
-    preview: u16,
-}
-
-impl LayoutConfig {
-    fn parent_ratio(&self) -> u16 {
-        self.parent
-    }
-
-    fn main_ratio(&self) -> u16 {
-        self.main
-    }
-
-    fn preview_ratio(&self) -> u16 {
-        self.preview
-    }
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(default)]
-pub struct ShowInfoOptions {
-    name: bool,
-    file_type: bool,
-    size: bool,
-    modified: bool,
-    perms: bool,
-    position: Option<DialogPosition>,
-}
-
-impl ShowInfoOptions {
-    pub fn name(&self) -> bool {
-        self.name
-    }
-
-    pub fn file_type(&self) -> bool {
-        self.file_type
-    }
-
-    pub fn size(&self) -> bool {
-        self.size
-    }
-
-    pub fn modified(&self) -> bool {
-        self.modified
-    }
-
-    pub fn perms(&self) -> bool {
-        self.perms
-    }
-
-    pub fn position(&self) -> &Option<DialogPosition> {
-        &self.position
-    }
-}
-
-impl Default for ShowInfoOptions {
-    fn default() -> Self {
-        ShowInfoOptions {
-            name: true,
-            file_type: false,
-            size: true,
-            modified: true,
-            perms: false,
-            position: None,
-        }
-    }
-}
-
+/// Display configuration options
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Display {
@@ -95,36 +25,12 @@ pub struct Display {
     scroll_padding: usize,
     toggle_marker_jump: bool,
     instant_preview: bool,
+    preview_options: PreviewOptions,
     layout: LayoutConfig,
     info: ShowInfoOptions,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum BorderStyle {
-    None,
-    Unified,
-    Split,
-}
-
-#[derive(Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum BorderShape {
-    Square,
-    Rounded,
-    Double,
-}
-
-impl BorderShape {
-    pub fn as_border_type(&self) -> BorderType {
-        match self {
-            BorderShape::Square => BorderType::Plain,
-            BorderShape::Rounded => BorderType::Rounded,
-            BorderShape::Double => BorderType::Double,
-        }
-    }
-}
-
+/// Public methods for accessing display configuration options
 impl Display {
     pub fn selection_marker(&self) -> bool {
         self.selection_marker
@@ -198,10 +104,15 @@ impl Display {
         self.instant_preview
     }
 
+    pub fn preview_options(&self) -> &PreviewOptions {
+        &self.preview_options
+    }
+
     pub fn info(&self) -> &ShowInfoOptions {
         &self.info
     }
 
+    /// Get padding string based on entry_padding
     pub fn padding_str(&self) -> &'static str {
         // ASCII whitespaces
         match self.entry_padding {
@@ -214,6 +125,7 @@ impl Display {
     }
 }
 
+/// Default display configuration options
 impl Default for Display {
     fn default() -> Self {
         Display {
@@ -236,7 +148,152 @@ impl Default for Display {
             scroll_padding: 5,
             toggle_marker_jump: false,
             instant_preview: false,
+            preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
+        }
+    }
+}
+
+/// Layout configuration for the display panes
+#[derive(Deserialize, Debug)]
+pub struct LayoutConfig {
+    parent: u16,
+    main: u16,
+    preview: u16,
+}
+
+/// Public methods for accessing layout configuration options
+impl LayoutConfig {
+    fn parent_ratio(&self) -> u16 {
+        self.parent
+    }
+
+    fn main_ratio(&self) -> u16 {
+        self.main
+    }
+
+    fn preview_ratio(&self) -> u16 {
+        self.preview
+    }
+}
+
+/// Options for showing file information in the info dialog
+#[derive(Deserialize, Debug)]
+#[serde(default)]
+pub struct ShowInfoOptions {
+    name: bool,
+    file_type: bool,
+    size: bool,
+    modified: bool,
+    perms: bool,
+    position: Option<DialogPosition>,
+}
+
+/// Public methods for accessing show info configuration options
+impl ShowInfoOptions {
+    pub fn name(&self) -> bool {
+        self.name
+    }
+
+    pub fn file_type(&self) -> bool {
+        self.file_type
+    }
+
+    pub fn size(&self) -> bool {
+        self.size
+    }
+
+    pub fn modified(&self) -> bool {
+        self.modified
+    }
+
+    pub fn perms(&self) -> bool {
+        self.perms
+    }
+
+    pub fn position(&self) -> &Option<DialogPosition> {
+        &self.position
+    }
+}
+
+/// Default show info configuration options
+impl Default for ShowInfoOptions {
+    fn default() -> Self {
+        ShowInfoOptions {
+            name: true,
+            file_type: false,
+            size: true,
+            modified: true,
+            perms: false,
+            position: None,
+        }
+    }
+}
+
+/// Preview method options
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum PreviewMethod {
+    Internal,
+    Bat,
+}
+
+/// Preview configuration options
+#[derive(Deserialize, Debug, Clone)]
+pub struct PreviewOptions {
+    #[serde(default = "PreviewOptions::default_methood")]
+    method: PreviewMethod,
+    #[serde(default)]
+    bat_args: Vec<String>,
+}
+
+/// Public methods for accessing preview configuration options
+impl PreviewOptions {
+    fn default() -> Self {
+        PreviewOptions {
+            method: PreviewMethod::Internal,
+            bat_args: vec!["--style=plain".to_string(), "--color=always".to_string()],
+        }
+    }
+
+    fn default_methood() -> PreviewMethod {
+        PreviewMethod::Internal
+    }
+
+    pub fn method(&self) -> &PreviewMethod {
+        &self.method
+    }
+
+    pub fn bat_args(&self) -> &Vec<String> {
+        &self.bat_args
+    }
+}
+
+/// Border style options
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum BorderStyle {
+    None,
+    Unified,
+    Split,
+}
+
+/// Border shape options
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum BorderShape {
+    Square,
+    Rounded,
+    Double,
+}
+
+/// Public methods for accessing border shape options
+impl BorderShape {
+    pub fn as_border_type(&self) -> BorderType {
+        match self {
+            BorderShape::Square => BorderType::Plain,
+            BorderShape::Rounded => BorderType::Rounded,
+            BorderShape::Double => BorderType::Double,
         }
     }
 }
