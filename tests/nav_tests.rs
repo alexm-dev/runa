@@ -2,9 +2,11 @@ use rand::rng;
 use rand::seq::SliceRandom;
 use runa_tui::app::NavState;
 use runa_tui::core::browse_dir;
+use std::collections::HashSet;
 use std::error;
 use std::fs;
 use std::fs::File;
+use std::path::PathBuf;
 use tempfile::tempdir;
 
 #[test]
@@ -239,6 +241,8 @@ fn test_navstate_marker_persistence() -> Result<(), Box<dyn error::Error>> {
     let mut nav = NavState::new(base_path.clone());
     nav.update_from_worker(base_path.clone(), entries, None);
 
+    let mut clipboard: Option<HashSet<PathBuf>> = None;
+
     let to_mark = vec!["apple.txt", "banana.txt"];
     for target in to_mark {
         // Find it in the current view
@@ -257,7 +261,7 @@ fn test_navstate_marker_persistence() -> Result<(), Box<dyn error::Error>> {
 
         let selected = nav.selected_entry().ok_or("No entry selected to mark")?;
         assert_eq!(selected.name_str(), target);
-        nav.toggle_marker();
+        nav.toggle_marker(&mut clipboard);
     }
 
     assert_eq!(nav.markers().len(), 2);
@@ -294,7 +298,7 @@ fn test_navstate_marker_persistence() -> Result<(), Box<dyn error::Error>> {
         nav.move_up();
     }
 
-    nav.toggle_marker();
+    nav.toggle_marker(&mut clipboard);
     assert_eq!(nav.markers().len(), 1);
     assert!(nav.markers().contains(&base_path.join("banana.txt")));
     Ok(())

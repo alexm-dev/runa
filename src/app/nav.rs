@@ -150,17 +150,24 @@ impl NavState {
         self.selected = self.selected.min(self.entries.len().saturating_sub(1));
     }
 
-    pub fn toggle_marker(&mut self) {
+    pub fn toggle_marker(&mut self, clipboard: &mut Option<HashSet<PathBuf>>) {
         if let Some(entry) = self.selected_shown_entry() {
             let path = self.current_dir().join(entry.name());
+
+            if let Some(clip) = clipboard {
+                if clip.remove(&path) {
+                    self.markers.insert(path);
+                    return;
+                }
+            }
             if !self.markers.remove(&path) {
                 self.markers.insert(path);
             }
         }
     }
 
-    pub fn toggle_marker_advance(&mut self, jump: bool) {
-        self.toggle_marker();
+    pub fn toggle_marker_advance(&mut self, clipboard: &mut Option<HashSet<PathBuf>>, jump: bool) {
+        self.toggle_marker(clipboard);
         let count = self.shown_entries_len();
 
         if count == 0 {

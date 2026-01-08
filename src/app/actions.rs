@@ -70,6 +70,10 @@ impl ActionContext {
         &self.clipboard
     }
 
+    pub fn clipboard_mut(&mut self) -> &mut Option<HashSet<PathBuf>> {
+        &mut self.clipboard
+    }
+
     // Find functions
 
     pub fn find_state_mut(&mut self) -> &mut FindState {

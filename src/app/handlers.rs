@@ -137,7 +137,8 @@ impl<'a> AppState<'a> {
             }
             NavAction::ToggleMarker => {
                 let marker_jump = self.config.display().toggle_marker_jump();
-                self.nav.toggle_marker_advance(marker_jump);
+                let clipboard = self.actions.clipboard_mut();
+                self.nav.toggle_marker_advance(clipboard, marker_jump);
                 self.request_preview();
             }
         }
