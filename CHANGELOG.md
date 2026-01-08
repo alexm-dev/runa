@@ -2,6 +2,8 @@
 
 ## [0.4.1] - 2025-01-08
 
+UI related additions and more.
+
 ### Added
 - **Marker coloring**: Added a new `clipboard` config option to color the yanked and selected entries with a different marker color. Now its easier to indicate which entry was yanked.
 - **Pane markers**: Added markers to panes. Now persistent markers will be shown/rendered in each preview and parent pane.
