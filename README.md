@@ -64,7 +64,7 @@ For a detailed list of changes and release notes, see [CHANGELOG.md](./CHANGELOG
 ### Cargo:
 
 ```bash
-cargo install runa-tui
+cargo install runa-tui --locked
 ```
 
 ### Arch Linux (AUR)
@@ -111,7 +111,7 @@ Clone the repo and build with Cargo:
 ```bash
 git clone https://github.com/alexm-dev/runa.git
 cd runa
-cargo build --release
+cargo build --release --locked
 ```
 
 ### Usage
