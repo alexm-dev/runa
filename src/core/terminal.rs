@@ -6,6 +6,7 @@
 use crate::app::{AppState, KeypressResult};
 use crate::ui;
 use crossterm::{
+    cursor::{Hide, Show},
     event::{self, Event, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -21,13 +22,13 @@ use std::{io, time::Duration};
 pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, Hide)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
     let result = event_loop(&mut terminal, app);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, Show)?;
     result
 }
 
@@ -48,7 +49,7 @@ where
         }
 
         // Event Polling
-        if event::poll(Duration::from_millis(10))? {
+        if event::poll(Duration::from_millis(16))? {
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {

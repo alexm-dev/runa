@@ -54,6 +54,11 @@ impl ParentState {
         self.request_id
     }
 
+    pub fn prepare_update(&mut self) {
+        self.last_path = None;
+        self.selected_idx = None;
+    }
+
     /// Updates the state with new entries
     ///
     /// Only applies the update if request ID is the latest
@@ -78,6 +83,5 @@ impl ParentState {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;
-        self.request_id += 1;
     }
 }
