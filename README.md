@@ -44,7 +44,7 @@
 - **Essential-only Rust crates:** No external TUI frameworks or bloat.
 - **Direct terminal rendering:** Uses low-overhead [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
-- **Small, native binary:** The `rn` binary is compact (typically 1.2–1.8 MB, depending on operating system and architecture).
+- **Small, native binary:** The `rn` binary is compact (typically 1.3–1.9 MB, depending on operating system and architecture).
 
 </details>
 
