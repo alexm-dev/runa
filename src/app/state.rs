@@ -356,12 +356,13 @@ impl<'a> AppState<'a> {
                 });
             } else {
                 let preview_options = self.config.display().preview_options();
-                let bat_args = self.config.bat_args_for_preview();
+                let preview_method = preview_options.method().clone();
+                let bat_args = self.config.bat_args_for_preview(self.metrics.preview_width);
                 let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
                     path,
                     max_lines: self.metrics.preview_height,
                     pane_width: self.metrics.preview_width,
-                    preview_method: preview_options.method().clone(),
+                    preview_method,
                     args: bat_args,
                     request_id: req_id,
                 });
@@ -375,7 +376,7 @@ impl<'a> AppState<'a> {
         if let Some(parent_path) = self.nav.current_dir().parent() {
             let parent_path_buf = parent_path.to_path_buf();
 
-            self.parent.clear();
+            self.parent.prepare_update();
 
             if self.parent.should_request(&parent_path_buf) {
                 let req_id = self.parent.prepare_new_request(parent_path_buf.clone());

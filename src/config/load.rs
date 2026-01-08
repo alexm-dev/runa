@@ -170,13 +170,10 @@ impl Config {
         &self.keys
     }
 
-    pub fn bat_args_for_preview(&self) -> Vec<String> {
-        let mut args = self.display.preview_options().bat_args().clone();
-        if !args.iter().any(|arg| arg == "--theme") {
-            args.push("--theme".into());
-            args.push(self.theme.bat_theme_name().to_string());
-        }
-        args
+    pub fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
+        self.display
+            .preview_options()
+            .bat_args(self.theme.bat_theme_name(), pane_width)
     }
 
     /// Determine the default configuration file path.

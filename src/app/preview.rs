@@ -4,7 +4,7 @@
 //! data, debounce for background rendering, selection within the preview and request tracking
 
 use crate::core::FileEntry;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
 /// Preview content for the preview pane
@@ -143,32 +143,4 @@ impl Default for PreviewState {
             last_input_time: Instant::now(),
         }
     }
-}
-
-/// Use bat to preview a file at the given path, returning up to max_lines of output
-/// Uses the provided bat_args for customization.
-/// # Errors
-/// Returns an std::io::Error if the bat command fails to execute or returns a non-zero status.
-pub fn preview_with_bat(
-    path: &Path,
-    max_lines: usize,
-    bat_args: &[String],
-) -> Result<Vec<String>, std::io::Error> {
-    use std::process::{Command, Stdio};
-
-    let mut args = bat_args.to_vec();
-    args.push(path.to_string_lossy().to_string());
-
-    let output = Command::new("bat")
-        .args(&args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .output()?;
-
-    if !output.status.success() {
-        return Err(std::io::Error::other("bat command failed"));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
 }

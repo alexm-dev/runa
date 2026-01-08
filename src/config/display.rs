@@ -238,13 +238,29 @@ pub enum PreviewMethod {
     Bat,
 }
 
+#[derive(Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum BatStyle {
+    Plain,
+    Numbers,
+    Full,
+}
+
+impl Default for BatStyle {
+    fn default() -> Self {
+        BatStyle::Plain
+    }
+}
+
 /// Preview configuration options
 #[derive(Deserialize, Debug, Clone)]
 pub struct PreviewOptions {
-    #[serde(default = "PreviewOptions::default_methood")]
+    #[serde(default = "PreviewOptions::default_method")]
     method: PreviewMethod,
     #[serde(default)]
-    bat_args: Vec<String>,
+    style: BatStyle,
+    #[serde(default = "PreviewOptions::default_wrap")]
+    wrap: bool,
 }
 
 /// Public methods for accessing preview configuration options
@@ -252,20 +268,50 @@ impl PreviewOptions {
     fn default() -> Self {
         PreviewOptions {
             method: PreviewMethod::Internal,
-            bat_args: vec!["--style=plain".to_string(), "--color=always".to_string()],
+            style: BatStyle::Plain,
+            wrap: true,
         }
     }
 
-    fn default_methood() -> PreviewMethod {
+    fn default_method() -> PreviewMethod {
         PreviewMethod::Internal
+    }
+
+    fn default_wrap() -> bool {
+        true
     }
 
     pub fn method(&self) -> &PreviewMethod {
         &self.method
     }
 
-    pub fn bat_args(&self) -> &Vec<String> {
-        &self.bat_args
+    pub fn style(&self) -> BatStyle {
+        self.style
+    }
+
+    pub fn wrap(&self) -> bool {
+        self.wrap
+    }
+
+    pub fn bat_args(&self, theme_name: &str, pane_width: usize) -> Vec<String> {
+        let mut args = vec!["--color=always".to_owned(), "--paging=never".to_owned()];
+        args.push(format!("--terminal-width={}", pane_width));
+        match self.style {
+            BatStyle::Plain => args.push("--style=plain".to_owned()),
+            BatStyle::Numbers => args.push("--style=numbers".to_owned()),
+            BatStyle::Full => args.push("--style=full".to_owned()),
+        }
+
+        args.push("--theme".to_owned());
+        args.push(theme_name.to_owned());
+
+        if self.wrap {
+            args.push("--wrap=character".to_owned());
+        } else {
+            args.push("--wrap=never".to_owned());
+        }
+
+        args
     }
 }
 

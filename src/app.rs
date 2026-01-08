@@ -14,5 +14,5 @@ mod state;
 
 pub use nav::NavState;
 pub use parent::ParentState;
-pub use preview::{PreviewData, PreviewState, preview_with_bat};
+pub use preview::{PreviewData, PreviewState};
 pub use state::{AppState, KeypressResult, LayoutMetrics};

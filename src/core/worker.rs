@@ -13,7 +13,6 @@
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
 //! may require corresponding changes throughout state, response-handling code and UI.
 
-use crate::app::preview_with_bat;
 use crate::config::display::PreviewMethod;
 use crate::core::{FileEntry, FindResult, file_manager::browse_dir, find};
 use crate::utils::{Formatter, copy_recursive, get_unused_path};
@@ -26,6 +25,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::path::{Path, PathBuf};
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -616,4 +616,30 @@ fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<St
             vec![sanitize_to_exact_width(msg, pane_width)]
         }
     }
+}
+
+/// Use bat to preview a file at the given path, returning up to max_lines of output
+/// Uses the provided bat_args for customization.
+/// # Errors
+/// Returns an std::io::Error if the bat command fails to execute or returns a non-zero status.
+fn preview_with_bat(
+    path: &Path,
+    max_lines: usize,
+    bat_args: &[String],
+) -> Result<Vec<String>, std::io::Error> {
+    let mut args = bat_args.to_vec();
+    args.push(path.to_string_lossy().to_string());
+
+    let output = Command::new("bat")
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()?;
+
+    if !output.status.success() {
+        return Err(std::io::Error::other("bat command failed"));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
 }
