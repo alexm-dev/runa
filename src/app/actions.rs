@@ -19,6 +19,13 @@ use std::time::Instant;
 /// Describes the current mode for action handling/input.
 ///
 /// Used to determine which UI overlays, prompts, or context actions should be active.
+///
+/// Variants:
+/// * `Normal` - Default browsing mode.
+/// * `Input` - Input mode with specific [InputMode] and prompt string.
+/// * `ShowInfo` - Display file information overlay with [FileInfo].
+///
+/// Used by [ActionContext] to track current user action state.
 #[derive(Clone, PartialEq)]
 pub enum ActionMode {
     Normal,
@@ -29,6 +36,14 @@ pub enum ActionMode {
 /// Enumerates all the available input field modes
 ///
 /// Used to select the prompts, behavior and the style of the input dialog.
+///
+/// Variants:
+/// * `Rename` - Rename file/folder prompt.
+/// * `NewFile` - Create new file prompt.
+/// * `NewFolder` - Create new folder prompt.
+/// * `Filter` - Filter files in the current directory prompt.
+/// * `ConfirmDelete` - Confirm delete files prompt.
+/// * `Find` - Fuzzy find files prompt.
 #[derive(Clone, Copy, PartialEq)]
 pub enum InputMode {
     Rename,
@@ -43,6 +58,19 @@ pub enum InputMode {
 ///
 /// Stores the current mode/prompt, input buffer, cursor, and clipboard (for copy/yank) status.
 /// Handles mutation for input, clipboard & command responses.
+///
+/// Used by the main application loop to manage user interactions.
+/// Includes methods for performing actions like copy, paste, delete, rename, create, and filter
+///
+/// Also manages fuzzy find state via the embedded [FindState] struct.
+///
+/// # Fields
+/// * `mode` - Current [ActionMode] (Normal, Input, ShowInfo).
+/// * `input_buffer` - Current input string buffer.
+/// * `input_cursor_pos` - Cursor position within the input buffer.
+/// * `clipboard` - Optional set of file paths for copy/paste operations.
+/// * `is_cut` - Flag indicating if clipboard items are cut or copied.
+/// * `find` - Embedded [FindState] for managing fuzzy find operations.
 pub struct ActionContext {
     mode: ActionMode,
     input_buffer: String,
