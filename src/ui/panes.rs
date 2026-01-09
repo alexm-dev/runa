@@ -151,7 +151,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         let icon = if context.show_icons {
             nerd_font_icon(entry)
         } else {
-            ""
+            "\u{200B}"
         };
 
         let name_str = if entry.is_dir() && context.show_marker {
@@ -165,7 +165,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
 
         if entry_padding == 0 {
             if context.show_icons {
-                spans.push(Span::raw(icon));
+                spans.push(Span::styled(format!("{} ", icon), entry_style))
             }
             spans.push(Span::raw(name_str));
         } else {
@@ -192,7 +192,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 spans.push(Span::raw(&padding_str));
             }
             if context.show_icons {
-                spans.push(Span::raw(icon));
+                spans.push(Span::styled(format!("{} ", icon), entry_style))
             }
             spans.push(Span::raw(name_str));
         }
