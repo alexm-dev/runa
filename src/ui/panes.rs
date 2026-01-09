@@ -21,6 +21,7 @@ use ratatui::{
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use unicode_width::UnicodeWidthStr;
 
 /// Styles used for rendering items in a pane
 /// Includes styles for regular items, directories and selected items
@@ -148,10 +149,10 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
             .map(|set| set.contains(&entry_path))
             .unwrap_or(false);
 
-        let icons = if context.show_icons {
-            nerd_font_icon(entry)
+        let icon = if context.show_icons {
+            padded_icon(nerd_font_icon(entry))
         } else {
-            ""
+            "".to_owned()
         };
 
         let name_str = if entry.is_dir() && context.show_marker {
@@ -165,8 +166,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
 
         if entry_padding == 0 {
             if context.show_icons {
-                spans.push(Span::raw(icons));
-                spans.push(Span::raw(" "));
+                spans.push(Span::raw(icon));
             }
             spans.push(Span::raw(name_str));
         } else {
@@ -193,8 +193,7 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 spans.push(Span::raw(&padding_str));
             }
             if context.show_icons {
-                spans.push(Span::raw(icons));
-                spans.push(Span::raw(" "));
+                spans.push(Span::raw(icon));
             }
             spans.push(Span::raw(name_str));
         }
@@ -446,14 +445,13 @@ fn make_entry_row<'a>(
     };
 
     let icon = if context.show_icons {
-        nerd_font_icon(entry)
+        padded_icon(nerd_font_icon(entry))
     } else {
-        ""
+        "".to_owned()
     };
     let mut spans = vec![pad];
     if context.show_icons {
         spans.push(Span::raw(icon));
-        spans.push(Span::raw(" "));
     }
     let name_str = if entry.is_dir() && context.show_marker {
         entry.display_name()
@@ -463,4 +461,24 @@ fn make_entry_row<'a>(
     spans.push(Span::raw(name_str));
     let line = Line::from(spans);
     ListItem::new(line).style(row_style)
+}
+
+fn padded_icon(icon: &str) -> String {
+    let w = UnicodeWidthStr::width(icon);
+    if !icon.is_empty() && w < 2 {
+        match w {
+            1 => match icon.len() {
+                1 => [icon, " "].concat(),
+                _ => {
+                    let mut s = String::with_capacity(icon.len() + 1);
+                    s.push_str(icon);
+                    s.push(' ');
+                    s
+                }
+            },
+            _ => icon.to_owned(),
+        }
+    } else {
+        icon.to_owned()
+    }
 }

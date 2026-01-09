@@ -14,7 +14,7 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("json", "");
     m.insert("xml", "");
     m.insert("sh", "");
-    m.insert("go", "");
+    m.insert("go", "󰟓");
     m.insert("java", "");
     m.insert("c", "");
     m.insert("cpp", "");
@@ -69,8 +69,8 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("snap", "");
     m.insert("flatpak", "");
     m.insert("msi", "");
-    m.insert("iso", "");
-    m.insert("img", "");
+    m.insert("iso", "󰗮");
+    m.insert("img", "󰗮");
     m.insert("vhd", "");
     m.insert("cab", "");
     m.insert("psd", "");
