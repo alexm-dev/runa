@@ -161,11 +161,17 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         };
 
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-        let mut spans = Vec::with_capacity(4);
+
+        let base_style = Style::default()
+            .fg(entry_style.fg.unwrap_or(Color::Reset))
+            .bg(entry_style.bg.unwrap_or(Color::Reset));
+
+        let mut spans = Vec::with_capacity(8);
 
         if entry_padding == 0 {
             if context.show_icons {
-                spans.push(Span::styled(format!("{} ", icon), entry_style))
+                spans.push(Span::styled(icon, base_style));
+                spans.push(Span::styled(" ", base_style));
             }
             spans.push(Span::raw(name_str));
         } else {
@@ -192,13 +198,14 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 spans.push(Span::raw(&padding_str));
             }
             if context.show_icons {
-                spans.push(Span::styled(format!("{} ", icon), entry_style))
+                spans.push(Span::styled(icon, base_style));
+                spans.push(Span::styled(" ", base_style));
             }
             spans.push(Span::raw(name_str));
         }
 
         let line = Line::from(spans);
-        ListItem::new(line).style(entry_style)
+        ListItem::new(line).style(base_style)
     });
 
     let mut state = ListState::default();
