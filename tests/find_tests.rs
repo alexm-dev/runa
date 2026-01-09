@@ -1,4 +1,4 @@
-use runa_tui::core::find::find;
+use runa_tui::core::proc::find;
 use std::fs;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;

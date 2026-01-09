@@ -5,7 +5,7 @@
 
 use crate::app::nav::NavState;
 use crate::core::FileInfo;
-use crate::core::find::FindResult;
+use crate::core::proc::FindResult;
 use crate::core::worker::{FileOperation, WorkerTask};
 
 use crossbeam_channel::Sender;

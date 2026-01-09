@@ -3,7 +3,7 @@
 //! Provides the FileEntry struct which is used throughout runa.
 //! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
-use crate::utils::format_attributes;
+use crate::core::format_attributes;
 
 use std::ffi::OsString;
 use std::fs::{self, symlink_metadata};
@@ -13,8 +13,17 @@ use std::time::SystemTime;
 
 /// Represents a single entry in a directory listing
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
-/// Used throughout runa for directory browsing and file management.
+/// Used throughout runa for directory browsing and file management
 /// Created and populated by the browse_dir function.
+///
+/// # Fields
+/// * `name` - The original OsString name of the file or directory
+/// * `name_str` - The String representation of the name
+/// * `lowercase_name` - The lowercase version of the name for case-insensitive comparisons
+/// * `display_name` - The name formatted for display (e.g., with trailing slash for directories)
+/// * `is_dir` - Boolean indicating if the entry is a directory
+/// * `is_hidden` - Boolean indicating if the entry is hidden
+/// * `is_system` - Boolean indicating if the entry is a system file (useful on Windows)
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
@@ -96,6 +105,14 @@ pub enum FileType {
 }
 
 /// Main FileInfo struct that holds each info field for the ShowInfo overlay widget.
+/// Holds name, size, modified time, attributes string, and file type.
+///
+/// # Fields
+/// * `name` - The OsString name of the file or directory
+/// * `size` - The size of the file in bytes (None for directories)
+/// * `modified` - The last modified time as SystemTime (None if unavailable)
+/// * `attributes` - A formatted string of file attributes
+/// * `file_type` - The FileType enum indicating if it's a file, directory, symlink, or other
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileInfo {
     name: OsString,
@@ -129,6 +146,12 @@ impl FileInfo {
     }
 
     // Main file info getter used by the ShowInfo overlay functions
+    //
+    // # Arguments
+    // * `path` - Path reference to the file or directory to get info for
+    //
+    // # Returns
+    // A FileInfo struct populated with the file's information.
     pub fn get_file_info(path: &Path) -> io::Result<FileInfo> {
         let metadata = symlink_metadata(path)?;
         let file_type = if metadata.is_file() {
@@ -156,6 +179,12 @@ impl FileInfo {
 }
 
 /// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
+///
+/// # Arguments
+/// * `path` - Path reference to the directory to browse
+///
+/// # Returns
+/// A Result containing a vector of FileEntry structs or an std::io::Error
 pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
     let mut entries = Vec::with_capacity(256);
     for entry in fs::read_dir(path)? {
