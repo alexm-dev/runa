@@ -57,6 +57,10 @@ impl PreviewState {
 
     // Setters / mutators
 
+    /// Sets the selected index, clamped to the length of the current data
+    ///
+    /// # Arguments
+    /// * `idx` - The new selected index
     pub fn set_selected_idx(&mut self, idx: usize) {
         let len = match &self.data {
             PreviewData::Directory(entries) => entries.len(),
@@ -66,6 +70,7 @@ impl PreviewState {
         self.selected_idx = idx.min(len.saturating_sub(1));
     }
 
+    /// Marks the preview as pending and updates the last input time
     pub fn mark_pending(&mut self) {
         self.pending = true;
         self.last_input_time = Instant::now();
@@ -76,6 +81,13 @@ impl PreviewState {
         self.pending && self.last_input_time.elapsed().as_millis() > 75
     }
 
+    /// Prepares a new preview request for the given path
+    /// Increments the request ID, sets the current path and marks as not pending
+    /// # Arguments
+    /// * `path` - The path to preview
+    ///
+    /// # Returns
+    /// * `u64` - The new request ID
     pub fn prepare_new_request(&mut self, path: PathBuf) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.current_path = Some(path);
@@ -83,12 +95,24 @@ impl PreviewState {
         self.request_id
     }
 
+    /// Updates the preview content with new file lines
+    /// Only applies the update if the request ID matches the latest
+    ///
+    /// # Arguments
+    /// * `lines` - The new file lines
+    /// * `request_id` - The request ID of the update
     pub fn update_content(&mut self, lines: Vec<String>, request_id: u64) {
         if request_id == self.request_id {
             self.data = PreviewData::File(lines);
         }
     }
 
+    /// Updates the preview content with new directory entries
+    /// Only applies the update if the request ID matches the latest
+    ///
+    /// # Arguments
+    /// * `entries` - The new directory entries
+    /// * `request_id` - The request ID of the update
     pub fn update_from_entries(&mut self, entries: Vec<FileEntry>, request_id: u64) {
         if request_id == self.request_id {
             self.data = PreviewData::Directory(entries);
@@ -96,10 +120,12 @@ impl PreviewState {
         }
     }
 
+    /// Sets an error message as the preview content
     pub fn set_error(&mut self, err: String) {
         self.data = PreviewData::File(vec![err]);
     }
 
+    /// Clears the preview state
     pub fn clear(&mut self) {
         self.data = PreviewData::Empty;
         self.selected_idx = 0;
@@ -109,6 +135,7 @@ impl PreviewState {
 }
 
 impl PreviewData {
+    /// Determines if the preview data is empty
     pub fn is_empty(&self) -> bool {
         match self {
             PreviewData::Directory(v) => v.is_empty(),
@@ -117,6 +144,7 @@ impl PreviewData {
         }
     }
 
+    /// Returns an iterator over the directory entries if the preview data is a directory
     pub fn iter(&self) -> impl Iterator<Item = &FileEntry> {
         match self {
             PreviewData::Directory(entries) => entries.iter(),
@@ -124,6 +152,7 @@ impl PreviewData {
         }
     }
 
+    /// Returns the length of the directory entries if the preview data is a directory
     pub fn len(&self) -> usize {
         match self {
             PreviewData::Directory(entries) => entries.len(),

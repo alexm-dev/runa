@@ -320,6 +320,10 @@ impl<'a> AppState<'a> {
 
     // Worker requests functions for directory loading, preview and parent pane content
 
+    /// Requests a directory load for the current navigation directory
+    ///
+    /// # Arguments
+    /// * `focus` - Optional OsString to focus on a specific entry after loading
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
@@ -336,6 +340,7 @@ impl<'a> AppState<'a> {
         });
     }
 
+    /// Requests a preview load for the currently selected entry in the navigation pane
     pub fn request_preview(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
@@ -372,6 +377,7 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Requests loading of the parent directory content for the parent pane
     pub fn request_parent_content(&mut self) {
         if let Some(parent_path) = self.nav.current_dir().parent() {
             let parent_path_buf = parent_path.to_path_buf();
@@ -399,6 +405,7 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Requests a recursive find operation for the current navigation directory
     pub fn request_find(&mut self, query: String) {
         self.actions.cancel_find();
 
