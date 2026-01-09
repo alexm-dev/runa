@@ -84,16 +84,3 @@ fn test_find_recursive_subdirectory() -> Result<(), Box<dyn std::error::Error>> 
     );
     Ok(())
 }
-
-#[test]
-fn test_find_recursive_reports_dir() -> Result<(), Box<dyn std::error::Error>> {
-    skip_if_no_fd!();
-    let dir = tempdir()?;
-    let subdir = dir.path().join("crabdir");
-    fs::create_dir(&subdir)?;
-    let cancel = Arc::new(AtomicBool::new(false));
-    let mut out = Vec::new();
-    find(dir.path(), "crab", &mut out, cancel, 10)?;
-    assert!(out.iter().any(|r| r.is_dir()));
-    Ok(())
-}

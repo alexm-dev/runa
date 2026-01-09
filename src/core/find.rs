@@ -28,11 +28,10 @@ use std::sync::atomic::AtomicBool;
 const BUFREADER_SIZE: usize = 32768;
 
 /// A single result from the find function.
-/// It contains the path, whether it is a directory, and the score of the fuzzy match.
+/// It contains the path and the score of the fuzzy match.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FindResult {
     path: PathBuf,
-    is_dir: bool,
     score: i64,
 }
 
@@ -52,9 +51,6 @@ impl PartialOrd for FindResult {
 impl FindResult {
     pub fn path(&self) -> &Path {
         &self.path
-    }
-    pub fn is_dir(&self) -> bool {
-        self.is_dir
     }
     pub fn score(&self) -> i64 {
         self.score
@@ -92,6 +88,8 @@ pub fn find(
             "--type",
             "d",
             "--hidden",
+            "--exclude",
+            ".git",
             "--color",
             "never",
             "--max-results",
@@ -145,10 +143,8 @@ pub fn find(
     out.reserve(raw_results.len());
     for raw in raw_results {
         let path = base_dir.join(&raw.relative);
-        let is_dir = path.is_dir();
         out.push(FindResult {
             path,
-            is_dir,
             score: raw.score,
         });
     }

@@ -241,8 +241,9 @@ impl<'a> AppState<'a> {
             return;
         };
         let path = r.path();
+        let is_dir = path.is_dir();
 
-        if r.is_dir() {
+        if is_dir {
             self.nav.save_position();
             self.nav.set_path(path.to_path_buf());
             self.request_dir_load(None);
