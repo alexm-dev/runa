@@ -24,7 +24,6 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("rb", "");
     m.insert("swift", "");
     m.insert("kt", "");
-    m.insert("dart", "");
     m.insert("lua", "");
     m.insert("ts", "");
     m.insert("tsx", "");
@@ -57,7 +56,7 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("config", "");
     m.insert("ini", "");
     m.insert("bat", "");
-    m.insert("ps1", "");
+    m.insert("ps1", "󰨊");
     m.insert("cmd", "");
     m.insert("dll", "");
     m.insert("yml", "");
@@ -86,9 +85,10 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
 pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
     m.insert("README.md", "");
-    m.insert("LICENSE", "");
+    m.insert("LICENSE", "");
     m.insert("Makefile", "");
     m.insert(".gitignore", "");
+    m.insert(".gitconfig", "");
     m.insert("Cargo.toml", "");
     m.insert("Dockerfile", "");
     m.insert("package.json", "");
@@ -112,6 +112,8 @@ pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = La
     m.insert("Cargo.lock", "");
     m.insert("CmakeLists.txt", "");
     m.insert("PKGBUILD", "󰣇");
+    m.insert(".bashrc", "󱆃");
+    m.insert(".vimrc", "");
     m
 });
 
@@ -120,10 +122,12 @@ pub static SPECIAL_DIR_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Laz
     let mut m = HashMap::new();
     m.insert("bin", "");
     m.insert("lib", "");
-    m.insert("node_modules", "");
+    m.insert("node_modules", "");
     m.insert(".git", "");
-    m.insert(".github", "");
+    m.insert(".github", "");
     m.insert(".config", "");
+    m.insert("Documents", "󰲃");
+    m.insert("nvim", "");
     m
 });
 
