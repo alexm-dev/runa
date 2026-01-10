@@ -7,11 +7,10 @@
 
 use crate::app::AppState;
 use crate::app::actions::{ActionMode, InputMode};
-use crate::core::{FileInfo, file_manager::FileType};
+use crate::core::{FileInfo, FileType, format_file_size, format_file_time, format_file_type};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog,
 };
-use crate::utils::{format_file_size, format_file_time, format_file_type};
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},

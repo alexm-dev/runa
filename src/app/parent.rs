@@ -10,6 +10,12 @@ use std::path::{Path, PathBuf};
 ///
 /// Stores the list of entries in the parent directory, the selected entry (index)
 /// and tracks the request IDs to coordinate updates.
+///
+/// # Fields
+/// * `entries` - List of `FileEntry` in the parent directory
+/// * `selected_idx` - Index of the currently selected entry
+/// * `last_path` - Last path for which entries were fetched
+/// * `request_id` - Current request ID for tracking updates
 #[derive(Default)]
 pub struct ParentState {
     entries: Vec<FileEntry>,
@@ -47,11 +53,16 @@ impl ParentState {
         Some(parent_path) != self.last_path.as_deref()
     }
 
-    /// Prepares a request: increases the request_id, sets new path and returns the new request_id
-    pub fn prepare_new_request(&mut self, path: PathBuf) -> u64 {
+    /// Prepares a request: increases the request_id.
+    pub fn prepare_new_request(&mut self) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
-        self.last_path = Some(path);
         self.request_id
+    }
+
+    /// Prepares for an update: clears the last path and increases the request_id.
+    pub fn prepare_update(&mut self) {
+        self.last_path = None;
+        self.request_id = self.request_id.wrapping_add(1);
     }
 
     /// Updates the state with new entries
@@ -78,6 +89,6 @@ impl ParentState {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;
-        self.request_id += 1;
+        self.request_id = self.request_id.wrapping_add(1);
     }
 }

@@ -22,6 +22,8 @@ pub enum NavAction {
     GoUp,
     GoDown,
     ToggleMarker,
+    ClearMarker,
+    ClearFilter,
 }
 
 /// File actions (delete, copy, open, paste, etc.)
@@ -53,11 +55,21 @@ pub struct Key {
 }
 
 /// Stores the mapping from Key to action, which is built in the config
+///
+/// # Fields
+/// * `map` - HashMap mapping Key to Action
 pub struct Keymap {
     map: HashMap<Key, Action>,
 }
 
 impl Keymap {
+    /// Builds the keymap from the config
+    ///
+    /// # Arguments
+    /// * `config` - The app configuration containing keybindings
+    ///
+    /// # Returns
+    /// * `Keymap` - The constructed keymap
     pub fn from_config(config: &crate::config::Config) -> Self {
         let mut map = HashMap::new();
         let keys = config.keys();
@@ -104,6 +116,10 @@ impl Keymap {
             })
         };
 
+        // Helper to bind multiple keys to the same action
+        // # Arguments
+        // * `key_list` - List of key strings
+        // * `action` - The action to bind to
         let mut bind = |key_list: &[String], action: Action| {
             for k in key_list {
                 if let Some(key) = parse_key(k) {
@@ -131,10 +147,13 @@ impl Keymap {
         bind(keys.quit(), Action::System(SystemAction::Quit));
         bind(keys.show_info(), Action::File(FileAction::ShowInfo));
         bind(keys.find(), Action::File(FileAction::Find));
+        bind(keys.clear_markers(), Action::Nav(NavAction::ClearMarker));
+        bind(keys.clear_filter(), Action::Nav(NavAction::ClearFilter));
 
         Keymap { map }
     }
 
+    /// Looks up the action for a given key event
     pub fn lookup(&self, key: KeyEvent) -> Option<Action> {
         let k = Key {
             code: key.code,

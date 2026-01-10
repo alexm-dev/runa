@@ -7,6 +7,9 @@
 
 use crate::app::{AppState, PreviewData};
 use crate::core::FileEntry;
+use crate::ui::icons::nerd_font_icon;
+use ansi_to_tui::IntoText;
+use ratatui::text::Text;
 use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
@@ -36,7 +39,6 @@ impl PaneStyles {
         };
 
         if is_selected {
-            style = style.add_modifier(Modifier::BOLD);
             if let Some(bg) = self.selection.bg
                 && bg != Color::Reset
             {
@@ -63,6 +65,8 @@ pub struct PaneContext<'a> {
     pub highlight_symbol: &'a str,
     pub entry_padding: u8,
     pub padding_str: &'static str,
+    pub show_icons: bool,
+    pub show_marker: bool,
 }
 
 /// Options for preview pane rendering
@@ -85,7 +89,6 @@ pub struct PaneMarkers<'a> {
 ///
 /// Highlights selection, markers and directories and handles styling for items.
 pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
-    let show_marker = app.config().display().dir_marker();
     let selected_idx = app.visible_selected();
     let markers = app.nav().markers();
     let marker_theme = app.config().theme().marker();
@@ -144,16 +147,24 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
             .map(|set| set.contains(&entry_path))
             .unwrap_or(false);
 
-        let name_str = if entry.is_dir() && show_marker {
+        let name_str = if entry.is_dir() && context.show_marker {
             entry.display_name()
         } else {
             entry.name_str()
         };
 
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-        let mut spans = Vec::with_capacity(4);
+        let mut spans = Vec::with_capacity(8);
 
         if entry_padding == 0 {
+            if context.show_icons {
+                let icon = nerd_font_icon(entry);
+                let icon_col = icon.to_owned() + " ";
+                spans.push(Span::styled(
+                    icon_col,
+                    entry_style.add_modifier(Modifier::BOLD),
+                ));
+            }
             spans.push(Span::raw(name_str));
         } else {
             let mut marker_style = if is_copied {
@@ -177,6 +188,14 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
 
             if entry_padding > 1 {
                 spans.push(Span::raw(&padding_str));
+            }
+            if context.show_icons {
+                let icon = nerd_font_icon(entry);
+                let icon_col = icon.to_owned() + " ";
+                spans.push(Span::styled(
+                    icon_col,
+                    entry_style.add_modifier(Modifier::BOLD),
+                ));
             }
             spans.push(Span::raw(name_str));
         }
@@ -223,7 +242,8 @@ pub fn draw_preview(
         }
 
         PreviewData::File(lines) => {
-            let text: Vec<Line> = lines.iter().map(|s| Line::from(s.as_str())).collect();
+            let raw = lines.join("\n");
+            let text = raw.into_text().unwrap_or_else(|_| Text::from(raw));
 
             frame.render_widget(
                 Paragraph::new(text).block(context.block.border_style(context.accent_style)),
@@ -368,6 +388,8 @@ pub fn make_pane_markers<'a>(
 
 /// Helper: Create a ListItem row for a file entry with appropriate styles and markers.
 /// Used in pane drawing functions.
+///
+/// # Ar
 fn make_entry_row<'a>(
     entry: &'a FileEntry,
     is_selected: bool,
@@ -426,7 +448,21 @@ fn make_entry_row<'a>(
         Span::raw(context.padding_str)
     };
 
-    let spans = vec![pad, Span::raw(entry.display_name())];
+    let mut spans = vec![pad];
+    if context.show_icons {
+        let icon = nerd_font_icon(entry);
+        let icon_col = icon.to_owned() + " ";
+        spans.push(Span::styled(
+            icon_col,
+            row_style.add_modifier(Modifier::BOLD),
+        ));
+    }
+    let name_str = if entry.is_dir() && context.show_marker {
+        entry.display_name()
+    } else {
+        entry.name_str()
+    };
+    spans.push(Span::raw(name_str));
     let line = Line::from(spans);
     ListItem::new(line).style(row_style)
 }

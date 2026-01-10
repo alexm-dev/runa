@@ -9,7 +9,7 @@ mod handlers;
 mod keymap;
 mod nav;
 mod parent;
-mod preview;
+pub mod preview;
 mod state;
 
 pub use nav::NavState;

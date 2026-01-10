@@ -6,6 +6,7 @@
 use serde::Deserialize;
 use std::vec;
 
+/// Input configuration options of all actions
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Keys {
@@ -25,14 +26,18 @@ pub struct Keys {
     toggle_marker: Vec<String>,
     show_info: Vec<String>,
     find: Vec<String>,
+    clear_markers: Vec<String>,
+    clear_filter: Vec<String>,
 }
 
+/// Editor configuration options
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Editor {
     cmd: String,
 }
 
+/// Public methods for accessing input configuration options
 impl Keys {
     pub fn open_file(&self) -> &Vec<String> {
         &self.open_file
@@ -97,8 +102,17 @@ impl Keys {
     pub fn find(&self) -> &Vec<String> {
         &self.find
     }
+
+    pub fn clear_markers(&self) -> &Vec<String> {
+        &self.clear_markers
+    }
+
+    pub fn clear_filter(&self) -> &Vec<String> {
+        &self.clear_filter
+    }
 }
 
+/// Default input configuration options
 impl Default for Keys {
     fn default() -> Self {
         Keys {
@@ -119,16 +133,21 @@ impl Default for Keys {
             toggle_marker: vec![" ".into()],
             show_info: vec!["i".into()],
             find: vec!["s".into()],
+
+            clear_markers: vec!["Ctrl+c".into()],
+            clear_filter: vec!["Ctrl+f".into()],
         }
     }
 }
 
+/// Public methods for accessing editor configuration options
 impl Editor {
     pub fn cmd(&self) -> &str {
         &self.cmd
     }
 }
 
+/// Default editor configuration options
 impl Default for Editor {
     fn default() -> Self {
         Editor { cmd: "nvim".into() }

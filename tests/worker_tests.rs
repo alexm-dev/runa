@@ -1,3 +1,10 @@
+//! Tests for the worker pool handling directory loading and file finding.
+//! These tests ensure that the worker pool can handle multiple
+//! concurrent requests correctly and efficiently.
+//!
+//! Temporary directories and files are created for testing purposes and
+//! are automatically cleaned up after the tests complete.
+
 use rand::{Rng, rng};
 use runa_tui::core::worker::{WorkerResponse, WorkerTask, Workers};
 use std::collections::HashSet;

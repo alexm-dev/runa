@@ -1,3 +1,10 @@
+//! Tests for NavState navigation, selection, filtering, and marker persistence.
+//! These tests ensure that the NavState behaves correctly under various operations.
+//!
+//! They create temporary sandbox directories with files and directories to simulate user navigation
+//! and verify that the internal state of NavState remains consistent.
+//! These sandbox directories are automatically cleaned up after the tests complete.
+
 use rand::rng;
 use rand::seq::SliceRandom;
 use runa_tui::app::NavState;

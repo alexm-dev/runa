@@ -1,9 +1,18 @@
+//! UI-related tests for runa
+//!
+//! These tests focus on the user interface components of the runa TUI application,
+//! including formatting and layout rendering.
+//! They ensure that the UI behaves correctly under various conditions.
+//!
+//! These tests may create temporary directories and files to simulate different UI scenarios.
+//! These temporary resources are automatically cleaned up after the tests complete.
+
 use ratatui::layout::Rect;
 use runa_tui::app::AppState;
 use runa_tui::config::{Config, load::RawConfig};
 use runa_tui::core;
+use runa_tui::core::Formatter;
 use runa_tui::ui::render::layout_chunks;
-use runa_tui::utils::Formatter;
 use std::collections::HashSet;
 use std::error;
 use std::path::Path;

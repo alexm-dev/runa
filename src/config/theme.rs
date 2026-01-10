@@ -10,226 +10,19 @@ use crate::utils::parse_color;
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
-pub struct ColorPair {
-    #[serde(default, deserialize_with = "deserialize_color_field")]
-    fg: Color,
-    #[serde(default, deserialize_with = "deserialize_color_field")]
-    bg: Color,
-}
-
-impl Default for ColorPair {
-    fn default() -> Self {
-        Self {
-            fg: Color::Reset,
-            bg: Color::Reset,
-        }
-    }
-}
-
-impl ColorPair {
-    pub fn as_style(&self) -> Style {
-        Style::default().fg(self.fg).bg(self.bg)
-    }
-
-    pub fn effective_style(&self, fallback: &ColorPair) -> Style {
-        let fg = if self.fg == Color::Reset {
-            fallback.fg
-        } else {
-            self.fg
-        };
-        let bg = if self.bg == Color::Reset {
-            fallback.bg
-        } else {
-            self.bg
-        };
-        Style::default().fg(fg).bg(bg)
-    }
-
-    pub fn fg(&self) -> Color {
-        self.fg
-    }
-    pub fn bg(&self) -> Color {
-        self.bg
-    }
-}
-
-#[derive(Deserialize, Debug, PartialEq, Clone, Copy, Default)]
-#[serde(default)]
-pub struct PaneTheme {
-    color: ColorPair,
-    selection: Option<ColorPair>,
-}
-
-impl PaneTheme {
-    pub fn as_style(&self) -> Style {
-        self.color.as_style()
-    }
-
-    pub fn selection_style(&self, fallback: Style) -> Style {
-        match self.selection {
-            Some(sel) => sel.as_style(),
-            None => fallback,
-        }
-    }
-
-    pub fn effective_style(&self, fallback: &ColorPair) -> Style {
-        self.color.effective_style(fallback)
-    }
-
-    pub fn fg(&self) -> Color {
-        self.color.fg()
-    }
-    pub fn bg(&self) -> Color {
-        self.color.bg()
-    }
-}
-
-#[derive(Deserialize, Debug, Clone, PartialEq)]
-#[serde(default)]
-pub struct MarkerTheme {
-    icon: String,
-    #[serde(flatten)]
-    color: ColorPair,
-    clipboard: Option<ColorPair>,
-}
-
-impl MarkerTheme {
-    pub fn icon(&self) -> &str {
-        &self.icon
-    }
-    pub fn color(&self) -> &ColorPair {
-        &self.color
-    }
-    pub fn clipboard(&self) -> Option<&ColorPair> {
-        self.clipboard.as_ref()
-    }
-}
-
-impl Default for MarkerTheme {
-    fn default() -> Self {
-        MarkerTheme {
-            icon: "*".to_string(),
-            color: ColorPair {
-                fg: Color::Yellow,
-                bg: Color::Reset,
-            },
-            clipboard: Some(ColorPair {
-                fg: Color::Green,
-                bg: Color::Reset,
-            }),
-        }
-    }
-}
-
-#[derive(Deserialize, Debug, Clone)]
-#[serde(default)]
-pub struct WidgetTheme {
-    color: ColorPair,
-    border: ColorPair,
-    title: ColorPair,
-    position: Option<DialogPosition>,
-    size: Option<DialogSize>,
-    confirm_size: Option<DialogSize>,
-    find_size: Option<DialogSize>,
-}
-
-impl WidgetTheme {
-    pub fn position(&self) -> &Option<DialogPosition> {
-        &self.position
-    }
-
-    pub fn size(&self) -> &Option<DialogSize> {
-        &self.size
-    }
-
-    pub fn confirm_size(&self) -> &Option<DialogSize> {
-        &self.confirm_size
-    }
-
-    pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
-        self.confirm_size()
-            .as_ref()
-            .or_else(|| self.size().as_ref())
-            .copied()
-            .unwrap_or(fallback)
-    }
-
-    pub fn find_size_or(&self, fallback: DialogSize) -> DialogSize {
-        self.find_size
-            .as_ref()
-            .or_else(|| self.size().as_ref())
-            .copied()
-            .unwrap_or(fallback)
-    }
-
-    pub fn border_style_or(&self, fallback: Style) -> Style {
-        let fg = if self.border.fg != Color::Reset {
-            self.border.fg
-        } else {
-            fallback.fg.unwrap_or(Color::Reset)
-        };
-
-        let bg = if self.border.bg != Color::Reset {
-            self.border.bg
-        } else {
-            fallback.bg.unwrap_or(Color::Reset)
-        };
-
-        fallback.fg(fg).bg(bg)
-    }
-
-    pub fn fg_or(&self, fallback: Style) -> Style {
-        if self.color.fg() == Color::Reset {
-            fallback
-        } else {
-            Style::default().fg(self.color.fg())
-        }
-    }
-
-    pub fn bg_or(&self, fallback: Style) -> Style {
-        if self.color.bg() == Color::Reset {
-            fallback
-        } else {
-            Style::default().bg(self.color.bg())
-        }
-    }
-
-    pub fn title_style_or(&self, fallback: Style) -> Style {
-        let fg = if self.title.fg != Color::Reset {
-            self.title.fg
-        } else {
-            fallback.fg.unwrap_or(Color::Reset)
-        };
-        let bg = if self.title.bg != Color::Reset {
-            self.title.bg
-        } else {
-            fallback.bg.unwrap_or(Color::Reset)
-        };
-        fallback.fg(fg).bg(bg)
-    }
-}
-
-impl PartialEq for WidgetTheme {
-    fn eq(&self, other: &Self) -> bool {
-        self.color == other.color && self.border == other.border && self.title == other.title
-    }
-}
-
-impl Default for WidgetTheme {
-    fn default() -> Self {
-        WidgetTheme {
-            color: ColorPair::default(),
-            border: ColorPair::default(),
-            title: ColorPair::default(),
-            position: Some(DialogPosition::Center),
-            size: Some(DialogSize::Small),
-            confirm_size: Some(DialogSize::Large),
-            find_size: Some(DialogSize::Medium),
-        }
-    }
-}
-
+/// Theme configuration options
+/// Holds all color and style options for the application.
+/// Also holds the internal themes and the logic to apply user overrides on top of them.
+/// # Examples
+/// ```toml
+/// [theme]
+/// name = "gruvbox-dark"
+/// [theme.entry]
+/// fg = "white"
+/// bg = "black"
+/// [theme.selection]
+/// bg = "grey"
+/// ```
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Theme {
@@ -305,6 +98,8 @@ macro_rules! override_if_changed {
     };
 }
 
+/// Theme implementation
+/// Provides methods to access theme properties and apply user overrides.
 impl Theme {
     pub fn accent(&self) -> ColorPair {
         self.accent
@@ -394,6 +189,30 @@ impl Theme {
         }
     }
 
+    pub fn bat_theme_name(&self) -> &'static str {
+        self.name
+            .as_deref()
+            .map(Theme::map_to_bat_theme)
+            .unwrap_or("base16-256.dark")
+    }
+
+    fn map_to_bat_theme(internal_theme: &str) -> &'static str {
+        match internal_theme {
+            "gruvbox-dark" | "gruvbox-dark-hard" | "gruvbox" => "gruvbox-dark",
+            "gruvbox-light" => "gruvbox-light",
+            "tokyonight-night" | "tokyonight" | "tokyonight-storm" => "TwoDark",
+            "catppuccin-latte" => "Catppuccin Latte",
+            "catppuccin-frappe" => "Catppuccin Frappe",
+            "catppuccin-macchiato" => "Catppuccin Macchiato",
+            "catppuccin-mocha" | "catppuccin" => "Catppuccin Mocha",
+            "nightfox" | "carbonfox" | "rose-pine" | "everforest" => "TwoDark",
+            _ => "TwoDark",
+        }
+    }
+
+    /// Apply user overrides on top of the current theme.
+    /// Compares each field with the default theme and overrides if changed
+    /// This allows to only specify the fields they want to change
     fn apply_user_overrides(&mut self, user: Theme) {
         let defaults = Theme::default();
 
@@ -414,6 +233,252 @@ impl Theme {
 
         if user.name.is_some() {
             self.name = user.name.clone();
+        }
+    }
+}
+
+/// ColorPair struct to hold foreground and background colors.
+/// Used throughout the theme configuration.
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+pub struct ColorPair {
+    #[serde(default, deserialize_with = "deserialize_color_field")]
+    fg: Color,
+    #[serde(default, deserialize_with = "deserialize_color_field")]
+    bg: Color,
+}
+
+/// Default implementation for ColorPair
+/// Sets both foreground and background to Color::Reset
+impl Default for ColorPair {
+    fn default() -> Self {
+        Self {
+            fg: Color::Reset,
+            bg: Color::Reset,
+        }
+    }
+}
+
+/// ColorPair implementation
+/// Provides methods to convert to Style and get effective styles.
+impl ColorPair {
+    /// Convert ColorPair to Style
+    pub fn as_style(&self) -> Style {
+        Style::default().fg(self.fg).bg(self.bg)
+    }
+
+    /// Get effective style, using fallback colors if Reset is set
+    pub fn effective_style(&self, fallback: &ColorPair) -> Style {
+        let fg = if self.fg == Color::Reset {
+            fallback.fg
+        } else {
+            self.fg
+        };
+        let bg = if self.bg == Color::Reset {
+            fallback.bg
+        } else {
+            self.bg
+        };
+        Style::default().fg(fg).bg(bg)
+    }
+
+    // Getters for fg and bg colors
+    pub fn fg(&self) -> Color {
+        self.fg
+    }
+    pub fn bg(&self) -> Color {
+        self.bg
+    }
+}
+
+/// PaneTheme struct to hold color and selection styles for panes.
+/// Used for parent and preview panes.
+#[derive(Deserialize, Debug, PartialEq, Clone, Copy, Default)]
+#[serde(default)]
+pub struct PaneTheme {
+    color: ColorPair,
+    selection: Option<ColorPair>,
+}
+
+/// Similar to ColorPair implementation
+/// Provides methods to convert to Style and get effective styles.
+impl PaneTheme {
+    pub fn as_style(&self) -> Style {
+        self.color.as_style()
+    }
+
+    pub fn selection_style(&self, fallback: Style) -> Style {
+        match self.selection {
+            Some(sel) => sel.as_style(),
+            None => fallback,
+        }
+    }
+
+    pub fn effective_style(&self, fallback: &ColorPair) -> Style {
+        self.color.effective_style(fallback)
+    }
+
+    pub fn fg(&self) -> Color {
+        self.color.fg()
+    }
+    pub fn bg(&self) -> Color {
+        self.color.bg()
+    }
+}
+
+/// MarkerTheme struct to hold marker icon and colors.
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(default)]
+pub struct MarkerTheme {
+    icon: String,
+    #[serde(flatten)]
+    color: ColorPair,
+    /// Optional clipboard color pair
+    /// sets the color of the copy/paste marker
+    clipboard: Option<ColorPair>,
+}
+
+impl MarkerTheme {
+    pub fn icon(&self) -> &str {
+        &self.icon
+    }
+    pub fn color(&self) -> &ColorPair {
+        &self.color
+    }
+    pub fn clipboard(&self) -> Option<&ColorPair> {
+        self.clipboard.as_ref()
+    }
+}
+
+impl Default for MarkerTheme {
+    fn default() -> Self {
+        MarkerTheme {
+            icon: "*".to_string(),
+            color: ColorPair {
+                fg: Color::Yellow,
+                bg: Color::Reset,
+            },
+            clipboard: Some(ColorPair {
+                fg: Color::Green,
+                bg: Color::Reset,
+            }),
+        }
+    }
+}
+
+/// WidgetTheme struct to hold colors and styles for widgets/dialogs.
+/// Used by various dialog widgets and overlay widgets.
+#[derive(Deserialize, Debug, Clone)]
+#[serde(default)]
+pub struct WidgetTheme {
+    color: ColorPair,
+    border: ColorPair,
+    title: ColorPair,
+    position: Option<DialogPosition>,
+    size: Option<DialogSize>,
+    confirm_size: Option<DialogSize>,
+    find_size: Option<DialogSize>,
+}
+
+impl WidgetTheme {
+    pub fn position(&self) -> &Option<DialogPosition> {
+        &self.position
+    }
+
+    pub fn size(&self) -> &Option<DialogSize> {
+        &self.size
+    }
+
+    pub fn confirm_size(&self) -> &Option<DialogSize> {
+        &self.confirm_size
+    }
+
+    /// Returns the confirm dialog size, falling back to the general size, and then to the provided fallback.
+    pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
+        self.confirm_size()
+            .as_ref()
+            .or_else(|| self.size().as_ref())
+            .copied()
+            .unwrap_or(fallback)
+    }
+
+    /// Returns the find dialog size, falling back to the general size, and then to the provided fallback.)
+    pub fn find_size_or(&self, fallback: DialogSize) -> DialogSize {
+        self.find_size
+            .as_ref()
+            .or_else(|| self.size().as_ref())
+            .copied()
+            .unwrap_or(fallback)
+    }
+
+    /// Returns the border style, falling back to the provided style for Reset colors.
+    pub fn border_style_or(&self, fallback: Style) -> Style {
+        let fg = if self.border.fg != Color::Reset {
+            self.border.fg
+        } else {
+            fallback.fg.unwrap_or(Color::Reset)
+        };
+
+        let bg = if self.border.bg != Color::Reset {
+            self.border.bg
+        } else {
+            fallback.bg.unwrap_or(Color::Reset)
+        };
+
+        fallback.fg(fg).bg(bg)
+    }
+
+    /// Returns the foreground style, falling back to the provided style if Reset.
+    pub fn fg_or(&self, fallback: Style) -> Style {
+        if self.color.fg() == Color::Reset {
+            fallback
+        } else {
+            Style::default().fg(self.color.fg())
+        }
+    }
+
+    /// Returns the background style, falling back to the provided style if Reset.
+    pub fn bg_or(&self, fallback: Style) -> Style {
+        if self.color.bg() == Color::Reset {
+            fallback
+        } else {
+            Style::default().bg(self.color.bg())
+        }
+    }
+
+    /// Returns the title style, falling back to the provided style for Reset colors.
+    pub fn title_style_or(&self, fallback: Style) -> Style {
+        let fg = if self.title.fg != Color::Reset {
+            self.title.fg
+        } else {
+            fallback.fg.unwrap_or(Color::Reset)
+        };
+        let bg = if self.title.bg != Color::Reset {
+            self.title.bg
+        } else {
+            fallback.bg.unwrap_or(Color::Reset)
+        };
+        fallback.fg(fg).bg(bg)
+    }
+}
+
+/// PartialEq implementation for WidgetTheme only comparing color, border, and title.
+impl PartialEq for WidgetTheme {
+    fn eq(&self, other: &Self) -> bool {
+        self.color == other.color && self.border == other.border && self.title == other.title
+    }
+}
+
+/// Default implementation for WidgetTheme
+impl Default for WidgetTheme {
+    fn default() -> Self {
+        WidgetTheme {
+            color: ColorPair::default(),
+            border: ColorPair::default(),
+            title: ColorPair::default(),
+            position: Some(DialogPosition::Center),
+            size: Some(DialogSize::Small),
+            confirm_size: Some(DialogSize::Large),
+            find_size: Some(DialogSize::Medium),
         }
     }
 }

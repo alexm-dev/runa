@@ -8,10 +8,15 @@
 //!
 //! Most callers will import [browse_dir], [FileEntry], and [FileInfo] from this module.
 
-pub mod file_manager;
-pub mod find;
+pub mod fm;
+pub mod formatter;
+pub mod proc;
 pub mod terminal;
 pub mod worker;
 
-pub use file_manager::{FileEntry, FileInfo, browse_dir};
-pub use find::{FindResult, find};
+pub use fm::{FileEntry, FileInfo, FileType, browse_dir};
+pub use formatter::{
+    Formatter, format_attributes, format_file_size, format_file_time, format_file_type,
+    preview_directory, safe_read_preview, sanitize_to_exact_width,
+};
+pub use proc::{FindResult, find, preview_bat};

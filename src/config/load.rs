@@ -18,6 +18,9 @@ use std::ffi::OsString;
 use std::sync::Arc;
 use std::{fs, io, path::PathBuf};
 
+/// Raw configuration as read from the toml file
+/// This struct is deserialized directly from the toml file.
+/// It uses owned types and is then converted into the main [Config] struct.
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct RawConfig {
@@ -34,6 +37,8 @@ pub struct RawConfig {
     keys: Keys,
 }
 
+/// Default values for RawConfig
+/// These are the same as the internal defaults used by runa.
 impl Default for RawConfig {
     fn default() -> Self {
         RawConfig {
@@ -51,6 +56,8 @@ impl Default for RawConfig {
     }
 }
 
+/// Main configuration struct for runa
+/// This struct holds the processed configuration options used by runa.
 #[derive(Debug)]
 pub struct Config {
     dirs_first: bool,
@@ -65,6 +72,8 @@ pub struct Config {
     keys: Keys,
 }
 
+/// Conversion from RawConfig to Config
+/// This handles any necessary processing of the raw values
 impl From<RawConfig> for Config {
     fn from(raw: RawConfig) -> Self {
         Self {
@@ -87,7 +96,13 @@ impl From<RawConfig> for Config {
     }
 }
 
+/// Public methods for loading and accessing the configuration
 impl Config {
+    /// Load configuration from the default path
+    /// If the file does not exist or fails to parse, returns the default configuration.
+    /// Also applies any necessary overrides to the theme after loading.
+    ///
+    /// Called by entry point to load config at startup.
     pub fn load() -> Self {
         let path = Self::default_path();
 
@@ -155,6 +170,15 @@ impl Config {
         &self.keys
     }
 
+    pub fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
+        self.display
+            .preview_options()
+            .bat_args(self.theme.bat_theme_name(), pane_width)
+    }
+
+    /// Determine the default configuration file path.
+    /// Checks the RUNA_CONFIG environment variable first,
+    /// then defaults to ~/.config/runa/runa.toml,
     pub fn default_path() -> PathBuf {
         if let Ok(path) = std::env::var("RUNA_CONFIG") {
             return PathBuf::from(path);
@@ -165,6 +189,9 @@ impl Config {
         PathBuf::from("runa.toml")
     }
 
+    /// Generate a default configuration file at the specified path.
+    /// If `minimal` is true, generates a minimal config with only essential settings.
+    /// If the file already exists, returns an error.
     pub fn generate_default(path: &PathBuf, minimal: bool) -> std::io::Result<()> {
         if path.exists() {
             return Err(io::Error::new(
@@ -195,6 +222,7 @@ case_insensitive = true
 borders = "unified"
 border_shape = "square"
 # titles = true
+# icons = false
 # separators = true
 # parent = true
 # preview = true
@@ -204,6 +232,12 @@ preview_underline = true
 # scroll_padding = 5
 # toggle_marker_jump = false
 # instant_preview = false
+
+[display.preview_options]
+method = "internal"
+# bat related options if method = "bat"
+# style = "plain"
+# wrap = true
 
 # [display.layout]
 # parent = 20
@@ -310,6 +344,8 @@ selection_icon = ""
 # toggle_marker = [" "]     # " " - indicates space bar
 # info = ["i"]
 # find = ["s"]
+# clear_markers = ["Ctrl+c"]
+# clear_filter = ["Ctrl+f"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
@@ -345,6 +381,7 @@ selection_icon = ""
     }
 }
 
+/// Default configuration options
 impl Default for Config {
     fn default() -> Self {
         Config {
@@ -362,6 +399,7 @@ impl Default for Config {
     }
 }
 
+/// Helper function for default max_find_results
 fn default_find_results() -> usize {
     DEFAULT_FIND_RESULTS
 }

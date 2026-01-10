@@ -6,6 +6,7 @@
 use crate::app::{AppState, KeypressResult};
 use crate::ui;
 use crossterm::{
+    cursor::{Hide, Show},
     event::{self, Event, KeyEventKind},
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
@@ -18,21 +19,34 @@ use std::{io, time::Duration};
 ///
 /// Blocks until quit. Handles all input and UI rendering.
 /// Returns a error if terminal setup or teardown fails
+///
+/// # Arguments
+/// * `app` - Mutable reference to the application state
+///
+/// # Errors
+/// Returns an std::io::Error if terminal setup or teardown fails.
 pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen)?;
+    execute!(stdout, EnterAlternateScreen, Hide)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
     let result = event_loop(&mut terminal, app);
 
     disable_raw_mode()?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen, Show)?;
     result
 }
 
 /// Main event loop of runa: draws UI, polls for events and dispatches them to the app.
 /// Returns on quit
+///
+/// # Arguments
+/// * `terminal` - Mutable reference to the terminal
+/// * `app` - Mutable reference to the application state
+///
+/// # Errors
+/// Returns an std::io::Error if terminal drawing or event polling fails.
 fn event_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut AppState,
@@ -48,7 +62,7 @@ where
         }
 
         // Event Polling
-        if event::poll(Duration::from_millis(10))? {
+        if event::poll(Duration::from_millis(16))? {
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {

@@ -11,6 +11,7 @@
 //!
 //! See submodules [panes] and [widgets] for detailed drawing functions.
 
+pub mod icons;
 pub mod overlays;
 pub mod panes;
 pub mod render;

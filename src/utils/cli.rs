@@ -90,6 +90,7 @@ runa - Full Configuration Guide (runa.toml)
   borders                 (str)     "none", "unified", or "split"
   border_shape            (str)     "square", "rounded", or "double"
   titles                  (bool)    Show pane titles at the top
+  icons                   (bool)    Show Nerd Font icons
   separators              (bool)    Show vertical lines between panes
   parent                  (bool)    Show parent (left) pane [default: true]
   preview                 (bool)    Show preview (right) pane [default: true]
@@ -175,6 +176,8 @@ runa - Full Configuration Guide (runa.toml)
   toggle_marker           (list)   [" "]     (space bar)
   info                    (list)   ["i"]
   find                    (list)   ["s"]
+  clear_markers           (list)   ["Ctrl+c]
+  clear_filter            (list)   ["Ctrl+f]
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
 

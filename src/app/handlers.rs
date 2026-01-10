@@ -9,12 +9,19 @@ use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
 use crate::ui::overlays::Overlay;
+
 use crossterm::event::{KeyCode::*, KeyEvent};
 use std::time::{Duration, Instant};
 
+/// AppState input and action handlers
 impl<'a> AppState<'a> {
     // AppState core handlers
 
+    /// Handles key events when in an input mode (rename, filter, etc).
+    /// Returns a [KeypressResult] indicating how the key event was handled.
+    ///
+    /// If not in an input mode, returns [KeypressResult::Continue].
+    /// Consumes keys related to input editing and mode confirmation/cancellation.
     pub fn handle_input_mode(&mut self, key: KeyEvent) -> KeypressResult {
         let mode = if let ActionMode::Input { mode, .. } = &self.actions().mode() {
             *mode
@@ -115,6 +122,14 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Handles navigation actions (up, down, into dir, etc).
+    /// Returns a [KeypressResult] indicating how the action was handled.
+    ///
+    /// # Arguments
+    /// * `action` - The navigation action to handle.
+    ///
+    /// # Returns
+    /// * [KeypressResult] indicating the result of the action.
     pub fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
         match action {
             NavAction::GoUp => {
@@ -141,10 +156,26 @@ impl<'a> AppState<'a> {
                 self.nav.toggle_marker_advance(clipboard, marker_jump);
                 self.request_preview();
             }
+            NavAction::ClearMarker => {
+                self.nav.clear_markers();
+                self.request_preview();
+            }
+            NavAction::ClearFilter => {
+                self.nav.clear_filters();
+                self.request_preview();
+            }
         }
         KeypressResult::Continue
     }
 
+    /// Handles file actions (open, delete, copy, etc).
+    /// Returns a [KeypressResult] indicating how the action was handled.
+    ///
+    /// # Arguments
+    /// * `action` - The file action to handle.
+    ///
+    /// # Returns
+    /// * [KeypressResult] indicating the result of the action.
     pub fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
         match action {
             FileAction::Open => return self.handle_open_file(),
@@ -167,6 +198,12 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
+    /// Enters an input mode with the given parameters.
+    ///
+    /// # Arguments
+    /// * `mode` - The input mode to enter.
+    /// * `prompt` - The prompt text to display.
+    /// * `initial` - Optional initial text for the input buffer.
     pub fn enter_input_mode(&mut self, mode: InputMode, prompt: String, initial: Option<String>) {
         let buffer = initial.unwrap_or_default();
         self.actions
@@ -179,6 +216,8 @@ impl<'a> AppState<'a> {
     ///
     /// If the movement was successful (f returns true), marks the preview as pending refresh.
     /// Used to encapsulate common logic for nav actions that change selection or directory.
+    /// # Arguments
+    /// * `f` - A closure that takes a mutable reference to [NavState] and returns a bool indicating success.
     fn move_nav_if_possible<F>(&mut self, f: F)
     where
         F: FnOnce(&mut NavState) -> bool,
@@ -192,6 +231,13 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Handles the go to parent directory action.
+    ///
+    /// If the current directory has a parent, navigates to it, saves the current position,
+    /// and requests loading of the new directory and its parent content.
+    ///
+    /// # Returns
+    /// * [KeypressResult] indicating the result of the action.
     fn handle_go_parent(&mut self) -> KeypressResult {
         if let Some(parent) = self.nav.current_dir().parent() {
             let exited_name = self.nav.current_dir().file_name().map(|n| n.to_os_string());
@@ -205,6 +251,13 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
+    /// Handles the go into directory action.
+    ///
+    /// If the selected entry is a directory, navigates into it, saves the current position,
+    /// and requests loading of the new directory and its parent content.
+    ///
+    /// # Returns
+    /// * [KeypressResult] indicating the result of the action.
     fn handle_go_into_dir(&mut self) -> KeypressResult {
         if let Some(entry) = self.nav.selected_shown_entry()
             && entry.is_dir()
@@ -219,6 +272,13 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
+    /// Handles the open file action.
+    ///
+    /// If a file is selected, attempts to open it in the configured editor.
+    /// If an error occurs, prints it to stderr.
+    ///
+    /// # Returns
+    /// * [KeypressResult] indicating the result of the action.
     fn handle_open_file(&mut self) -> KeypressResult {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
@@ -231,6 +291,11 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Handles the find action.
+    ///
+    /// If a result is selected in the find results, navigates to its path.
+    /// If the path is a directory, navigates into it.
+    /// If the path is a file, navigates to its parent directory and focuses on the file.
     fn handle_find(&mut self) {
         let Some(r) = self
             .actions
@@ -240,8 +305,9 @@ impl<'a> AppState<'a> {
             return;
         };
         let path = r.path();
+        let is_dir = path.is_dir();
 
-        if r.is_dir() {
+        if is_dir {
             self.nav.save_position();
             self.nav.set_path(path.to_path_buf());
             self.request_dir_load(None);
@@ -260,12 +326,19 @@ impl<'a> AppState<'a> {
         self.request_parent_content();
     }
 
+    /// Handles displaying a timed message overlay.
+    ///
+    /// # Arguments
+    /// * `duration` - The duration for which the message should be displayed.
     pub fn handle_timed_message(&mut self, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
     }
 
     // Input processes
 
+    /// Processes a character input for the confirm delete input mode.
+    /// # Arguments
+    /// * `c` - The character input to process.
     pub fn process_confirm_delete_char(&mut self, c: char) {
         if matches!(c, 'y' | 'Y') {
             self.confirm_delete();
@@ -273,10 +346,14 @@ impl<'a> AppState<'a> {
         self.exit_input_mode();
     }
 
+    /// Exits the current input mode.
+    /// Simple wrapper around [Actions::exit_mode].
     pub fn exit_input_mode(&mut self) {
         self.actions.exit_mode();
     }
 
+    /// Creates a new file with the name in the input buffer.
+    /// Calls [Actions::action_create] with `is_folder` set to false.
     fn create_file(&mut self) {
         if !self.actions.input_buffer().is_empty() {
             let fileop_tx = self.workers.fileop_tx();
@@ -284,6 +361,8 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Creates a new folder with the name in the input buffer.
+    /// Calls [Actions::action_create] with `is_folder` set to true.
     fn create_folder(&mut self) {
         if !self.actions.input_buffer().is_empty() {
             let fileop_tx = self.workers.fileop_tx();
@@ -291,11 +370,15 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Renames the selected entry to the name in the input buffer.
+    /// Calls [Actions::action_rename].
     fn rename_entry(&mut self) {
         let fileop_tx = self.workers.fileop_tx();
         self.actions.action_rename(&mut self.nav, fileop_tx);
     }
 
+    /// Applies the filter in the input buffer to the navigation state.
+    /// Calls [Actions::action_filter] and requests a preview refresh.
     fn apply_filter(&mut self) {
         self.actions.action_filter(&mut self.nav);
         self.request_preview();
@@ -308,6 +391,7 @@ impl<'a> AppState<'a> {
 
     // Prompt functions
 
+    /// Prompts the user to confirm deletion of selected items.
     fn prompt_delete(&mut self) {
         let targets = self.nav.get_action_targets();
         if targets.is_empty() {
@@ -321,6 +405,7 @@ impl<'a> AppState<'a> {
         self.enter_input_mode(InputMode::ConfirmDelete, prompt_text, None);
     }
 
+    /// Prompts the user to rename the selected entry.
     fn prompt_rename(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let name = entry.name().to_string_lossy().to_string();
@@ -328,14 +413,17 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Prompts the user to create a new file.
     fn prompt_create_file(&mut self) {
         self.enter_input_mode(InputMode::NewFile, "New File: ".to_string(), None);
     }
 
+    /// Prompts the user to create a new folder.
     fn prompt_create_folder(&mut self) {
         self.enter_input_mode(InputMode::NewFolder, "New Folder: ".to_string(), None);
     }
 
+    /// Prompts the user to enter a filter string.
     fn prompt_filter(&mut self) {
         let current_filter = self.nav.filter().to_string();
         self.enter_input_mode(
@@ -345,6 +433,9 @@ impl<'a> AppState<'a> {
         );
     }
 
+    /// Prompts the user to enter a fuzzy find query.
+    /// Requires the `fd` tool to be installed.
+    /// If `fd` is not found, displays a temporary overlay message.
     fn prompt_find(&mut self) {
         if which::which("fd").is_err() {
             self.push_overlay_message(
@@ -358,6 +449,7 @@ impl<'a> AppState<'a> {
 
     // Helpers
 
+    /// Refreshes the file info overlay if it is currently open.
     pub fn refresh_show_info_if_open(&mut self) {
         let maybe_idx = self
             .overlays()
@@ -375,6 +467,7 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Shows the file info overlay for the currently selected entry.
     fn show_file_info(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
@@ -385,6 +478,7 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Toggles the file info overlay.
     fn toggle_file_info(&mut self) {
         let is_open = self
             .overlays()
@@ -399,6 +493,7 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Pushes a message overlay that lasts for the specified duration.
     pub fn push_overlay_message(&mut self, text: String, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
 

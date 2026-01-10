@@ -1,6 +1,6 @@
-//! The (fuzzy) find module for the find function in runa
+//! The runa processes module.
 //!
-//! This module implements the [find] function, the [FindResult] and the [RawResult] structs.
+//! This module implements the [find] and the [preview_bat] function, the [FindResult] and the [RawResult] structs.
 //!
 //! The [FindResult] struct is used to correctly display the calculated results of the
 //! find function. It is used mainly by ui/actions.
@@ -13,9 +13,15 @@
 //! fuzzy_matcher crate to filter and score the results based on the provided query.
 //! The results are returned as a vector of [FindResult] structs, sorted by their
 //! fuzzy match scores.
+//!
+//! The module also includes a [preview_bat] function that uses the bat command-line tool
+//! to preview the contents of a file, returning a specified number of lines from the file.
+//! This function is used by core/workers.rs to provide file previews in the UI.
+//! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
+
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::io::{self, BufRead};
@@ -25,24 +31,37 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
 /// The size of the buffer reader used to read the output of fd
+/// This value is set to 32KB to balance memory usage and performance.
+/// Larger buffers may improve performance for large outputs,
+/// but will also increase memory consumption.
 const BUFREADER_SIZE: usize = 32768;
 
+/// A list of common directories and files to exclude from the search.
+/// This helps to speed up the search and avoid irrelevant results.
+#[rustfmt::skip]
+const EXCLUDES: &[&str] = &[
+    ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist",
+    "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj"
+];
+
 /// A single result from the find function.
-/// It contains the path, whether it is a directory, and the score of the fuzzy match.
+/// It contains the path and the score of the fuzzy match.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FindResult {
     path: PathBuf,
-    is_dir: bool,
     score: i64,
 }
 
 /// Implement ordering for FindResult based on score (higher is better).
+/// This allows sorting of FindResult instances.
 impl Ord for FindResult {
     fn cmp(&self, other: &Self) -> Ordering {
         other.score.cmp(&self.score)
     }
 }
 
+/// Implement partial ordering for FindResult.
+/// This is required because we implemented Ord.
 impl PartialOrd for FindResult {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -53,9 +72,6 @@ impl FindResult {
     pub fn path(&self) -> &Path {
         &self.path
     }
-    pub fn is_dir(&self) -> bool {
-        self.is_dir
-    }
     pub fn score(&self) -> i64 {
         self.score
     }
@@ -65,12 +81,25 @@ impl FindResult {
     }
 }
 
+/// An internal struct to hold raw results from the fuzzy matching process.
+/// It contains the relative path and the score.
+#[derive(Debug, Clone)]
 struct RawResult {
     relative: String,
     score: i64,
 }
 
 /// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
+///
+/// # Arguments
+/// * `base_dir` - The base directory to search in.
+/// * `query` - The fuzzy search query.
+/// * `out` - A mutable reference to a vector to store the results.
+/// * `cancel` - An atomic boolean to signal cancellation of the search.
+/// * `max_results` - The maximum number of results to return.
+///
+/// # Errors
+/// Returns an std::io::Error if the fd command fails to execute.
 pub fn find(
     base_dir: &Path,
     query: &str,
@@ -86,12 +115,9 @@ pub fn find(
     let mut cmd = Command::new("fd");
     cmd.arg(".")
         .arg(base_dir)
+        .args(["--type", "f", "--type", "d", "--hidden"])
+        .args(EXCLUDES.iter().flat_map(|x| ["--exclude", *x]))
         .args([
-            "--type",
-            "f",
-            "--type",
-            "d",
-            "--hidden",
             "--color",
             "never",
             "--max-results",
@@ -116,6 +142,7 @@ pub fn find(
     let mut raw_results: Vec<RawResult> = Vec::with_capacity(max_results * 2);
 
     let norm_query = normalize_separators(query);
+    let flat_query = flatten_separators(&norm_query);
 
     if let Some(stdout) = proc.stdout.take() {
         let reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
@@ -129,7 +156,8 @@ pub fn find(
             let rel = line?;
             let rel = rel.trim();
             let norm_rel = normalize_separators(rel);
-            if let Some(score) = matcher.fuzzy_match(&norm_rel, &norm_query) {
+            let flat_rel = flatten_separators(&norm_rel);
+            if let Some(score) = matcher.fuzzy_match(&flat_rel, &flat_query) {
                 raw_results.push(RawResult {
                     relative: norm_rel.into_owned(),
                     score,
@@ -145,14 +173,47 @@ pub fn find(
     out.reserve(raw_results.len());
     for raw in raw_results {
         let path = base_dir.join(&raw.relative);
-        let is_dir = path.is_dir();
         out.push(FindResult {
             path,
-            is_dir,
             score: raw.score,
         });
     }
     Ok(())
+}
+
+/// Use bat to preview a file at the given path, returning up to max_lines of output
+/// Uses the provided bat_args for customization.
+///
+/// # Arguments
+/// * `path` - The path to the file to preview.
+/// * `max_lines` - The maximum number of lines to return.
+/// * `bat_args` - Additional arguments to pass to the bat command.
+///
+/// # Errors
+/// Returns an std::io::Error if the bat command fails to execute or returns a non-zero status.
+///
+/// # Returns
+/// A vector of strings, each representing a line from the file preview.
+pub fn preview_bat(
+    path: &Path,
+    max_lines: usize,
+    bat_args: &[String],
+) -> Result<Vec<String>, std::io::Error> {
+    let mut args = bat_args.to_vec();
+    args.push(path.to_string_lossy().to_string());
+
+    let output = Command::new("bat")
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()?;
+
+    if !output.status.success() {
+        return Err(std::io::Error::other("bat command failed"));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
 }
 
 /// Helpers:
@@ -177,4 +238,24 @@ fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
     } else {
         Cow::Borrowed(separator)
     }
+}
+
+/// Flatten separators by removing all '/' and '\' characters from the string.
+/// This is used to create a simplified version of the path for fuzzy matching.
+/// # Arguments
+/// * `separator` - The input string to flatten.
+/// # Returns
+/// A new String with all '/' and '\' characters removed.
+///
+/// # Examples
+/// let flat = flatten_separators("src/core/proc.rs");
+/// flat = "srccoreprocrs";
+fn flatten_separators(separator: &str) -> String {
+    let mut buf = String::with_capacity(separator.len());
+    for char in separator.chars() {
+        if char != '/' && char != '\\' {
+            buf.push(char);
+        }
+    }
+    buf
 }

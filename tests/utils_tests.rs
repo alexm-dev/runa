@@ -1,3 +1,10 @@
+//! Tests for the `get_unused_path` utility function.
+//! These tests ensure that the function correctly generates unused file paths
+//!
+//! Is used by correctly handling name collisions by appending numerical suffixes.
+//! Temporary directories and files are created for testing purposes and
+//! are automatically cleaned up after the tests complete.
+
 use runa_tui::utils::get_unused_path;
 use std::error;
 use std::fs::File;

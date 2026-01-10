@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.1] - 2025-01-10
+
+### Added
+- **bat integration**: Added `bat` as an preview option to the internal preview. Can be set in `runa.toml` under `[display.preview_options]`
+- **Clear Markers/Filters**: Added a `clear_filters` and `clear_markers` keybind option to clear either.
+- **Icons**: Added optional nerd font icons. Is desabled by default.
+
+### Fixed
+- **Parent pane**: Fixed the parent pane stale content update **and** optimized the parent directory selection being reset and redrawn after every directory change.
+- **Directory Marker**: Fixed the `dir_marker` option to toggle the `/` for all panes.
+
+### Changed
+- **fd exclusions**: Switched to using a central exclusion map for `fd` searches. Added multiple default directories (e.g., `.git`, `node_modules`, `target`, `venv`, etc.) to reduce noise and improve relevance when searching. This also makes it easier to maintain and update the exclusion list.
+
+### Internal
+- **Core refactor**: Moved `formatter.rs` from utils/ to core/, since formatter now handles all core formatting logic of multiple functions.
+- **Renamed file_manager.rs**: `file_manager.rs` is renamed to `rm.rs` to keep it more simple :)
+- **Renamed find**: `find.rs` is renamed to `proc.rs` since it now handles all subprocesses spawned by runa.
+
+
+---
+
+
 ## [0.5.0] - 2025-01-08
 
 UI related additions and more.

@@ -320,6 +320,10 @@ impl<'a> AppState<'a> {
 
     // Worker requests functions for directory loading, preview and parent pane content
 
+    /// Requests a directory load for the current navigation directory
+    ///
+    /// # Arguments
+    /// * `focus` - Optional OsString to focus on a specific entry after loading
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
@@ -336,6 +340,7 @@ impl<'a> AppState<'a> {
         });
     }
 
+    /// Requests a preview load for the currently selected entry in the navigation pane
     pub fn request_preview(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
@@ -355,10 +360,15 @@ impl<'a> AppState<'a> {
                     request_id: req_id,
                 });
             } else {
+                let preview_options = self.config.display().preview_options();
+                let preview_method = preview_options.method().clone();
+                let bat_args = self.config.bat_args_for_preview(self.metrics.preview_width);
                 let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
                     path,
                     max_lines: self.metrics.preview_height,
                     pane_width: self.metrics.preview_width,
+                    preview_method,
+                    args: bat_args,
                     request_id: req_id,
                 });
             }
@@ -367,14 +377,15 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Requests loading of the parent directory content for the parent pane
     pub fn request_parent_content(&mut self) {
         if let Some(parent_path) = self.nav.current_dir().parent() {
             let parent_path_buf = parent_path.to_path_buf();
 
-            self.parent.clear();
+            self.parent.prepare_update();
 
             if self.parent.should_request(&parent_path_buf) {
-                let req_id = self.parent.prepare_new_request(parent_path_buf.clone());
+                let req_id = self.parent.prepare_new_request();
 
                 let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
                     path: parent_path_buf,
@@ -394,6 +405,7 @@ impl<'a> AppState<'a> {
         }
     }
 
+    /// Requests a recursive find operation for the current navigation directory
     pub fn request_find(&mut self, query: String) {
         self.actions.cancel_find();
 
