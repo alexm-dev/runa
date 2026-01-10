@@ -39,11 +39,10 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m.insert("kt", "");
     m.insert("lua", "");
     m.insert("ts", "");
-    m.insert("tsx", "");
-    m.insert("jsx", "");
+    m.insert("tsx", "");
+    m.insert("jsx", "");
     m.insert("vue", "");
     m.insert("sql", "");
-    m.insert("yml", "");
     m.insert("lock", "");
     m.insert("exe", "");
     m.insert("zip", "");
