@@ -306,7 +306,7 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
 
     let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
     let columns = widget
-        .find_width_or(area.width.saturating_sub(8).min(80).max(20))
+        .find_width_or(area.width.saturating_sub(8).clamp(20, 80))
         .min(area.width)
         .max(20);
 
