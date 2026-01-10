@@ -36,6 +36,14 @@ use std::sync::atomic::AtomicBool;
 /// but will also increase memory consumption.
 const BUFREADER_SIZE: usize = 32768;
 
+/// A list of common directories and files to exclude from the search.
+/// This helps to speed up the search and avoid irrelevant results.
+#[rustfmt::skip]
+const EXCLUDES: &[&str] = &[
+    ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist",
+    "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj"
+];
+
 /// A single result from the find function.
 /// It contains the path and the score of the fuzzy match.
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -107,14 +115,9 @@ pub fn find(
     let mut cmd = Command::new("fd");
     cmd.arg(".")
         .arg(base_dir)
+        .args(["--type", "f", "--type", "d", "--hidden"])
+        .args(EXCLUDES.iter().flat_map(|x| ["--exclude", *x]))
         .args([
-            "--type",
-            "f",
-            "--type",
-            "d",
-            "--hidden",
-            "--exclude",
-            ".git",
             "--color",
             "never",
             "--max-results",
@@ -237,6 +240,16 @@ fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
     }
 }
 
+/// Flatten separators by removing all '/' and '\' characters from the string.
+/// This is used to create a simplified version of the path for fuzzy matching.
+/// # Arguments
+/// * `separator` - The input string to flatten.
+/// # Returns
+/// A new String with all '/' and '\' characters removed.
+///
+/// # Examples
+/// let flat = flatten_separators("src/core/proc.rs");
+/// flat = "srccoreprocrs";
 fn flatten_separators(separator: &str) -> String {
     let mut buf = String::with_capacity(separator.len());
     for char in separator.chars() {
