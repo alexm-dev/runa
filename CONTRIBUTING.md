@@ -30,7 +30,7 @@ Please explain:
 
 1. Fork the repository and clone your fork:
     ```sh
-    git clone https://github.com/alexm-dev/runa.git
+    git clone https://github.com/<your-username>/runa.git
     ```
 
 2. Create a feature branch:
