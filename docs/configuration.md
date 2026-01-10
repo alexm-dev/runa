@@ -245,16 +245,24 @@ bg = "default"
 #   - Table/object:     { x = 25, y = 60 } # percent of screen
 position = "center"
 
-# Popup size: choose one of
+# Popup size: choose one of:
 #   - Preset string:    "small", "medium", "large"
-#   - List:             [width, height]    # percent, e.g., [38, 32]
-#   - Table/object:     { w = 38, h = 32 } # percent
+#   - List:             [width, height]    # **cells (columns x rows)**, e.g., [60, 12]
+#   - Table/object:     { w = 60, h = 12 } # **cells**
+# size arrays/tables are now always **cell-based** (not percent-based!)
 size = "medium"
 
 # Confirmation dialog size (for confirmations like deleting files):
 #   - Preset string, list, or table, just like "size" above.
 #   - Leave blank or omit to use the regular `size`.
 confirm_size = "large"
+
+# Option to specify the maximal `drawn` results of the find widget.
+# Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
+find_visible_results = 5
+
+# Option to configure the find widget widht
+find_width = 40
 
 # Coloring for the widgets
 color.fg = "white"

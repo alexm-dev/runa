@@ -6,13 +6,23 @@
 - **bat integration**: Added `bat` as an preview option to the internal preview. Can be set in `runa.toml` under `[display.preview_options]`
 - **Clear Markers/Filters**: Added a `clear_filters` and `clear_markers` keybind option to clear either.
 - **Icons**: Added optional nerd font icons. Is desabled by default.
+- **Dynamic find widget**: Made the find widget more customizable by adding a `find_visible_results` option.
 
 ### Fixed
 - **Parent pane**: Fixed the parent pane stale content update **and** optimized the parent directory selection being reset and redrawn after every directory change.
 - **Directory Marker**: Fixed the `dir_marker` option to toggle the `/` for all panes.
 
+### Breaking Changes
+- **Dialog Size Configuration (`DialogSize::Custom`) now uses cells, not percentages:**
+  - All custom dialog size values specified as arrays (e.g. `size = [70, 20]`) are now interpreted as exact cell (column/row) counts instead of percentages.
+  - **Before:** `size = [70, 20]` meant 70% width and 20% height of the terminal area.
+  - **Now:** `size = [70, 20]` means 70 columns wide and 20 rows tall.
+  - Presets like `size = "small"` remain percentage-based.
+  - **If you had custom dialog sizes or positions configured previously, please review your `runa.toml` and update values for your preferred appearance.**
+
 ### Changed
 - **fd exclusions**: Switched to using a central exclusion map for `fd` searches. Added multiple default directories (e.g., `.git`, `node_modules`, `target`, `venv`, etc.) to reduce noise and improve relevance when searching. This also makes it easier to maintain and update the exclusion list.
+
 
 ### Internal
 - **Core refactor**: Moved `formatter.rs` from utils/ to core/, since formatter now handles all core formatting logic of multiple functions.
