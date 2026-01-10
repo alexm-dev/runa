@@ -27,7 +27,7 @@ pub enum InputKey {
 /// Also possible to customize the position via the runa.toml
 ///
 /// Is used to determine where dialog/widgets such as dialogs and input boxes are rendered.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DialogPosition {
     Center,
     Top,
@@ -96,7 +96,7 @@ impl<'de> Deserialize<'de> for DialogPosition {
 }
 
 /// Preset for all dialogs/widgets sizes as well as a customized size via the runa.toml
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum DialogSize {
     Small,
     Medium,
@@ -182,11 +182,27 @@ pub struct DialogLayout {
 ///
 /// Returns the Rect of the calculated are of the dialog
 pub fn dialog_area(area: Rect, size: DialogSize, pos: DialogPosition) -> Rect {
-    let (w_pct, h_pct) = size.percentages();
     let min_w = 7;
     let min_h = 3;
-    let w = (area.width * w_pct / 100).max(min_w).min(area.width);
-    let h = (area.height * h_pct / 100).max(min_h).min(area.height);
+
+    let (w, h) = match size {
+        DialogSize::Small => (
+            (area.width * 24 / 100).max(min_w).min(area.width),
+            (area.height * 7 / 100).max(min_h).min(area.height),
+        ),
+        DialogSize::Medium => (
+            (area.width * 26 / 100).max(min_w).min(area.width),
+            (area.height * 14 / 100).max(min_h).min(area.height),
+        ),
+        DialogSize::Large => (
+            (area.width * 32 / 100).max(min_w).min(area.width),
+            (area.height * 40 / 100).max(min_h).min(area.height),
+        ),
+        DialogSize::Custom(w_cells, h_cells) => (
+            w_cells.max(min_w).min(area.width),
+            h_cells.max(min_h).min(area.height),
+        ),
+    };
 
     match pos {
         DialogPosition::Center => Rect {

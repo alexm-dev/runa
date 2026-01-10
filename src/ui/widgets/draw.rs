@@ -260,14 +260,11 @@ pub fn draw_show_info_dialog(
     let min_width = 27;
     let border_pad = 2;
     let right_pad = 2;
-    let width = (max_width + right_pad).max(min_width) + border_pad;
     let area = frame.area();
 
-    let width = width.min(area.width as usize);
-    let height = (lines.len() + border_pad).min(area.height as usize);
-
-    let w_pct = ((width as f32 / area.width as f32) * 100.0).ceil() as u16;
-    let h_pct = ((height as f32 / area.height as f32) * 100.0).ceil() as u16;
+    let raw_width = (max_width + right_pad).max(min_width) + border_pad;
+    let width = raw_width.min(area.width as usize) as u16;
+    let height = (lines.len() + border_pad).min(area.height as usize) as u16;
 
     let dialog_style = DialogStyle {
         border: Borders::ALL,
@@ -283,7 +280,7 @@ pub fn draw_show_info_dialog(
     let dialog_layout = DialogLayout {
         area,
         position,
-        size: DialogSize::Custom(w_pct, h_pct),
+        size: DialogSize::Custom(width, height),
     };
 
     draw_dialog(
@@ -299,16 +296,24 @@ pub fn draw_show_info_dialog(
 /// Draws the fuzzy find dialog widget
 ///
 /// Draws the input field and the result field as one widget.
-/// Scrolls the entries of the find result. (max_visible = 15).
 /// Sets a find result indicator in the input line to the right.
 /// Find result indicator being on the input line makes the actual input line smaller.
 pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let actions = app.actions();
     let widget = app.config().theme().widget();
     let base_dir = app.nav().current_dir();
+    let area = frame.area();
 
     let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
-    let size = widget.find_size_or(DialogSize::Medium);
+    let columns = widget
+        .find_width_or(area.width.saturating_sub(8).min(80).max(20))
+        .min(area.width)
+        .max(20);
+
+    let max_visible = widget.find_visible_or(5);
+    let rows = max_visible as u16 + 4;
+
+    let size = DialogSize::Custom(columns, rows);
     let border_type = app.config().display().border_shape().as_border_type();
 
     let input_text = actions.input_buffer();
@@ -318,7 +323,6 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
     let area = frame.area();
     let dialog_rect = dialog_area(area, size, position);
 
-    let max_visible = dialog_rect.height.saturating_sub(4).max(1) as usize;
     let total = results.len();
     let selected = selected.min(total.saturating_sub(1));
     let mut scroll = 0;
@@ -454,15 +458,13 @@ pub fn draw_message_overlay(frame: &mut Frame, app: &AppState, accent_style: Sty
     let min_width = 27;
     let border_pad = 2;
     let right_pad = 2;
-    let width = (max_line_width + right_pad).max(min_width) + border_pad;
     let area = frame.area();
 
-    let width = width.min(area.width as usize);
-    let height = (line_count + border_pad).min(area.height as usize);
+    let width =
+        ((max_line_width + right_pad).max(min_width) + border_pad).min(area.width as usize) as u16;
+    let height = ((line_count + border_pad).min(area.height as usize)) as u16;
 
-    let w_pct = ((width as f32 / area.width as f32) * 100.0).ceil() as u16;
-    let h_pct = ((height as f32 / area.height as f32) * 100.0).ceil() as u16;
-    let dialog_size = DialogSize::Custom(w_pct, h_pct);
+    let dialog_size = DialogSize::Custom(width, height);
 
     let dialog_style = DialogStyle {
         border: Borders::ALL,
