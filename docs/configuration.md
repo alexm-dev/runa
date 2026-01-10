@@ -104,6 +104,20 @@ toggle_marker_jump = false
 # Default = false which results in pending preview when holding down a navigation key.
 instant_preview = false
 
+# Options for the preview method used by the preview pane.
+# Options: "internal" and "bat". For "bat" you will need to have `bat` installed otherwise it will fallback to internal.
+[display.previews_options]
+method = "internal"
+
+# Change the style of the `bat` preview method.
+# Options: "plain", "numbers", "full".
+style = "plain"
+
+# Toggle wrapping the bat output to the pane width.
+# If false, long lines stay on onle line and go off-screen
+# If true, all the lines are wrapped to the pane width
+wrap = "true"
+
 [display.layout]
 # Display ratios for panes (will be scaled to 100%)
 parent = 20

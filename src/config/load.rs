@@ -222,6 +222,7 @@ case_insensitive = true
 borders = "unified"
 border_shape = "square"
 # titles = true
+# icons = false
 # separators = true
 # parent = true
 # preview = true
@@ -231,6 +232,12 @@ preview_underline = true
 # scroll_padding = 5
 # toggle_marker_jump = false
 # instant_preview = false
+
+[display.preview_options]
+method = "internal"
+# bat related options if method = "bat"
+# style = "plain"
+# wrap = true
 
 # [display.layout]
 # parent = 20
@@ -337,6 +344,8 @@ selection_icon = ""
 # toggle_marker = [" "]     # " " - indicates space bar
 # info = ["i"]
 # find = ["s"]
+# clear_markers = ["Ctrl+c"]
+# clear_filter = ["Ctrl+f"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
