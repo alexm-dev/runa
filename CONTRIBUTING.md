@@ -26,23 +26,6 @@ Please explain:
 
 ---
 
-## Development Setup
-
-1. Fork the repository and clone your fork:
-    ```sh
-    git clone https://github.com/<your-username>/runa.git
-    ```
-
-2. Create a feature branch:
-    ```sh
-    git checkout -b feature/my-change
-    ```
-
-3. Make your changes.
-4. If the changes impacts behavior or adds new interaction with the overall existing logic, update the documentation accordingly.
-
----
-
 ## Pull Requests
 
 Before opening a pull request:
@@ -59,6 +42,77 @@ PR checklist:
 - [ ] No unrelated changes mixed in
 
 Since the project is currently developed by a single developer, review turnaround times may vary. Feedback will aim to be constructive and collaborative.
+
+---
+
+## Fork the Repository
+
+1. Fork the repository on GitHub:
+
+2. Clone your fork locally:
+    ```sh
+    git clone https://github.com/<your-username>/runa.git
+    cd runa
+    ```
+
+3. Add the upstream remote:
+    ```sh
+    git remote add upstream https://github.com/alexm-dev/runa.git
+    ```
+
+## Development Setup
+
+1. Make sure you have the lastest stable Rust toolchain installed
+    ```sh
+    rustc --version
+    cargo --version
+    ```
+
+2. Build runa and run the tests afterwards
+    ```sh
+    cargo build
+    cargo test
+    ```
+
+## Submit your branch
+
+1. Create a new branch for your changes
+    ```sh
+    git checkout -b your-branch-name
+    ```
+
+2. Make your changes and ensure that it alligns with the overall coding style of runa.
+3. Commit your changes with a description
+    ```sh
+    git commit -m "feat: new feature"
+    ```
+
+4. Push your changes to your fork
+    ```sh
+    git push origin your-branch-name
+    ```
+
+
+## Keep your Fork in sync.
+
+Before Submittting your Pull Request, ensure your branch is up-to-date with the latest changes in runa.
+
+1. Fetch latest changes
+    ```sh
+    git fetch upstream
+    ```
+
+2. Update your local main branch
+    ```sh
+    git checkout main
+    git merge upstream/main
+    ```
+
+3. Rebase your feature branch
+    ```sh
+    git checkout your-branch-name
+    git rebase main
+    ```
 
 ---
 
