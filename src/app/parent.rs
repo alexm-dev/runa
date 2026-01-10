@@ -61,7 +61,6 @@ impl ParentState {
 
     /// Prepares for an update: clears the last path and increases the request_id.
     pub fn prepare_update(&mut self) {
-        self.last_path = None;
         self.request_id = self.request_id.wrapping_add(1);
     }
 
@@ -73,6 +72,7 @@ impl ParentState {
         entries: Vec<FileEntry>,
         current_name: &str,
         req_id: u64,
+        parent_path: &Path,
     ) {
         if req_id < self.request_id {
             return;
@@ -80,6 +80,7 @@ impl ParentState {
         // Find the index of the folder we are currently inside to highlight it
         self.selected_idx = entries.iter().position(|e| e.name_str() == current_name);
         self.entries = entries;
+        self.last_path = Some(parent_path.to_path_buf());
         self.request_id = req_id;
     }
 

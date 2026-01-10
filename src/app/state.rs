@@ -259,7 +259,7 @@ impl<'a> AppState<'a> {
                             .unwrap_or_default();
 
                         self.parent
-                            .update_from_entries(entries, &current_name, request_id);
+                            .update_from_entries(entries, &current_name, request_id, &path);
                     }
                 }
                 WorkerResponse::PreviewLoaded { lines, request_id } => {
