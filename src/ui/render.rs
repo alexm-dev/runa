@@ -136,7 +136,8 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
 
     // PARENT PANE
     if display_cfg.parent() && pane_idx < chunks.len() {
-        let parent_dir = as_path_op(app.parent().last_path());
+        let parent_dir =
+            as_path_op(app.parent().last_path()).or_else(|| app.nav().current_dir().parent());
         let parent_markers = panes::make_pane_markers(
             markers,
             clipboard,
