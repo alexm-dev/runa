@@ -367,7 +367,7 @@ impl Default for MarkerTheme {
 
 /// WidgetTheme struct to hold colors and styles for widgets/dialogs.
 /// Used by various dialog widgets and overlay widgets.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(default)]
 pub struct WidgetTheme {
     color: ColorPair,
@@ -376,7 +376,8 @@ pub struct WidgetTheme {
     position: Option<DialogPosition>,
     size: Option<DialogSize>,
     confirm_size: Option<DialogSize>,
-    find_size: Option<DialogSize>,
+    find_visible_results: Option<usize>,
+    find_width: Option<u16>,
 }
 
 impl WidgetTheme {
@@ -395,15 +396,6 @@ impl WidgetTheme {
     /// Returns the confirm dialog size, falling back to the general size, and then to the provided fallback.
     pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
         self.confirm_size()
-            .as_ref()
-            .or_else(|| self.size().as_ref())
-            .copied()
-            .unwrap_or(fallback)
-    }
-
-    /// Returns the find dialog size, falling back to the general size, and then to the provided fallback.)
-    pub fn find_size_or(&self, fallback: DialogSize) -> DialogSize {
-        self.find_size
             .as_ref()
             .or_else(|| self.size().as_ref())
             .copied()
@@ -459,12 +451,13 @@ impl WidgetTheme {
         };
         fallback.fg(fg).bg(bg)
     }
-}
 
-/// PartialEq implementation for WidgetTheme only comparing color, border, and title.
-impl PartialEq for WidgetTheme {
-    fn eq(&self, other: &Self) -> bool {
-        self.color == other.color && self.border == other.border && self.title == other.title
+    pub fn find_visible_or(&self, fallback: usize) -> usize {
+        self.find_visible_results.unwrap_or(fallback)
+    }
+
+    pub fn find_width_or(&self, fallback: u16) -> u16 {
+        self.find_width.unwrap_or(fallback)
     }
 }
 
@@ -478,7 +471,8 @@ impl Default for WidgetTheme {
             position: Some(DialogPosition::Center),
             size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),
-            find_size: Some(DialogSize::Medium),
+            find_visible_results: Some(5),
+            find_width: Some(40),
         }
     }
 }
