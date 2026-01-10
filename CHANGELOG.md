@@ -1,6 +1,9 @@
 # Changelog
 
-## [0.5.1] - 2025-01-10
+All the changes made to runa are documented here.
+
+
+## Unreleased
 
 ### Added
 - **bat integration**: Added `bat` as an preview option to the internal preview. Can be set in `runa.toml` under `[display.preview_options]`
