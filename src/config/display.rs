@@ -308,6 +308,8 @@ pub struct PreviewOptions {
     method: PreviewMethod,
     #[serde(default)]
     style: BatStyle,
+    #[serde(default)]
+    theme: Option<String>,
     #[serde(default = "PreviewOptions::default_wrap")]
     wrap: bool,
 }
@@ -318,6 +320,7 @@ impl PreviewOptions {
         PreviewOptions {
             method: PreviewMethod::Internal,
             style: BatStyle::Plain,
+            theme: None,
             wrap: true,
         }
     }
@@ -351,7 +354,7 @@ impl PreviewOptions {
     ///
     /// # Returns
     /// A vector of strings representing the command-line arguments for 'bat'
-    pub fn bat_args(&self, theme_name: &str, pane_width: usize) -> Vec<String> {
+    pub fn bat_args(&self, default_theme: &str, pane_width: usize) -> Vec<String> {
         let mut args = vec!["--color=always".to_owned(), "--paging=never".to_owned()];
         args.push(format!("--terminal-width={}", pane_width));
         match self.style {
@@ -360,8 +363,9 @@ impl PreviewOptions {
             BatStyle::Full => args.push("--style=full".to_owned()),
         }
 
+        let theme = self.theme.as_deref().unwrap_or(default_theme);
         args.push("--theme".to_owned());
-        args.push(theme_name.to_owned());
+        args.push(theme.to_owned());
 
         if self.wrap {
             args.push("--wrap=character".to_owned());

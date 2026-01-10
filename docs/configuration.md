@@ -109,9 +109,14 @@ instant_preview = false
 [display.previews_options]
 method = "internal"
 
+# Optionals for when method = "bat" otherwise these will be ignored by runa.
 # Change the style of the `bat` preview method.
 # Options: "plain", "numbers", "full".
 style = "plain"
+
+# Options to set the bat theme of the bat preview method
+# All available bat themes are supported
+theme = "default"
 
 # Toggle wrapping the bat output to the pane width.
 # If false, long lines stay on onle line and go off-screen
@@ -131,6 +136,7 @@ file_type = true
 size = true
 modified = true
 perms = true
+position = "default"
 ```
 
 

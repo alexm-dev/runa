@@ -356,6 +356,7 @@ show_hidden = true
 
 [display]
 borders = "unified"
+icons = false
 entry_padding = 1
 
 [theme]

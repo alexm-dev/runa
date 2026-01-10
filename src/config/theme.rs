@@ -193,11 +193,12 @@ impl Theme {
         self.name
             .as_deref()
             .map(Theme::map_to_bat_theme)
-            .unwrap_or("base16-256.dark")
+            .unwrap_or("TwoDark")
     }
 
     fn map_to_bat_theme(internal_theme: &str) -> &'static str {
         match internal_theme {
+            "default" => "TwoDark",
             "gruvbox-dark" | "gruvbox-dark-hard" | "gruvbox" => "gruvbox-dark",
             "gruvbox-light" => "gruvbox-light",
             "tokyonight-night" | "tokyonight" | "tokyonight-storm" => "TwoDark",
