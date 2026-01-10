@@ -170,11 +170,10 @@ impl ActionContext {
         self.find.reset();
     }
 
-    // ---------------------------------
     // Actions functions
-    // --------------------------------
 
     /// Deletes the currently marked files or the selected file if no markers exist.
+    ///
     /// Sends a delete task to the worker thread via the provided channel.
     ///
     /// # Arguments
@@ -194,13 +193,15 @@ impl ActionContext {
         nav.clear_markers();
     }
 
-    // Currently, cut/move is not implemented yet. Only copy/yank is used.
-    // This allows for easy addition of a cut/move feature in the future.
-    //
-    // # Arguments
-    // * `nav` - Reference to the current navigation state.
-    // * `is_cut` - Boolean indicating if the operation is a cut (true) or copy (false).
-    // Sets the clipboard with the selected files.
+    /// Currently, cut/move is not implemented yet. Only copy/yank is used.
+    ///
+    /// This allows for easy addition of a cut/move feature in the future.
+    ///
+    /// # Arguments
+    /// * `nav` - Reference to the current navigation state.
+    /// * `is_cut` - Boolean indicating if the operation is a cut (true) or copy (false).
+    ///
+    /// Sets the clipboard with the selected files.
     pub fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
         let mut set = HashSet::new();
         if !nav.markers().is_empty() {
@@ -217,6 +218,7 @@ impl ActionContext {
     }
 
     /// Pastes the files from the clipboard into the current directory.
+    ///
     /// Sends a copy task to the worker thread via the provided channel.
     ///
     /// # Arguments
@@ -250,12 +252,14 @@ impl ActionContext {
     ///
     /// # Arguments
     /// * `nav` - Mutable reference to the current navigation state.
+    ///
     /// Sets the filter string in the navigation state.
     pub fn action_filter(&mut self, nav: &mut NavState) {
         nav.set_filter(self.input_buffer.clone());
     }
 
     /// Renames the currently selected file or folder to the name in the input buffer.
+    ///
     /// Sends a rename task to the worker thread via the provided channel.
     /// # Arguments
     /// * `nav` - Mutable reference to the current navigation state.
@@ -282,6 +286,7 @@ impl ActionContext {
     }
 
     /// Creates a new file or directory with the name in the input buffer.
+    ///
     /// Sends a create task to the worker thread via the provided channel.
     ///
     /// # Arguments
@@ -308,9 +313,7 @@ impl ActionContext {
         self.exit_mode();
     }
 
-    // ------------------------------
     // Cursor actions
-    // ------------------------------
 
     /// Moves the input cursor one position to the left, if possible.
     pub fn action_move_cursor_left(&mut self) {
@@ -336,6 +339,7 @@ impl ActionContext {
     }
 
     /// Deletes the character before the current cursor position in the input buffer.
+    ///
     /// Moves the cursor back accordingly
     pub fn action_backspace_at_cursor(&mut self) {
         if self.input_cursor_pos > 0
@@ -426,6 +430,7 @@ impl FindState {
     // Find functions
 
     /// Cancels the current ongoing find operation, if any.
+    ///
     /// Sets the cancellation token to true.
     fn cancel_current(&mut self) {
         if let Some(token) = self.cancel.take() {
@@ -446,6 +451,7 @@ impl FindState {
     ///
     /// # Arguments
     /// * `token` - Arc-wrapped [AtomicBool] used for cancellation.
+    ///
     /// Sets the internal cancel token.
     fn set_cancel(&mut self, token: Arc<AtomicBool>) {
         self.cancel = Some(token);

@@ -70,24 +70,27 @@ impl Workers {
         }
     }
 
-    /// Accessors the I/O worker task sender.
-
+    /// Accessor the I/O worker task sender.
     pub fn io_tx(&self) -> &Sender<WorkerTask> {
         &self.io_tx
     }
 
+    /// Accessor for the preview worker task sender.
     pub fn preview_tx(&self) -> &Sender<WorkerTask> {
         &self.preview_tx
     }
 
+    /// Accessor for the find worker task sender.
     pub fn find_tx(&self) -> &Sender<WorkerTask> {
         &self.find_tx
     }
 
+    /// Accessor for the file operation worker task sender.
     pub fn fileop_tx(&self) -> &Sender<WorkerTask> {
         &self.fileop_tx
     }
 
+    /// Accessor for the worker response receiver.
     pub fn response_rx(&self) -> &Receiver<WorkerResponse> {
         &self.response_rx
     }

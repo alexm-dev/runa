@@ -1,8 +1,21 @@
+//! Module for mapping file types and names to Nerd Font icons.
+//! This module provides functions to retrieve appropriate icons
+//! based on file extensions, special filenames, and directory names.
+//!
+//! It uses `once_cell` for lazy static initialization of icon maps.
+//! The icons are represented as static string slices.
+//!
+//! The main function `nerd_font_icon` takes a `FileEntry` and returns
+//! the corresponding Nerd Font icon.
+
 use crate::core::FileEntry;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
-// Extension-based icon map
+/// File extension to icon mapping
+/// This map associates common file extensions with their corresponding
+/// Nerd Font icons.
+/// For example, "rs" maps to the Rust icon "".
 pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
     m.insert("rs", "");
@@ -81,11 +94,15 @@ pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     m
 });
 
-// Special filenames
+/// Special file names
+/// This map associates specific filenames with their corresponding
+/// Nerd Font icons.
+/// For example, "Cargo.toml" maps to the icon "".
 pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
     m.insert("README.md", "");
     m.insert("LICENSE", "");
+    m.insert("LICENSE.txt", "");
     m.insert("Makefile", "");
     m.insert(".gitignore", "");
     m.insert(".gitconfig", "");
@@ -104,9 +121,7 @@ pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = La
     m.insert(".env.production", "");
     m.insert(".env.development", "");
     m.insert("README", "");
-    m.insert("CHANGELOG", "");
     m.insert("TODO", "");
-    m.insert("LICENSE.txt", "");
     m.insert("Dockerfile.dev", "");
     m.insert("Dockerfile.prod", "");
     m.insert("Cargo.lock", "");
@@ -117,7 +132,10 @@ pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = La
     m
 });
 
-// Special directory names
+/// Special directory names
+/// This map associates specific directory names with their corresponding
+/// Nerd Font icons.
+/// For example, "node_modules" maps to the icon "".
 pub static SPECIAL_DIR_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     let mut m = HashMap::new();
     m.insert("bin", "");
@@ -126,11 +144,17 @@ pub static SPECIAL_DIR_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Laz
     m.insert(".git", "");
     m.insert(".github", "");
     m.insert(".config", "");
-    m.insert("Documents", "󰲃");
     m.insert("nvim", "");
     m
 });
 
+/// Get the Nerd Font icon for a given file entry.
+/// This function determines the appropriate icon based on whether
+/// the entry is a directory or a file, and uses the special
+/// filename and extension mappings to find the correct icon.
+///
+/// # Arguments
+/// * `entry` - A reference to a `FileEntry` representing the file or directory.
 pub fn nerd_font_icon(entry: &FileEntry) -> &'static str {
     let lowercase_name = entry.lowercase_name();
     let entry_name = entry.name_str();

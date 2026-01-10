@@ -8,6 +8,38 @@ use ratatui::widgets::BorderType;
 use serde::Deserialize;
 
 /// Display configuration options
+///
+/// This struct holds various options related to the display of the file manager,
+/// including border styles, preview settings, layout ratios, and more.
+/// These options can be customized by the user in the configuration file.
+/// The struct derives `Deserialize` to allow easy loading from a TOML file,
+/// and `Debug` for convenient debugging output.
+///
+/// Default values are provided for all options to ensure a consistent user experience
+/// even if the user does not specify certain settings.
+///
+/// # Examples
+/// toml
+/// [display]
+/// selection_marker = true
+/// dir_marker = true
+/// borders = "unified"
+/// border_shape = "rounded"
+/// titles = true
+/// icons = false
+/// separators = true
+/// parent = true
+/// preview = true
+/// preview_underline = true
+/// preview_underline_color = false
+/// entry_padding = 1
+/// scroll_padding = 5
+/// toggle_marker_jump = false
+/// instant_preview = false
+/// [display.layout]
+/// parent = 20
+/// main = 40
+/// preview = 40
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Display {
@@ -161,6 +193,7 @@ impl Default for Display {
 }
 
 /// Layout configuration for the display panes
+/// This struct holds the ratio settings for the parent, main, and preview panes
 #[derive(Deserialize, Debug)]
 pub struct LayoutConfig {
     parent: u16,
@@ -184,6 +217,10 @@ impl LayoutConfig {
 }
 
 /// Options for showing file information in the info dialog
+/// This struct holds boolean flags for various file attributes
+/// that can be displayed, as well as an optional position for the dialog
+///
+/// Positions can be specified using the DialogPosition enum
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct ShowInfoOptions {
@@ -237,6 +274,9 @@ impl Default for ShowInfoOptions {
 }
 
 /// Preview method options
+/// This enum defines the available methods for previewing file contents
+/// - Internal: Use the built-in preview functionality
+/// - Bat: Use the external 'bat' command for previewing
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum PreviewMethod {
@@ -244,21 +284,24 @@ pub enum PreviewMethod {
     Bat,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy)]
+/// Bat style options for file previewing
+/// This enum defines the different styles that can be used with the 'bat' command
+/// - Plain: No line numbers or decorations
+/// - Numbers: Line numbers only
+/// - Full: Full decorations including line numbers and and grid
+#[derive(Deserialize, Debug, Clone, Copy, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum BatStyle {
+    #[default]
     Plain,
     Numbers,
     Full,
 }
 
-impl Default for BatStyle {
-    fn default() -> Self {
-        BatStyle::Plain
-    }
-}
-
 /// Preview configuration options
+/// This struct holds various options related to file previewing,
+/// including the preview method, bat style, and text wrapping.
+/// These options can be customized by the user in the configuration file.
 #[derive(Deserialize, Debug, Clone)]
 pub struct PreviewOptions {
     #[serde(default = "PreviewOptions::default_method")]
@@ -299,6 +342,15 @@ impl PreviewOptions {
         self.wrap
     }
 
+    /// Generate command-line arguments for the 'bat' command based on the preview options
+    /// and the given theme name and pane width.
+    ///
+    /// # Arguments
+    /// * `theme_name` - The name of the syntax highlighting theme to use
+    /// * `pane_width` - The width of the preview pane in characters
+    ///
+    /// # Returns
+    /// A vector of strings representing the command-line arguments for 'bat'
     pub fn bat_args(&self, theme_name: &str, pane_width: usize) -> Vec<String> {
         let mut args = vec!["--color=always".to_owned(), "--paging=never".to_owned()];
         args.push(format!("--terminal-width={}", pane_width));
@@ -322,6 +374,7 @@ impl PreviewOptions {
 }
 
 /// Border style options
+/// This enum defines the different border styles that can be used in the UI
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum BorderStyle {
@@ -331,6 +384,7 @@ pub enum BorderStyle {
 }
 
 /// Border shape options
+/// This enum defines the different border shapes that can be used in the UI
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum BorderShape {
