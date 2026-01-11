@@ -272,25 +272,25 @@ impl<'a> AppState<'a> {
                 return KeypressResult::Continue;
             }
 
-            if entry.is_symlink() {
-                if let Ok(target) = std::fs::read_link(&entry_path) {
-                    let resolved = if target.is_absolute() {
-                        target
-                    } else {
-                        entry_path
-                            .parent()
-                            .unwrap_or_else(|| std::path::Path::new(""))
-                            .join(target)
-                    };
-                    if let Ok(meta) = std::fs::metadata(&resolved) {
-                        if meta.is_dir() {
-                            self.nav.save_position();
-                            self.nav.set_path(resolved);
-                            self.request_dir_load(None);
-                            self.request_parent_content();
-                            return KeypressResult::Continue;
-                        }
-                    }
+            if entry.is_symlink()
+                && let Ok(target) = std::fs::read_link(&entry_path)
+            {
+                let resolved = if target.is_absolute() {
+                    target
+                } else {
+                    entry_path
+                        .parent()
+                        .unwrap_or_else(|| std::path::Path::new(""))
+                        .join(target)
+                };
+                if let Ok(meta) = std::fs::metadata(&resolved)
+                    && meta.is_dir()
+                {
+                    self.nav.save_position();
+                    self.nav.set_path(resolved);
+                    self.request_dir_load(None);
+                    self.request_parent_content();
+                    return KeypressResult::Continue;
                 }
             }
         }

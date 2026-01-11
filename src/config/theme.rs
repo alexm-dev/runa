@@ -110,11 +110,12 @@ impl Theme {
     /// This avoids recreating the default theme multiple times
     /// by using a static Lazy instance.
     pub fn internal_defaults() -> &'static Self {
-        static DEFAULT: Lazy<Theme> = Lazy::new(|| Theme::default());
+        static DEFAULT: Lazy<Theme> = Lazy::new(Theme::default);
         &DEFAULT
     }
 
     // Getters for various theme properties with fallbacks to internal defaults
+    // _style methods for getting Style instances with fallbacks to internal defaults
 
     pub fn accent_style(&self) -> Style {
         self.accent.style_or(&Theme::internal_defaults().accent)
@@ -144,10 +145,6 @@ impl Theme {
             .style_or(&Theme::internal_defaults().separator)
     }
 
-    pub fn selection_icon(&self) -> &str {
-        &self.selection_icon
-    }
-
     pub fn path_style(&self) -> Style {
         self.path.style_or(&Theme::internal_defaults().path)
     }
@@ -158,7 +155,13 @@ impl Theme {
     }
 
     pub fn symlink(&self) -> Color {
-        self.symlink
+        self.symlink.or(Theme::internal_defaults().symlink)
+    }
+
+    // Accessor methods for various theme properties
+
+    pub fn selection_icon(&self) -> &str {
+        &self.selection_icon
     }
 
     pub fn parent(&self) -> &PaneTheme {
@@ -509,11 +512,7 @@ impl WidgetTheme {
 
     /// Returns the title style, falling back to the internal default theme if Reset.
     pub fn title_style_or_theme(&self) -> Style {
-        let fallback = Theme::internal_defaults()
-            .info
-            .title
-            .style_or(&ColorPair::default());
-        self.title_style_or(fallback)
+        self.title.style_or(&Theme::internal_defaults().info.title)
     }
 
     /// Returns the number of visible results in the find dialog, falling back to the provided fallback.
@@ -543,6 +542,25 @@ impl Default for WidgetTheme {
     }
 }
 
+/// Trait to provide a fallback color if the original color is Reset.
+/// Is used when a field is Color::Reset to fallback to another color.
+/// Useful for when a field is ratatui::style::Color instead of ColorPair.
+trait ColorFallback {
+    fn or(self, fallback: Color) -> Color;
+}
+
+/// Implementation of ColorFallback for Color.
+/// If the color is Reset, returns the fallback color, otherwise returns self.
+impl ColorFallback for Color {
+    fn or(self, fallback: Color) -> Color {
+        if let Color::Reset = self {
+            fallback
+        } else {
+            self
+        }
+    }
+}
+
 // Helper function to deserialize Theme colors
 fn deserialize_color_field<'de, D>(deserializer: D) -> Result<Color, D::Error>
 where
@@ -568,6 +586,15 @@ pub struct Palette {
 }
 
 /// Centralized function to create a Theme from a Palette.
+/// Used by all internal themes to avoid code duplication.
+///
+/// # Arguments
+/// * `name` - A string slice representing the name of the theme.
+/// * `palette` - A Palette struct containing the color definitions for the theme.
+/// * `icon` - A string slice representing the marker icon for the theme.
+///
+/// # Returns
+/// * `Theme` - A Theme instance created from the provided palette
 pub fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
     let primary = rgb(palette.primary);
     let secondary = rgb(palette.secondary);

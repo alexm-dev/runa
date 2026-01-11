@@ -203,16 +203,16 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
                 ));
             }
             spans.push(Span::raw(name_str));
-            if entry.is_symlink() {
-                if let Some(target) = symlink_target_resolved(entry, current_dir) {
-                    let mut sym_text = String::with_capacity(4 + target.to_string_lossy().len());
-                    sym_text.push_str(" -> ");
-                    sym_text.push_str(&target.to_string_lossy());
-                    spans.push(Span::styled(
-                        sym_text,
-                        context.styles.get_symlink_style(entry_style),
-                    ));
-                }
+            if entry.is_symlink()
+                && let Some(target) = symlink_target_resolved(entry, current_dir)
+            {
+                let mut sym_text = String::with_capacity(4 + target.to_string_lossy().len());
+                sym_text.push_str(" -> ");
+                sym_text.push_str(&target.to_string_lossy());
+                spans.push(Span::styled(
+                    sym_text,
+                    context.styles.get_symlink_style(entry_style),
+                ));
             }
         }
 
@@ -494,18 +494,17 @@ fn make_entry_row<'a>(
 
     spans.push(Span::raw(name_str));
 
-    if entry.is_symlink() {
-        if let Some(dir) = current_dir {
-            if let Some(target) = symlink_target_resolved(entry, dir) {
-                let mut sym_text = String::with_capacity(4 + target.to_string_lossy().len());
-                sym_text.push_str(" -> ");
-                sym_text.push_str(&target.to_string_lossy());
-                spans.push(Span::styled(
-                    sym_text,
-                    context.styles.get_symlink_style(row_style),
-                ));
-            }
-        }
+    if entry.is_symlink()
+        && let Some(dir) = current_dir
+        && let Some(target) = symlink_target_resolved(entry, dir)
+    {
+        let mut sym_text = String::with_capacity(4 + target.to_string_lossy().len());
+        sym_text.push_str(" -> ");
+        sym_text.push_str(&target.to_string_lossy());
+        spans.push(Span::styled(
+            sym_text,
+            context.styles.get_symlink_style(row_style),
+        ));
     }
 
     let line = Line::from(spans);

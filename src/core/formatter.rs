@@ -343,19 +343,19 @@ pub fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Ve
 
             for e in entries.iter().take(max_lines) {
                 let display_name = if e.is_dir() {
-                    e.name().to_string_lossy().to_owned() + "/"
+                    e.name().to_string_lossy().clone() + "/"
                 } else {
-                    e.name().to_string_lossy().to_owned()
+                    e.name().to_string_lossy().clone()
                 };
                 lines.push(sanitize_to_exact_width(&display_name, pane_width));
             }
 
             if lines.is_empty() {
                 lines.push(sanitize_to_exact_width("[empty directory]", pane_width));
-            } else if total_entries > max_lines {
-                if let Some(last) = lines.last_mut() {
-                    *last = sanitize_to_exact_width("...", pane_width);
-                }
+            } else if total_entries > max_lines
+                && let Some(last) = lines.last_mut()
+            {
+                *last = sanitize_to_exact_width("...", pane_width);
             }
 
             while lines.len() < max_lines {

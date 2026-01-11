@@ -21,46 +21,34 @@ use std::time::SystemTime;
 /// * `name_str` - The String representation of the name
 /// * `lowercase_name` - The lowercase version of the name for case-insensitive comparisons
 /// * `display_name` - The name formatted for display (e.g., with trailing slash for directories)
-/// * `is_dir` - Boolean indicating if the entry is a directory
-/// * `is_hidden` - Boolean indicating if the entry is hidden
-/// * `is_system` - Boolean indicating if the entry is a system file (useful on Windows)
-/// # `is_symlink` - Boolean indicating if the entry is a symlink
+/// * `file_flags` - Struct holding boolean flags for is_dir, is_hidden, is_system, is_symlink
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
     name_str: String,
     lowercase_name: String,
     display_name: String,
-    is_dir: bool,
-    is_hidden: bool,
-    is_system: bool,
-    is_symlink: bool,
+    file_flags: FileFlags,
 }
 
 impl FileEntry {
-    pub fn new(
+    fn new(
         name: OsString,
         name_str: String,
         lowercase_name: String,
         display_name: String,
-        is_dir: bool,
-        is_hidden: bool,
-        is_system: bool,
-        is_symlink: bool,
+        file_flags: FileFlags,
     ) -> Self {
         FileEntry {
             name,
             name_str,
             lowercase_name,
             display_name,
-            is_dir,
-            is_hidden,
-            is_system,
-            is_symlink,
+            file_flags,
         }
     }
 
-    // Getters / accessors
+    // Accessors
 
     pub fn name(&self) -> &OsString {
         &self.name
@@ -79,19 +67,19 @@ impl FileEntry {
     }
 
     pub fn is_dir(&self) -> bool {
-        self.is_dir
+        self.file_flags.is_dir
     }
 
     pub fn is_hidden(&self) -> bool {
-        self.is_hidden
+        self.file_flags.is_hidden
     }
 
     pub fn is_system(&self) -> bool {
-        self.is_system
+        self.file_flags.is_system
     }
 
     pub fn is_symlink(&self) -> bool {
-        self.is_symlink
+        self.file_flags.is_symlink
     }
 
     pub fn extension(&self) -> Option<String> {
@@ -106,6 +94,22 @@ impl FileEntry {
     pub fn set_display_name(&mut self, new_name: String) {
         self.display_name = new_name;
     }
+}
+
+/// Struct to hold file attribute flags for FileEntry
+/// Holds is_dir, is_hidden, is_system, is_symlink booleans.
+/// Used internally by FileEntry.
+/// # Fields
+/// * `is_dir` - Boolean indicating if the entry is a directory
+/// * `is_hidden` - Boolean indicating if the entry is hidden
+/// * `is_system` - Boolean indicating if the entry is a system file
+/// * `is_symlink` - Boolean indicating if the entry is a symlink
+#[derive(Debug, Clone, Copy)]
+struct FileFlags {
+    is_dir: bool,
+    is_hidden: bool,
+    is_system: bool,
+    is_symlink: bool,
 }
 
 /// Enumerator for the filye types which are then shown inside [FileInfo]
@@ -160,13 +164,13 @@ impl FileInfo {
         &self.file_type
     }
 
-    // Main file info getter used by the ShowInfo overlay functions
-    //
-    // # Arguments
-    // * `path` - Path reference to the file or directory to get info for
-    //
-    // # Returns
-    // A FileInfo struct populated with the file's information.
+    /// Main file info getter used by the ShowInfo overlay functions
+    ///
+    /// # Arguments
+    /// * `path` - Path reference to the file or directory to get info for
+    ///
+    /// # Returns
+    /// A FileInfo struct populated with the file's information.
     pub fn get_file_info(path: &Path) -> io::Result<FileInfo> {
         let metadata = symlink_metadata(path)?;
         let file_type = if metadata.is_file() {
@@ -248,17 +252,20 @@ pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
             display_name.push('/');
         }
 
+        let file_flags = FileFlags {
+            is_dir,
+            is_hidden,
+            is_system,
+            is_symlink,
+        };
+
         entries.push(FileEntry::new(
             name,
             name_str,
             lowercase_name,
             display_name,
-            is_dir,
-            is_hidden,
-            is_system,
-            is_symlink,
+            file_flags,
         ));
     }
-
     Ok(entries)
 }

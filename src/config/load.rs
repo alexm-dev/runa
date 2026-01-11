@@ -236,6 +236,7 @@ preview_underline = true
 [display.preview_options]
 method = "internal"
 # bat related options if method = "bat"
+# theme = "TwoDark"
 # style = "plain"
 # wrap = true
 
@@ -252,6 +253,8 @@ method = "internal"
 # perms = false
 
 [theme]
+name = "default"
+symlink = "default"
 selection_icon = ""
 
 # [theme.selection]
@@ -366,7 +369,7 @@ selection_icon = ""
 # [theme.path]
 # fg = "magenta"
 
-[editor]
+# [editor]
 # cmd = "nvim"
 "##;
 
