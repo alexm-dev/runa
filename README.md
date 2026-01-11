@@ -132,7 +132,7 @@ After installation, start runa with: `rn`
   * Without it, `runa` remains a fully functional file manager but will notify you if you attempt a recursive search.
 
 * **Preview Syntax coloring**: To enable syntax coloring in the preview pane, install **[bat](https://github.com/sharkdp/bat)**
-  * If `bat` is detected and installed, you can switch the `preview_options` method in the runa.toml to `method = "bat"`.
+  * If `bat` is detected and installed, you can switch method in the runa.toml to `method = "bat"`.
   * Without it, `runa` uses the `internal` preview method, which is a plain preview method useful for extra speed without syntax highlighting.
 
 ## Configuration
