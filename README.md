@@ -168,28 +168,23 @@ This will generate a config in the default config path.
 
 ## Roadmap
 
-runa is in active development.  
-Future releases will focus on expanding functionality while keeping it fast and lightweight.  
+runa is in active development, with future releases focusing on expanding functionality while keeping it fast and lightweight.  
 
-### Planned features
+### Planned Features
 
-- [ ] Image Previews: Support for Sixel/Kitty graphics protocols.  
+- [ ] Image Previews: Support for Sixel/Kitty graphics protocols
 
-### Completed
+### Completed Features
 
-- [x] Syntax Highlighting: `bat` integration for the preview pane. (Completed in 0.5.1)  
+- [x] Syntax Highlighting: `bat` integration for the preview pane  
+- [x] Search & Discovery: Integrated fuzzy finding (`fd` support)  
+- [x] File Operations: Copy, move, delete, and rename from within the UI  
+- [x] Content Search: Text search and filtering  
+- [x] Performance: Reactive rendering  
+- [x] UI Customization: Pane-specific styling and Hex color support  
+- [x] Navigation Context: Persistent Parent (Origin) and Preview panes  
 
-- [x] Search & Discovery: Integrated fuzzy finding (fd support) (Completed in 0.4.0)  
-
-- [x] File Operations: Copy, move, delete, and rename from within the UI.  (Completed in 0.3.0)  
-
-- [x] Content Search: Text search and filtering. (Completed in 0.3.0)  
-
-- [x] Performance: Reactive rendering (Completed in 0.2.0).
-
-- [x] UI Customization: Pane-specific styling and Hex color support (Completed in 0.2.2).
-
-- [x] Navigation Context: Persistent Parent (Origin) and Preview panes (Completed in 0.2.0)  
+> See [CHANGELOG.md](./CHANGELOG.md) for version details and release history.
 
 ---
 
