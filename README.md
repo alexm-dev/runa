@@ -33,7 +33,7 @@
 - **Cross-Platform:** Works on Windows, Linux, and macOS.
 - **Keyboard-Driven:** Every action accessible by keybinding. No mouse needed.
 
-<img src="https://github.com/user-attachments/assets/22663c5a-3fbb-4480-856e-4a1efa4bd5b6" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
+<img src="https://github.com/user-attachments/assets/5590719c-016d-41a6-ba83-1acbe32dab1b" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 <br></br>
 
 <details>
