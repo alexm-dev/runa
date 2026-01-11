@@ -81,7 +81,7 @@ fn test_formatter_empty_dir() -> Result<(), Box<dyn error::Error>> {
     let temp_dir = tempdir()?;
 
     let empty_path = temp_dir.path();
-    let mut entries = core::browse_dir(&empty_path)?;
+    let mut entries = core::browse_dir(empty_path)?;
     formatter.format(&mut entries);
 
     for entry in entries {

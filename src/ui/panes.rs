@@ -3,7 +3,7 @@
 //! This module provides renderes/drawers for the parent, main and preview panes.
 //! All layout and highlighting logic for items, cursor and file type coloring is handled here.
 //!
-//! Used internally by [ui::render]
+//! Used internally by ui::render
 
 use crate::app::{AppState, PreviewData};
 use crate::core::{FileEntry, symlink_target_resolved};

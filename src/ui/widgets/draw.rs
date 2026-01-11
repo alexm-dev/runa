@@ -1,8 +1,8 @@
 //! Draw widget module which holds all the draw functions for the render to use.
 //!
-//! Relies on helpers and data structs from [widgets::dialog]
+//! Relies on helpers and data structs from widgets::dialog
 //!
-//! All draw functions are then used by [ui::render] to then draw widgets such a input dialog,
+//! All draw functions are then used by ui::rende] to then draw widgets such a input dialog,
 //! which is used by file action functions like rename and more..
 
 use crate::app::AppState;

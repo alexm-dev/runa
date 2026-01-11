@@ -1,11 +1,11 @@
 //! The runa processes module.
 //!
-//! This module implements the [find] and the [preview_bat] function, the [FindResult] and the [RawResult] structs.
+//! This module implements the [find] and the [preview_bat] function, the [FindResult] and the RawResult structs.
 //!
 //! The [FindResult] struct is used to correctly display the calculated results of the
 //! find function. It is used mainly by ui/actions.
 //!
-//! The [RawResult] struct is an internal struct used to store intermediate results
+//! The RawResult struct is an internal struct used to store intermediate results
 //! during the find process.
 //!
 //! The [find] function uses the fd command-line tool to perform a file search

@@ -17,29 +17,6 @@ use serde::Deserialize;
 ///
 /// Default values are provided for all options to ensure a consistent user experience
 /// even if the user does not specify certain settings.
-///
-/// # Examples
-/// toml
-/// [display]
-/// selection_marker = true
-/// dir_marker = true
-/// borders = "unified"
-/// border_shape = "rounded"
-/// titles = true
-/// icons = false
-/// separators = true
-/// parent = true
-/// preview = true
-/// preview_underline = true
-/// preview_underline_color = false
-/// entry_padding = 1
-/// scroll_padding = 5
-/// toggle_marker_jump = false
-/// instant_preview = false
-/// [display.layout]
-/// parent = 20
-/// main = 40
-/// preview = 40
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub struct Display {

@@ -81,7 +81,6 @@ fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Er
     for t in 0..thread_count {
         let task_tx = task_tx.clone();
         let dirs = dirs.clone();
-        let pane_base = pane_base;
         handles.push(thread::spawn(move || {
             let mut rng = rng();
             for i in 0..requests_per_thread {

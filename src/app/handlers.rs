@@ -372,13 +372,13 @@ impl<'a> AppState<'a> {
     }
 
     /// Exits the current input mode.
-    /// Simple wrapper around [Actions::exit_mode].
+    /// Simple wrapper around actions::exit_mode.
     pub fn exit_input_mode(&mut self) {
         self.actions.exit_mode();
     }
 
     /// Creates a new file with the name in the input buffer.
-    /// Calls [Actions::action_create] with `is_folder` set to false.
+    /// Calls actions::action_create with `is_folder` set to false.
     fn create_file(&mut self) {
         if !self.actions.input_buffer().is_empty() {
             let fileop_tx = self.workers.fileop_tx();
@@ -387,7 +387,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Creates a new folder with the name in the input buffer.
-    /// Calls [Actions::action_create] with `is_folder` set to true.
+    /// Calls actions::action_create with `is_folder` set to true.
     fn create_folder(&mut self) {
         if !self.actions.input_buffer().is_empty() {
             let fileop_tx = self.workers.fileop_tx();
@@ -396,19 +396,21 @@ impl<'a> AppState<'a> {
     }
 
     /// Renames the selected entry to the name in the input buffer.
-    /// Calls [Actions::action_rename].
+    /// Calls actions::action_rename.
     fn rename_entry(&mut self) {
         let fileop_tx = self.workers.fileop_tx();
         self.actions.action_rename(&mut self.nav, fileop_tx);
     }
 
     /// Applies the filter in the input buffer to the navigation state.
-    /// Calls [Actions::action_filter] and requests a preview refresh.
+    /// Calls actions::action_filter and requests a preview refresh.
     fn apply_filter(&mut self) {
         self.actions.action_filter(&mut self.nav);
         self.request_preview();
     }
 
+    /// Confirms deletion of the selected items.
+    /// Calls actions::action_delete.
     fn confirm_delete(&mut self) {
         let fileop_tx = self.workers.fileop_tx();
         self.actions.action_delete(&mut self.nav, fileop_tx);
