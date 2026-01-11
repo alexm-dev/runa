@@ -181,6 +181,8 @@ impl Theme {
         &self.info
     }
 
+    /// Apply user overrides on top of a preset theme if a known preset name is provided.
+    /// If no preset name is provided or the name is unknown, returns the theme as is.
     pub fn with_overrides(self) -> Self {
         let preset = match self.name.as_deref() {
             Some("gruvbox-dark-hard") => Some(gruvbox_dark_hard()),
@@ -213,6 +215,9 @@ impl Theme {
         }
     }
 
+    /// Map internal theme name to bat theme name for syntax highlighting.
+    /// If no name is set, defaults to "TwoDark".
+    /// Returns a static string slice representing the bat theme name.
     pub fn bat_theme_name(&self) -> &'static str {
         self.name
             .as_deref()
@@ -220,6 +225,13 @@ impl Theme {
             .unwrap_or("TwoDark")
     }
 
+    /// Helper function to map internal theme names to bat theme names.
+    /// Used by bat for syntax highlighting.
+    /// # Arguments:
+    /// * internal_theme - A string slice representing the internal theme name.
+    ///
+    /// # Returns:
+    /// * A static string slice representing the corresponding bat theme name.
     fn map_to_bat_theme(internal_theme: &str) -> &'static str {
         match internal_theme {
             "default" => "TwoDark",
