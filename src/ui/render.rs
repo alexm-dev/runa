@@ -10,7 +10,7 @@ use crate::ui::panes;
 use crate::ui::widgets;
 use crate::{
     app::{
-        AppState,
+        AppState, LayoutMetrics,
         actions::{ActionMode, InputMode},
     },
     ui::{
@@ -33,47 +33,8 @@ use ratatui::{
 /// - app: runa's shared state, mutated as needed to display metrics
 pub fn render(frame: &mut Frame, app: &mut AppState) {
     let mut root_area = frame.area();
-    {
-        let chunks = layout_chunks(root_area, app);
-        let mut metrics = crate::app::LayoutMetrics::default();
-        let display_cfg = app.config().display();
-
-        let mut current_idx = 0;
-        let has_sep = display_cfg.separators() && !display_cfg.is_split();
-
-        // Helper to determine inner space available for text
-        let get_inner = |rect: ratatui::layout::Rect| {
-            let width = if display_cfg.is_split() || display_cfg.is_unified() {
-                rect.width.saturating_sub(2)
-            } else {
-                rect.width
-            };
-            let height = rect.height.saturating_sub(2);
-            (width as usize, height as usize)
-        };
-
-        if display_cfg.parent() && current_idx < chunks.len() {
-            metrics.parent_width = get_inner(chunks[current_idx]).0;
-            current_idx += if has_sep { 2 } else { 1 };
-        }
-
-        if current_idx < chunks.len() {
-            metrics.main_width = get_inner(chunks[current_idx]).0;
-            current_idx += if has_sep && display_cfg.preview() {
-                2
-            } else {
-                1
-            };
-        }
-
-        if display_cfg.preview() && current_idx < chunks.len() {
-            let (width, height) = get_inner(chunks[current_idx]);
-            metrics.preview_width = width;
-            metrics.preview_height = height;
-        }
-
-        *app.metrics_mut() = metrics;
-    }
+    let metrics = calculate_layout_metrics(frame.area(), app);
+    *app.metrics_mut() = metrics;
 
     let cfg = app.config();
     let display_cfg = cfg.display();
@@ -313,6 +274,47 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             }
         }
     }
+}
+
+fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
+    let chunks = layout_chunks(area, app);
+    let mut metrics = LayoutMetrics::default();
+    let display_cfg = app.config().display();
+
+    let mut idx = 0;
+    let has_sep = display_cfg.separators() && !display_cfg.is_split();
+
+    let get_inner = |rect: Rect| {
+        let width = if display_cfg.is_split() || display_cfg.is_unified() {
+            rect.width.saturating_sub(2)
+        } else {
+            rect.width
+        };
+
+        let height = rect.height.saturating_sub(2);
+        (width as usize, height as usize)
+    };
+
+    if display_cfg.parent() && idx < chunks.len() {
+        metrics.parent_width = get_inner(chunks[idx]).0;
+        idx += if has_sep { 2 } else { 1 };
+    }
+
+    if idx < chunks.len() {
+        metrics.main_width = get_inner(chunks[idx]).0;
+        idx += if has_sep && display_cfg.preview() {
+            2
+        } else {
+            1
+        };
+    }
+
+    if display_cfg.preview() && idx < chunks.len() {
+        let (w, h) = get_inner(chunks[idx]);
+        metrics.preview_width = w;
+        metrics.preview_height = h;
+    }
+    metrics
 }
 
 /// Returns the rectangular areas for all active panes, given the current configuration
