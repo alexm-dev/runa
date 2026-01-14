@@ -124,7 +124,7 @@ pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = La
     m.insert("Dockerfile.dev", "");
     m.insert("Dockerfile.prod", "");
     m.insert("Cargo.lock", "");
-    m.insert("CmakeLists.txt", "");
+    m.insert("CMakeLists.txt", "");
     m.insert("PKGBUILD", "󰣇");
     m.insert(".bashrc", "󱆃");
     m.insert(".vimrc", "");
