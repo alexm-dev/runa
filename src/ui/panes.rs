@@ -394,6 +394,11 @@ fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneM
 /// * `is_selected` - Boolean indicating if the entry is currently selected.
 /// * `style` - Style to apply to the row.
 /// * `context` - Reference to the PaneContext for rendering options.
+/// * `markers` - Reference to the PaneMarkers for marker and clipboard data.
+/// * `opts` - Optional reference to PreviewOptions for additional styling.
+///
+/// # Returns
+/// * `ListItem` - The constructed ListItem for the file entry.
 fn make_entry_row<'a>(
     entry: &'a FileEntry,
     current_dir: Option<&Path>,
