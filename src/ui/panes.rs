@@ -129,26 +129,21 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
 
     let markers = make_main_pane_markers(app, current_dir);
 
-    let items: Vec<ListItem> = app
-        .nav()
-        .shown_entries()
-        .enumerate()
-        .map(|(idx, entry)| {
-            let is_selected = Some(idx) == selected_idx;
-
-            let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-
-            make_entry_row(
-                entry,
-                Some(current_dir),
-                is_selected,
-                entry_style,
-                &context,
-                &markers,
-                None,
-            )
-        })
-        .collect();
+    let shown_len = app.nav().shown_entries_len();
+    let mut items = Vec::with_capacity(shown_len);
+    for (idx, entry) in app.nav().shown_entries().enumerate() {
+        let is_selected = Some(idx) == selected_idx;
+        let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
+        items.push(make_entry_row(
+            entry,
+            Some(current_dir),
+            is_selected,
+            entry_style,
+            &context,
+            &markers,
+            None,
+        ));
+    }
 
     let mut state = ListState::default();
     if app.has_visible_entries() {
@@ -216,23 +211,20 @@ pub fn draw_preview(
                 return;
             }
 
-            let items: Vec<ListItem> = entries
-                .iter()
-                .enumerate()
-                .map(|(idx, entry)| {
-                    let is_selected = Some(idx) == selected_idx;
-                    let style = context.styles.get_style(entry.is_dir(), is_selected);
-                    make_entry_row(
-                        entry,
-                        path,
-                        is_selected,
-                        style,
-                        &context,
-                        markers,
-                        Some(&opts),
-                    )
-                })
-                .collect();
+            let mut items = Vec::with_capacity(entries.len());
+            for (idx, entry) in entries.iter().enumerate() {
+                let is_selected = Some(idx) == selected_idx;
+                let style = context.styles.get_style(entry.is_dir(), is_selected);
+                items.push(make_entry_row(
+                    entry,
+                    path,
+                    is_selected,
+                    style,
+                    &context,
+                    markers,
+                    Some(&opts),
+                ));
+            }
 
             let mut state = ListState::default();
             state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
@@ -268,15 +260,20 @@ pub fn draw_parent(
         return;
     }
 
-    let items: Vec<ListItem> = entries
-        .iter()
-        .enumerate()
-        .map(|(idx, entry)| {
-            let is_selected = Some(idx) == selected_idx;
-            let style = context.styles.get_style(entry.is_dir(), is_selected);
-            make_entry_row(entry, path, is_selected, style, &context, markers, None)
-        })
-        .collect();
+    let mut items = Vec::with_capacity(entries.len());
+    for (idx, entry) in entries.iter().enumerate() {
+        let is_selected = Some(idx) == selected_idx;
+        let style = context.styles.get_style(entry.is_dir(), is_selected);
+        items.push(make_entry_row(
+            entry,
+            path,
+            is_selected,
+            style,
+            &context,
+            markers,
+            None,
+        ));
+    }
 
     let mut state = ListState::default();
     state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
