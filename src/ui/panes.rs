@@ -94,13 +94,8 @@ pub struct PaneMarkers<'a> {
 /// Highlights selection, markers and directories and handles styling for items.
 pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let selected_idx = app.visible_selected();
-    let markers = app.nav().markers();
-    let marker_theme = app.config().theme().marker();
-    let marker_icon = marker_theme.icon();
-    let marker_pad = " ".repeat(unicode_width::UnicodeWidthStr::width(marker_icon));
     let entry_padding = context.entry_padding as usize;
     let current_dir = app.nav().current_dir();
-    let clipboard = app.actions().clipboard();
 
     let padding_str = if entry_padding > 1 {
         " ".repeat(entry_padding - 1)
@@ -118,16 +113,6 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         return;
     }
 
-    let local_markers: HashSet<&std::ffi::OsStr> = if markers.is_empty() {
-        HashSet::new()
-    } else {
-        markers
-            .iter()
-            .filter(|path| path.parent() == Some(current_dir))
-            .map(|path| path.file_name().unwrap_or_default())
-            .collect()
-    };
-
     if !app.has_visible_entries() {
         let style = context.styles.item;
         let line = Line::from(vec![
@@ -142,83 +127,28 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         return;
     }
 
-    let items = app.nav().shown_entries().enumerate().map(|(idx, entry)| {
-        let is_selected = Some(idx) == selected_idx;
-        let is_marked = local_markers.contains(entry.name().as_os_str());
-        let entry_path = current_dir.join(entry.name());
-        let is_copied = clipboard
-            .as_ref()
-            .map(|set| set.contains(&entry_path))
-            .unwrap_or(false);
+    let markers = make_main_pane_markers(app, current_dir);
 
-        let name_str = if entry.is_dir() && context.show_marker {
-            entry.display_name()
-        } else {
-            entry.name_str()
-        };
+    let items: Vec<ListItem> = app
+        .nav()
+        .shown_entries()
+        .enumerate()
+        .map(|(idx, entry)| {
+            let is_selected = Some(idx) == selected_idx;
 
-        let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-        let mut spans = Vec::with_capacity(8);
+            let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
 
-        if entry_padding == 0 {
-            if context.show_icons {
-                let icon = nerd_font_icon(entry);
-                let mut icon_col = String::with_capacity(icon.len() + 1);
-                icon_col.push_str(icon);
-                icon_col.push(' ');
-                spans.push(Span::styled(
-                    icon_col,
-                    entry_style.add_modifier(Modifier::BOLD),
-                ));
-            }
-            spans.push(Span::raw(name_str));
-        } else {
-            let mut marker_style = if is_copied {
-                marker_theme.clipboard_style_or_theme()
-            } else {
-                marker_theme.style_or_theme()
-            };
-
-            if is_selected {
-                marker_style = marker_style.bg(entry_style.bg.unwrap_or_default());
-            }
-
-            if is_marked || is_copied {
-                spans.push(Span::styled(marker_icon, marker_style));
-            } else {
-                spans.push(Span::styled(&marker_pad, marker_style));
-            }
-
-            if entry_padding > 1 {
-                spans.push(Span::raw(&padding_str));
-            }
-            if context.show_icons {
-                let icon = nerd_font_icon(entry);
-                let mut icon_col = String::with_capacity(icon.len() + 1);
-                icon_col.push_str(icon);
-                icon_col.push(' ');
-                spans.push(Span::styled(
-                    icon_col,
-                    entry_style.add_modifier(Modifier::BOLD),
-                ));
-            }
-            spans.push(Span::raw(name_str));
-            if entry.is_symlink()
-                && let Some(target) = symlink_target_resolved(entry, current_dir)
-            {
-                let mut sym_text = String::with_capacity(4 + target.to_string_lossy().len());
-                sym_text.push_str(" -> ");
-                sym_text.push_str(&target.to_string_lossy());
-                spans.push(Span::styled(
-                    sym_text,
-                    context.styles.get_symlink_style(entry_style),
-                ));
-            }
-        }
-
-        let line = Line::from(spans);
-        ListItem::new(line).style(entry_style)
-    });
+            make_entry_row(
+                entry,
+                Some(current_dir),
+                is_selected,
+                entry_style,
+                &context,
+                &markers,
+                None,
+            )
+        })
+        .collect();
 
     let mut state = ListState::default();
     if app.has_visible_entries() {
@@ -412,10 +342,58 @@ pub fn make_pane_markers<'a>(
     }
 }
 
+/// Helper: Create a PaneMarkers struct for the main pane.
+/// Builds marker and clipboard sets for the current directory.
+/// Used in main pane drawing function.
+/// # Arguments
+/// * `app` - Reference to the application state.
+/// * `current_dir` - Path to the current directory being viewed in the main pane.
+///
+/// # Returns
+/// * `PaneMarkers` - Struct containing marker and clipboard sets along with styles and icons.
+fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneMarkers<'a> {
+    let marker_theme = app.config().theme().marker();
+    let marker_icon = marker_theme.icon();
+
+    let nav = app.nav();
+    let markers = nav.markers();
+    let local_markers = if markers.is_empty() {
+        None
+    } else {
+        let set: HashSet<OsString> = markers
+            .iter()
+            .filter(|p| p.parent() == Some(current_dir))
+            .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+            .collect();
+
+        if set.is_empty() { None } else { Some(set) }
+    };
+
+    let clipboard = app.actions().clipboard().as_ref().map(|set| {
+        set.iter()
+            .filter(|p| p.parent() == Some(current_dir))
+            .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+            .collect::<HashSet<OsString>>()
+    });
+
+    PaneMarkers {
+        markers: local_markers,
+        clipboard,
+        marker_icon,
+        marker_style: marker_theme.style_or_theme(),
+        clipboard_style: marker_theme.clipboard_style_or_theme(),
+    }
+}
+
 /// Helper: Create a ListItem row for a file entry with appropriate styles and markers.
 /// Used in pane drawing functions.
 ///
-/// # Ar
+/// # Arguments
+/// * `entry` - Reference to the FileEntry to create a row for.
+/// * `current_dir` - Optional reference to the current directory Path.
+/// * `is_selected` - Boolean indicating if the entry is currently selected.
+/// * `style` - Style to apply to the row.
+/// * `context` - Reference to the PaneContext for rendering options.
 fn make_entry_row<'a>(
     entry: &'a FileEntry,
     current_dir: Option<&Path>,
@@ -465,17 +443,25 @@ fn make_entry_row<'a>(
         }
     }
 
-    let pad = if is_marked || is_copied {
-        let mut pad = context.padding_str.to_owned();
-        if !pad.is_empty() {
-            pad.replace_range(0..1, markers.marker_icon);
-        }
-        Span::styled(pad, icon_style)
+    let pad = if (is_marked || is_copied) && !context.padding_str.is_empty() {
+        let first_char_len = context
+            .padding_str
+            .chars()
+            .next()
+            .map_or(0, |c| c.len_utf8());
+
+        let mut s = String::with_capacity(markers.marker_icon.len() + context.padding_str.len());
+        s.push_str(markers.marker_icon);
+        s.push_str(&context.padding_str[first_char_len..]);
+
+        Span::styled(s, icon_style)
     } else {
         Span::raw(context.padding_str)
     };
 
-    let mut spans = vec![pad];
+    let mut spans = Vec::with_capacity(8);
+    spans.push(pad);
+
     if context.show_icons {
         let icon = nerd_font_icon(entry);
         let mut icon_col = String::with_capacity(icon.len() + 1);
@@ -486,27 +472,27 @@ fn make_entry_row<'a>(
             row_style.add_modifier(Modifier::BOLD),
         ));
     }
+
     let name_str = if entry.is_dir() && context.show_marker {
         entry.display_name()
     } else {
         entry.name_str()
     };
-
     spans.push(Span::raw(name_str));
 
     if entry.is_symlink()
         && let Some(dir) = current_dir
         && let Some(target) = symlink_target_resolved(entry, dir)
     {
-        let mut sym_text = String::with_capacity(4 + target.to_string_lossy().len());
+        let target_str = target.to_string_lossy();
+        let mut sym_text = String::with_capacity(4 + target_str.len());
         sym_text.push_str(" -> ");
-        sym_text.push_str(&target.to_string_lossy());
+        sym_text.push_str(&target_str);
         spans.push(Span::styled(
             sym_text,
             context.styles.get_symlink_style(row_style),
         ));
     }
 
-    let line = Line::from(spans);
-    ListItem::new(line).style(row_style)
+    ListItem::new(Line::from(spans)).style(row_style)
 }

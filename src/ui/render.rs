@@ -22,6 +22,7 @@ use crate::{
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
+    style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
@@ -42,8 +43,6 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
 
     let accent_style = theme_cfg.accent_style();
     let selection_style = theme_cfg.selection_style();
-    let path_str = shorten_home_path(app.nav().current_dir());
-    let path_style = theme_cfg.path_style();
 
     let symlink_style = theme_cfg.symlink();
 
@@ -58,37 +57,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
     let clipboard = app.actions().clipboard().as_ref();
     let clipboard_style = marker_theme.clipboard_style_or_theme();
 
-    // Root Border / Header Logic
-    if display_cfg.is_unified() {
-        let mut outer_block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(accent_style)
-            .border_type(border_type);
-        if display_cfg.titles() {
-            outer_block = outer_block.title(Line::from(vec![Span::styled(
-                format!(" {} ", path_str),
-                path_style,
-            )]));
-        }
-        frame.render_widget(outer_block, root_area);
-        root_area = Block::default()
-            .borders(Borders::ALL)
-            .border_type(border_type)
-            .inner(root_area);
-    } else {
-        let header_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(0)])
-            .split(root_area);
-        frame.render_widget(
-            Paragraph::new(Line::from(vec![Span::styled(
-                format!("{} ", path_str),
-                path_style,
-            )])),
-            header_layout[0],
-        );
-        root_area = header_layout[1];
-    }
+    root_area = render_root_and_header(frame, app, root_area);
 
     // Render Panes
     let chunks = layout_chunks(root_area, app);
@@ -108,6 +77,13 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             clipboard_style,
         );
 
+        let parent_pane_style = PaneStyles {
+            item: theme_cfg.parent().effective_style_or_theme(),
+            dir: theme_cfg.directory_style(),
+            selection: theme_cfg.parent().selection_style_or_theme(),
+            symlink: symlink_style,
+        };
+
         panes::draw_parent(
             parent_dir,
             frame,
@@ -116,12 +92,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
                 block: widgets::get_pane_block("Parent", app),
                 border_type,
                 accent_style,
-                styles: PaneStyles {
-                    item: theme_cfg.parent().effective_style_or_theme(),
-                    dir: theme_cfg.directory_style(),
-                    selection: theme_cfg.parent().selection_style_or_theme(),
-                    symlink: symlink_style,
-                },
+                styles: parent_pane_style,
                 highlight_symbol: "",
                 entry_padding: display_cfg.entry_padding(),
                 padding_str,
@@ -134,14 +105,10 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
         pane_idx += 1;
         if show_separators && pane_idx < chunks.len() {
-            widgets::draw_separator(
+            render_separator(
                 frame,
-                Rect {
-                    x: chunks[pane_idx].x,
-                    y: root_area.y,
-                    width: 1,
-                    height: root_area.height,
-                },
+                chunks[pane_idx].x,
+                root_area,
                 theme_cfg.separator_style(),
             );
             pane_idx += 1;
@@ -181,14 +148,10 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
         pane_idx += 1;
         if show_separators && display_cfg.preview() && pane_idx < chunks.len() {
-            widgets::draw_separator(
+            render_separator(
                 frame,
-                Rect {
-                    x: chunks[pane_idx].x,
-                    y: root_area.y,
-                    width: 1,
-                    height: root_area.height,
-                },
+                chunks[pane_idx].x,
+                root_area,
                 theme_cfg.separator_style(),
             );
             pane_idx += 1;
@@ -217,6 +180,13 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             clipboard_style,
         );
 
+        let preview_pane_styles = PaneStyles {
+            item: theme_cfg.preview().effective_style_or_theme(),
+            dir: theme_cfg.directory_style(),
+            selection: theme_cfg.preview().selection_style_or_theme(),
+            symlink: symlink_style,
+        };
+
         panes::draw_preview(
             preview_dir,
             frame,
@@ -225,12 +195,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
                 block: widgets::get_pane_block("Preview", app),
                 border_type,
                 accent_style,
-                styles: PaneStyles {
-                    item: theme_cfg.preview().effective_style_or_theme(),
-                    dir: theme_cfg.directory_style(),
-                    selection: theme_cfg.preview().selection_style_or_theme(),
-                    symlink: symlink_style,
-                },
+                styles: preview_pane_styles,
                 highlight_symbol: "",
                 entry_padding: display_cfg.entry_padding(),
                 padding_str,
@@ -252,69 +217,8 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
 
-    // Render Input / Find Dialogs
-
     widgets::draw_status_line(frame, app);
-
-    if let ActionMode::Input { mode, .. } = app.actions().mode() {
-        if *mode != InputMode::Find {
-            widgets::draw_input_dialog(frame, app, accent_style);
-        } else {
-            widgets::draw_find_dialog(frame, app, accent_style);
-        }
-    }
-
-    for overlay in app.overlays().iter() {
-        match overlay {
-            Overlay::ShowInfo { info } => {
-                widgets::draw_show_info_dialog(frame, app, accent_style, info);
-            }
-            Overlay::Message { text } => {
-                widgets::draw_message_overlay(frame, app, accent_style, text);
-            }
-        }
-    }
-}
-
-fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
-    let chunks = layout_chunks(area, app);
-    let mut metrics = LayoutMetrics::default();
-    let display_cfg = app.config().display();
-
-    let mut idx = 0;
-    let has_sep = display_cfg.separators() && !display_cfg.is_split();
-
-    let get_inner = |rect: Rect| {
-        let width = if display_cfg.is_split() || display_cfg.is_unified() {
-            rect.width.saturating_sub(2)
-        } else {
-            rect.width
-        };
-
-        let height = rect.height.saturating_sub(2);
-        (width as usize, height as usize)
-    };
-
-    if display_cfg.parent() && idx < chunks.len() {
-        metrics.parent_width = get_inner(chunks[idx]).0;
-        idx += if has_sep { 2 } else { 1 };
-    }
-
-    if idx < chunks.len() {
-        metrics.main_width = get_inner(chunks[idx]).0;
-        idx += if has_sep && display_cfg.preview() {
-            2
-        } else {
-            1
-        };
-    }
-
-    if display_cfg.preview() && idx < chunks.len() {
-        let (w, h) = get_inner(chunks[idx]);
-        metrics.preview_width = w;
-        metrics.preview_height = h;
-    }
-    metrics
+    render_overlays(frame, app, accent_style);
 }
 
 /// Returns the rectangular areas for all active panes, given the current configuration
@@ -377,4 +281,161 @@ pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
         .constraints(constraints)
         .split(size)
         .to_vec()
+}
+
+/// Renders the root block and header (if applicable) around the main content area.
+///
+/// # Arguments
+/// * `frame` - The drawing frame from ratatui
+/// * `app` - The application state
+/// * `area` - The total available area for rendering
+///
+/// # Returns
+/// * `Rect` - The inner area available for panes
+fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect {
+    let cfg = app.config();
+    let display_cfg = cfg.display();
+    let theme_cfg = cfg.theme();
+    let path_str = shorten_home_path(app.nav().current_dir());
+    let border_type = display_cfg.border_shape().as_border_type();
+
+    if display_cfg.is_unified() {
+        let mut outer_block = Block::default()
+            .borders(Borders::ALL)
+            .border_style(theme_cfg.accent_style())
+            .border_type(border_type);
+
+        if display_cfg.titles() {
+            let mut title_text = " ".to_owned();
+            title_text.push_str(&path_str);
+            title_text.push(' ');
+
+            outer_block = outer_block.title(Line::from(vec![Span::styled(
+                title_text,
+                theme_cfg.path_style(),
+            )]));
+        }
+
+        let inner = outer_block.inner(area);
+        frame.render_widget(outer_block, area);
+        inner
+    } else {
+        let header_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)])
+            .split(area);
+
+        let mut path_display = path_str;
+        path_display.push(' ');
+
+        frame.render_widget(
+            Paragraph::new(Line::from(vec![Span::styled(
+                path_display,
+                theme_cfg.path_style(),
+            )])),
+            header_layout[0],
+        );
+        header_layout[1]
+    }
+}
+
+/// Renders a vertical separator line at the specified x-coordinate within the root area.
+///
+/// # Arguments
+/// * `frame` - The drawing frame from ratatui
+/// * `x` - The x-coordinate where the separator should be drawn
+/// * `root_area` - The root area defining the height of the separator
+/// * `style` - The style to apply to the separator
+fn render_separator(frame: &mut Frame, x: u16, root_area: Rect, style: Style) {
+    widgets::draw_separator(
+        frame,
+        Rect {
+            x,
+            y: root_area.y,
+            width: 1,
+            height: root_area.height,
+        },
+        style,
+    );
+}
+
+/// Renders any active overlays such as input dialogs or message boxes.
+///
+/// # Arguments
+/// * `frame` - The drawing frame from ratatui
+/// * `app` - The application state
+/// * `accent_style` - The accent style to use for overlay borders
+///
+/// Calls appropriate widget drawing functions based on the current overlays.
+fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    if let ActionMode::Input { mode, .. } = app.actions().mode() {
+        if *mode != InputMode::Find {
+            widgets::draw_input_dialog(frame, app, accent_style);
+        } else {
+            widgets::draw_find_dialog(frame, app, accent_style);
+        }
+    }
+
+    for overlay in app.overlays().iter() {
+        match overlay {
+            Overlay::ShowInfo { info } => {
+                widgets::draw_show_info_dialog(frame, app, accent_style, info);
+            }
+            Overlay::Message { text } => {
+                widgets::draw_message_overlay(frame, app, accent_style, text);
+            }
+        }
+    }
+}
+
+/// Helper function to calculate and return layout metrics
+///
+/// Used to store pane widths and heights in the AppState for later use.
+///
+/// # Arguments:
+/// * `area` - The total available area for layout
+/// * `app` - The application state containing configuration
+///
+/// # Returns:
+/// * `LayoutMetrics` - The calculated layout metrics
+fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
+    let chunks = layout_chunks(area, app);
+    let mut metrics = LayoutMetrics::default();
+    let display_cfg = app.config().display();
+
+    let mut idx = 0;
+    let has_sep = display_cfg.separators() && !display_cfg.is_split();
+
+    // Helper to get inner width and height of a Rect, accounting for borders
+    let get_inner = |rect: Rect| {
+        let width = if display_cfg.is_split() || display_cfg.is_unified() {
+            rect.width.saturating_sub(2)
+        } else {
+            rect.width
+        };
+
+        let height = rect.height.saturating_sub(2);
+        (width as usize, height as usize)
+    };
+
+    if display_cfg.parent() && idx < chunks.len() {
+        metrics.parent_width = get_inner(chunks[idx]).0;
+        idx += if has_sep { 2 } else { 1 };
+    }
+
+    if idx < chunks.len() {
+        metrics.main_width = get_inner(chunks[idx]).0;
+        idx += if has_sep && display_cfg.preview() {
+            2
+        } else {
+            1
+        };
+    }
+
+    if display_cfg.preview() && idx < chunks.len() {
+        let (width, height) = get_inner(chunks[idx]);
+        metrics.preview_width = width;
+        metrics.preview_height = height;
+    }
+    metrics
 }
