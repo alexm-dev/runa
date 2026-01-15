@@ -336,7 +336,6 @@ impl<'a> AppState<'a> {
             show_system: self.config.show_system(),
             case_insensitive: self.config.case_insensitive(),
             always_show: Arc::clone(self.config.always_show()),
-            pane_width: self.metrics.main_width,
             request_id,
         });
     }
@@ -357,7 +356,6 @@ impl<'a> AppState<'a> {
                     show_system: self.config.show_system(),
                     case_insensitive: self.config.case_insensitive(),
                     always_show: Arc::clone(self.config.always_show()),
-                    pane_width: self.metrics.preview_width,
                     request_id: req_id,
                 });
             } else {
@@ -399,7 +397,6 @@ impl<'a> AppState<'a> {
                     show_system: self.config.show_system(),
                     case_insensitive: self.config.case_insensitive(),
                     always_show: Arc::clone(self.config.always_show()),
-                    pane_width: self.metrics.parent_width,
                     request_id: req_id,
                 });
             }

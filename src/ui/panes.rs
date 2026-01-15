@@ -475,12 +475,11 @@ fn make_entry_row<'a>(
         ));
     }
 
-    let name_str = if entry.is_dir() && context.show_marker {
-        entry.display_name()
-    } else {
-        entry.name_str()
-    };
-    spans.push(Span::raw(name_str));
+    spans.push(Span::raw(entry.name_str()));
+
+    if entry.is_dir() && context.show_marker {
+        spans.push(Span::styled("/", row_style.add_modifier(Modifier::DIM)));
+    }
 
     if entry.is_symlink()
         && let Some(dir) = current_dir

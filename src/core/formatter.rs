@@ -11,8 +11,9 @@ use crate::core::{FileEntry, browse_dir};
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
-use unicode_width::UnicodeWidthChar;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
@@ -48,7 +49,6 @@ pub struct Formatter {
     case_insensitive: bool,
     always_show: Arc<HashSet<OsString>>,
     always_show_lowercase: Arc<HashSet<String>>,
-    pane_width: usize,
 }
 
 impl Formatter {
@@ -58,7 +58,6 @@ impl Formatter {
         show_system: bool,
         case_insensitive: bool,
         always_show: Arc<HashSet<OsString>>,
-        pane_width: usize,
     ) -> Self {
         let always_show_lowercase = Arc::new(
             always_show
@@ -73,15 +72,13 @@ impl Formatter {
             case_insensitive,
             always_show,
             always_show_lowercase,
-            pane_width,
         }
     }
 
-    /// Formats and sorts the given file entries in place according to the formatter's settings.
+    /// Sorts the given file entries in place according to the formatter's settings.
     /// # Arguments
-    /// * `entries` - Mutable slice of FileEntry to format and sort.
-    pub fn format(&self, entries: &mut [FileEntry]) {
-        // Sort the entries
+    /// * `entries` - Mutable slice of FileEntry to sort.
+    pub fn sort_entries(&self, entries: &mut [FileEntry]) {
         entries.sort_by(|a, b| {
             if self.dirs_first {
                 match (a.is_dir(), b.is_dir()) {
@@ -93,41 +90,14 @@ impl Formatter {
             if self.case_insensitive {
                 a.lowercase_name().cmp(b.lowercase_name())
             } else {
-                a.name_str().cmp(b.name_str())
+                a.name_str().cmp(&b.name_str())
             }
         });
-
-        for entry in entries.iter_mut() {
-            let base_name = if entry.is_dir() {
-                entry.name_str().to_owned() + "/"
-            } else {
-                entry.name_str().to_owned()
-            };
-
-            let mut out = String::with_capacity(self.pane_width);
-            let mut current_w = 0;
-
-            for c in base_name.chars() {
-                // simple truncation for the main list
-                let w = unicode_width::UnicodeWidthChar::width(c).unwrap_or(0);
-                if current_w + w > self.pane_width {
-                    if !out.is_empty() {
-                        out.pop();
-                        out.push('…');
-                    }
-                    break;
-                }
-                out.push(c);
-                current_w += w;
-            }
-
-            if current_w < self.pane_width {
-                out.push_str(&" ".repeat(self.pane_width - current_w));
-            }
-            entry.set_display_name(out);
-        }
     }
 
+    /// Filters the given file entries in place according to the formatter's settings.
+    /// # Arguments
+    /// * `entries` - Mutable vector of FileEntry to filter.
     pub fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         entries.retain(|e| {
             let is_exception = if self.case_insensitive {
@@ -144,8 +114,32 @@ impl Formatter {
             let system_ok = self.show_system || !e.is_system();
             hidden_ok && system_ok
         });
-        self.format(entries);
+        self.sort_entries(entries);
     }
+}
+
+pub fn truncate_name<'a>(name: &'a str, max_width: usize) -> Cow<'a, str> {
+    // 1. Instant exit: If it fits, return the reference (Zero Allocation)
+    if name.width() <= max_width {
+        return Cow::Borrowed(name);
+    }
+
+    // 2. Only if it's too long, we do the work
+    let target_width = max_width.saturating_sub(1);
+    let mut current_width = 0;
+    let mut result = String::with_capacity(name.len());
+
+    for c in name.chars() {
+        let char_width = c.width().unwrap_or(0);
+        if current_width + char_width > target_width {
+            break;
+        }
+        result.push(c);
+        current_width += char_width;
+    }
+
+    result.push('…');
+    Cow::Owned(result)
 }
 
 /// Formatts the file attributes like Directory, Symlink, and permissions in a unix-like format
