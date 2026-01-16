@@ -253,6 +253,7 @@ bg = "default"
 # If on, then selection.bg and .bg are set to "default" or to a specific override.
 selection_mode = "on"
 
+# Overrides the central [theme.selection] for just the parent pane
 selection.fg = "default"
 selection.bg = "default"
 
@@ -265,6 +266,7 @@ bg = "default"
 # If on, then selection.bg and .bg are set to "default" or to a specific override.
 selection_mode = "on"
 
+# Overrides the central [theme.selection] for just the preview pane
 selection.fg = "default"
 selection.bg = "default"
 
