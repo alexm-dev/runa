@@ -118,7 +118,8 @@ Before Submittting your Pull Request, ensure your branch is up-to-date with the 
 
 ## Communication
 
-Design clarifications, ideas, and general discussion can happen via [GitHub Discussions](https://github.com/alexm-dev/runa/discussions). Please be respectful and considerate toward other contributors.
+Design clarifications, ideas, and general discussion can happen via [GitHub Discussions](https://github.com/alexm-dev/runa/discussions).  
+Please be respectful and considerate toward other contributors.
 
 We use **Issues** strictly for tracking bugs and planned features. When participating, please be respectful and considerate toward other contributors.
 
