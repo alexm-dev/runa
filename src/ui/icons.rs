@@ -9,143 +9,136 @@
 //! the corresponding Nerd Font icon.
 
 use crate::core::FileEntry;
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use phf::phf_map;
 
 /// File extension to icon mapping
 /// This map associates common file extensions with their corresponding
 /// Nerd Font icons.
 /// For example, "rs" maps to the Rust icon "".
-pub static EXT_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert("rs", "");
-    m.insert("py", "");
-    m.insert("js", "");
-    m.insert("md", "");
-    m.insert("html", "");
-    m.insert("css", "");
-    m.insert("json", "");
-    m.insert("xml", "");
-    m.insert("sh", "");
-    m.insert("go", "󰟓");
-    m.insert("java", "");
-    m.insert("c", "");
-    m.insert("cpp", "");
-    m.insert("h", "");
-    m.insert("hpp", "");
-    m.insert("php", "");
-    m.insert("rb", "");
-    m.insert("swift", "");
-    m.insert("kt", "");
-    m.insert("lua", "");
-    m.insert("ts", "");
-    m.insert("tsx", "");
-    m.insert("jsx", "");
-    m.insert("vue", "");
-    m.insert("sql", "");
-    m.insert("lock", "");
-    m.insert("exe", "");
-    m.insert("zip", "");
-    m.insert("tar", "");
-    m.insert("gz", "");
-    m.insert("mp3", "");
-    m.insert("mp4", "");
-    m.insert("png", "");
-    m.insert("jpg", "");
-    m.insert("jpeg", "");
-    m.insert("gif", "");
-    m.insert("svg", "");
-    m.insert("pdf", "");
-    m.insert("doc", "");
-    m.insert("docx", "");
-    m.insert("xls", "");
-    m.insert("xlsx", "");
-    m.insert("ppt", "");
-    m.insert("pptx", "");
-    m.insert("txt", "");
-    m.insert("log", "");
-    m.insert("cfg", "");
-    m.insert("config", "");
-    m.insert("ini", "");
-    m.insert("bat", "");
-    m.insert("ps1", "󰨊");
-    m.insert("cmd", "");
-    m.insert("dll", "");
-    m.insert("yml", "");
-    m.insert("yaml", "");
-    m.insert("toml", "");
-    m.insert("deb", "");
-    m.insert("rpm", "");
-    m.insert("dmg", "");
-    m.insert("appimage", "");
-    m.insert("snap", "");
-    m.insert("flatpak", "");
-    m.insert("msi", "");
-    m.insert("iso", "󰗮");
-    m.insert("img", "󰗮");
-    m.insert("vhd", "");
-    m.insert("cab", "");
-    m.insert("psd", "");
-    m.insert("patch", "");
-    m.insert("diff", "");
-    m.insert("ebuild", "");
-    m.insert("spec", "");
-    m
-});
+static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+    "rs" => "",
+    "py" => "",
+    "js" => "",
+    "md" => "",
+    "html" => "",
+    "css" => "",
+    "json" => "",
+    "xml" => "",
+    "sh" => "",
+    "go" => "󰟓",
+    "java" => "",
+    "c" => "",
+    "cpp" => "",
+    "h" => "",
+    "hpp" => "",
+    "php" => "",
+    "rb" => "",
+    "swift" => "",
+    "kt" => "",
+    "lua" => "",
+    "ts" => "",
+    "tsx" => "",
+    "jsx" => "",
+    "vue" => "",
+    "sql" => "",
+    "lock" => "",
+    "exe" => "",
+    "zip" => "",
+    "tar" => "",
+    "gz" => "",
+    "mp3" => "",
+    "mp4" => "",
+    "png" => "",
+    "jpg" => "",
+    "jpeg" => "",
+    "gif" => "",
+    "svg" => "",
+    "pdf" => "",
+    "doc" => "",
+    "docx" => "",
+    "xls" => "",
+    "xlsx" => "",
+    "ppt" => "",
+    "pptx" => "",
+    "txt" => "",
+    "log" => "",
+    "cfg" => "",
+    "config" => "",
+    "ini" => "",
+    "bat" => "",
+    "ps1" => "󰨊",
+    "cmd" => "",
+    "dll" => "",
+    "yml" => "",
+    "yaml" => "",
+    "toml" => "",
+    "deb" => "",
+    "rpm" => "",
+    "dmg" => "",
+    "appimage" => "",
+    "snap" => "",
+    "flatpak" => "",
+    "msi" => "",
+    "iso" => "󰗮",
+    "img" => "󰗮",
+    "vhd" => "",
+    "cab" => "",
+    "psd" => "",
+    "patch" => "",
+    "diff" => "",
+    "ebuild" => "",
+    "spec" => "",
+};
 
 /// Special file names
 /// This map associates specific filenames with their corresponding
 /// Nerd Font icons.
 /// For example, "Cargo.toml" maps to the icon "".
-pub static SPECIAL_FILE_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert("README.md", "");
-    m.insert("LICENSE", "");
-    m.insert("LICENSE.txt", "");
-    m.insert("Makefile", "");
-    m.insert(".gitignore", "");
-    m.insert(".gitconfig", "");
-    m.insert("Cargo.toml", "");
-    m.insert("Dockerfile", "");
-    m.insert("package.json", "");
-    m.insert("tsconfig.json", "");
-    m.insert("webpack.config.js", "");
-    m.insert("Pipfile", "");
-    m.insert("requirements.txt", "");
-    m.insert("setup.py", "");
-    m.insert("config.yaml", "");
-    m.insert("config.yml", "");
-    m.insert(".env", "");
-    m.insert(".env.local", "");
-    m.insert(".env.production", "");
-    m.insert(".env.development", "");
-    m.insert("README", "");
-    m.insert("TODO", "");
-    m.insert("Dockerfile.dev", "");
-    m.insert("Dockerfile.prod", "");
-    m.insert("Cargo.lock", "");
-    m.insert("CMakeLists.txt", "");
-    m.insert("PKGBUILD", "󰣇");
-    m.insert(".bashrc", "󱆃");
-    m.insert(".vimrc", "");
-    m
-});
+pub static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+    "README.md" => "",
+    "LICENSE" => "",
+    "LICENSE.txt" => "",
+    "Makefile" => "",
+    ".gitignore" => "",
+    ".gitconfig" => "",
+    "Cargo.toml" => "",
+    "Dockerfile" => "",
+    "package.json" => "",
+    "tsconfig.json" => "",
+    "webpack.config.js" => "",
+    "Pipfile" => "",
+    "requirements.txt" => "",
+    "setup.py" => "",
+    "config.yaml" => "",
+    "config.yml" => "",
+    ".env" => "",
+    ".env.local" => "",
+    ".env.production" => "",
+    ".env.development" => "",
+    "README" => "",
+    "TODO" => "",
+    "Dockerfile.dev" => "",
+    "Dockerfile.prod" => "",
+    "Cargo.lock" => "",
+    "CMakeLists.txt" => "",
+    "PKGBUILD" => "󰣇",
+    ".bashrc" => "󱆃",
+    ".vimrc" => "",
+};
 
 /// Special directory names
 /// This map associates specific directory names with their corresponding
 /// Nerd Font icons.
 /// For example, "node_modules" maps to the icon "".
-pub static SPECIAL_DIR_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
-    let mut m = HashMap::new();
-    m.insert("bin", "");
-    m.insert("lib", "");
-    m.insert("node_modules", "");
-    m.insert(".git", "");
-    m.insert(".github", "");
-    m.insert(".config", "");
-    m.insert("nvim", "");
-    m
-});
+pub static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+    "bin" => "",
+    "lib" => "",
+    "node_modules" => "",
+    ".git" => "",
+    ".github" => "",
+    ".config" => "",
+    "nvim" => "",
+};
 
 /// Get the Nerd Font icon for a given file entry.
 /// This function determines the appropriate icon based on whether
@@ -156,7 +149,6 @@ pub static SPECIAL_DIR_ICON_MAP: Lazy<HashMap<&'static str, &'static str>> = Laz
 /// * `entry` - A reference to a `FileEntry` representing the file or directory.
 pub fn nerd_font_icon(entry: &FileEntry) -> &'static str {
     let lowercase_name = entry.lowercase_name();
-    let entry_name = entry.name_str();
 
     if entry.is_dir() {
         if let Some(dir_icon) = SPECIAL_DIR_ICON_MAP.get(lowercase_name) {
@@ -173,19 +165,16 @@ pub fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         }
     }
 
-    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(entry_name) {
+    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(entry.name_str().as_ref()) {
         return icon;
     }
 
-    let ext = match entry_name.rsplit('.').next() {
-        Some(ext) if ext != entry_name => ext,
-        _ => "",
-    };
-
-    if !ext.is_empty() {
-        let ext_lc = ext.to_ascii_lowercase();
-        if let Some(icon) = EXT_ICON_MAP.get(ext_lc.as_str()) {
-            return icon;
+    if let Some(dot_idx) = lowercase_name.rfind('.') {
+        if dot_idx > 0 && dot_idx < lowercase_name.len() - 1 {
+            let ext = &lowercase_name[dot_idx + 1..];
+            if let Some(icon) = EXT_ICON_MAP.get(ext) {
+                return icon;
+            }
         }
     }
 

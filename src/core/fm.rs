@@ -5,6 +5,7 @@
 
 use crate::core::format_attributes;
 
+use std::borrow::Cow;
 use std::ffi::OsString;
 use std::fs::{self, symlink_metadata};
 use std::io;
@@ -18,33 +19,29 @@ use std::time::SystemTime;
 ///
 /// # Fields
 /// * `name` - The original OsString name of the file or directory
-/// * `name_str` - The String representation of the name
 /// * `lowercase_name` - The lowercase version of the name for case-insensitive comparisons
-/// * `display_name` - The name formatted for display (e.g., with trailing slash for directories)
-/// * `file_flags` - Struct holding boolean flags for is_dir, is_hidden, is_system, is_symlink
+/// * `flags` - A u8 bitfield representing attributes (is_dir, is_hidden, is_system, is_symlink)
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
-    name_str: String,
-    lowercase_name: String,
-    display_name: String,
-    file_flags: FileFlags,
+    lowercase_name: Box<str>,
+    flags: u8,
 }
 
 impl FileEntry {
-    fn new(
-        name: OsString,
-        name_str: String,
-        lowercase_name: String,
-        display_name: String,
-        file_flags: FileFlags,
-    ) -> Self {
+    // Flag bit definitions
+    // These are used to set and check attributes in the flags field
+    const IS_DIR: u8 = 1 << 0;
+    const IS_HIDDEN: u8 = 1 << 1;
+    const IS_SYSTEM: u8 = 1 << 2;
+    const IS_SYMLINK: u8 = 1 << 3;
+
+    fn new(name: OsString, flags: u8) -> Self {
+        let lowercase_name = name.to_string_lossy().to_lowercase().into_boxed_str();
         FileEntry {
             name,
-            name_str,
             lowercase_name,
-            display_name,
-            file_flags,
+            flags,
         }
     }
 
@@ -54,62 +51,39 @@ impl FileEntry {
         &self.name
     }
 
-    pub fn name_str(&self) -> &str {
-        &self.name_str
+    pub fn name_str(&self) -> Cow<'_, str> {
+        self.name.to_string_lossy()
     }
 
     pub fn lowercase_name(&self) -> &str {
         &self.lowercase_name
     }
 
-    pub fn display_name(&self) -> &str {
-        &self.display_name
-    }
-
     pub fn is_dir(&self) -> bool {
-        self.file_flags.is_dir
+        self.flags & Self::IS_DIR != 0
     }
 
     pub fn is_hidden(&self) -> bool {
-        self.file_flags.is_hidden
+        self.flags & Self::IS_HIDDEN != 0
     }
 
     pub fn is_system(&self) -> bool {
-        self.file_flags.is_system
+        self.flags & Self::IS_SYSTEM != 0
     }
 
     pub fn is_symlink(&self) -> bool {
-        self.file_flags.is_symlink
+        self.flags & Self::IS_SYMLINK != 0
     }
 
+    /// Returns the file extension in lowercase if it exists
+    /// # Returns
+    /// An Option containing the lowercase file extension as a String, or None if no extension exists
     pub fn extension(&self) -> Option<String> {
-        Path::new(&self.name_str)
+        Path::new(&self.name)
             .extension()
             .and_then(|s| s.to_str())
             .map(|s| s.to_ascii_lowercase())
     }
-
-    // Setters
-
-    pub fn set_display_name(&mut self, new_name: String) {
-        self.display_name = new_name;
-    }
-}
-
-/// Struct to hold file attribute flags for FileEntry
-/// Holds is_dir, is_hidden, is_system, is_symlink booleans.
-/// Used internally by FileEntry.
-/// # Fields
-/// * `is_dir` - Boolean indicating if the entry is a directory
-/// * `is_hidden` - Boolean indicating if the entry is hidden
-/// * `is_system` - Boolean indicating if the entry is a system file
-/// * `is_symlink` - Boolean indicating if the entry is a symlink
-#[derive(Debug, Clone, Copy)]
-struct FileFlags {
-    is_dir: bool,
-    is_hidden: bool,
-    is_system: bool,
-    is_symlink: bool,
 }
 
 /// Enumerator for the filye types which are then shown inside [FileInfo]
@@ -204,7 +178,7 @@ impl FileInfo {
 ///
 /// # Returns
 /// A Result containing a vector of FileEntry structs or an std::io::Error
-pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
+pub fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
     let mut entries = Vec::with_capacity(256);
 
     for entry in fs::read_dir(path)? {
@@ -214,21 +188,25 @@ pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
         };
 
         let name = entry.file_name();
-        let name_lossy = name.to_string_lossy();
-
-        let (is_dir, is_symlink) = match entry.file_type() {
-            Ok(ft) => (ft.is_dir(), ft.is_symlink()),
-            Err(_) => (false, false),
+        let ft = match entry.file_type() {
+            Ok(ft) => ft,
+            Err(_) => continue,
         };
 
-        let is_hidden: bool;
-        let is_system: bool;
+        let mut flags = 0u8;
+        if ft.is_dir() {
+            flags |= FileEntry::IS_DIR;
+        }
+        if ft.is_symlink() {
+            flags |= FileEntry::IS_SYMLINK;
+        }
 
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
-            is_hidden = name.as_bytes().first() == Some(&b'.');
-            is_system = false;
+            if name.as_bytes().first() == Some(&b'.') {
+                flags |= FileEntry::IS_HIDDEN;
+            }
         }
 
         #[cfg(windows)]
@@ -236,36 +214,21 @@ pub fn browse_dir(path: &std::path::Path) -> std::io::Result<Vec<FileEntry>> {
             use std::os::windows::fs::MetadataExt;
             if let Ok(md) = entry.metadata() {
                 let attrs = md.file_attributes();
-                is_hidden = (attrs & 0x2 != 0) || name_lossy.starts_with('.');
-                is_system = attrs & 0x4 != 0;
-            } else {
-                is_hidden = name_lossy.starts_with('.');
-                is_system = false;
+
+                if attrs & 0x2 != 0 {
+                    flags |= FileEntry::IS_HIDDEN;
+                }
+                if attrs & 0x4 != 0 {
+                    flags |= FileEntry::IS_SYSTEM;
+                }
+            }
+
+            if flags & FileEntry::IS_HIDDEN == 0 && name.to_string_lossy().starts_with('.') {
+                flags |= FileEntry::IS_HIDDEN;
             }
         }
 
-        let name_str: String = name_lossy.into_owned();
-        let lowercase_name: String = name_str.to_lowercase();
-
-        let mut display_name = name_str.clone();
-        if is_dir {
-            display_name.push('/');
-        }
-
-        let file_flags = FileFlags {
-            is_dir,
-            is_hidden,
-            is_system,
-            is_symlink,
-        };
-
-        entries.push(FileEntry::new(
-            name,
-            name_str,
-            lowercase_name,
-            display_name,
-            file_flags,
-        ));
+        entries.push(FileEntry::new(name, flags));
     }
     Ok(entries)
 }

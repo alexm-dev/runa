@@ -11,87 +11,46 @@ use ratatui::layout::Rect;
 use runa_tui::app::AppState;
 use runa_tui::config::{Config, load::RawConfig};
 use runa_tui::core;
-use runa_tui::core::Formatter;
 use runa_tui::ui::render::layout_chunks;
-use std::collections::HashSet;
 use std::error;
-use std::path::Path;
-use std::sync::Arc;
 use tempfile::tempdir;
 
 #[test]
-fn test_formatter_truncation_and_padding() -> Result<(), Box<dyn error::Error>> {
-    let width = 10;
-    let formatter = Formatter::new(true, true, true, false, Arc::new(HashSet::new()), width);
+fn test_ui_sanitization_and_exact_width() {
+    let pane_width = 10;
 
-    let path = Path::new(".");
-    let mut entries = core::browse_dir(path)?;
+    let cases = vec![
+        ("short.txt", 10),
+        ("very_long_filename.txt", 10),
+        ("🦀_crab.rs", 10),
+        ("\t_tab", 10),
+    ];
 
-    formatter.format(&mut entries);
+    for (input, expected_width) in cases {
+        let result = core::sanitize_to_exact_width(input, pane_width);
 
-    assert!(
-        !entries.is_empty(),
-        "Should have found files in project root"
-    );
+        let actual_width = unicode_width::UnicodeWidthStr::width(result.as_str());
 
-    for entry in entries {
-        let disp = entry.display_name();
-        let visual_width = unicode_width::UnicodeWidthStr::width(disp);
-
-        // every single line must be exactly the pane width
         assert_eq!(
-            visual_width,
-            width,
-            "Visual width mismatch for '{}'. Got {}, expected {}",
-            entry.name_str(),
-            visual_width,
-            width
+            actual_width, expected_width,
+            "Failed to produce exact width for input: '{}'. Result was: '{}' (width: {})",
+            input, result, actual_width
         );
 
-        let suffix_len = if entry.is_dir() { 1 } else { 0 };
-        if entry.name_str().chars().count() + suffix_len > width {
-            assert!(
-                disp.contains('…'),
-                "Long file '{}' (len {}) should contain ellipsis '…' at width {}",
-                entry.name_str(),
-                entry.name_str().chars().count(),
-                width
-            );
-        }
-
-        // Special check for crab file if it exists in the directory
-        if entry.name_str().contains('🦀') {
-            // If the crab file is short, ensure it was padded correctly
-            if visual_width == width && !disp.contains('…') {
-                assert!(
-                    disp.ends_with(' '),
-                    "Short crab file should be space-padded"
-                );
-            }
-        }
+        assert!(
+            !result.chars().any(|c| c.is_control() && c != ' '),
+            "Result contains control characters: {:?}",
+            result
+        );
     }
-    Ok(())
 }
 
 #[test]
-fn test_formatter_empty_dir() -> Result<(), Box<dyn error::Error>> {
-    let width = 15;
-    let formatter = Formatter::new(true, true, true, false, Arc::new(HashSet::new()), width);
-
+fn test_core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
     let temp_dir = tempdir()?;
+    let entries = core::browse_dir(temp_dir.path())?;
 
-    let empty_path = temp_dir.path();
-    let mut entries = core::browse_dir(empty_path)?;
-    formatter.format(&mut entries);
-
-    for entry in entries {
-        let disp = entry.display_name();
-        assert!(
-            disp.chars().count() <= width,
-            "Entry '{}' exceeds width",
-            entry.name_str()
-        );
-    }
+    assert!(entries.is_empty(), "Directory should be empty");
     Ok(())
 }
 

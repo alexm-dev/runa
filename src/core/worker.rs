@@ -108,7 +108,6 @@ pub enum WorkerTask {
         show_system: bool,
         case_insensitive: bool,
         always_show: Arc<HashSet<OsString>>,
-        pane_width: usize,
         request_id: u64,
     },
     LoadPreview {
@@ -196,7 +195,6 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                 show_system,
                 case_insensitive,
                 always_show,
-                pane_width,
                 request_id,
             } = task
             else {
@@ -210,7 +208,6 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                         show_system,
                         case_insensitive,
                         always_show,
-                        pane_width,
                     );
                     formatter.filter_entries(&mut entries);
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
