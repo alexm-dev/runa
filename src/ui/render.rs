@@ -78,9 +78,9 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
 
         let parent_pane_style = PaneStyles {
-            item: theme_cfg.parent().effective_style_or_theme(),
+            item: theme_cfg.parent_item_style(),
             dir: theme_cfg.directory_style(),
-            selection: theme_cfg.parent().selection_style_or_theme(),
+            selection: theme_cfg.parent_selection_style(),
             symlink: symlink_style,
         };
 
@@ -181,9 +181,9 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
         );
 
         let preview_pane_styles = PaneStyles {
-            item: theme_cfg.preview().effective_style_or_theme(),
+            item: theme_cfg.preview_item_style(),
             dir: theme_cfg.directory_style(),
-            selection: theme_cfg.preview().selection_style_or_theme(),
+            selection: theme_cfg.preview_selection_style(),
             symlink: symlink_style,
         };
 

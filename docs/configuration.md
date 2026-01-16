@@ -145,9 +145,13 @@ position = "default"
 
 ## Theme Configuration
 
+The easiest way to change colors:  
+Just set the colors you care about directly under `[theme]`, you only need to override what you want.
+
 ```toml
 [theme]
 # The name of the preset themes included in runa.
+# Choose a preset, or leave as "default" or omit.
 name = "default"
 # Available options (case-sensitive strings):
 #   "gruvbox-dark"
@@ -164,8 +168,6 @@ name = "default"
 #   "tokyonight-day"
 #   "everforest"
 #   "rose-pine"       # or "rose_pine"
-# Example:
-# name = "gruvbox-dark"
 
 # Coloring option for the symling indicator on the entries.
 symlink = "default"
@@ -173,6 +175,11 @@ symlink = "default"
 # The symbol for the current selection. Use "" or " " to disable.
 selection_icon = ">"
 
+# Change your favorite colors easily, no need for full tables or advanced options!
+accent.fg = "#e9a"
+selection.bg = "#204488"
+directory.fg = "cyan"
+# ... add any .fg or .bg of the available options you like.
 ```
 
 
