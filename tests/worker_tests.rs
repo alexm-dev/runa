@@ -16,7 +16,6 @@ use std::sync::atomic::AtomicBool;
 use std::thread;
 use std::time::Duration;
 use tempfile::tempdir;
-use unicode_width::UnicodeWidthStr;
 
 #[test]
 fn test_worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,7 +33,6 @@ fn test_worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
         show_system: false,
         case_insensitive: true,
         always_show: Arc::new(HashSet::new()),
-        pane_width: 20,
         request_id: 1,
     })?;
 
@@ -44,12 +42,7 @@ fn test_worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
 
             // Check display name width
             for entry in entries {
-                let disp = entry.display_name();
-                assert!(
-                    disp.chars().count() <= 20,
-                    "Entry '{}' too wide",
-                    entry.name_str()
-                );
+                assert!(!entry.name_str().is_empty());
             }
         }
         WorkerResponse::Error(e) => panic!("Worker error: {}", e),
@@ -68,7 +61,6 @@ fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Er
 
     let dirs = vec![curr_dir, temp_dir.path().to_path_buf(), safe_subdir.clone()];
 
-    let pane_base = 20;
     let thread_count = 2;
     let requests_per_thread = 25;
 
@@ -94,7 +86,6 @@ fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Er
                         show_system: rng.random_bool(0.5),
                         case_insensitive: rng.random_bool(0.5),
                         always_show: Arc::new(HashSet::new()),
-                        pane_width: pane_base + rng.random_range(0..10),
                         request_id: (t * requests_per_thread + i) as u64,
                     })
                     .expect("Couldn't send task to worker");
@@ -115,26 +106,17 @@ fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Er
     // Read responses
     let total_requests = thread_count * requests_per_thread;
     let mut valid_responses = 0;
+
     for _ in 0..total_requests {
         match res_rx.recv_timeout(Duration::from_secs(2)) {
             Ok(WorkerResponse::DirectoryLoaded { entries, .. }) => {
                 valid_responses += 1;
                 for entry in &entries {
-                    let disp = entry.display_name();
-                    let visual_width = UnicodeWidthStr::width(disp);
+                    let name = entry.name_str();
+
+                    assert!(!name.is_empty(), "Entry name_str must not be empty.");
                     assert!(
-                        visual_width <= pane_base + 10,
-                        "Entry '{}' display width {} > allowed ({}).",
-                        entry.name_str(),
-                        visual_width,
-                        pane_base + 10
-                    );
-                    assert!(
-                        !entry.name_str().is_empty(),
-                        "Entry name_str must not be empty."
-                    );
-                    assert!(
-                        !entry.name_str().contains('\0'),
+                        !name.contains('\0'),
                         "Entry name_str must not contain null."
                     );
                 }

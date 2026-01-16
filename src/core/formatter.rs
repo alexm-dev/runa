@@ -11,9 +11,8 @@ use crate::core::{FileEntry, browse_dir};
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_width::UnicodeWidthChar;
 
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
@@ -116,30 +115,6 @@ impl Formatter {
         });
         self.sort_entries(entries);
     }
-}
-
-pub fn truncate_name<'a>(name: &'a str, max_width: usize) -> Cow<'a, str> {
-    // 1. Instant exit: If it fits, return the reference (Zero Allocation)
-    if name.width() <= max_width {
-        return Cow::Borrowed(name);
-    }
-
-    // 2. Only if it's too long, we do the work
-    let target_width = max_width.saturating_sub(1);
-    let mut current_width = 0;
-    let mut result = String::with_capacity(name.len());
-
-    for c in name.chars() {
-        let char_width = c.width().unwrap_or(0);
-        if current_width + char_width > target_width {
-            break;
-        }
-        result.push(c);
-        current_width += char_width;
-    }
-
-    result.push('…');
-    Cow::Owned(result)
 }
 
 /// Formatts the file attributes like Directory, Symlink, and permissions in a unix-like format
