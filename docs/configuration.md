@@ -168,6 +168,13 @@ name = "default"
 #   "tokyonight-day"
 #   "everforest"
 #   "rose-pine"       # or "rose_pine"
+#   "nord"
+#   "two-dark"
+#   "one-dark"
+#   "solarized-dark"
+#   "solarized-light"
+#   "dracula"
+#   "monokai"
 
 # Coloring option for the symling indicator on the entries.
 symlink = "default"
