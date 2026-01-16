@@ -281,12 +281,14 @@ selection_icon = ""
 # [theme.parent]
 # fg = "default"
 # bg = "default"
+# selection_mode = "on"
 # selection.fg = "default"
 # selection.bg = "default"
 
 # [theme.preview]
 # fg = "default"
 # bg = "default"
+# selection_mode = "on"
 # selection.fg = "default"
 # selection.bg = "default"
 
@@ -366,6 +368,7 @@ entry_padding = 1
 [theme]
 name = "default"
 selection_icon = ""
+accent.fg = "default"
 
 # [theme.path]
 # fg = "magenta"
