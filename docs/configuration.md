@@ -222,6 +222,8 @@ These options are optional and can be omitted.
 #
 # Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
 
+# The global selection coloring section.
+# Can be overwritten for each pane.
 [theme.selection]     # Selection bar colors
 fg = "default"
 bg = "default"
@@ -245,12 +247,24 @@ bg = "default"
 [theme.parent]        # Parent pane text
 fg = "default"
 bg = "default"
+
+# Sets the selection coloring mode.
+# If off, then selection.fg and .bg are ignored and off.
+# If on, then selection.bg and .bg are set to "default" or to a specific override.
+selection_mode = "on"
+
 selection.fg = "default"
 selection.bg = "default"
 
 [theme.preview]       # Preview pane text
 fg = "default"
 bg = "default"
+
+# Sets the selection coloring mode.
+# If off, then selection.fg and .bg are ignored and off.
+# If on, then selection.bg and .bg are set to "default" or to a specific override.
+selection_mode = "on"
+
 selection.fg = "default"
 selection.bg = "default"
 

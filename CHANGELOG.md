@@ -9,6 +9,7 @@ File entry performance improvements. `runa` should now feel much smoother in lar
 
 ### Added
 - **New Theme presets**: Added more theme presets. [(#23)](https://github.com/alexm-dev/runa/pull/23)
+- **Selection mode**: Added a new toggle to disable or enable the selection coloring modes for the parent and or the preview pane [(#24)](https://github.com/alexm-dev/runa/pull/24)
 
 ### Changed
 - **FileEntry refactor**: Refactored FileEntry and `core/fm` for substantial performance improvements [(#21)](https://github.com/alexm-dev/runa/pull/21)

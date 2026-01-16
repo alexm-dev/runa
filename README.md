@@ -7,7 +7,7 @@
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?label=AUR&color=blue&style=flat-square&logo=archlinux)](https://aur.archlinux.org/packages/runa)
 [![Language](https://img.shields.io/github/languages/top/alexm-dev/runa?style=flat-square&logo=rust&color=%23e67e22&label=Rust)](https://github.com/alexm-dev/runa)
-[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache%202.0-blue?style=flat-square)](#license)
+[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache-2.0-blue?style=flat-square)](#license)
 
 </div>
 <div align="center">
@@ -42,9 +42,9 @@
 
 - **Multi-threaded engine:** Spawns 4 dedicated worker threads (with `crossbeam_channel`) for I/O, preview, find, and file operations, so UI is never blocked.
 - **Essential-only Rust crates:** No external TUI frameworks or bloat.
-- **Direct terminal rendering:** Uses low-overhead [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
+- **Direct terminal rendering:** Uses [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
-- **Small, native binary:** The `rn` binary is compact (typically 1.4–2 MB, depending on operating system and architecture).
+- **Small, native binary:** The `rn` binary is compact (typically 1.3–2 MB, depending on operating system and architecture).
 
 </details>
 
