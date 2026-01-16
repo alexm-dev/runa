@@ -169,12 +169,13 @@ pub fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         return icon;
     }
 
-    if let Some(dot_idx) = lowercase_name.rfind('.') {
-        if dot_idx > 0 && dot_idx < lowercase_name.len() - 1 {
-            let ext = &lowercase_name[dot_idx + 1..];
-            if let Some(icon) = EXT_ICON_MAP.get(ext) {
-                return icon;
-            }
+    if let Some(dot_idx) = lowercase_name.rfind('.')
+        && dot_idx > 0
+        && dot_idx < lowercase_name.len() - 1
+    {
+        let ext = &lowercase_name[dot_idx + 1..];
+        if let Some(icon) = EXT_ICON_MAP.get(ext) {
+            return icon;
         }
     }
 

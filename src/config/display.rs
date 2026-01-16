@@ -372,6 +372,7 @@ pub enum BorderShape {
     Square,
     Rounded,
     Double,
+    Thick,
 }
 
 /// Public methods for accessing border shape options
@@ -381,6 +382,7 @@ impl BorderShape {
             BorderShape::Square => BorderType::Plain,
             BorderShape::Rounded => BorderType::Rounded,
             BorderShape::Double => BorderType::Double,
+            BorderShape::Thick => BorderType::Thick,
         }
     }
 }

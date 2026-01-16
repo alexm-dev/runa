@@ -6,6 +6,7 @@
 pub mod display;
 pub mod input;
 pub mod load;
+pub mod presets;
 pub mod theme;
 
 pub use display::Display;
