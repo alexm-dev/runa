@@ -182,11 +182,13 @@ symlink = "default"
 # The symbol for the current selection. Use "" or " " to disable.
 selection_icon = ">"
 
-# Change your favorite colors easily, no need for full tables or advanced options!
-accent.fg = "#e9a"
-selection.bg = "#204488"
-directory.fg = "cyan"
-# ... add any .fg or .bg of the available options you like.
+# You can set each color field directly in [theme] instead.
+# There is now need to create each [theme] subsection for overriding and or creating custom themes.
+# Example:
+selection.fg = "#EEBBAA"
+directory.fg = "#7BA"
+widget.border.fg = "#555555"
+# and so on
 ```
 
 
@@ -382,6 +384,9 @@ main = 40
 
 [theme]
 name = "gruvbox-dark"
+selection.fg = "#EBA"
+entry.fg = "#333333"
+directory.fg = "magenta"
 
 [theme.accent]
 fg = "#00ff00"

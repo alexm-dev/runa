@@ -340,31 +340,26 @@ impl Default for ColorPair {
 /// ColorPair implementation
 /// Provides methods to convert to Style and get effective styles.
 impl ColorPair {
-    /// Converts a `ColorPair` to a `Style`, using the provided fallback for any `Reset` colors.
-    ///
-    /// If the foreground or background color is `Color::Reset`, the corresponding color from
-    /// `fallback` is used. Otherwise, the `ColorPair`’s own color is used.
-    ///
-    /// # Arguments
-    /// * `fallback` - A `ColorPair` to use for any `Reset` colors.
-    ///
-    /// # Returns
-    /// * `Style` - A `Style` with `fg` and `bg` set to the effective colors.
-    ///
-    /// # Example
-    /// Use `ColorPair::new(fg, bg)` to create a color pair before calling `style_or`.
+    /// Resolves the ColorPair by replacing Reset colors with those from another ColorPair.
+    pub fn resolve(&self, other: &ColorPair) -> Self {
+        Self {
+            fg: if self.fg == Color::Reset {
+                other.fg
+            } else {
+                self.fg
+            },
+            bg: if self.bg == Color::Reset {
+                other.bg
+            } else {
+                self.bg
+            },
+        }
+    }
+
+    /// Converts the ColorPair to a Style, falling back to the provided fallback ColorPair for Reset colors.
     pub fn style_or(&self, fallback: &ColorPair) -> Style {
-        let fg = if self.fg == Color::Reset {
-            fallback.fg
-        } else {
-            self.fg
-        };
-        let bg = if self.bg == Color::Reset {
-            fallback.bg
-        } else {
-            self.bg
-        };
-        Style::default().fg(fg).bg(bg)
+        let resovled = self.resolve(fallback);
+        Style::default().fg(resovled.fg).bg(resovled.bg)
     }
 }
 
@@ -390,9 +385,10 @@ impl PaneTheme {
     /// # Returns
     /// * `Style` - A `Style` representing the selection style.
     pub fn selection_style(&self, fallback: &ColorPair) -> Style {
+        let default = &Theme::internal_defaults().selection;
         match self.selection {
-            Some(sel) => sel.style_or(fallback),
-            None => fallback.style_or(&Theme::internal_defaults().selection),
+            Some(pane_sel) => pane_sel.style_or(&fallback.resolve(default)),
+            None => fallback.style_or(default),
         }
     }
 
