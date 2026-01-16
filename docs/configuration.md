@@ -196,6 +196,16 @@ symlink = "default"
 # The symbol for the current selection. Use "" or " " to disable.
 selection_icon = ">"
 
+```
+
+
+
+## Advanced Theme Configuration
+
+You can override all these color options for each section down below.  
+These options are optional and can be omitted.  
+```toml
+
 [theme.selection]     # Selection bar colors
 fg = "default"
 bg = "default"
@@ -338,7 +348,7 @@ filter              = ["f"]
 toggle_marker       = [" "]     # space bar
 info                = ["i"]
 find                = ["s"]
-clear_makers        = ["Ctrl+c"]
+clear_markers        = ["Ctrl+c"]
 clear_filter        = ["Ctrl+f"]
 ```
 
@@ -356,9 +366,11 @@ borders = "split"
 [display.layout]
 main = 40
 
+[theme]
+name = "gruvbox-dark"
+
 [theme.accent]
 fg = "#00ff00"
-bg = "default"
 
 [theme.widget]
 position = [25, 60]
