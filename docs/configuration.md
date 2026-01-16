@@ -145,31 +145,7 @@ position = "default"
 ## Theme Configuration
 
 ```toml
-# Color keys for most sections are always placed directly in the table:
-# [theme.selection]
-# fg = "yellow"
-# bg = "default"
-#
-# For larger sections such as [theme.widget] or [theme.info], you may use either
-# dot notation (e.g. color.fg, border.bg) OR define subtables like [theme.widget.color]:
-#
-# [theme.widget]
-# color.fg = "white"
-# color.bg = "black"
-# border.fg = "magenta"
-#
-# Alternatively, this works and is equivalent:
-# [theme.widget.color]
-# fg = "white"
-# bg = "black"
-#
-# [theme.widget.border]
-# fg = "magenta"
-#
-# Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
-
 [theme]
-
 # The name of the preset themes included in runa.
 name = "default"
 # Available options (case-sensitive strings):
@@ -205,6 +181,29 @@ selection_icon = ">"
 You can override all these color options for each section down below.  
 These options are optional and can be omitted.  
 ```toml
+
+# Color keys for most sections are always placed directly in the table:
+# [theme.selection]
+# fg = "yellow"
+# bg = "default"
+#
+# For larger sections such as [theme.widget] or [theme.info], you may use either
+# dot notation (e.g. color.fg, border.bg) OR define subtables like [theme.widget.color]:
+#
+# [theme.widget]
+# color.fg = "white"
+# color.bg = "black"
+# border.fg = "magenta"
+#
+# Alternatively, this works and is equivalent:
+# [theme.widget.color]
+# fg = "white"
+# bg = "black"
+#
+# [theme.widget.border]
+# fg = "magenta"
+#
+# Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
 
 [theme.selection]     # Selection bar colors
 fg = "default"
