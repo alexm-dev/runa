@@ -37,5 +37,5 @@ package() {
     install -Dm755 target/release/rn -t "$pkgdir/usr/bin/"
     install -Dm644 LICENSE-MIT -t "$pkgdir/usr/share/licenses/$pkgname/"
     install -Dm644 LICENSE-APACHE -t "$pkgdir/usr/share/licenses/$pkgname/"
-    install -Dm644 docs/configuration.md -t "$pkgdir/usr/share/docs/$pkgname/"
+    install -Dm644 docs/configuration.md -t "$pkgdir/usr/share/doc/$pkgname/"
 }
