@@ -2,6 +2,19 @@
 
 All the changes made to runa are documented here.
 
+
+## Unreleased
+
+File entry performance improvements.
+
+### Changed
+- **FileEntry refactor**: Improved FileEntry and overall performance improvements [(#21)](https://github.com/alexm-dev/runa/pull/21)
+- **UI module refactor**: Improved UI modules for better maintainability [(#20)](https://github.com/alexm-dev/runa/pull/20)
+
+
+---
+
+
 ## [0.5.1] - 2026-01-11
 
 ### Added
