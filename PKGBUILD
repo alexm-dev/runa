@@ -7,7 +7,7 @@ pkgrel=1
 pkgdesc="A fast and lightweight console file browser written in Rust"
 arch=('x86_64' 'aarch64')
 url="https://github.com/alexm-dev/runa"
-license=('MIT')
+license=('MIT' 'Apache-2.0')
 depends=('gcc-libs')
 makedepends=('cargo')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
@@ -35,6 +35,7 @@ check() {
 package() {
     cd "$pkgname-$pkgver"
     install -Dm755 target/release/rn -t "$pkgdir/usr/bin/"
-    install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+    install -Dm644 LICENSE-MIT -t "$pkgdir/usr/share/licenses/$pkgname/"
+    install -Dm644 LICENSE-APACHE -t "$pkgdir/usr/share/licenses/$pkgname/"
     install -Dm644 docs/configuration.md -t "$pkgdir/usr/share/docs/$pkgname/"
 }
