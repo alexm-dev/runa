@@ -348,7 +348,7 @@ filter              = ["f"]
 toggle_marker       = [" "]     # space bar
 info                = ["i"]
 find                = ["s"]
-clear_markers        = ["Ctrl+c"]
+clear_markers       = ["Ctrl+c"]
 clear_filter        = ["Ctrl+f"]
 ```
 
