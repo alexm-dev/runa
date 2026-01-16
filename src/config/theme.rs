@@ -163,10 +163,16 @@ impl Theme {
     // Pane-specific style getters
 
     pub fn parent_selection_style(&self) -> Style {
+        if self.parent.selection_mode == SelectionMode::Off {
+            return Style::default();
+        }
         self.parent.selection_style(&self.selection)
     }
 
     pub fn preview_selection_style(&self) -> Style {
+        if self.preview.selection_mode == SelectionMode::Off {
+            return Style::default();
+        }
         self.preview.selection_style(&self.selection)
     }
 
@@ -363,6 +369,14 @@ impl ColorPair {
     }
 }
 
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq, Default)]
+#[serde(rename_all = "lowercase")]
+enum SelectionMode {
+    #[default]
+    On,
+    Off,
+}
+
 /// PaneTheme struct to hold color and selection styles for panes.
 /// Used for parent and preview panes.
 #[derive(Deserialize, Debug, PartialEq, Clone, Copy, Default)]
@@ -371,6 +385,7 @@ pub struct PaneTheme {
     #[serde(flatten)]
     color: ColorPair,
     selection: Option<ColorPair>,
+    selection_mode: SelectionMode,
 }
 
 /// Similar to ColorPair implementation
