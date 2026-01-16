@@ -8,6 +8,7 @@ runa is under active development and options may change over time.
 - [Quick Start](#quick-start)
 - [General Settings](#general-settings)
 - [Theme Configuration](#theme-configuration)
+- [Advanced Theme Configuration](#advanced-theme-configuration)
 - [Editor](#editor)
 - [Key Bindings](#key-bindings)
 - [Examples](#examples)
