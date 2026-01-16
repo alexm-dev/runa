@@ -392,7 +392,7 @@ impl PaneTheme {
     pub fn selection_style(&self, fallback: &ColorPair) -> Style {
         match self.selection {
             Some(sel) => sel.style_or(fallback),
-            None => fallback.style_or(&ColorPair::default()),
+            None => fallback.style_or(&Theme::internal_defaults().selection),
         }
     }
 
