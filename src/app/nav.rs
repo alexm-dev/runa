@@ -132,8 +132,6 @@ impl NavState {
         self.save_position();
 
         self.current_dir = path;
-        self.entries.clear();
-        self.selected = 0;
         self.restore_filter_for_current_dir();
         // instantly ends all pending messages from the previous directory.
         self.request_id = self.request_id.wrapping_add(1);
