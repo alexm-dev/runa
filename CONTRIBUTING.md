@@ -118,13 +118,15 @@ Before Submittting your Pull Request, ensure your branch is up-to-date with the 
 
 ## Communication
 
-Design clarifications, ideas, and general discussion can happen via GitHub issues. Please be respectful and considerate toward other contributors.
+Design clarifications, ideas, and general discussion can happen via [GitHub Discussions](https://github.com/alexm-dev/runa/discussions). Please be respectful and considerate toward other contributors.
+
+We use **Issues** strictly for tracking bugs and planned features. When participating, please be respectful and considerate toward other contributors.
 
 ---
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the project's open-source license.
+By contributing to runa, you agree that your contributions will be licensed under either the MIT License OR the Apache License, Version 2.0, at your option.
 
 ---
 
