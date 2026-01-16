@@ -8,7 +8,7 @@ repository = "https://github.com/alexm-dev/runa"
 documentation = "https://docs.rs/runa-tui"
 readme = "README.md"
 authors = ["alexm-dev"]
-rust-version = "1.92"
+rust-version = "1.85"
 categories = ["filesystem", "command-line-utilities", "command-line-interface"]
 keywords = ["file-browser", "file-manager", "tui", "cli", "search"]
 
