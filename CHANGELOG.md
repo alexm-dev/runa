@@ -8,7 +8,7 @@ All the changes made to runa are documented here.
 File entry performance improvements.
 
 ### Added
-- **Theme presets**: Added more theme presets. [(#23)][https://github.com/alexm-dev/runa/pull/23]
+- **Theme presets**: Added more theme presets. [(#23)](https://github.com/alexm-dev/runa/pull/23)
 
 ### Changed
 - **FileEntry refactor**: Refactored FileEntry and `core/fm` for substantial performance improvements [(#21)](https://github.com/alexm-dev/runa/pull/21)
