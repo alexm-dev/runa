@@ -7,9 +7,16 @@ All the changes made to runa are documented here.
 
 File entry performance improvements.
 
+### Added
+- **Theme presets**: Added more theme presets. [(#23)][https://github.com/alexm-dev/runa/pull/23]
+
 ### Changed
-- **FileEntry refactor**: Improved FileEntry and overall performance improvements [(#21)](https://github.com/alexm-dev/runa/pull/21)
+- **FileEntry refactor**: Refactored FileEntry and `core/fm` for substantial performance improvements [(#21)](https://github.com/alexm-dev/runa/pull/21)
 - **UI module refactor**: Improved UI modules for better maintainability [(#20)](https://github.com/alexm-dev/runa/pull/20)
+- **Theming**: Changed how parent and preview panes now use selection and entry theme fields in ui/render
+
+### Internal
+- `runa` is now using dual-license with `MIT` OR `Apache-2.0`
 
 
 ---
