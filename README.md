@@ -199,7 +199,7 @@ If you enjoy using **runa**, you can help the project grow:
 
 * ⭐ **Star the Repo:** It helps more people discover runa :)
 * 🐛 **Report Bugs:** Open an issue if something doesn't work as expected.
-* 💡 **Feature Requests:** Suggest new ideas in the [Issues](https://github.com/alexm-dev/runa/issues) tab.
+* 💡 **Feature Requests:** Suggest new ideas in the [Discussions](https://github.com/alexm-dev/runa/discussions) tab.
 * 🦀 **Contribute:** Pull requests are always welcome! Checkout the [CONTRIBUTING guide](CONTRIBUTING.md) for more info.
 
 
