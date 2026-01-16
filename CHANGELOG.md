@@ -2,6 +2,17 @@
 
 All the changes made to runa are documented here.
 
+## [0.5.3] - 2026-01-17
+
+Quick fix for selection entry flicker and `"[Empty]"` flicker on terminals like Windows Terminal.
+
+### Fixed
+- **Selection flicker**: The set_path function no longer resets the selection index to 0 or clears the entries prematurely.  
+This eliminates rapid flickering of the selection highlight and the `[Empty]` label when navigating directories, especially on Windows terminals.
+
+
+---
+
 
 ## [0.5.2] - 2026-01-16
 
