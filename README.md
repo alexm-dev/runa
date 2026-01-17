@@ -78,6 +78,19 @@ yay -S runa
 yay -S runa-bin
 ```
 
+### Homebrew
+
+You can install runa via homebrew.
+
+```bash
+brew tap alexm-dev/tap
+brew install runa
+
+#or for binaries
+brew install runa-bin
+
+```
+
 ### Pre-compiled Binaries
 
 If you'd like to download Pre-compiled binaries instead of installing runa as a crate in cargo or via the AUR,
