@@ -85,9 +85,6 @@ You can install runa via homebrew.
 ```bash
 brew tap alexm-dev/tap
 brew install runa
-
-#or for binaries
-brew install runa-bin
 ```
 
 ### Scoop
