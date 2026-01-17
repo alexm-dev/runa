@@ -88,7 +88,13 @@ brew install runa
 
 #or for binaries
 brew install runa-bin
+```
 
+### Scoop
+
+```bash
+scoop add bucket https://github.com/alexm-dev/scoop-bucket
+scoop install runa
 ```
 
 ### Pre-compiled Binaries
