@@ -19,11 +19,12 @@
 //! This function is used by core/workers.rs to provide file previews in the UI.
 //! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
 
-use crate::core::formatter::{flatten_separators, normalize_relative_path, normalize_separators};
+use crate::core::formatter::normalize_relative_path;
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
 use std::io::{self, BufRead};
@@ -42,8 +43,8 @@ const BUFREADER_SIZE: usize = 32768;
 /// This helps to speed up the search and avoid irrelevant results.
 #[rustfmt::skip]
 const EXCLUDES: &[&str] = &[
-    ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist",
-    "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj"
+    ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist", ".local",
+    "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj", ".cache",
 ];
 
 /// A single result from the find function.
@@ -208,6 +209,59 @@ pub fn preview_bat(
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
+}
+
+/// Auto completion of directories
+/// Used by MoveFile inputmode to autocomplete the directory paths.
+pub fn complete_dirs_with_fd(base_dir: &Path, prefix: &str) -> Result<Vec<String>, std::io::Error> {
+    let output = Command::new("fd")
+        .arg("--type")
+        .arg("d")
+        .arg("--max-depth")
+        .arg("1")
+        .arg(prefix)
+        .arg(base_dir)
+        .output()?;
+
+    if !output.status.success() {
+        return Err(std::io::Error::other(format!(
+            "fd exited with status: {:?}",
+            output.status
+        )));
+    }
+
+    let dirs = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|s| s.trim_end_matches(std::path::MAIN_SEPARATOR).to_string())
+        .collect();
+
+    Ok(dirs)
+}
+
+/// Helpers:
+/// Normalize separators in a given string to use forward slashes.
+fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
+    if separator.contains('\\') {
+        Cow::Owned(separator.replace('\\', "/"))
+    } else {
+        Cow::Borrowed(separator)
+    }
+}
+
+/// Flatten separators by removing all '/' and '\' characters from the string.
+/// This is used to create a simplified version of the path for fuzzy matching.
+///
+/// # Examples
+/// let flat = flatten_separators("src/core/proc.rs");
+/// flat = "srccoreprocrs";
+fn flatten_separators(separator: &str) -> String {
+    let mut buf = String::with_capacity(separator.len());
+    for char in separator.chars() {
+        if char != '/' && char != '\\' {
+            buf.push(char);
+        }
+    }
+    buf
 }
 
 /// Integration tests for proc

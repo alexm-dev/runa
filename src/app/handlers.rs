@@ -9,10 +9,13 @@ use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
 use crate::core::formatter::normalize_relative_path;
+use crate::core::proc::complete_dirs_with_fd;
 use crate::ui::overlays::Overlay;
-use crate::utils::readable_path;
+use crate::utils::{expand_home_path, readable_path};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
+
+use std::path::MAIN_SEPARATOR;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
@@ -99,6 +102,19 @@ impl<'a> AppState<'a> {
                     self.actions.find_debounce(Duration::from_millis(90));
                 }
                 KeypressResult::Consumed
+            }
+
+            Tab => {
+                if matches!(mode, InputMode::MoveFile) {
+                    if which::which("fd").is_ok() {
+                        self.move_tab_autocomplete();
+                        KeypressResult::Consumed
+                    } else {
+                        KeypressResult::Continue
+                    }
+                } else {
+                    KeypressResult::Continue
+                }
             }
 
             Char(c) => match mode {
@@ -563,6 +579,29 @@ impl<'a> AppState<'a> {
                 .retain(|o| !matches!(o, Overlay::ShowInfo { .. }));
         } else {
             self.show_file_info();
+        }
+    }
+
+    /// Handles the autocomplete for move to directory action
+    fn move_tab_autocomplete(&mut self) {
+        if which::which("fd").is_err() {
+            return;
+        }
+        let input = self.actions.input_buffer();
+        let expanded = expand_home_path(input.trim());
+
+        let (base_dir, prefix) = if let Some(idx) = expanded.rfind(MAIN_SEPARATOR) {
+            let (base, frag) = expanded.split_at(idx + 1);
+            (std::path::Path::new(base), frag)
+        } else {
+            (self.nav.current_dir(), expanded.as_str())
+        };
+
+        let suggestions = complete_dirs_with_fd(base_dir, prefix).unwrap_or_default();
+
+        if let Some(suggestion) = suggestions.first() {
+            let completed = suggestion.to_string();
+            self.actions.set_input_buffer(completed);
         }
     }
 

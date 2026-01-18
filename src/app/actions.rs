@@ -132,6 +132,11 @@ impl ActionContext {
         self.find.set_cancel(token);
     }
 
+    pub fn set_input_buffer(&mut self, new_buf: String) {
+        self.input_cursor_pos = new_buf.len();
+        self.input_buffer = new_buf;
+    }
+
     // Mode functions
 
     pub fn is_input_mode(&self) -> bool {

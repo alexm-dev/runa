@@ -13,7 +13,6 @@ use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
 use unicode_width::UnicodeWidthChar;
 
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
@@ -198,6 +197,19 @@ pub fn format_file_time(modified: Option<SystemTime>) -> String {
             dt.format("%Y-%m-%d %H:%M:%S").to_string()
         })
         .unwrap_or_else(|| "-".to_string())
+}
+
+/// Normalize a relative path to use forward slashes for consistency across platforms.
+pub fn normalize_relative_path(path: &Path) -> String {
+    let rel = path.to_string_lossy().into_owned();
+    #[cfg(windows)]
+    {
+        rel.replace('\\', "/")
+    }
+    #[cfg(not(windows))]
+    {
+        rel
+    }
 }
 
 /// Returns Some(resolved_target) if entry is a symlink and can be resolved, otherwise None.
@@ -403,44 +415,6 @@ pub fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Ve
             vec![sanitize_to_exact_width(msg, pane_width)]
         }
     }
-}
-
-/// Normalize a relative path to use forward slashes for consistency across platforms.
-pub fn normalize_relative_path(path: &Path) -> String {
-    let rel = path.to_string_lossy().into_owned();
-    #[cfg(windows)]
-    {
-        rel.replace('\\', "/")
-    }
-    #[cfg(not(windows))]
-    {
-        rel
-    }
-}
-
-/// Normalize separators in a given string to use forward slashes.
-pub fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
-    if separator.contains('\\') {
-        Cow::Owned(separator.replace('\\', "/"))
-    } else {
-        Cow::Borrowed(separator)
-    }
-}
-
-/// Flatten separators by removing all '/' and '\' characters from the string.
-/// This is used to create a simplified version of the path for fuzzy matching.
-///
-/// # Examples
-/// let flat = flatten_separators("src/core/proc.rs");
-/// flat = "srccoreprocrs";
-pub fn flatten_separators(separator: &str) -> String {
-    let mut buf = String::with_capacity(separator.len());
-    for char in separator.chars() {
-        if char != '/' && char != '\\' {
-            buf.push(char);
-        }
-    }
-    buf
 }
 
 /// Formatter integration tests
