@@ -327,26 +327,31 @@ impl<'a> AppState<'a> {
         else {
             return;
         };
-        let path = r.path();
-        let is_dir = path.is_dir();
 
-        if is_dir {
-            self.nav.save_position();
-            self.nav.set_path(path.to_path_buf());
-            self.request_dir_load(None);
-            self.request_parent_content();
+        let path = r.path();
+
+        let (target_dir, focus) = if path.is_dir() {
+            (path.to_path_buf(), None)
+        } else {
+            let Some(parent) = path.parent() else {
+                return;
+            };
+            let file_name = path.file_name().map(|n| n.to_os_string());
+            (parent.to_path_buf(), file_name)
+        };
+
+        if let Err(e) = std::fs::read_dir(&target_dir) {
+            let msg = format!("Access Denied: {}", e);
+            self.push_overlay_message(msg, Duration::from_secs(3));
             return;
         }
 
-        let Some(parent) = path.parent() else {
-            return;
-        };
-        let focus = path.file_name().map(|n| n.to_os_string());
-
         self.nav.save_position();
-        self.nav.set_path(parent.to_path_buf());
+        self.nav.set_path(target_dir);
         self.request_dir_load(focus);
         self.request_parent_content();
+
+        self.exit_input_mode();
     }
 
     /// Handles the move action
@@ -372,15 +377,24 @@ impl<'a> AppState<'a> {
 
         let absolute_dest = match resolved_path.canonicalize() {
             Ok(p) => p,
-            Err(_) => {
+            Err(e) => {
                 let norm_msg = normalize_relative_path(&resolved_path);
                 self.push_overlay_message(
-                    format!("Move failed: directory does not exist: {}", norm_msg),
+                    format!("Move failed: {}: {}", e, norm_msg),
                     Duration::from_secs(3),
                 );
                 return;
             }
         };
+
+        if let Err(e) = std::fs::read_dir(&absolute_dest) {
+            let norm_msg = normalize_relative_path(&absolute_dest);
+            self.push_overlay_message(
+                format!("Move failed: Permission denied in {}: {}", norm_msg, e),
+                Duration::from_secs(3),
+            );
+            return;
+        }
 
         if !absolute_dest.is_dir() {
             let norm_msg = normalize_relative_path(&absolute_dest);
@@ -398,7 +412,7 @@ impl<'a> AppState<'a> {
             let norm_msg = normalize_relative_path(&absolute_dest);
             self.push_overlay_message(
                 format!(
-                    "Move failed: source and destination are the same directory: {}",
+                    "Move failed: source and destination are the same: {}",
                     norm_msg
                 ),
                 Duration::from_secs(3),
@@ -408,8 +422,10 @@ impl<'a> AppState<'a> {
 
         let fileop_tx = self.workers.fileop_tx();
         let move_msg = format!("Files moved to: {}", readable_path(&absolute_dest));
+
         self.actions
             .actions_move(&mut self.nav, absolute_dest, fileop_tx);
+
         self.exit_input_mode();
         self.push_overlay_message(move_msg, Duration::from_secs(3));
     }
