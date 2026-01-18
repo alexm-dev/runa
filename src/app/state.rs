@@ -172,6 +172,22 @@ impl<'a> AppState<'a> {
         !self.nav.entries().is_empty()
     }
 
+    /// Metrics updater for LayoutMetrics to request_preview new preview after old metrics
+    pub fn update_layout_metrics(&mut self, metrics: LayoutMetrics) {
+        let old_width = self.metrics.preview_width;
+        let old_height = self.metrics.preview_height;
+
+        self.metrics = metrics;
+
+        if old_width != self.metrics.preview_width || old_height != self.metrics.preview_height {
+            if self.preview.data().is_empty() {
+                self.request_preview();
+            } else {
+                self.preview.mark_pending();
+            }
+        }
+    }
+
     /// The heart of the app: updates state and handles worker messages
     ///
     /// Is used by the main event loop to update the application state.

@@ -35,7 +35,7 @@ use ratatui::{
 pub fn render(frame: &mut Frame, app: &mut AppState) {
     let mut root_area = frame.area();
     let metrics = calculate_layout_metrics(frame.area(), app);
-    *app.metrics_mut() = metrics;
+    app.update_layout_metrics(metrics);
 
     let cfg = app.config();
     let display_cfg = cfg.display();
@@ -440,6 +440,7 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
     metrics
 }
 
+/// render integration tests
 #[cfg(test)]
 mod tests {
     use super::*;
