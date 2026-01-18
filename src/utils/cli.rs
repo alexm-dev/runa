@@ -21,6 +21,10 @@ pub fn handle_args() -> CliAction {
     }
 
     match args[1].as_str() {
+        "--version" | "-v" => {
+            print_version();
+            CliAction::Exit
+        }
         "-h" | "--help" => {
             print_help();
             CliAction::Exit
@@ -46,6 +50,10 @@ pub fn handle_args() -> CliAction {
             CliAction::Exit
         }
     }
+}
+
+fn print_version() {
+    println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
 }
 
 fn print_help() {

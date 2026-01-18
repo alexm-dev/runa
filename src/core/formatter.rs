@@ -445,3 +445,50 @@ pub fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Ve
         }
     }
 }
+
+/// Formatter integration tests
+#[cfg(test)]
+mod tests {
+
+    use crate::core;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_ui_sanitization_and_exact_width() {
+        let pane_width = 10;
+
+        let cases = vec![
+            ("short.txt", 10),
+            ("very_long_filename.txt", 10),
+            ("🦀_crab.rs", 10),
+            ("\t_tab", 10),
+        ];
+
+        for (input, expected_width) in cases {
+            let result = core::sanitize_to_exact_width(input, pane_width);
+
+            let actual_width = unicode_width::UnicodeWidthStr::width(result.as_str());
+
+            assert_eq!(
+                actual_width, expected_width,
+                "Failed to produce exact width for input: '{}'. Result was: '{}' (width: {})",
+                input, result, actual_width
+            );
+
+            assert!(
+                !result.chars().any(|c| c.is_control() && c != ' '),
+                "Result contains control characters: {:?}",
+                result
+            );
+        }
+    }
+
+    #[test]
+    fn test_core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let entries = core::browse_dir(temp_dir.path())?;
+
+        assert!(entries.is_empty(), "Directory should be empty");
+        Ok(())
+    }
+}

@@ -439,3 +439,43 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
     }
     metrics
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::Config;
+    use crate::config::load::RawConfig;
+    use std::error;
+
+    #[test]
+    fn test_layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
+        let size = Rect::new(0, 0, 100, 10);
+
+        let toml_content = r#"
+            [display]
+            parent = true
+            preview = true
+            separators = false
+
+            [display.layout]
+            parent = 50
+            main = 50
+            preview = 50
+        "#;
+
+        let raw: RawConfig = toml::from_str(toml_content)?;
+        let config = Config::from(raw);
+
+        let app = AppState::new(&config).expect("Failed to create AppState");
+
+        let chunks = layout_chunks(size, &app);
+
+        assert_eq!(chunks.len(), 3);
+        let total_width: u16 = chunks.iter().map(|c| c.width).sum();
+
+        assert!(total_width <= 100);
+        assert!(chunks[0].width >= 33 && chunks[0].width <= 34);
+        Ok(())
+    }
+}
