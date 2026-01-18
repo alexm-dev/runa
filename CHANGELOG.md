@@ -2,6 +2,15 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased
+
+### Fixed
+- Preview width truncation: Now correclty requests a inital preview based on the actual pane width of the preview pane
+
+#### Changed
+- Layout metrics debounce for preview: Added a debounce for layout metrics changing, resulting in less preview requests for chaning the terminal size.
+
+
 ## [0.5.3] - 2026-01-17
 
 Quick fix for selection entry flicker and `"[Empty]"` flicker on terminals like Windows Terminal.
