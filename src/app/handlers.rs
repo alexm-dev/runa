@@ -279,22 +279,32 @@ impl<'a> AppState<'a> {
                 entry_path
             };
 
-            if let Err(e) = std::fs::read_dir(&target_path) {
-                let msg = format!("Permission Denied: {}", e);
-                self.push_overlay_message(msg, Duration::from_secs(3));
-                return KeypressResult::Consumed; // STOP HERE: Don't update NavState
-            }
+            let Ok(meta) = std::fs::metadata(&target_path) else {
+                return KeypressResult::Continue;
+            };
 
-            if let Ok(meta) = std::fs::metadata(&target_path)
-                && meta.is_dir()
-            {
-                self.nav.save_position();
-                self.nav.set_path(target_path);
-                self.request_dir_load(None);
-                self.request_parent_content();
+            if !meta.is_dir() {
                 return KeypressResult::Continue;
             }
+
+            if let Err(e) = std::fs::read_dir(&target_path) {
+                if e.kind() == std::io::ErrorKind::PermissionDenied {
+                    let msg = format!("Permission Denied: {}", e);
+                    self.push_overlay_message(msg, std::time::Duration::from_secs(3));
+                    return KeypressResult::Consumed;
+                } else {
+                    return KeypressResult::Continue;
+                }
+            }
+
+            self.nav.save_position();
+            self.nav.set_path(target_path);
+            self.request_dir_load(None);
+            self.request_parent_content();
+
+            return KeypressResult::Continue;
         }
+
         KeypressResult::Continue
     }
 
