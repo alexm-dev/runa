@@ -12,6 +12,6 @@ pub mod cli;
 pub mod helpers;
 
 pub use helpers::{
-    DEFAULT_FIND_RESULTS, as_path_op, copy_recursive, get_unused_path, open_in_editor, parse_color,
-    shorten_home_path,
+    DEFAULT_FIND_RESULTS, as_path_op, copy_recursive, expand_home_path, get_unused_path,
+    open_in_editor, parse_color, readable_path, shorten_home_path,
 };

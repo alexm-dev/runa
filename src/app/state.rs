@@ -338,9 +338,6 @@ impl<'a> AppState<'a> {
     // Worker requests functions for directory loading, preview and parent pane content
 
     /// Requests a directory load for the current navigation directory
-    ///
-    /// # Arguments
-    /// * `focus` - Optional OsString to focus on a specific entry after loading
     pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();

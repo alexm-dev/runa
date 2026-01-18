@@ -267,11 +267,8 @@ impl Theme {
 
     /// Helper function to map internal theme names to bat theme names.
     /// Used by bat for syntax highlighting.
-    /// # Arguments:
-    /// * internal_theme - A string slice representing the internal theme name.
-    ///
     /// # Returns:
-    /// * A static string slice representing the corresponding bat theme name.
+    /// A static string slice representing the corresponding bat theme name.
     fn map_to_bat_theme(internal_theme: &str) -> &'static str {
         match internal_theme {
             "default" => "TwoDark",
@@ -394,11 +391,6 @@ impl PaneTheme {
     /// Returns the selection style, falling back to the provided fallback if not set.
     /// If selection is None, falls back to the provided fallback ColorPair.
     /// If selection is Some, uses its style_or method with the fallback.
-    ///
-    /// # Arguments
-    /// * `fallback` - A `ColorPair` to use if selection is None.
-    /// # Returns
-    /// * `Style` - A `Style` representing the selection style.
     pub fn selection_style(&self, fallback: &ColorPair) -> Style {
         let default = &Theme::internal_defaults().selection;
         match self.selection {
@@ -409,20 +401,11 @@ impl PaneTheme {
 
     /// Returns the entry style, falling back to the provided fallback ColorPair.
     /// If entry color is Reset, uses the fallback.
-    ///
-    /// # Arguments
-    /// * `fallback` - A `ColorPair` to use as fallback.
-    /// # Returns
-    /// * `Style` - A `Style` representing the entry style.
     pub fn entry_style(&self, fallback: &ColorPair) -> Style {
         self.color.style_or(fallback)
     }
 
     /// Returns the pane color style, falling back to the provided fallback ColorPair.
-    /// # Arguments
-    /// * `fallback` - A `ColorPair` to use as fallback.
-    /// # Returns
-    /// * `Style` - A `Style` representing the pane color style.
     pub fn style_or(&self, fallback: &ColorPair) -> Style {
         self.color.style_or(fallback)
     }
@@ -638,14 +621,6 @@ pub struct Palette {
 
 /// Centralized function to create a Theme from a Palette.
 /// Used by all internal themes to avoid code duplication.
-///
-/// # Arguments
-/// * `name` - A string slice representing the name of the theme.
-/// * `palette` - A Palette struct containing the color definitions for the theme.
-/// * `icon` - A string slice representing the marker icon for the theme.
-///
-/// # Returns
-/// * `Theme` - A Theme instance created from the provided palette
 pub fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
     let primary = rgb(palette.primary);
     let secondary = rgb(palette.secondary);

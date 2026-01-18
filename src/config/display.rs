@@ -324,11 +324,6 @@ impl PreviewOptions {
 
     /// Generate command-line arguments for the 'bat' command based on the preview options
     /// and the given theme name and pane width.
-    ///
-    /// # Arguments
-    /// * `theme_name` - The name of the syntax highlighting theme to use
-    /// * `pane_width` - The width of the preview pane in characters
-    ///
     /// # Returns
     /// A vector of strings representing the command-line arguments for 'bat'
     pub fn bat_args(&self, default_theme: &str, pane_width: usize) -> Vec<String> {

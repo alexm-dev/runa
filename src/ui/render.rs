@@ -29,9 +29,6 @@ use ratatui::{
 
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
-/// # Params:
-/// - frame: the drawing frame from ratatui::frame
-/// - app: runa's shared state, mutated as needed to display metrics
 pub fn render(frame: &mut Frame, app: &mut AppState) {
     let mut root_area = frame.area();
     let metrics = calculate_layout_metrics(frame.area(), app);
@@ -284,14 +281,6 @@ pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
 }
 
 /// Renders the root block and header (if applicable) around the main content area.
-///
-/// # Arguments
-/// * `frame` - The drawing frame from ratatui
-/// * `app` - The application state
-/// * `area` - The total available area for rendering
-///
-/// # Returns
-/// * `Rect` - The inner area available for panes
 fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect {
     let cfg = app.config();
     let display_cfg = cfg.display();
@@ -340,12 +329,6 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
 }
 
 /// Renders a vertical separator line at the specified x-coordinate within the root area.
-///
-/// # Arguments
-/// * `frame` - The drawing frame from ratatui
-/// * `x` - The x-coordinate where the separator should be drawn
-/// * `root_area` - The root area defining the height of the separator
-/// * `style` - The style to apply to the separator
 fn render_separator(frame: &mut Frame, x: u16, root_area: Rect, style: Style) {
     widgets::draw_separator(
         frame,
@@ -360,11 +343,6 @@ fn render_separator(frame: &mut Frame, x: u16, root_area: Rect, style: Style) {
 }
 
 /// Renders any active overlays such as input dialogs or message boxes.
-///
-/// # Arguments
-/// * `frame` - The drawing frame from ratatui
-/// * `app` - The application state
-/// * `accent_style` - The accent style to use for overlay borders
 ///
 /// Calls appropriate widget drawing functions based on the current overlays.
 fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
@@ -391,13 +369,6 @@ fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
 /// Helper function to calculate and return layout metrics
 ///
 /// Used to store pane widths and heights in the AppState for later use.
-///
-/// # Arguments:
-/// * `area` - The total available area for layout
-/// * `app` - The application state containing configuration
-///
-/// # Returns:
-/// * `LayoutMetrics` - The calculated layout metrics
 fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
     let chunks = layout_chunks(area, app);
     let mut metrics = LayoutMetrics::default();

@@ -20,10 +20,6 @@ use std::{io, time::Duration};
 /// Blocks until quit. Handles all input and UI rendering.
 /// Returns a error if terminal setup or teardown fails
 ///
-/// # Arguments
-/// * `app` - Mutable reference to the application state
-///
-/// # Errors
 /// Returns an std::io::Error if terminal setup or teardown fails.
 pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
     enable_raw_mode()?;
@@ -40,13 +36,6 @@ pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
 
 /// Main event loop of runa: draws UI, polls for events and dispatches them to the app.
 /// Returns on quit
-///
-/// # Arguments
-/// * `terminal` - Mutable reference to the terminal
-/// * `app` - Mutable reference to the application state
-///
-/// # Errors
-/// Returns an std::io::Error if terminal drawing or event polling fails.
 fn event_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     app: &mut AppState,

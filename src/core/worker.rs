@@ -180,10 +180,6 @@ pub enum WorkerResponse {
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
-///
-/// # Arguments
-/// * `task_rx` - Receiver channel for incoming tasks
-/// * `res_tx` - Sender channel for outgoing responses
 fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
@@ -226,10 +222,6 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
 }
 
 /// Starts the preview worker thread
-///
-/// # Arguments
-/// * `task_rx` - Receiver channel for incoming tasks
-/// * `res_tx` - Sender channel for outgoing responses
 fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
@@ -282,10 +274,6 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
 }
 
 /// Starts the find worker thread
-///
-/// # Arguments
-/// * `task_rx` - Receiver channel for incoming tasks
-/// * `res_tx` - Sender channel for outgoing responses
 fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
@@ -343,10 +331,6 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
 }
 
 /// Starts the file operation worker thread
-///
-/// # Arguments
-/// * `task_rx` - Receiver channel for incoming tasks
-/// * `res_tx` - Sender channel for outgoing responses
 fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {

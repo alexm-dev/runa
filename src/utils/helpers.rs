@@ -148,6 +148,20 @@ pub fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     path.display().to_string()
 }
 
+pub fn expand_home_path(input: &str) -> String {
+    if input == "~"
+        && let Some(home) = dirs::home_dir()
+    {
+        return home.to_string_lossy().to_string();
+    }
+    if let Some(rest) = input.strip_prefix("~/")
+        && let Some(home) = dirs::home_dir()
+    {
+        return home.join(rest).to_string_lossy().to_string();
+    }
+    input.to_string()
+}
+
 /// Safely clamp the find result numbers.
 ///
 /// If the clamped value does not match the set [MAX_FIND_RESULTS_LIMIT] then its invalid and its
@@ -179,6 +193,21 @@ pub fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
         fs::copy(src, dest)?;
     }
     Ok(())
+}
+
+pub fn readable_path(path: &Path) -> String {
+    #[cfg(windows)]
+    {
+        let display = path.display().to_string();
+        display
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&display)
+            .to_string()
+    }
+    #[cfg(not(windows))]
+    {
+        path.display().to_string()
+    }
 }
 
 /// Helpers to convert Option<&PathBuf> to Option<&Path>

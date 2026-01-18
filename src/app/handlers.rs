@@ -8,9 +8,15 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
+use crate::core::formatter::normalize_relative_path;
+use crate::core::proc::complete_dirs_with_fd;
 use crate::ui::overlays::Overlay;
+use crate::utils::{expand_home_path, readable_path};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
+
+use std::path::MAIN_SEPARATOR;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
@@ -38,6 +44,7 @@ impl<'a> AppState<'a> {
                     InputMode::Filter => self.apply_filter(),
                     InputMode::ConfirmDelete => self.confirm_delete(),
                     InputMode::Find => self.handle_find(),
+                    InputMode::MoveFile => self.handle_move(),
                 }
                 self.exit_input_mode();
                 KeypressResult::Consumed
@@ -97,6 +104,19 @@ impl<'a> AppState<'a> {
                 KeypressResult::Consumed
             }
 
+            Tab => {
+                if matches!(mode, InputMode::MoveFile) {
+                    if which::which("fd").is_ok() {
+                        self.move_tab_autocomplete();
+                        KeypressResult::Consumed
+                    } else {
+                        KeypressResult::Continue
+                    }
+                } else {
+                    KeypressResult::Continue
+                }
+            }
+
             Char(c) => match mode {
                 InputMode::ConfirmDelete => {
                     self.process_confirm_delete_char(c);
@@ -116,6 +136,10 @@ impl<'a> AppState<'a> {
                     self.actions.find_debounce(Duration::from_millis(120));
                     KeypressResult::Consumed
                 }
+                InputMode::MoveFile => {
+                    self.actions.action_insert_at_cursor(c);
+                    KeypressResult::Consumed
+                }
             },
 
             _ => KeypressResult::Consumed,
@@ -124,12 +148,6 @@ impl<'a> AppState<'a> {
 
     /// Handles navigation actions (up, down, into dir, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    ///
-    /// # Arguments
-    /// * `action` - The navigation action to handle.
-    ///
-    /// # Returns
-    /// * [KeypressResult] indicating the result of the action.
     pub fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
         match action {
             NavAction::GoUp => {
@@ -170,12 +188,6 @@ impl<'a> AppState<'a> {
 
     /// Handles file actions (open, delete, copy, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    ///
-    /// # Arguments
-    /// * `action` - The file action to handle.
-    ///
-    /// # Returns
-    /// * [KeypressResult] indicating the result of the action.
     pub fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
         match action {
             FileAction::Open => return self.handle_open_file(),
@@ -194,16 +206,12 @@ impl<'a> AppState<'a> {
             FileAction::Filter => self.prompt_filter(),
             FileAction::ShowInfo => self.toggle_file_info(),
             FileAction::Find => self.prompt_find(),
+            FileAction::MoveFile => self.prompt_move(),
         }
         KeypressResult::Continue
     }
 
     /// Enters an input mode with the given parameters.
-    ///
-    /// # Arguments
-    /// * `mode` - The input mode to enter.
-    /// * `prompt` - The prompt text to display.
-    /// * `initial` - Optional initial text for the input buffer.
     pub fn enter_input_mode(&mut self, mode: InputMode, prompt: String, initial: Option<String>) {
         let buffer = initial.unwrap_or_default();
         self.actions
@@ -216,8 +224,6 @@ impl<'a> AppState<'a> {
     ///
     /// If the movement was successful (f returns true), marks the preview as pending refresh.
     /// Used to encapsulate common logic for nav actions that change selection or directory.
-    /// # Arguments
-    /// * `f` - A closure that takes a mutable reference to [NavState] and returns a bool indicating success.
     fn move_nav_if_possible<F>(&mut self, f: F)
     where
         F: FnOnce(&mut NavState) -> bool,
@@ -235,9 +241,6 @@ impl<'a> AppState<'a> {
     ///
     /// If the current directory has a parent, navigates to it, saves the current position,
     /// and requests loading of the new directory and its parent content.
-    ///
-    /// # Returns
-    /// * [KeypressResult] indicating the result of the action.
     fn handle_go_parent(&mut self) -> KeypressResult {
         if let Some(parent) = self.nav.current_dir().parent() {
             let exited_name = self.nav.current_dir().file_name().map(|n| n.to_os_string());
@@ -255,9 +258,6 @@ impl<'a> AppState<'a> {
     ///
     /// If the selected entry is a directory, navigates into it, saves the current position,
     /// and requests loading of the new directory and its parent content.
-    ///
-    /// # Returns
-    /// * [KeypressResult] indicating the result of the action.
     fn handle_go_into_dir(&mut self) -> KeypressResult {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let cur_path = self.nav.current_dir();
@@ -301,9 +301,6 @@ impl<'a> AppState<'a> {
     ///
     /// If a file is selected, attempts to open it in the configured editor.
     /// If an error occurs, prints it to stderr.
-    ///
-    /// # Returns
-    /// * [KeypressResult] indicating the result of the action.
     fn handle_open_file(&mut self) -> KeypressResult {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
@@ -351,10 +348,72 @@ impl<'a> AppState<'a> {
         self.request_parent_content();
     }
 
-    /// Handles displaying a timed message overlay.
+    /// Handles the move action
     ///
-    /// # Arguments
-    /// * `duration` - The duration for which the message should be displayed.
+    /// Checks if the directory for files to be moved to exists
+    /// Also normalizes relative paths for easier moving of files.
+    fn handle_move(&mut self) {
+        let dest_dir = self.actions.input_buffer();
+        if dest_dir.trim().is_empty() {
+            self.push_overlay_message(
+                "Move failed: target directory cannot be empty".to_string(),
+                Duration::from_secs(3),
+            );
+            return;
+        }
+
+        let input_path = Path::new(dest_dir.trim());
+        let resolved_path = if input_path.is_absolute() {
+            input_path.to_path_buf()
+        } else {
+            self.nav.current_dir().join(input_path)
+        };
+
+        let absolute_dest = match resolved_path.canonicalize() {
+            Ok(p) => p,
+            Err(_) => {
+                let norm_msg = normalize_relative_path(&resolved_path);
+                self.push_overlay_message(
+                    format!("Move failed: directory does not exist: {}", norm_msg),
+                    Duration::from_secs(3),
+                );
+                return;
+            }
+        };
+
+        if !absolute_dest.is_dir() {
+            let norm_msg = normalize_relative_path(&absolute_dest);
+            self.push_overlay_message(
+                format!("Move failed: not a directory: {}", norm_msg),
+                Duration::from_secs(3),
+            );
+            return;
+        }
+
+        let targets = self.nav.get_action_targets();
+        if targets.iter().any(|src| {
+            src.parent().and_then(|p| p.canonicalize().ok()).as_ref() == Some(&absolute_dest)
+        }) {
+            let norm_msg = normalize_relative_path(&absolute_dest);
+            self.push_overlay_message(
+                format!(
+                    "Move failed: source and destination are the same directory: {}",
+                    norm_msg
+                ),
+                Duration::from_secs(3),
+            );
+            return;
+        }
+
+        let fileop_tx = self.workers.fileop_tx();
+        let move_msg = format!("Files moved to: {}", readable_path(&absolute_dest));
+        self.actions
+            .actions_move(&mut self.nav, absolute_dest, fileop_tx);
+        self.exit_input_mode();
+        self.push_overlay_message(move_msg, Duration::from_secs(3));
+    }
+
+    /// Handles displaying a timed message overlay.
     pub fn handle_timed_message(&mut self, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
     }
@@ -362,8 +421,6 @@ impl<'a> AppState<'a> {
     // Input processes
 
     /// Processes a character input for the confirm delete input mode.
-    /// # Arguments
-    /// * `c` - The character input to process.
     pub fn process_confirm_delete_char(&mut self, c: char) {
         if matches!(c, 'y' | 'Y') {
             self.confirm_delete();
@@ -474,6 +531,11 @@ impl<'a> AppState<'a> {
         self.enter_input_mode(InputMode::Find, "".to_string(), None);
     }
 
+    fn prompt_move(&mut self) {
+        let prompt = "Move to directory: ".to_string();
+        self.enter_input_mode(InputMode::MoveFile, prompt, None);
+    }
+
     // Helpers
 
     /// Refreshes the file info overlay if it is currently open.
@@ -517,6 +579,29 @@ impl<'a> AppState<'a> {
                 .retain(|o| !matches!(o, Overlay::ShowInfo { .. }));
         } else {
             self.show_file_info();
+        }
+    }
+
+    /// Handles the autocomplete for move to directory action
+    fn move_tab_autocomplete(&mut self) {
+        if which::which("fd").is_err() {
+            return;
+        }
+        let input = self.actions.input_buffer();
+        let expanded = expand_home_path(input.trim());
+
+        let (base_dir, prefix) = if let Some(idx) = expanded.rfind(MAIN_SEPARATOR) {
+            let (base, frag) = expanded.split_at(idx + 1);
+            (std::path::Path::new(base), frag)
+        } else {
+            (self.nav.current_dir(), expanded.as_str())
+        };
+
+        let suggestions = complete_dirs_with_fd(base_dir, prefix).unwrap_or_default();
+
+        if let Some(suggestion) = suggestions.first() {
+            let completed = suggestion.to_string();
+            self.actions.set_input_buffer(completed);
         }
     }
 

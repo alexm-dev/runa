@@ -39,6 +39,7 @@ pub enum FileAction {
     Filter,
     ShowInfo,
     Find,
+    MoveFile,
 }
 
 /// System actions (quit)
@@ -64,12 +65,6 @@ pub struct Keymap {
 
 impl Keymap {
     /// Builds the keymap from the config
-    ///
-    /// # Arguments
-    /// * `config` - The app configuration containing keybindings
-    ///
-    /// # Returns
-    /// * `Keymap` - The constructed keymap
     pub fn from_config(config: &crate::config::Config) -> Self {
         let mut map = HashMap::new();
         let keys = config.keys();
@@ -117,9 +112,6 @@ impl Keymap {
         };
 
         // Helper to bind multiple keys to the same action
-        // # Arguments
-        // * `key_list` - List of key strings
-        // * `action` - The action to bind to
         let mut bind = |key_list: &[String], action: Action| {
             for k in key_list {
                 if let Some(key) = parse_key(k) {
@@ -137,6 +129,7 @@ impl Keymap {
         bind(keys.delete(), Action::File(FileAction::Delete));
         bind(keys.copy(), Action::File(FileAction::Copy));
         bind(keys.paste(), Action::File(FileAction::Paste));
+        bind(keys.move_file(), Action::File(FileAction::MoveFile));
         bind(keys.rename(), Action::File(FileAction::Rename));
         bind(keys.create(), Action::File(FileAction::Create));
         bind(

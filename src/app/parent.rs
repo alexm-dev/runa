@@ -10,12 +10,6 @@ use std::path::{Path, PathBuf};
 ///
 /// Stores the list of entries in the parent directory, the selected entry (index)
 /// and tracks the request IDs to coordinate updates.
-///
-/// # Fields
-/// * `entries` - List of `FileEntry` in the parent directory
-/// * `selected_idx` - Index of the currently selected entry
-/// * `last_path` - Last path for which entries were fetched
-/// * `request_id` - Current request ID for tracking updates
 #[derive(Default)]
 pub struct ParentState {
     entries: Vec<FileEntry>,

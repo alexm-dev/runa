@@ -19,6 +19,8 @@
 //! This function is used by core/workers.rs to provide file previews in the UI.
 //! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
 
+use crate::core::formatter::normalize_relative_path;
+
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
@@ -41,8 +43,8 @@ const BUFREADER_SIZE: usize = 32768;
 /// This helps to speed up the search and avoid irrelevant results.
 #[rustfmt::skip]
 const EXCLUDES: &[&str] = &[
-    ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist",
-    "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj"
+    ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist", ".local",
+    "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj", ".cache",
 ];
 
 /// A single result from the find function.
@@ -91,16 +93,6 @@ struct RawResult {
 }
 
 /// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
-///
-/// # Arguments
-/// * `base_dir` - The base directory to search in.
-/// * `query` - The fuzzy search query.
-/// * `out` - A mutable reference to a vector to store the results.
-/// * `cancel` - An atomic boolean to signal cancellation of the search.
-/// * `max_results` - The maximum number of results to return.
-///
-/// # Errors
-/// Returns an std::io::Error if the fd command fails to execute.
 pub fn find(
     base_dir: &Path,
     query: &str,
@@ -195,14 +187,6 @@ pub fn find(
 /// Use bat to preview a file at the given path, returning up to max_lines of output
 /// Uses the provided bat_args for customization.
 ///
-/// # Arguments
-/// * `path` - The path to the file to preview.
-/// * `max_lines` - The maximum number of lines to return.
-/// * `bat_args` - Additional arguments to pass to the bat command.
-///
-/// # Errors
-/// Returns an std::io::Error if the bat command fails to execute or returns a non-zero status.
-///
 /// # Returns
 /// A vector of strings, each representing a line from the file preview.
 pub fn preview_bat(
@@ -227,21 +211,34 @@ pub fn preview_bat(
     Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
 }
 
-/// Helpers:
-///
-/// Normalize a relative path to use forward slashes for consistency across platforms.
-fn normalize_relative_path(path: &Path) -> String {
-    let rel = path.to_string_lossy().into_owned();
-    #[cfg(windows)]
-    {
-        rel.replace('\\', "/")
+/// Auto completion of directories
+/// Used by MoveFile inputmode to autocomplete the directory paths.
+pub fn complete_dirs_with_fd(base_dir: &Path, prefix: &str) -> Result<Vec<String>, std::io::Error> {
+    let output = Command::new("fd")
+        .arg("--type")
+        .arg("d")
+        .arg("--max-depth")
+        .arg("1")
+        .arg(prefix)
+        .arg(base_dir)
+        .output()?;
+
+    if !output.status.success() {
+        return Err(std::io::Error::other(format!(
+            "fd exited with status: {:?}",
+            output.status
+        )));
     }
-    #[cfg(not(windows))]
-    {
-        rel
-    }
+
+    let dirs = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(|s| s.trim_end_matches(std::path::MAIN_SEPARATOR).to_string())
+        .collect();
+
+    Ok(dirs)
 }
 
+/// Helpers:
 /// Normalize separators in a given string to use forward slashes.
 fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
     if separator.contains('\\') {
@@ -253,10 +250,6 @@ fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
 
 /// Flatten separators by removing all '/' and '\' characters from the string.
 /// This is used to create a simplified version of the path for fuzzy matching.
-/// # Arguments
-/// * `separator` - The input string to flatten.
-/// # Returns
-/// A new String with all '/' and '\' characters removed.
 ///
 /// # Examples
 /// let flat = flatten_separators("src/core/proc.rs");

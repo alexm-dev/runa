@@ -342,12 +342,6 @@ pub fn make_pane_markers<'a>(
 /// Helper: Create a PaneMarkers struct for the main pane.
 /// Builds marker and clipboard sets for the current directory.
 /// Used in main pane drawing function.
-/// # Arguments
-/// * `app` - Reference to the application state.
-/// * `current_dir` - Path to the current directory being viewed in the main pane.
-///
-/// # Returns
-/// * `PaneMarkers` - Struct containing marker and clipboard sets along with styles and icons.
 fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneMarkers<'a> {
     let marker_theme = app.config().theme().marker();
     let marker_icon = marker_theme.icon();
@@ -384,16 +378,6 @@ fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneM
 
 /// Helper: Create a ListItem row for a file entry with appropriate styles and markers.
 /// Used in pane drawing functions.
-///
-/// # Arguments
-/// * `entry` - Reference to the FileEntry to create a row for.
-/// * `current_dir` - Optional reference to the current directory Path.
-/// * `is_selected` - Boolean indicating if the entry is currently selected.
-/// * `style` - Style to apply to the row.
-/// * `context` - Reference to the PaneContext for rendering options.
-/// * `markers` - Reference to the PaneMarkers for marker and clipboard data.
-/// * `opts` - Optional reference to PreviewOptions for additional styling.
-///
 /// # Returns
 /// * `ListItem` - The constructed ListItem for the file entry.
 fn make_entry_row<'a>(
