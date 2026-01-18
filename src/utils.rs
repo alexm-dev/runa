@@ -13,5 +13,5 @@ pub mod helpers;
 
 pub use helpers::{
     DEFAULT_FIND_RESULTS, as_path_op, copy_recursive, get_unused_path, open_in_editor, parse_color,
-    shorten_home_path,
+    readable_path, shorten_home_path,
 };

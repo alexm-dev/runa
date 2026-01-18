@@ -19,10 +19,11 @@
 //! This function is used by core/workers.rs to provide file previews in the UI.
 //! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
 
+use crate::core::formatter::{flatten_separators, normalize_relative_path, normalize_separators};
+
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
-use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
 use std::io::{self, BufRead};
@@ -207,46 +208,6 @@ pub fn preview_bat(
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
-}
-
-/// Helpers:
-///
-/// Normalize a relative path to use forward slashes for consistency across platforms.
-fn normalize_relative_path(path: &Path) -> String {
-    let rel = path.to_string_lossy().into_owned();
-    #[cfg(windows)]
-    {
-        rel.replace('\\', "/")
-    }
-    #[cfg(not(windows))]
-    {
-        rel
-    }
-}
-
-/// Normalize separators in a given string to use forward slashes.
-fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
-    if separator.contains('\\') {
-        Cow::Owned(separator.replace('\\', "/"))
-    } else {
-        Cow::Borrowed(separator)
-    }
-}
-
-/// Flatten separators by removing all '/' and '\' characters from the string.
-/// This is used to create a simplified version of the path for fuzzy matching.
-///
-/// # Examples
-/// let flat = flatten_separators("src/core/proc.rs");
-/// flat = "srccoreprocrs";
-fn flatten_separators(separator: &str) -> String {
-    let mut buf = String::with_capacity(separator.len());
-    for char in separator.chars() {
-        if char != '/' && char != '\\' {
-            buf.push(char);
-        }
-    }
-    buf
 }
 
 /// Integration tests for proc

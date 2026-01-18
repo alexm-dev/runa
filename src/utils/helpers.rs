@@ -181,6 +181,21 @@ pub fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     Ok(())
 }
 
+pub fn readable_path(path: &Path) -> String {
+    #[cfg(windows)]
+    {
+        let display = path.display().to_string();
+        display
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&display)
+            .to_string()
+    }
+    #[cfg(not(windows))]
+    {
+        path.display().to_string()
+    }
+}
+
 /// Helpers to convert Option<&PathBuf> to Option<&Path>
 pub fn as_path_op(opt: Option<&PathBuf>) -> Option<&Path> {
     opt.map(|pathb| pathb.as_path())

@@ -8,10 +8,12 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
+use crate::core::formatter::normalize_relative_path;
 use crate::ui::overlays::Overlay;
+use crate::utils::readable_path;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
-use std::path::PathBuf;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
@@ -330,20 +332,69 @@ impl<'a> AppState<'a> {
         self.request_parent_content();
     }
 
+    /// Handles the move action
+    ///
+    /// Checks if the directory for files to be moved to exists
+    /// Also normalizes relative paths for easier moving of files.
     fn handle_move(&mut self) {
         let dest_dir = self.actions.input_buffer();
-        let dest_path = PathBuf::from(dest_dir);
-
-        if dest_path.is_dir() {
-            let fileop_tx = self.workers.fileop_tx();
-            self.actions
-                .actions_move(&mut self.nav, dest_path, fileop_tx);
-        } else {
+        if dest_dir.trim().is_empty() {
             self.push_overlay_message(
-                "Move failed: target is not a directory".to_string(),
+                "Move failed: target directory cannot be empty".to_string(),
                 Duration::from_secs(3),
             );
+            return;
         }
+
+        let input_path = Path::new(dest_dir.trim());
+        let resolved_path = if input_path.is_absolute() {
+            input_path.to_path_buf()
+        } else {
+            self.nav.current_dir().join(input_path)
+        };
+
+        let absolute_dest = match resolved_path.canonicalize() {
+            Ok(p) => p,
+            Err(_) => {
+                let norm_msg = normalize_relative_path(&resolved_path);
+                self.push_overlay_message(
+                    format!("Move failed: directory does not exist: {}", norm_msg),
+                    Duration::from_secs(3),
+                );
+                return;
+            }
+        };
+
+        if !absolute_dest.is_dir() {
+            let norm_msg = normalize_relative_path(&absolute_dest);
+            self.push_overlay_message(
+                format!("Move failed: not a directory: {}", norm_msg),
+                Duration::from_secs(3),
+            );
+            return;
+        }
+
+        let targets = self.nav.get_action_targets();
+        if targets.iter().any(|src| {
+            src.parent().and_then(|p| p.canonicalize().ok()).as_ref() == Some(&absolute_dest)
+        }) {
+            let norm_msg = normalize_relative_path(&absolute_dest);
+            self.push_overlay_message(
+                format!(
+                    "Move failed: source and destination are the same directory: {}",
+                    norm_msg
+                ),
+                Duration::from_secs(3),
+            );
+            return;
+        }
+
+        let fileop_tx = self.workers.fileop_tx();
+        let move_msg = format!("Files moved to: {}", readable_path(&absolute_dest));
+        self.actions
+            .actions_move(&mut self.nav, absolute_dest, fileop_tx);
+        self.exit_input_mode();
+        self.push_overlay_message(move_msg, Duration::from_secs(3));
     }
 
     /// Handles displaying a timed message overlay.
