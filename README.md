@@ -146,6 +146,7 @@ After installation, start runa with: `rn`
 * **Fuzzy Search:** To enable fast, recursive fuzzy finding, install **[fd](https://github.com/sharkdp/fd)**.
   * If `fd` is detected in your `PATH`, the search feature will be enabled automatically.
   * Without it, `runa` remains a fully functional file manager but will notify you if you attempt a recursive search.
+  * Also enables `move_file` auto-complete if `fd` is enabled.
 
 * **Preview Syntax coloring**: To enable syntax coloring in the preview pane, install **[bat](https://github.com/sharkdp/bat)**
   * If `bat` is detected and installed, you can switch method in the runa.toml to `method = "bat"`.
