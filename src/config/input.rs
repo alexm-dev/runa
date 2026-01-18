@@ -22,6 +22,7 @@ pub struct Keys {
     rename: Vec<String>,
     create: Vec<String>,
     create_directory: Vec<String>,
+    move_file: Vec<String>,
     filter: Vec<String>,
     toggle_marker: Vec<String>,
     show_info: Vec<String>,
@@ -87,6 +88,10 @@ impl Keys {
         &self.create_directory
     }
 
+    pub fn move_file(&self) -> &Vec<String> {
+        &self.move_file
+    }
+
     pub fn filter(&self) -> &Vec<String> {
         &self.filter
     }
@@ -129,6 +134,7 @@ impl Default for Keys {
             rename: vec!["r".into()],
             create: vec!["n".into()],
             create_directory: vec!["Shift+n".into()],
+            move_file: vec!["m".into()],
             filter: vec!["f".into()],
             toggle_marker: vec![" ".into()],
             show_info: vec!["i".into()],

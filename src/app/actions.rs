@@ -39,6 +39,7 @@ pub enum InputMode {
     Filter,
     ConfirmDelete,
     Find,
+    MoveFile,
 }
 
 /// Tracks current user action and input buffer state for file operations and commands.
@@ -267,6 +268,28 @@ impl ActionContext {
         self.exit_mode();
     }
 
+    pub fn actions_move(
+        &mut self,
+        nav: &mut NavState,
+        destination: PathBuf,
+        worker_tx: &Sender<WorkerTask>,
+    ) {
+        let targets = nav.get_action_targets();
+        if targets.is_empty() {
+            return;
+        }
+        let _ = worker_tx.send(WorkerTask::FileOp {
+            op: FileOperation::Copy {
+                src: targets.into_iter().collect(),
+                dest: destination,
+                cut: true,
+                focus: None,
+            },
+            request_id: nav.prepare_new_request(),
+        });
+        nav.clear_markers();
+    }
+
     // Cursor actions
 
     /// Moves the input cursor one position to the left, if possible.
@@ -344,14 +367,6 @@ impl Default for ActionContext {
 /// selected result index, and cancellation token.
 ///
 /// Used by [ActionContext] to manage fuzzy find operations.
-/// # Fields
-/// * `cache` - Cached list of [FindResult] from the last search.
-/// * `request_id` - Unique ID for the current find request.
-/// * `debounce` - Optional timer for debouncing input.
-/// * `last_query` - Last query string used for searching.
-/// * `selected` - Index of the currently selected result.
-/// * `cancel` - Optional cancellation token for aborting ongoing searches.
-///
 /// Methods to manage results, requests, selection, and cancellation.
 #[derive(Default)]
 pub struct FindState {

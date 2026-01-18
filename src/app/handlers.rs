@@ -11,6 +11,7 @@ use crate::core::FileInfo;
 use crate::ui::overlays::Overlay;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
@@ -38,6 +39,7 @@ impl<'a> AppState<'a> {
                     InputMode::Filter => self.apply_filter(),
                     InputMode::ConfirmDelete => self.confirm_delete(),
                     InputMode::Find => self.handle_find(),
+                    InputMode::MoveFile => self.handle_move(),
                 }
                 self.exit_input_mode();
                 KeypressResult::Consumed
@@ -116,6 +118,10 @@ impl<'a> AppState<'a> {
                     self.actions.find_debounce(Duration::from_millis(120));
                     KeypressResult::Consumed
                 }
+                InputMode::MoveFile => {
+                    self.actions.action_insert_at_cursor(c);
+                    KeypressResult::Consumed
+                }
             },
 
             _ => KeypressResult::Consumed,
@@ -182,6 +188,7 @@ impl<'a> AppState<'a> {
             FileAction::Filter => self.prompt_filter(),
             FileAction::ShowInfo => self.toggle_file_info(),
             FileAction::Find => self.prompt_find(),
+            FileAction::MoveFile => self.prompt_move(),
         }
         KeypressResult::Continue
     }
@@ -323,6 +330,22 @@ impl<'a> AppState<'a> {
         self.request_parent_content();
     }
 
+    fn handle_move(&mut self) {
+        let dest_dir = self.actions.input_buffer();
+        let dest_path = PathBuf::from(dest_dir);
+
+        if dest_path.is_dir() {
+            let fileop_tx = self.workers.fileop_tx();
+            self.actions
+                .actions_move(&mut self.nav, dest_path, fileop_tx);
+        } else {
+            self.push_overlay_message(
+                "Move failed: target is not a directory".to_string(),
+                Duration::from_secs(3),
+            );
+        }
+    }
+
     /// Handles displaying a timed message overlay.
     pub fn handle_timed_message(&mut self, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
@@ -439,6 +462,11 @@ impl<'a> AppState<'a> {
             return;
         }
         self.enter_input_mode(InputMode::Find, "".to_string(), None);
+    }
+
+    fn prompt_move(&mut self) {
+        let prompt = "Move to directory: ".to_string();
+        self.enter_input_mode(InputMode::MoveFile, prompt, None);
     }
 
     // Helpers

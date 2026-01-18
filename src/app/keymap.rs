@@ -39,6 +39,7 @@ pub enum FileAction {
     Filter,
     ShowInfo,
     Find,
+    MoveFile,
 }
 
 /// System actions (quit)
@@ -128,6 +129,7 @@ impl Keymap {
         bind(keys.delete(), Action::File(FileAction::Delete));
         bind(keys.copy(), Action::File(FileAction::Copy));
         bind(keys.paste(), Action::File(FileAction::Paste));
+        bind(keys.move_file(), Action::File(FileAction::MoveFile));
         bind(keys.rename(), Action::File(FileAction::Rename));
         bind(keys.create(), Action::File(FileAction::Create));
         bind(
