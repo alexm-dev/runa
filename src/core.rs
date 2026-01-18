@@ -17,7 +17,8 @@ pub mod worker;
 
 pub use fm::{FileEntry, FileInfo, FileType, browse_dir};
 pub use formatter::{
-    Formatter, format_attributes, format_file_size, format_file_time, format_file_type,
-    preview_directory, safe_read_preview, sanitize_to_exact_width, symlink_target_resolved,
+    Formatter, flatten_separators, format_attributes, format_file_size, format_file_time,
+    format_file_type, normalize_separators, preview_directory, safe_read_preview,
+    sanitize_to_exact_width, symlink_target_resolved,
 };
 pub use proc::{FindResult, find, preview_bat};

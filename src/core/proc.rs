@@ -19,12 +19,11 @@
 //! This function is used by core/workers.rs to provide file previews in the UI.
 //! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
 
-use crate::core::formatter::normalize_relative_path;
+use crate::core::formatter::{flatten_separators, normalize_relative_path, normalize_separators};
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
-use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
 use std::io::{self, BufRead};
@@ -55,16 +54,12 @@ pub struct FindResult {
     score: i64,
 }
 
-/// Implement ordering for FindResult based on score (higher is better).
-/// This allows sorting of FindResult instances.
 impl Ord for FindResult {
     fn cmp(&self, other: &Self) -> Ordering {
         other.score.cmp(&self.score)
     }
 }
 
-/// Implement partial ordering for FindResult.
-/// This is required because we implemented Ord.
 impl PartialOrd for FindResult {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
@@ -105,28 +100,24 @@ pub fn find(
         return Ok(());
     }
 
-    let mut args: Vec<OsString> = vec![
-        OsString::from("."),
-        OsString::from(base_dir),
-        OsString::from("--type"),
-        OsString::from("f"),
-        OsString::from("--type"),
-        OsString::from("d"),
-        OsString::from("--hidden"),
-    ];
+    let max_res_str = max_results.to_string();
+    let mut cmd = Command::new("fd");
+    cmd.arg(".")
+        .arg(base_dir)
+        .arg("--type")
+        .arg("f")
+        .arg("--type")
+        .arg("d")
+        .arg("--hidden");
 
     for excl in EXCLUDES {
-        args.push(OsString::from("--exclude"));
-        args.push(OsString::from(excl));
+        cmd.arg("--exclude").arg(excl);
     }
-
-    args.push(OsString::from("--color"));
-    args.push(OsString::from("never"));
-    args.push(OsString::from("--max-results"));
-    args.push(OsString::from(max_results.to_string()));
-
-    let mut cmd = Command::new("fd");
-    cmd.args(&args).stdout(Stdio::piped());
+    cmd.arg("--color")
+        .arg("never")
+        .arg("--max-results")
+        .arg(&max_res_str)
+        .stdout(Stdio::piped());
 
     let mut proc = match cmd.spawn() {
         Ok(proc) => proc,
@@ -236,32 +227,6 @@ pub fn complete_dirs_with_fd(base_dir: &Path, prefix: &str) -> Result<Vec<String
         .collect();
 
     Ok(dirs)
-}
-
-/// Helpers:
-/// Normalize separators in a given string to use forward slashes.
-fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
-    if separator.contains('\\') {
-        Cow::Owned(separator.replace('\\', "/"))
-    } else {
-        Cow::Borrowed(separator)
-    }
-}
-
-/// Flatten separators by removing all '/' and '\' characters from the string.
-/// This is used to create a simplified version of the path for fuzzy matching.
-///
-/// # Examples
-/// let flat = flatten_separators("src/core/proc.rs");
-/// flat = "srccoreprocrs";
-fn flatten_separators(separator: &str) -> String {
-    let mut buf = String::with_capacity(separator.len());
-    for char in separator.chars() {
-        if char != '/' && char != '\\' {
-            buf.push(char);
-        }
-    }
-    buf
 }
 
 /// Integration tests for proc
