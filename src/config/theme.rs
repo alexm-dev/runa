@@ -476,6 +476,7 @@ pub struct WidgetTheme {
     position: Option<DialogPosition>,
     size: Option<DialogSize>,
     confirm_size: Option<DialogSize>,
+    move_size: Option<DialogSize>,
     find_visible_results: Option<usize>,
     find_width: Option<u16>,
 }
@@ -496,6 +497,18 @@ impl WidgetTheme {
     /// Returns the confirm dialog size, falling back to the general size, and then to the provided fallback.
     pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
         self.confirm_size()
+            .as_ref()
+            .or_else(|| self.size().as_ref())
+            .copied()
+            .unwrap_or(fallback)
+    }
+
+    pub fn move_size(&self) -> &Option<DialogSize> {
+        &self.move_size
+    }
+
+    pub fn move_size_or(&self, fallback: DialogSize) -> DialogSize {
+        self.move_size()
             .as_ref()
             .or_else(|| self.size().as_ref())
             .copied()
@@ -570,6 +583,7 @@ impl Default for WidgetTheme {
             position: Some(DialogPosition::Center),
             size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),
+            move_size: Some(DialogSize::Medium),
             find_visible_results: Some(5),
             find_width: Some(40),
         }

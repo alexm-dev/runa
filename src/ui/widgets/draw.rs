@@ -11,6 +11,7 @@ use crate::core::{FileInfo, FileType, format_file_size, format_file_time, format
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog,
 };
+use crate::utils::readable_path;
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
@@ -37,23 +38,27 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
         let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
         let size = widget.size().unwrap_or(DialogSize::Small);
         let confirm_size = widget.confirm_size_or(DialogSize::Large);
+        let move_size = widget.move_size_or(DialogSize::Medium);
         let border_type = app.config().display().border_shape().as_border_type();
 
         if *mode == InputMode::ConfirmDelete {
-            let action_targets = app.nav().get_action_targets();
-            let targets: Vec<String> = action_targets
-                .iter()
+            let mut targets: Vec<String> = app
+                .nav()
+                .get_action_targets()
+                .into_iter()
                 .map(|p| {
                     p.file_name()
                         .map(|n| n.to_string_lossy().into_owned())
                         .unwrap_or_default()
                 })
                 .collect();
+            targets.sort();
+
             let preview = if targets.len() == 1 {
-                format!("\nFile to delete: {}", targets[0])
+                format!("File to delete: {}", targets[0])
             } else if targets.len() > 1 {
                 format!(
-                    "\nFiles to delete ({}):\n{}",
+                    "Files to delete ({}):\n{}",
                     targets.len(),
                     targets
                         .iter()
@@ -64,6 +69,23 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
             } else {
                 String::new()
             };
+
+            let dialog_area = dialog_area(frame.area(), confirm_size, position);
+            let visible_width = dialog_area.width.saturating_sub(2) as usize;
+
+            let mut dialog_lines = vec![
+                Line::raw(prompt),
+                Line::from(vec![Span::styled(
+                    "─".repeat(visible_width),
+                    widget.border_style_or(Style::default().fg(Color::Red)),
+                )]),
+            ];
+            if !preview.is_empty() {
+                for line in preview.lines() {
+                    dialog_lines.push(Line::raw(line));
+                }
+            }
+            let dialog_text = Text::from(dialog_lines);
 
             let dialog_style = DialogStyle {
                 border: Borders::ALL,
@@ -87,9 +109,83 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
                 dialog_layout,
                 border_type,
                 &dialog_style,
-                format!("{prompt}{preview}"),
+                dialog_text,
                 Some(Alignment::Left),
             );
+        } else if *mode == InputMode::MoveFile {
+            let targets_set = app.nav().get_action_targets();
+            let mut action_targets: Vec<_> = targets_set.iter().collect();
+            action_targets.sort();
+
+            let preview = if !action_targets.is_empty() {
+                if action_targets.len() == 1 {
+                    format!("File to move: {}", readable_path(action_targets[0]))
+                } else {
+                    format!(
+                        "Files to move ({}):\n{}",
+                        action_targets.len(),
+                        action_targets
+                            .iter()
+                            .map(|p| format!("  - {}", readable_path(p)))
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    )
+                }
+            } else {
+                String::new()
+            };
+
+            let dialog_style = DialogStyle {
+                border: Borders::ALL,
+                border_style: widget.border_style_or(accent_style),
+                bg: widget.bg_or_theme(),
+                fg: widget.fg_or_theme(),
+                title: Some(Span::styled(
+                    format!(" {} ", prompt),
+                    widget.title_style_or_theme(),
+                )),
+            };
+
+            let dialog_layout = DialogLayout {
+                area: frame.area(),
+                position,
+                size: move_size,
+            };
+
+            let input_text = app.actions().input_buffer();
+            let cursor_pos = app.actions().input_cursor_pos();
+            let dialog_area = dialog_area(frame.area(), move_size, position);
+            let visible_width = dialog_area.width.saturating_sub(2) as usize;
+
+            let (display_input, cursor_offset) =
+                input_field_view(input_text, cursor_pos, visible_width);
+
+            let want_separator = move_size != DialogSize::Small && !preview.is_empty();
+            let mut dialog_lines = vec![Line::raw(display_input)];
+            if want_separator {
+                dialog_lines.push(Line::from(vec![Span::styled(
+                    "─".repeat(visible_width),
+                    accent_style,
+                )]));
+            }
+            if !preview.is_empty() {
+                for l in preview.lines() {
+                    dialog_lines.push(Line::raw(l));
+                }
+            }
+            let dialog_text = Text::from(dialog_lines);
+
+            draw_dialog(
+                frame,
+                dialog_layout,
+                border_type,
+                &dialog_style,
+                dialog_text,
+                Some(Alignment::Left),
+            );
+
+            frame
+                .set_cursor_position((dialog_area.x + 1 + cursor_offset as u16, dialog_area.y + 1));
         } else {
             let dialog_style = DialogStyle {
                 border: Borders::ALL,
@@ -381,7 +477,9 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
         Style::default().fg(Color::DarkGray),
     ));
     display_lines.push(Line::from(line_input));
-    display_lines.push(Line::from(""));
+
+    let horizontal_line = Span::styled("─".repeat(field_width), accent_style);
+    display_lines.push(Line::from(horizontal_line));
 
     if results.is_empty() {
         display_lines.push(Line::from(Span::styled(
