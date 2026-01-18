@@ -261,37 +261,38 @@ impl<'a> AppState<'a> {
     fn handle_go_into_dir(&mut self) -> KeypressResult {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let cur_path = self.nav.current_dir();
-            let file_name = entry.name();
-            let entry_path = cur_path.join(file_name);
+            let entry_path = cur_path.join(entry.name());
 
-            if entry.is_dir() && !entry.is_symlink() {
-                self.nav.save_position();
-                self.nav.set_path(entry_path);
-                self.request_dir_load(None);
-                self.request_parent_content();
-                return KeypressResult::Continue;
-            }
-
-            if entry.is_symlink()
-                && let Ok(target) = std::fs::read_link(&entry_path)
-            {
-                let resolved = if target.is_absolute() {
+            let target_path = if entry.is_symlink() {
+                let Ok(target) = std::fs::read_link(&entry_path) else {
+                    return KeypressResult::Continue;
+                };
+                if target.is_absolute() {
                     target
                 } else {
                     entry_path
                         .parent()
-                        .unwrap_or_else(|| std::path::Path::new(""))
+                        .unwrap_or_else(|| Path::new(""))
                         .join(target)
-                };
-                if let Ok(meta) = std::fs::metadata(&resolved)
-                    && meta.is_dir()
-                {
-                    self.nav.save_position();
-                    self.nav.set_path(resolved);
-                    self.request_dir_load(None);
-                    self.request_parent_content();
-                    return KeypressResult::Continue;
                 }
+            } else {
+                entry_path
+            };
+
+            if let Err(e) = std::fs::read_dir(&target_path) {
+                let msg = format!("Permission Denied: {}", e);
+                self.push_overlay_message(msg, Duration::from_secs(3));
+                return KeypressResult::Consumed; // STOP HERE: Don't update NavState
+            }
+
+            if let Ok(meta) = std::fs::metadata(&target_path)
+                && meta.is_dir()
+            {
+                self.nav.save_position();
+                self.nav.set_path(target_path);
+                self.request_dir_load(None);
+                self.request_parent_content();
+                return KeypressResult::Continue;
             }
         }
         KeypressResult::Continue
