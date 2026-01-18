@@ -31,6 +31,7 @@ pub struct RawConfig {
     always_show: Vec<String>,
     #[serde(default = "default_find_results")]
     max_find_results: usize,
+    move_to_trash: bool,
     display: Display,
     theme: Theme,
     editor: Editor,
@@ -48,6 +49,7 @@ impl Default for RawConfig {
             case_insensitive: true,
             always_show: Vec::new(),
             max_find_results: default_find_results(),
+            move_to_trash: true,
             display: Display::default(),
             theme: Theme::default(),
             editor: Editor::default(),
@@ -66,6 +68,7 @@ pub struct Config {
     case_insensitive: bool,
     always_show: Arc<HashSet<OsString>>,
     max_find_results: usize,
+    move_to_trash: bool,
     display: Display,
     theme: Theme,
     editor: Editor,
@@ -88,6 +91,7 @@ impl From<RawConfig> for Config {
                     .collect::<HashSet<_>>(),
             ),
             max_find_results: clamp_find_results(raw.max_find_results),
+            move_to_trash: raw.move_to_trash,
             display: raw.display,
             theme: raw.theme,
             editor: raw.editor,
@@ -152,6 +156,10 @@ impl Config {
 
     pub fn max_find_results(&self) -> usize {
         self.max_find_results
+    }
+
+    pub fn move_to_trash(&self) -> bool {
+        self.move_to_trash
     }
 
     pub fn display(&self) -> &Display {
@@ -346,6 +354,7 @@ selection_icon = ""
 # rename = ["r"]
 # create = ["n"]
 # create_directory = ["Shift+n"]
+# move_file = ["m"]
 # filter = ["f"]
 # toggle_marker = [" "]     # " " - indicates space bar
 # info = ["i"]
@@ -399,6 +408,7 @@ impl Default for Config {
             case_insensitive: true,
             always_show: Arc::new(HashSet::new()),
             max_find_results: DEFAULT_FIND_RESULTS,
+            move_to_trash: true,
             display: Display::default(),
             theme: Theme::default(),
             editor: Editor::default(),

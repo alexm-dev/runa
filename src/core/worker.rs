@@ -133,7 +133,7 @@ pub enum WorkerTask {
 
 /// Supported file system operations the worker can perform.
 pub enum FileOperation {
-    Delete(Vec<PathBuf>),
+    Delete(Vec<PathBuf>, bool),
     Rename {
         old: PathBuf,
         new: PathBuf,
@@ -339,18 +339,33 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
             };
             let mut focus_target: Option<OsString> = None;
             let result: Result<String, String> = match op {
-                FileOperation::Delete(paths) => {
+                FileOperation::Delete(paths, move_to_trash) => {
                     for p in paths {
-                        let res = if p.is_dir() {
-                            std::fs::remove_dir_all(&p)
+                        let res = if move_to_trash {
+                            trash::delete(&p).map_err(|e| e.to_string())
+                        } else if p.is_dir() {
+                            std::fs::remove_dir_all(&p).map_err(|e| e.to_string())
                         } else {
-                            std::fs::remove_file(&p)
+                            std::fs::remove_file(&p).map_err(|e| e.to_string())
                         };
                         if let Err(e) = res {
-                            eprintln!("Failed to delete {}: {}", p.display(), e);
+                            eprintln!(
+                                "{}: {}: {}",
+                                if move_to_trash {
+                                    "Failed to move to trash"
+                                } else {
+                                    "Failed to permanently delete"
+                                },
+                                p.display(),
+                                e
+                            );
                         }
                     }
-                    Ok("Items deleted".to_string())
+                    Ok(if move_to_trash {
+                        "Items moved to trash".to_string()
+                    } else {
+                        "Items permanently deleted".to_string()
+                    })
                 }
                 FileOperation::Rename { old, new } => {
                     let target = new;
@@ -734,7 +749,7 @@ mod tests {
         }
 
         workers.fileop_tx().send(WorkerTask::FileOp {
-            op: FileOperation::Delete(vec![file_path.clone()]),
+            op: FileOperation::Delete(vec![file_path.clone()], false),
             request_id: 5,
         })?;
 

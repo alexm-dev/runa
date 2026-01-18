@@ -470,7 +470,9 @@ impl<'a> AppState<'a> {
     /// Calls actions::action_delete.
     fn confirm_delete(&mut self) {
         let fileop_tx = self.workers.fileop_tx();
-        self.actions.action_delete(&mut self.nav, fileop_tx);
+        let move_to_trash = self.config.move_to_trash();
+        self.actions
+            .action_delete(&mut self.nav, fileop_tx, move_to_trash);
     }
 
     // Prompt functions

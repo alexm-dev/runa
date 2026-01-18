@@ -160,14 +160,19 @@ impl ActionContext {
     /// Deletes the currently marked files or the selected file if no markers exist.
     ///
     /// Sends a delete task to the worker thread via the provided channel.
-    pub fn action_delete(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
+    pub fn action_delete(
+        &mut self,
+        nav: &mut NavState,
+        worker_tx: &Sender<WorkerTask>,
+        move_to_trash: bool,
+    ) {
         let targets = nav.get_action_targets();
         if targets.is_empty() {
             return;
         }
 
         let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Delete(targets.into_iter().collect()),
+            op: FileOperation::Delete(targets.into_iter().collect(), move_to_trash),
             request_id: nav.prepare_new_request(),
         });
 

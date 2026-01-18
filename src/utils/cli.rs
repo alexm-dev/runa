@@ -180,6 +180,7 @@ runa - Full Configuration Guide (runa.toml)
   rename                  (list)   ["r"]
   create                  (list)   ["n"]
   create_directory        (list)   ["Shift+n"]
+  move_file               (list)   ["m"]
   filter                  (list)   ["f"]
   toggle_marker           (list)   [" "]     (space bar)
   info                    (list)   ["i"]

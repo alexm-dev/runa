@@ -40,6 +40,7 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
         let confirm_size = widget.confirm_size_or(DialogSize::Large);
         let move_size = widget.move_size_or(DialogSize::Medium);
         let border_type = app.config().display().border_shape().as_border_type();
+        let move_to_trash = app.config().move_to_trash();
 
         if *mode == InputMode::ConfirmDelete {
             let mut targets: Vec<String> = app
@@ -54,11 +55,15 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
                 .collect();
             targets.sort();
 
-            let preview = if targets.len() == 1 {
-                format!("File to delete: {}", targets[0])
-            } else if targets.len() > 1 {
+            let heading = if move_to_trash {
+                "Files to move to trash"
+            } else {
+                "Files to delete"
+            };
+
+            let preview = if !targets.is_empty() {
                 format!(
-                    "Files to delete ({}):\n{}",
+                    "{heading} ({}):\n{}",
                     targets.len(),
                     targets
                         .iter()

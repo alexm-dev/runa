@@ -376,6 +376,7 @@ paste               = ["p"]
 rename              = ["r"]
 create              = ["n"]
 create_directory    = ["Shift+n"]
+move_file           = ["m"]
 filter              = ["f"]
 toggle_marker       = [" "]     # space bar
 info                = ["i"]
