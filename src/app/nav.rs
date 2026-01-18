@@ -9,16 +9,6 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 /// Holds the navigation, selection and file list state of a pane.
-///
-/// # Fields
-/// * `current_dir` - Current directory path.
-/// * `entries` - List of file entries in the current directory.
-/// * `selected` - Index of the currently selected entry.
-/// * `positions` - Saved cursor positions per directory.
-/// * `markers` - Set of marked file paths for bulk actions.
-/// * `filter` - Current filter string.
-/// * `filters` - Saved filters per directory.
-/// * `request_id` - ID to track async directory load requests.
 pub struct NavState {
     current_dir: PathBuf,
     entries: Vec<FileEntry>,
@@ -126,8 +116,6 @@ impl NavState {
     /// Sets a new current directory path, clearing entries and selection.
     /// Also restores any saved filter for the new directory.
     /// Increments the request ID to cancel pending requests.
-    /// # Arguments
-    /// * `path` - The new directory path to set.
     pub fn set_path(&mut self, path: PathBuf) {
         self.save_position();
 
@@ -151,11 +139,6 @@ impl NavState {
 
     /// Updates the navigation state from a worker thread's result.
     /// Sets the current directory, entries, and selection based on the provided focus.
-    ///
-    /// # Arguments
-    /// * `path` - The current directory path.
-    /// * `entries` - The list of file entries in the directory.
-    /// * `focus` - Optional name of the entry to focus on.
     pub fn update_from_worker(
         &mut self,
         path: PathBuf,
@@ -180,9 +163,6 @@ impl NavState {
 
     /// Toggles the marker state of the currently selected entry.
     /// If the entry is in the clipboard, it is unmarked and removed from the clipboard.
-    ///
-    /// # Arguments
-    /// * `clipboard` - Optional mutable reference to a set of paths in the clipboard.
     pub fn toggle_marker(&mut self, clipboard: &mut Option<HashSet<PathBuf>>) {
         if let Some(entry) = self.selected_shown_entry() {
             let path = self.current_dir().join(entry.name());
@@ -200,10 +180,6 @@ impl NavState {
     }
 
     /// Toggles the marker state of the currently selected entry and advances the selection.
-    ///
-    /// # Arguments
-    /// * `clipboard` - Optional mutable reference to a set of paths in the clipboard.
-    /// * `jump` - If true, wraps selection to the start when reaching the end.
     pub fn toggle_marker_advance(&mut self, clipboard: &mut Option<HashSet<PathBuf>>, jump: bool) {
         self.toggle_marker(clipboard);
         let count = self.shown_entries_len();
@@ -275,9 +251,6 @@ impl NavState {
     }
 
     /// Sets a new filter string, preserving the selected entry if possible.
-    ///
-    /// # Arguments
-    /// * `filter` - The new filter string to set.
     pub fn set_filter(&mut self, filter: String) {
         if self.filter == filter {
             return;

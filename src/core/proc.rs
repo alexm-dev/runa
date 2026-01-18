@@ -91,16 +91,6 @@ struct RawResult {
 }
 
 /// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
-///
-/// # Arguments
-/// * `base_dir` - The base directory to search in.
-/// * `query` - The fuzzy search query.
-/// * `out` - A mutable reference to a vector to store the results.
-/// * `cancel` - An atomic boolean to signal cancellation of the search.
-/// * `max_results` - The maximum number of results to return.
-///
-/// # Errors
-/// Returns an std::io::Error if the fd command fails to execute.
 pub fn find(
     base_dir: &Path,
     query: &str,
@@ -195,14 +185,6 @@ pub fn find(
 /// Use bat to preview a file at the given path, returning up to max_lines of output
 /// Uses the provided bat_args for customization.
 ///
-/// # Arguments
-/// * `path` - The path to the file to preview.
-/// * `max_lines` - The maximum number of lines to return.
-/// * `bat_args` - Additional arguments to pass to the bat command.
-///
-/// # Errors
-/// Returns an std::io::Error if the bat command fails to execute or returns a non-zero status.
-///
 /// # Returns
 /// A vector of strings, each representing a line from the file preview.
 pub fn preview_bat(
@@ -253,10 +235,6 @@ fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
 
 /// Flatten separators by removing all '/' and '\' characters from the string.
 /// This is used to create a simplified version of the path for fuzzy matching.
-/// # Arguments
-/// * `separator` - The input string to flatten.
-/// # Returns
-/// A new String with all '/' and '\' characters removed.
 ///
 /// # Examples
 /// let flat = flatten_separators("src/core/proc.rs");

@@ -16,11 +16,6 @@ use std::time::SystemTime;
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
 /// Used throughout runa for directory browsing and file management
 /// Created and populated by the browse_dir function.
-///
-/// # Fields
-/// * `name` - The original OsString name of the file or directory
-/// * `lowercase_name` - The lowercase version of the name for case-insensitive comparisons
-/// * `flags` - A u8 bitfield representing attributes (is_dir, is_hidden, is_system, is_symlink)
 #[derive(Debug, Clone)]
 pub struct FileEntry {
     name: OsString,
@@ -99,13 +94,6 @@ pub enum FileType {
 
 /// Main FileInfo struct that holds each info field for the ShowInfo overlay widget.
 /// Holds name, size, modified time, attributes string, and file type.
-///
-/// # Fields
-/// * `name` - The OsString name of the file or directory
-/// * `size` - The size of the file in bytes (None for directories)
-/// * `modified` - The last modified time as SystemTime (None if unavailable)
-/// * `attributes` - A formatted string of file attributes
-/// * `file_type` - The FileType enum indicating if it's a file, directory, symlink, or other
 #[derive(Debug, Clone, PartialEq)]
 pub struct FileInfo {
     name: OsString,
@@ -139,10 +127,6 @@ impl FileInfo {
     }
 
     /// Main file info getter used by the ShowInfo overlay functions
-    ///
-    /// # Arguments
-    /// * `path` - Path reference to the file or directory to get info for
-    ///
     /// # Returns
     /// A FileInfo struct populated with the file's information.
     pub fn get_file_info(path: &Path) -> io::Result<FileInfo> {
@@ -172,10 +156,6 @@ impl FileInfo {
 }
 
 /// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
-///
-/// # Arguments
-/// * `path` - Path reference to the directory to browse
-///
 /// # Returns
 /// A Result containing a vector of FileEntry structs or an std::io::Error
 pub fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {

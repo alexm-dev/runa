@@ -32,15 +32,6 @@ const BINARY_PEEK_BYTES: usize = 1024;
 
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.
-///
-/// # Fields
-/// * `dirs_first` - Whether to sort directories before files.
-/// * `show_hidden` - Whether to show hidden files.
-/// * `show_system` - Whether to show system files.
-/// * `case_insensitive` - Whether sorting is case insensitive.
-/// * `always_show` - Set of filenames to always show, regardless of hidden/system status.
-/// * `always_show_lowercase` - Lowercase version of always_show for case insensitive checks.
-/// * `pane_width` - Width of the pane for formatting display names.
 pub struct Formatter {
     dirs_first: bool,
     show_hidden: bool,
@@ -75,8 +66,6 @@ impl Formatter {
     }
 
     /// Sorts the given file entries in place according to the formatter's settings.
-    /// # Arguments
-    /// * `entries` - Mutable slice of FileEntry to sort.
     pub fn sort_entries(&self, entries: &mut [FileEntry]) {
         entries.sort_by(|a, b| {
             if self.dirs_first {
@@ -95,8 +84,6 @@ impl Formatter {
     }
 
     /// Filters the given file entries in place according to the formatter's settings.
-    /// # Arguments
-    /// * `entries` - Mutable vector of FileEntry to filter.
     pub fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         entries.retain(|e| {
             let is_exception = if self.case_insensitive {
@@ -123,8 +110,6 @@ impl Formatter {
 /// On Windows: Returns a short string showing file type and attributes like:
 /// (`d`, `l`, `h` for hidden, `s` for system, `a` for archive, `r` for read-only). Not all flags map 1:1 to Unix.
 ///
-/// # Arguments
-/// * `meta` - Reference to the Metadata struct of the file.
 /// # Returns
 /// A string representing the formatted file attributes used by FileInfo
 pub fn format_attributes(meta: &Metadata) -> String {
@@ -178,8 +163,6 @@ pub fn format_attributes(meta: &Metadata) -> String {
 }
 
 /// Formats the FileType enum into a human-readable string.
-/// # Arguments
-/// * `file_type` - Reference to the FileType enum to format.
 /// # Returns
 /// A static string representing the file type.
 pub fn format_file_type(file_type: &FileType) -> &'static str {
@@ -192,11 +175,6 @@ pub fn format_file_type(file_type: &FileType) -> &'static str {
 }
 
 /// Formats the file size into a human-readable string.
-///
-/// # Arguments
-/// * `size` - Optional file size in bytes.
-/// * `is_dir` - Boolean indicating if the entry is a directory.
-///
 /// # Returns
 /// A string representing the formatted file size or "-" for directories/unknown sizes.
 pub fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
@@ -210,10 +188,6 @@ pub fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
 }
 
 /// Formats the file modification time into a human-readable string.
-///
-/// # Arguments
-/// * `modified` - Optional SystemTime representing the modification time.
-///
 /// # Returns
 /// A string representing the formatted modification time or "-" if unknown.
 pub fn format_file_time(modified: Option<SystemTime>) -> String {
@@ -252,11 +226,6 @@ pub fn symlink_target_resolved(
 /// Calculating the pane widht and clean the output to the widht of the pane
 /// by removing control characters, expanding tabs to 4 spaces,
 /// and truncating or padding the string to fit exactly.
-///
-/// # Arguments
-/// * `line` - The input string to sanitize.
-/// * `pane_width` - The width of the pane to fit the string into.
-///
 /// # Returns
 /// A sanitized string that fits exactly within the specified pane width.
 pub fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
@@ -296,12 +265,6 @@ pub fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
 }
 
 /// Loads a fixed-width preview of a directory entries
-///
-/// # Arguments
-/// * `path` - The path to the directory to preview.
-/// * `max_lines` - The maximum number of lines to return.
-/// * `pane_width` - The width of the pane for formatting.
-///
 /// # Returns
 /// A vector of strings, each representing a line from the directory preview.
 pub fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
@@ -346,11 +309,6 @@ pub fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Ve
 /// Loads a preview for any path (directory or file), returning an error or a padded lines for
 /// display.
 /// large binaries/unreadable and unsupported files are replaced with a notice.
-///
-/// # Arguments
-/// * `path` - The path to the file or directory to preview.
-/// * `max_lines` - The maximum number of lines to return.
-/// * `pane_width` - The width of the pane for formatting.
 ///
 /// # Returns
 /// A vector of strings, each representing a line from the file or directory preview.

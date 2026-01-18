@@ -20,11 +20,6 @@ use std::time::Instant;
 ///
 /// Used to determine which UI overlays, prompts, or context actions should be active.
 ///
-/// Variants:
-/// * `Normal` - Default browsing mode.
-/// * `Input` - Input mode with specific [InputMode] and prompt string.
-/// * `ShowInfo` - Display file information overlay with [FileInfo].
-///
 /// Used by [ActionContext] to track current user action state.
 #[derive(Clone, PartialEq)]
 pub enum ActionMode {
@@ -36,14 +31,6 @@ pub enum ActionMode {
 /// Enumerates all the available input field modes
 ///
 /// Used to select the prompts, behavior and the style of the input dialog.
-///
-/// Variants:
-/// * `Rename` - Rename file/folder prompt.
-/// * `NewFile` - Create new file prompt.
-/// * `NewFolder` - Create new folder prompt.
-/// * `Filter` - Filter files in the current directory prompt.
-/// * `ConfirmDelete` - Confirm delete files prompt.
-/// * `Find` - Fuzzy find files prompt.
 #[derive(Clone, Copy, PartialEq)]
 pub enum InputMode {
     Rename,
@@ -63,14 +50,6 @@ pub enum InputMode {
 /// Includes methods for performing actions like copy, paste, delete, rename, create, and filter
 ///
 /// Also manages fuzzy find state via the embedded [FindState] struct.
-///
-/// # Fields
-/// * `mode` - Current [ActionMode] (Normal, Input, ShowInfo).
-/// * `input_buffer` - Current input string buffer.
-/// * `input_cursor_pos` - Cursor position within the input buffer.
-/// * `clipboard` - Optional set of file paths for copy/paste operations.
-/// * `is_cut` - Flag indicating if clipboard items are cut or copied.
-/// * `find` - Embedded [FindState] for managing fuzzy find operations.
 ///
 /// Methods to manipulate input, clipboard, and perform file actions.
 /// Also find management methods.
@@ -175,10 +154,6 @@ impl ActionContext {
     /// Deletes the currently marked files or the selected file if no markers exist.
     ///
     /// Sends a delete task to the worker thread via the provided channel.
-    ///
-    /// # Arguments
-    /// * `nav` - Mutable reference to the current navigation state.
-    /// * `worker_tx` - Sender channel to dispatch worker tasks.
     pub fn action_delete(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
         let targets = nav.get_action_targets();
         if targets.is_empty() {
@@ -194,13 +169,7 @@ impl ActionContext {
     }
 
     /// Currently, cut/move is not implemented yet. Only copy/yank is used.
-    ///
     /// This allows for easy addition of a cut/move feature in the future.
-    ///
-    /// # Arguments
-    /// * `nav` - Reference to the current navigation state.
-    /// * `is_cut` - Boolean indicating if the operation is a cut (true) or copy (false).
-    ///
     /// Sets the clipboard with the selected files.
     pub fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
         let mut set = HashSet::new();
@@ -220,10 +189,6 @@ impl ActionContext {
     /// Pastes the files from the clipboard into the current directory.
     ///
     /// Sends a copy task to the worker thread via the provided channel.
-    ///
-    /// # Arguments
-    /// * `nav` - Mutable reference to the current navigation state.
-    /// * `worker_tx` - Sender channel to dispatch worker tasks.
     pub fn action_paste(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
         if let Some(source) = &self.clipboard {
             let first_file_name = source
@@ -250,9 +215,6 @@ impl ActionContext {
 
     /// Applies the current input buffer as a filter to the navigation state.
     ///
-    /// # Arguments
-    /// * `nav` - Mutable reference to the current navigation state.
-    ///
     /// Sets the filter string in the navigation state.
     pub fn action_filter(&mut self, nav: &mut NavState) {
         nav.set_filter(self.input_buffer.clone());
@@ -261,9 +223,6 @@ impl ActionContext {
     /// Renames the currently selected file or folder to the name in the input buffer.
     ///
     /// Sends a rename task to the worker thread via the provided channel.
-    /// # Arguments
-    /// * `nav` - Mutable reference to the current navigation state.
-    /// * `worker_tx` - Sender channel to dispatch worker tasks.
     ///
     /// Exits input mode after performing the action.
     pub fn action_rename(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
@@ -288,11 +247,6 @@ impl ActionContext {
     /// Creates a new file or directory with the name in the input buffer.
     ///
     /// Sends a create task to the worker thread via the provided channel.
-    ///
-    /// # Arguments
-    /// * `nav` - Mutable reference to the current navigation state.
-    /// * `is_dir` - Boolean indicating if creating a directory (true) or file (false).
-    /// * `worker_tx` - Sender channel to dispatch worker tasks.
     ///
     /// Exits input mode after performing the action.
     pub fn action_create(
@@ -330,9 +284,6 @@ impl ActionContext {
     }
 
     /// Inserts a character at the current cursor position in the input buffer.
-    ///
-    /// # Arguments
-    /// * `ch` - The character to insert.
     pub fn action_insert_at_cursor(&mut self, ch: char) {
         self.input_buffer.insert(self.input_cursor_pos, ch);
         self.input_cursor_pos += ch.len_utf8();
@@ -439,18 +390,12 @@ impl FindState {
     }
 
     /// Sets the cached find results and resets the selected index.
-    ///
-    /// # Arguments
-    /// * `results` - Vector of [FindResult] to cache.
     fn set_results(&mut self, results: Vec<FindResult>) {
         self.cache = results;
         self.selected = 0;
     }
 
     /// Sets the cancellation token for the current find operation.
-    ///
-    /// # Arguments
-    /// * `token` - Arc-wrapped [AtomicBool] used for cancellation.
     ///
     /// Sets the internal cancel token.
     fn set_cancel(&mut self, token: Arc<AtomicBool>) {
@@ -464,28 +409,17 @@ impl FindState {
 
     /// Prepares a new unique request ID for a find operation.
     /// Increments the internal request ID counter.
-    ///
-    /// # Returns:
-    /// * `u64` - The new request ID.
     fn prepare_new_request(&mut self) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.request_id
     }
 
     /// Sets the debounce timer for the find operation.
-    /// # Arguments
-    /// * `delay` - Duration to wait before processing input.
     fn set_debounce(&mut self, delay: Duration) {
         self.debounce = Some(Instant::now() + delay);
     }
 
     /// Takes the current query if the debounce period has elapsed and its different from the last query.
-    ///
-    /// # Arguments
-    /// * `current_query` - The current input query string.
-    ///
-    /// Returns:
-    /// * `Some(String)` - The current query if it should be processed.
     fn take_query(&mut self, current_query: &str) -> Option<String> {
         let until = self.debounce?;
         if Instant::now() < until {
