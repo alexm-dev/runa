@@ -38,7 +38,7 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
         let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
         let size = widget.size().unwrap_or(DialogSize::Small);
         let confirm_size = widget.confirm_size_or(DialogSize::Large);
-        let move_size = widget.move_size_or(DialogSize::Medium);
+        let move_size = widget.move_size_or(DialogSize::Custom(70, 14));
         let border_type = app.config().display().border_shape().as_border_type();
         let move_to_trash = app.config().move_to_trash();
 
@@ -174,8 +174,8 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
                 )]));
             }
             if !preview.is_empty() {
-                for l in preview.lines() {
-                    dialog_lines.push(Line::raw(l));
+                for lines in preview.lines() {
+                    dialog_lines.push(Line::raw(lines));
                 }
             }
             let dialog_text = Text::from(dialog_lines);

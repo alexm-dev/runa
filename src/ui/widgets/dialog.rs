@@ -134,20 +134,6 @@ impl<'de> Deserialize<'de> for DialogSize {
     }
 }
 
-impl DialogSize {
-    /// preset for dialog size percentages
-    ///
-    /// Returns the (width, height) -percentages of the dialog
-    pub fn percentages(&self) -> (u16, u16) {
-        match self {
-            DialogSize::Small => (24, 7),
-            DialogSize::Medium => (26, 14),
-            DialogSize::Large => (32, 40),
-            DialogSize::Custom(w, h) => (*w, *h),
-        }
-    }
-}
-
 /// Struct to hold the dialog style.
 ///
 /// Includes the dialog border, border_style, the background/foreground and the title.

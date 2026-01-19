@@ -583,7 +583,7 @@ impl Default for WidgetTheme {
             position: Some(DialogPosition::Center),
             size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),
-            move_size: Some(DialogSize::Medium),
+            move_size: Some(DialogSize::Custom(70, 14)),
             find_visible_results: Some(5),
             find_width: Some(40),
         }
