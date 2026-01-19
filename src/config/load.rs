@@ -9,8 +9,8 @@
 use crate::config::Display;
 use crate::config::Theme;
 use crate::config::{Editor, Keys};
-use crate::utils::DEFAULT_FIND_RESULTS;
 use crate::utils::helpers::clamp_find_results;
+use crate::utils::{DEFAULT_FIND_RESULTS, get_home};
 
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -191,7 +191,7 @@ impl Config {
         if let Ok(path) = std::env::var("RUNA_CONFIG") {
             return PathBuf::from(path);
         }
-        if let Some(home) = dirs::home_dir() {
+        if let Some(home) = get_home() {
             return home.join(".config/runa/runa.toml");
         }
         PathBuf::from("runa.toml")
@@ -223,6 +223,7 @@ show_hidden = true
 case_insensitive = true
 # always_show = []
 # max_find_results = 2000
+# move_to_trash = true
 
 [display]
 # selection_marker = true
@@ -319,6 +320,7 @@ selection_icon = ""
 # size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
 # position = "center"       # "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 # confirm_size = "large"
+# move_size = [70, 14]
 # find_size = "medium"
 # color.fg = "default"
 # color.bg = "default"

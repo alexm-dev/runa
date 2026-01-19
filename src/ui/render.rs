@@ -17,7 +17,7 @@ use crate::{
         overlays::Overlay,
         panes::{PaneContext, PaneStyles, PreviewOptions},
     },
-    utils::{as_path_op, shorten_home_path},
+    utils::{as_path_op, clean_display_path, shorten_home_path},
 };
 use ratatui::{
     Frame,
@@ -285,7 +285,8 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
     let cfg = app.config();
     let display_cfg = cfg.display();
     let theme_cfg = cfg.theme();
-    let path_str = shorten_home_path(app.nav().current_dir());
+    let path_short = shorten_home_path(app.nav().current_dir());
+    let path_str = clean_display_path(&path_short);
     let border_type = display_cfg.border_shape().as_border_type();
 
     if display_cfg.is_unified() {
@@ -296,7 +297,7 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
 
         if display_cfg.titles() {
             let mut title_text = " ".to_owned();
-            title_text.push_str(&path_str);
+            title_text.push_str(path_str);
             title_text.push(' ');
 
             outer_block = outer_block.title(Line::from(vec![Span::styled(
@@ -314,7 +315,7 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
             .constraints([Constraint::Length(1), Constraint::Min(0)])
             .split(area);
 
-        let mut path_display = path_str;
+        let mut path_display = path_str.to_string();
         path_display.push(' ');
 
         frame.render_widget(

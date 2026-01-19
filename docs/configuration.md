@@ -308,6 +308,11 @@ size = "medium"
 #   - Leave blank or omit to use the regular `size`.
 confirm_size = "large"
 
+# Move file widget size
+#   - Preset string, list, or table, just like "size" above.
+#   - Leave blank or omit to use the regular `size`. (default is [70, 14])
+move_size = [70, 14]
+
 # Option to specify the maximal `drawn` results of the find widget.
 # Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
 find_visible_results = 5

@@ -2,9 +2,6 @@
 //! This module provides functions to retrieve appropriate icons
 //! based on file extensions, special filenames, and directory names.
 //!
-//! It uses `once_cell` for lazy static initialization of icon maps.
-//! The icons are represented as static string slices.
-//!
 //! The main function `nerd_font_icon` takes a `FileEntry` and returns
 //! the corresponding Nerd Font icon.
 

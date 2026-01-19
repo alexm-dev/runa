@@ -9,9 +9,10 @@ use crate::config::presets::*;
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::parse_color;
 
-use once_cell::sync::Lazy;
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
+
+use std::sync::LazyLock;
 
 /// Theme configuration options
 /// Holds all color and style options for the application.
@@ -112,7 +113,7 @@ impl Theme {
     /// This avoids recreating the default theme multiple times
     /// by using a static Lazy instance.
     pub fn internal_defaults() -> &'static Self {
-        static DEFAULT: Lazy<Theme> = Lazy::new(Theme::default);
+        static DEFAULT: LazyLock<Theme> = LazyLock::new(Theme::default);
         &DEFAULT
     }
 

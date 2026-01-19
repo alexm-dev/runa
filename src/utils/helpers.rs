@@ -13,6 +13,7 @@
 use crate::config::Editor;
 use ratatui::style::Color;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
+use std::sync::OnceLock;
 use std::{fs, io};
 
 /// The minimum results which is set to if the maximum is overset in the runa.toml.
@@ -22,6 +23,14 @@ pub const DEFAULT_FIND_RESULTS: usize = 2000;
 /// The maximum find result limit which is possible.
 /// Can be set higher, but better to set it to a big limit instead of usize::MAX
 pub const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
+
+/// Shared cache for the home_dir dirs call
+static HOME_DIR_CACHE: OnceLock<Option<PathBuf>> = OnceLock::new();
+
+/// Thread safe for getting home_dir once.
+pub fn get_home() -> Option<&'static PathBuf> {
+    HOME_DIR_CACHE.get_or_init(dirs::home_dir).as_ref()
+}
 
 /// Parses a string (color name or hex) into a ratatui::style::color
 ///
@@ -132,34 +141,64 @@ pub fn get_unused_path(path: &Path) -> PathBuf {
 /// Is used by the path_str in the ui.rs render function.
 pub fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     let path = path.as_ref();
-    if let Some(home_dir) = dirs::home_dir()
-        && let Ok(stripped) = path.strip_prefix(&home_dir)
+
+    let home_dir = get_home();
+
+    if let Some(home) = home_dir
+        && let Ok(stripped) = path.strip_prefix(home)
     {
         if stripped.as_os_str().is_empty() {
             return "~".to_string();
         } else {
-            let mut short = stripped.display().to_string();
-            if short.starts_with(MAIN_SEPARATOR) {
-                short.remove(0);
-            }
-            return format!("~{}{}", MAIN_SEPARATOR, short);
+            return format!("~{}{}", MAIN_SEPARATOR, stripped.display());
         }
     }
     path.display().to_string()
 }
 
 pub fn expand_home_path(input: &str) -> String {
-    if input == "~"
-        && let Some(home) = dirs::home_dir()
-    {
-        return home.to_string_lossy().to_string();
+    expand_home_path_buf(input).to_string_lossy().to_string()
+}
+
+pub fn expand_home_path_buf(input: &str) -> PathBuf {
+    let home = get_home();
+
+    if let Some(home) = home {
+        if input == "~" {
+            return home.clone();
+        }
+
+        if let Some(rest) = input.strip_prefix("~/") {
+            return home.join(rest);
+        }
+
+        #[cfg(windows)]
+        if let Some(rest) = input.strip_prefix(r"~\") {
+            return home.join(rest);
+        }
     }
-    if let Some(rest) = input.strip_prefix("~/")
-        && let Some(home) = dirs::home_dir()
-    {
-        return home.join(rest).to_string_lossy().to_string();
+
+    PathBuf::from(input)
+}
+
+pub fn is_hardened_directory(path: &Path) -> bool {
+    if !path.exists() || !path.is_dir() {
+        return false;
     }
-    input.to_string()
+
+    if std::fs::read_dir(path).is_err() {
+        return false;
+    }
+
+    if path.components().count() > 255 {
+        return false;
+    }
+
+    true
+}
+
+pub fn clean_display_path(path: &str) -> &str {
+    path.strip_prefix(r"\\?\").unwrap_or(path)
 }
 
 /// Safely clamp the find result numbers.
@@ -181,13 +220,18 @@ pub fn clamp_find_results(value: usize) -> usize {
 ///
 /// If `src` is a directory, it creates the directory at `dest` and copies all its contents recursively.
 pub fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
+    if dest.starts_with(src) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Cannot copy a directory into itself",
+        ));
+    }
+
     if src.is_dir() {
         fs::create_dir_all(dest)?;
         for entry in fs::read_dir(src)? {
             let entry = entry?;
-            let entry_path = entry.path();
-            let dest_path = dest.join(entry.file_name());
-            copy_recursive(&entry_path, &dest_path)?;
+            copy_recursive(&entry.path(), &dest.join(entry.file_name()))?;
         }
     } else {
         fs::copy(src, dest)?;

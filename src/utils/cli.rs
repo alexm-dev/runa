@@ -1,7 +1,6 @@
 //! Command-line argument parsing and help for runa.
 //!
 //! This module handles all CLI flag parsing used for config initialization and help.
-//! It recognizes args/flags such: --help, --init, --init-full and --config-help
 //!
 //! When invoked with no args/flags (rn), runa simply launches the TUI
 
@@ -9,6 +8,7 @@ use crate::config::Config;
 
 pub enum CliAction {
     RunApp,
+    RunAppAtPath(String),
     Exit,
 }
 
@@ -33,6 +33,10 @@ pub fn handle_args() -> CliAction {
             print_config_help();
             CliAction::Exit
         }
+        "--keybinds" | "--keybind" | "--key" => {
+            print_keybinds();
+            CliAction::Exit
+        }
         "--init" => {
             if let Err(e) = Config::generate_default(&config_path, true) {
                 eprintln!("Error: {}", e);
@@ -45,8 +49,10 @@ pub fn handle_args() -> CliAction {
             }
             CliAction::Exit
         }
+        arg if !arg.starts_with('-') => CliAction::RunAppAtPath(arg.to_string()),
         arg => {
             eprintln!("Unknown argument: {}", arg);
+            eprintln!("Try --help for available options");
             CliAction::Exit
         }
     }
@@ -68,11 +74,44 @@ OPTIONS:
     --init                Generate a default config at ~/.config/runa/runa.toml
     --init-full           Generate the full config
     --config-help         Display all the configuration options
+    --keybinds            Display all the default keybinds
 
 ENVIRONMENT:
     RUNA_CONFIG         Override the default config path
 "#
     );
+}
+
+fn print_keybinds() {
+    println!(
+        r##"
+=========================
+ Key Bindings
+=========================
+[keys]
+  open_file                 e.g. ["Enter"]
+  go_up                     ["k", "Up"]
+  go_down                   ["j", "Down"]
+  go_parent                 ["h", "Left", "Backspace"]
+  go_into_dir               ["l", "Right"]
+  quit                      ["q", "Esc"]
+  delete                    ["d"]
+  copy                      ["y"]
+  paste                     ["p"]
+  rename                    ["r"]
+  create                    ["n"]
+  create_directory          ["Shift+n"]
+  move_file                 ["m"]
+  filter                    ["f"]
+  toggle_marker             [" "]     (space bar)
+  info                      ["i"]
+  find                      ["s"]
+  clear_markers             ["Ctrl+c]
+  clear_filter              ["Ctrl+f]
+
+    (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
+    "##
+    )
 }
 
 fn print_config_help() {
@@ -82,111 +121,114 @@ runa - Full Configuration Guide (runa.toml)
 =========================
  General Settings
 =========================
-  dirs_first              (bool)    Sort directories before files [default: true]
-  show_hidden             (bool)    Show hidden files (dotfiles)
-  show_system             (bool)    Show system/protected files (mainly Windows)
-  case_insensitive        (bool)    Ignore case sensitivity in search/sort [default: true]
-  always_show             (list)    Hidden entries always shown, e.g. [".config", "Downloads"]
-  max_find_results        (usize)   Max results for find (default: 2000, min: 15, max: 1_000_000)
+  dirs_first                 Sort directories before files [default: true]
+  show_hidden                Show hidden files (dotfiles)
+  show_system                Show system/protected files (mainly Windows)
+  case_insensitive           Ignore case sensitivity in search/sort [default: true]
+  always_show                Hidden entries always shown, e.g. [".config", "Downloads"]
+  max_find_results           Max results for find (default: 2000, min: 15, max: 1_000_000)
+  move_to_trash              Move files to trash bin instead of permanent deletion
 
 =========================
  Display Settings
 =========================
 [display]
-  selection_marker        (bool)    Show selection/cursor marker [default: true]
-  dir_marker              (bool)    Show '/' or marker for directories [default: true]
-  borders                 (str)     "none", "unified", or "split"
-  border_shape            (str)     "square", "rounded", or "double"
-  titles                  (bool)    Show pane titles at the top
-  icons                   (bool)    Show Nerd Font icons
-  separators              (bool)    Show vertical lines between panes
-  parent                  (bool)    Show parent (left) pane [default: true]
-  preview                 (bool)    Show preview (right) pane [default: true]
-  preview_underline       (bool)    Underline preview selection instead of highlight
-  preview_underline_color (bool)    Distinct color for preview underline
-  entry_padding           (usize)   Padding (# chars) left/right (0–4)
-  scroll_padding          (usize)   Reserved rows when scrolling
-  toggle_marker_jump      (bool)    Toggle marker jumping to first entry
-  instant_preview         (bool)    Toggle instant previews on every selection change
+  selection_marker           Show selection/cursor marker [default: true]
+  dir_marker                 Show '/' or marker for directories [default: true]
+  borders                    "none", "unified", or "split"
+  border_shape               "square", "rounded", or "double"
+  titles                     Show pane titles at the top
+  icons                      Show Nerd Font icons
+  separators                 Show vertical lines between panes
+  parent                     Show parent (left) pane [default: true]
+  preview                    Show preview (right) pane [default: true]
+  preview_underline          Underline preview selection instead of highlight
+  preview_underline_color    Distinct color for preview underline
+  entry_padding              Padding (# chars) left/right (0–4)
+  scroll_padding             Reserved rows when scrolling
+  toggle_marker_jump         Toggle marker jumping to first entry
+  instant_preview            Toggle instant previews on every selection change
 
 [display.layout]
-  parent                  (u16)     Width % for parent pane
-  main                    (u16)     Width % for main pane
-  preview                 (u16)     Width % for preview pane
+  parent                     Width % for parent pane
+  main                       Width % for main pane
+  preview                    Width % for preview pane
 
-[display.info] (toggle display of file info attributes)
-  name                    (bool)
-  file_type               (bool)
-  size                    (bool)
-  modified                (bool)
-  perms                   (bool)
+[display.info] (toggle display file info attributes)
+  name
+  file_type
+  size
+  modified
+  perms
 
 =========================
  Theme Configuration
 =========================
 [theme]
-  name                    (str)     Theme name, e.g. "gruvbox-dark"
-  selection_icon          (str)     Symbol for selection (">" or " ")
+  name                       Theme name, e.g. "gruvbox-dark"
+  selection_icon             Symbol for selection (">" or " ")
 
 # Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"):
-[theme.selection]                  Selection bar (fg, bg)
-[theme.accent]                     Borders/titles (fg, bg)
-[theme.entry]                      Normal entries (fg, bg)
-[theme.directory]                  Directory entries (fg, bg)
-[theme.separator]                  Vertical separators (fg, bg)
-[theme.parent]                     Parent pane text (fg, bg, selection_fg, selection_bg)
-[theme.preview]                    Preview pane text (fg, bg, selection_fg, selection_bg)
-[theme.marker]                     Multi-select marker (icon, fg, bg, clipboard)
-[theme.underline]                  Preview underline (fg, bg)
-[theme.path]                       Path bar at the top (fg, bg)
+[theme.selection]            Selection bar (fg, bg)
+[theme.accent]               Borders/titles (fg, bg)
+[theme.entry]                Normal entries (fg, bg)
+[theme.directory]            Directory entries (fg, bg)
+[theme.separator]            Vertical separators (fg, bg)
+[theme.parent]               Parent pane text (fg, bg, selection_fg, selection_bg)
+[theme.preview]              Preview pane text (fg, bg, selection_fg, selection_bg)
+[theme.marker]               Multi-select marker (icon, fg, bg, clipboard)
+[theme.underline]            Preview underline (fg, bg)
+[theme.path]                 Path bar at the top (fg, bg)
 
-[theme.status_line]                Status line color bar
-  fg                      (str)  Foreground color for the status line
-  bg                      (str)  Background color for the status line
+[theme.status_line]          Status line color bar
+  fg                         Foreground color for the status line
+  bg                         Background color for the status line
 
-[theme.widget]                     Dialog/widgets config (see docs):
-  position                (str/list/table)  "center", [x, y], {x = 38, y = 32}
-  size                    (str/list/table)  "small", [w, h], {w = 33, h = 15}
-  confirm_size            (str/list/table)  Override size for confirmation popups
-  color.fg/bg             (str)             Text/background color
-  border.fg/bg            (str)
-  title.fg/bg             (str)
+[theme.widget]               Dialog/widgets config (see docs):
+  position                   "center", [x, y], {x = 38, y = 32}
+  size                       "small", [w, h], {w = 33, h = 15}
+  confirm_size               Override size for confirmation widget
+  move_size                  Override size for the move file widget
+  find_size                  Override size for the find widget
+  color.fg/bg                Text/background color
+  border.fg/bg               Widget Border colors
+  title.fg/bg                Widget Title colors
 
-[theme.info]              File info overlay
- color.fg/bg,             (str)
- border.fg/bg,            (str)
- title.fg/bg,             (str)
- position                 (str/list/table) "center", "top_left", [x, y], { x, y }
+[theme.info]                 File Info overlay widget
+ color.fg/bg,
+ border.fg/bg,
+ title.fg/bg,
+ position                   "center", "top_left", [x, y], { x, y }
 
 =========================
  Editor
 =========================
 [editor]
-  cmd                     (str)    Command to open files (e.g., "nvim", "code")
+  cmd                       Command to open files (e.g., "nvim", "code")
 
 =========================
  Key Bindings
 =========================
 [keys]
-  open_file               (list)   e.g. ["Enter"]
-  go_up                   (list)   ["k", "Up"]
-  go_down                 (list)   ["j", "Down"]
-  go_parent               (list)   ["h", "Left", "Backspace"]
-  go_into_dir             (list)   ["l", "Right"]
-  quit                    (list)   ["q", "Esc"]
-  delete                  (list)   ["d"]
-  copy                    (list)   ["y"]
-  paste                   (list)   ["p"]
-  rename                  (list)   ["r"]
-  create                  (list)   ["n"]
-  create_directory        (list)   ["Shift+n"]
-  move_file               (list)   ["m"]
-  filter                  (list)   ["f"]
-  toggle_marker           (list)   [" "]     (space bar)
-  info                    (list)   ["i"]
-  find                    (list)   ["s"]
-  clear_markers           (list)   ["Ctrl+c]
-  clear_filter            (list)   ["Ctrl+f]
+  open_file                 e.g. ["Enter"]
+  go_up                     ["k", "Up"]
+  go_down                   ["j", "Down"]
+  go_parent                 ["h", "Left", "Backspace"]
+  go_into_dir               ["l", "Right"]
+  quit                      ["q", "Esc"]
+  delete                    ["d"]
+  copy                      ["y"]
+  paste                     ["p"]
+  rename                    ["r"]
+  create                    ["n"]
+  create_directory          ["Shift+n"]
+  move_file                 ["m"]
+  filter                    ["f"]
+  toggle_marker             [" "]     (space bar)
+  info                      ["i"]
+  find                      ["s"]
+  clear_markers             ["Ctrl+c]
+  clear_filter              ["Ctrl+f]
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
 
