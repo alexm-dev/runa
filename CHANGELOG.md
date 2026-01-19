@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.5.4] - 2026-01-18
+## [0.5.4] - 2026-01-19
 
 ### Added
 - Move function: New move function, by default mapped to `m`, moves files to a directory via input. [(#25)](https://github.com/alexm-dev/runa/pull/25)

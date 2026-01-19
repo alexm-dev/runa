@@ -58,6 +58,10 @@ always_show = []
 # Maximum allowed: 1_000_000 (values above this will be clamped)
 max_find_results = 2000
 
+# Toggle to move deleted files to the the recycle bin instead of being permanently deleted.
+move_to_trash = true
+
+
 [display]
 # Show the selection icon next to the file/directory name
 selection_marker = true
