@@ -6,7 +6,6 @@ edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/alexm-dev/runa"
-documentation = "docs/configuration.md"
 readme = "README.md"
 authors = ["alexm-dev"]
 categories = ["filesystem", "command-line-utilities", "command-line-interface"]
