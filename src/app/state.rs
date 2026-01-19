@@ -92,29 +92,11 @@ pub struct AppState<'a> {
 
 impl<'a> AppState<'a> {
     pub fn new(config: &'a Config) -> std::io::Result<Self> {
-        let workers = Workers::spawn();
         let current_dir = std::env::current_dir()?;
-
-        let mut app = Self {
-            config,
-            keymap: Keymap::from_config(config),
-            metrics: LayoutMetrics::default(),
-            nav: NavState::new(current_dir),
-            actions: ActionContext::default(),
-            preview: PreviewState::default(),
-            parent: ParentState::default(),
-            workers,
-            is_loading: false,
-            notification_time: None,
-            overlays: OverlayStack::new(),
-        };
-
-        app.request_dir_load(None);
-        app.request_parent_content();
-        Ok(app)
+        Self::from_dir(config, &current_dir)
     }
 
-    pub fn new_with_path(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
+    pub fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
         let workers = Workers::spawn();
         let current_dir = if initial_path.exists() && initial_path.is_dir() {
             initial_path.to_path_buf()

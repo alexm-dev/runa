@@ -178,6 +178,16 @@ pub fn expand_home_path_buf(input: &str) -> PathBuf {
         }
     }
 
+    #[cfg(windows)]
+    {
+        if input.len() == 2 && input.ends_with(':') {
+            let first_char = input.chars().next().unwrap();
+            if first_char.is_ascii_alphabetic() {
+                return PathBuf::from(format!(r"{}\", input));
+            }
+        }
+    }
+
     PathBuf::from(input)
 }
 

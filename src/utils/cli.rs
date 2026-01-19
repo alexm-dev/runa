@@ -106,8 +106,8 @@ fn print_keybinds() {
   toggle_marker             [" "]     (space bar)
   info                      ["i"]
   find                      ["s"]
-  clear_markers             ["Ctrl+c]
-  clear_filter              ["Ctrl+f]
+  clear_markers             ["Ctrl+c"]
+  clear_filter              ["Ctrl+f"]
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
     "##
@@ -227,8 +227,8 @@ runa - Full Configuration Guide (runa.toml)
   toggle_marker             [" "]     (space bar)
   info                      ["i"]
   find                      ["s"]
-  clear_markers             ["Ctrl+c]
-  clear_filter              ["Ctrl+f]
+  clear_markers             ["Ctrl+c"]
+  clear_filter              ["Ctrl+f"]
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
 
