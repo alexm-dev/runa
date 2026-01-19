@@ -22,16 +22,13 @@ fn main() -> std::io::Result<()> {
             crossterm::cursor::Show
         );
 
-        eprintln!("\n[runa] Panic occurred: {}", info);
+        eprintln!("\n[runa] Error occurred: {}", info);
 
         #[cfg(debug_assertions)]
         {
             let bt = std::backtrace::Backtrace::force_capture();
             eprintln!("\nStack Backtrace:\n{}", bt);
         }
-
-        #[cfg(not(debug_assertions))]
-        eprintln!("Run with RUST_BACKTRACE=1 for more details.");
     }));
 
     let action = handle_args();
