@@ -6,17 +6,17 @@ All the changes made to runa are documented here.
 
 ### Added
 - Move function: New move function, by default mapped to `m`, moves files to a directory via input. [(#25)](https://github.com/alexm-dev/runa/pull/25)
-- Move widget auto-complete: New move function input has auto-complete, to find easier paths easier to move files into. [(#25)](https://github.com/alexm-dev/runa/pull/25)
+- Move widget auto-complete: New move function input has auto-complete, to make it easier to find paths to move into. [(#25)](https://github.com/alexm-dev/runa/pull/25)
 - Dialog separators: Added horizontal separators to Delete, Move and Find widgets/dialogs, to visually separate input from the rest of the widget.
 - Move to trash: Toggle to enable files to be moved to trash instead of permanent deletion.
-- CLI path start: Added a way to start `runa` at a different path via cli args.
+- CLI path start: Added a way to start `runa` at a different path via CLI args.
 
 ### Fixed
-- Preview width truncation: Now correclty requests a inital preview based on the actual pane width of the preview pane
+- Preview width truncation: Now correctly requests a initial preview based on the actual pane width of the preview pane
 
-#### Changed
-- Layout metrics debounce for preview: Added a debounce for layout metrics changing, resulting in less preview requests for chaning the terminal size.
-- Navigation Hardening: Navigation is now hardened to correclty stop navigation when a directory is permission denied.
+### Changed
+- Layout metrics debounce for preview: Added a debounce for layout metrics changes, resulting in fewer preview requests for changing the terminal size.
+- Navigation hardening: Navigation is now hardened to correctly stop navigation when a directory is permission denied.
 - Integration tests: Moved integration tests to their specific modules instead of a central `tests/` directory.
 
 
