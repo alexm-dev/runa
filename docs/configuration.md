@@ -25,11 +25,22 @@ runa is under active development and options may change over time.
 
 ## Quick Start
 
+Launch `runa` by simply running `rn`. You can also specify a starting directory:
+
+- `rn`: Opens up runa at the current directory.
+- `rn /path/to/dir`: Opens runa at the specified location.
+
 If you don't have a config file yet, you can generate one automatically:
 
+### Configuration Setup
 - `rn --init`: Generates the configuration.
 - `rn --init-full`: Creates a full configuration file with all options as shown below.
 - `rn --config-help`: Displays all configuration options.
+
+### Quick Reference
+- `rn --help`: Shows the standard CLI help menu
+- `rn --keybinds`: Displays all default keybinds for quick reference
+- `rn --version`: Displays the current installed version
 
 ## General Settings
 
