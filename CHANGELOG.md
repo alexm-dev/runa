@@ -17,6 +17,7 @@ All the changes made to runa are documented here.
 #### Changed
 - Layout metrics debounce for preview: Added a debounce for layout metrics changing, resulting in less preview requests for chaning the terminal size.
 - Navigation Hardening: Navigation is now hardened to correclty stop navigation when a directory is permission denied.
+- Integration tests: Moved integration tests to their specific modules instead of a central `tests/` directory.
 
 
 ---
