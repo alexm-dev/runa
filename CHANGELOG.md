@@ -8,7 +8,9 @@ Quick patch to fix Cargo.toml issue
 
 ### Fixed
 - Cargo.toml: removed invalid `documentation` field to fix publish issues.
-
+- Pinned exact versions of dependencies to ensure reproducible builds:
+  - `crossbeam-channel = "0.5.15"`
+  - `chrono = "0.4.43"`
 
 ---
 
