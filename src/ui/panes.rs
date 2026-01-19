@@ -103,11 +103,11 @@ pub fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
         String::new()
     };
 
-    if app.nav().shown_entries_len() == 0 && !app.nav().filter().is_empty() {
+    if !app.is_loading() && app.nav().shown_entries_len() == 0 && !app.nav().filter().is_empty() {
         let style = context.styles.item;
         let line = Line::from(vec![
             Span::raw(&padding_str),
-            Span::styled("[Now results for this filter]", style),
+            Span::styled("[No results for this filter]", style),
         ]);
         frame.render_widget(Paragraph::new(line).block(context.block), context.area);
         return;

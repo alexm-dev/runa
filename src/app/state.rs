@@ -153,6 +153,10 @@ impl<'a> AppState<'a> {
         &self.parent
     }
 
+    pub fn is_loading(&self) -> bool {
+        self.is_loading
+    }
+
     pub fn notification_time(&self) -> &Option<Instant> {
         &self.notification_time
     }
