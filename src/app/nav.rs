@@ -114,13 +114,11 @@ impl NavState {
     }
 
     /// Sets a new current directory path, clearing entries and selection.
-    /// Also restores any saved filter for the new directory.
     /// Increments the request ID to cancel pending requests.
     pub fn set_path(&mut self, path: PathBuf) {
         self.save_position();
 
         self.current_dir = path;
-        self.restore_filter_for_current_dir();
         // instantly ends all pending messages from the previous directory.
         self.request_id = self.request_id.wrapping_add(1);
     }
@@ -147,6 +145,8 @@ impl NavState {
     ) {
         self.current_dir = path;
         self.entries = entries;
+
+        self.restore_filter_for_current_dir();
 
         if let Some(f) = focus {
             self.selected = self
