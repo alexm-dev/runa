@@ -390,4 +390,48 @@ mod tests {
         assert!(result.is_err(), "Expected error for missing file");
         Ok(())
     }
+
+    #[test]
+    fn test_complete_dirs_with_fd_sandboxed() -> Result<(), Box<dyn std::error::Error>> {
+        let dir = tempdir()?;
+        let base_path = dir.path();
+
+        let dirs_to_create = ["photos", "documents", ".hidden_dir"];
+        for dir_name in &dirs_to_create {
+            std::fs::create_dir(base_path.join(dir_name))?;
+        }
+
+        std::fs::write(base_path.join("not_a_dir.txt"), "hello")?;
+
+        let results = complete_dirs_with_fd(base_path, "p")?;
+
+        assert!(
+            results.iter().any(|r| r.contains("photos")),
+            "Should find 'photos'"
+        );
+        assert!(
+            !results.iter().any(|r| r.contains("documents")),
+            "Should not find 'documents'"
+        );
+        assert!(
+            !results.iter().any(|r| r.contains("not_a_dir")),
+            "Should not find files"
+        );
+
+        let all_results = complete_dirs_with_fd(base_path, "")?;
+        assert!(all_results.len() >= 2);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
+        let sandbox = tempdir()?;
+        let non_existent = sandbox.path().join("ghost_zone");
+
+        let result = complete_dirs_with_fd(&non_existent, "");
+        assert!(result.is_err(), "Expected error for non-existent path");
+
+        Ok(())
+    }
 }

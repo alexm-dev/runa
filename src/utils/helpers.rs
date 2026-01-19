@@ -386,4 +386,54 @@ mod tests {
         assert!(name.contains("_1"), "Suffix missing: got {:?}", name);
         Ok(())
     }
+
+    #[test]
+    fn test_home_expansion() -> Result<(), Box<dyn error::Error>> {
+        let path = expand_home_path_buf("~");
+        assert!(path.is_absolute());
+
+        let path = expand_home_path_buf("~/downloads");
+        assert!(path.ends_with("downloads"));
+        assert!(path.is_absolute());
+
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn test_windows_drive_normalization() -> Result<(), Box<dyn error::Error>> {
+        // Test C: -> C:\
+        let path = expand_home_path_buf("C:");
+        assert_eq!(path.to_str().ok_or("UTF8 error")?, r"C:\");
+
+        // Test lowercase d: -> d:\
+        let path = expand_home_path_buf("d:");
+        assert_eq!(path.to_str().ok_or("UTF8 error")?, r"d:\");
+
+        let path = expand_home_path_buf(r"C:\Users");
+        assert_eq!(path.to_str().ok_or("UTF8 error")?, r"C:\Users");
+
+        let path = expand_home_path_buf(r"~\Documents");
+        assert!(path.is_absolute());
+        assert!(path.ends_with("Documents"));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_standard_paths() -> Result<(), Box<dyn error::Error>> {
+        let path = expand_home_path_buf("projects/runa");
+        assert_eq!(path, Path::new("projects/runa"));
+
+        let sandbox = tempdir()?;
+        let absolute_input = sandbox.path().join("my_app").join("config.toml");
+
+        let input_str = absolute_input.to_string_lossy();
+        let result = expand_home_path_buf(&input_str);
+
+        assert_eq!(result, absolute_input);
+        assert!(result.is_absolute());
+
+        Ok(())
+    }
 }
