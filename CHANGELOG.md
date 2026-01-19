@@ -2,6 +2,17 @@
 
 All the changes made to runa are documented here.
 
+## [0.5.5] - 2026-01-19
+
+Quick patch to fix Cargo.toml issue
+
+### Fixed
+- Cargo.toml: removed invalid `documentation` field to fix publish issues.
+
+
+---
+
+
 ## [0.5.4] - 2026-01-19
 
 ### Added
