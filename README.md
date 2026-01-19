@@ -19,6 +19,7 @@
 
 <a href="docs/configuration.md">Full Configuration Guide</a> • 
 <a href="#installation">Installation Guide</a> • 
+<a href="docs/configuration.md#quick-start">Quick Start</a> • 
 <a href="docs/configuration.md#general-settings">General Settings</a> • 
 <a href="docs/configuration.md#theme-configuration">Theme Configuration</a> • 
 <a href="docs/configuration.md#key-bindings">Key Bindings</a> • 
