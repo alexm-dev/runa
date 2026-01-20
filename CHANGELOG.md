@@ -13,7 +13,7 @@ All the changes made to runa are documented here.
 - Filter selection: Fixed filter removing the selection index after moving out of a filtered entry
 
 ### Changed
-- Visibility refactor: set function visibility to crate only.
+- Visibility refactor: Set function visibility to crate only.
 - Editor: Hardened open_in_editor logic to handle false arguments
 
 ### Internal
