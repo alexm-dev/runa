@@ -13,12 +13,14 @@ All the changes made to runa are documented here.
 - Filter selection: Fixed filter removing the selection index after moving out of a filtered entry
 
 ### Changed
-- Set pub functions visibility to crate only
-- Hardened open_in_editor logic to handle false arguments
+- Visibility refactor: set function visibility to crate only.
+- Editor: Hardened open_in_editor logic to handle false arguments
 
 ### Internal
-- Added inline attributes to getter functions
-- Added core/fm and app/state integration tests
+- Performance: Optimized worker threads by removing redundant string conversions during message handling.
+- Tests: Added `core/fm` and `app/state` integration tests.
+- Inline attributes: Added inline attributes to getter functions
+- Tests: Added core/fm and app/state integration tests
 
 
 ---
