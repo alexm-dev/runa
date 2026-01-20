@@ -2,6 +2,17 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased
+
+### Fixed
+- No filter result flicker: Fixed a flicker showing `[No results for this filter]` when navigating in and out of a filtered dir
+- Unfiltered content flash: Fixed a very subtle stale content update when moving **out** of a filtered dir.
+- Filter selection: Fixed filter removing the selection index after moving out of a filtered entry
+
+
+---
+
+
 ## [0.5.5] - 2026-01-19
 
 Quick patch to fix Cargo.toml issue
