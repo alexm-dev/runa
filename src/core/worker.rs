@@ -449,7 +449,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
+    fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
         let task_tx = workers.io_tx();
         let res_rx = workers.response_rx();
@@ -570,7 +570,7 @@ mod tests {
     }
 
     #[test]
-    fn test_worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
+    fn worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
         if !fd_available() {
             return Ok(());
         }
@@ -649,7 +649,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_worker_finds_file() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_worker_finds_file() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         std::fs::File::create(temp.path().join("crab.txt"))?;
 
@@ -682,7 +682,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_worker_internal() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_worker_internal() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let preview_file = temp.path().join("preview.txt");
         std::fs::write(&preview_file, "A\nB\nC\nD\n")?;
@@ -712,7 +712,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fileop_worker_create_and_delete_file() -> Result<(), Box<dyn std::error::Error>> {
+    fn fileop_worker_create_and_delete_file() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let file_path = temp.path().join("touch.txt");
         let workers = Workers::spawn();

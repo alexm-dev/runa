@@ -294,7 +294,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_path_collision_increments() -> Result<(), Box<dyn error::Error>> {
+    fn path_collision_increments() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let path = dir.path().join("data.csv");
 
@@ -312,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hidden_file_collision() -> Result<(), Box<dyn error::Error>> {
+    fn hidden_file_collision() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let path = dir.path().join(".config");
 
@@ -323,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_basic() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_basic() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let file_path = dir.path().join("test.txt");
 
@@ -351,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_no_extension() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_no_extension() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let folder_path = dir.path().join("my_folder");
 
@@ -369,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_hidden_file() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_hidden_file() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let dot_file = dir.path().join(".gitignore");
 
@@ -386,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_complex_extension() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_complex_extension() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let tar_gz = dir.path().join("archive.tar.gz");
 
@@ -403,7 +403,7 @@ mod tests {
     }
 
     #[test]
-    fn test_home_expansion() -> Result<(), Box<dyn error::Error>> {
+    fn home_expansion() -> Result<(), Box<dyn error::Error>> {
         let path = expand_home_path_buf("~");
         assert!(path.is_absolute());
 
@@ -416,7 +416,7 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn test_windows_drive_normalization() -> Result<(), Box<dyn error::Error>> {
+    fn windows_drive_normalization() -> Result<(), Box<dyn error::Error>> {
         // Test C: -> C:\
         let path = expand_home_path_buf("C:");
         assert_eq!(path.to_str().ok_or("UTF8 error")?, r"C:\");
@@ -436,7 +436,7 @@ mod tests {
     }
 
     #[test]
-    fn test_standard_paths() -> Result<(), Box<dyn error::Error>> {
+    fn standard_paths() -> Result<(), Box<dyn error::Error>> {
         let path = expand_home_path_buf("projects/runa");
         assert_eq!(path, Path::new("projects/runa"));
 

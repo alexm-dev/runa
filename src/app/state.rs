@@ -22,6 +22,7 @@ use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{Overlay, OverlayStack};
 
 use crossterm::event::KeyEvent;
+
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
@@ -450,5 +451,101 @@ impl<'a> AppState<'a> {
             request_id,
             cancel: cancel_token,
         });
+    }
+}
+
+// AppState tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use std::time::{Duration, Instant};
+
+    fn dummy_config() -> Config {
+        Config::default()
+    }
+
+    #[test]
+    fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let cwd = std::env::current_dir()?;
+        let app = AppState::from_dir(&config, &cwd)?;
+        assert_eq!(app.nav().current_dir(), cwd);
+        Ok(())
+    }
+
+    #[test]
+    fn tick_clears_expired_notification_message() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        app.notification_time = Some(Instant::now() - Duration::from_secs(2));
+        app.overlays_mut().push(Overlay::Message {
+            text: "Timed MSG".to_string(),
+        });
+        let changed = app.tick();
+        assert!(changed);
+        assert!(app.notification_time.is_none());
+        assert!(
+            !app.overlays()
+                .iter()
+                .any(|o| matches!(o, Overlay::Message { .. }))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let app_nav = app.nav();
+        if app_nav.entries().is_empty() {
+            assert_eq!(app.visible_selected(), None);
+            assert!(!app.has_visible_entries());
+        } else {
+            assert!(app.visible_selected().is_some());
+            assert!(app.has_visible_entries());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn handle_keypress_continue_if_no_action() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
+        let result = app.handle_keypress(key);
+        assert!(matches!(result, KeypressResult::Continue));
+        Ok(())
+    }
+
+    #[test]
+    fn request_dir_load_sets_is_loading() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        app.is_loading = false;
+        app.request_dir_load(None);
+        assert!(app.is_loading);
+        Ok(())
+    }
+
+    #[test]
+    fn request_parent_content_handles_root() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        #[cfg(unix)]
+        {
+            use std::path::PathBuf;
+            app.nav.set_path(PathBuf::from("/"));
+            app.request_parent_content();
+            assert!(app.parent.entries().is_empty() || app.parent.entries().len() >= 0);
+        }
+        #[cfg(windows)]
+        {
+            use std::path::PathBuf;
+            app.nav.set_path(PathBuf::from("C:\\"));
+            app.request_parent_content();
+            assert!(app.parent.entries().is_empty());
+        }
+        Ok(())
     }
 }

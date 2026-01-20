@@ -452,7 +452,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_ui_sanitization_and_exact_width() {
+    fn ui_sanitization_and_exact_width() {
         let pane_width = 10;
 
         let cases = vec![
@@ -482,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
+    fn core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempdir()?;
         let entries = core::browse_dir(temp_dir.path())?;
 

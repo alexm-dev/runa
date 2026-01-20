@@ -327,7 +327,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_navstate_rapid_navigation() -> Result<(), Box<dyn error::Error>> {
+    fn navstate_rapid_navigation() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let file_count = 10;
 
@@ -391,7 +391,7 @@ mod tests {
     }
 
     #[test]
-    fn test_navstate_navigation() -> Result<(), Box<dyn error::Error>> {
+    fn navstate_navigation() -> Result<(), Box<dyn error::Error>> {
         let base = tempdir()?;
         let base_path = base.path().to_path_buf();
         let subdir_path = base_path.join("subdir");
@@ -443,7 +443,7 @@ mod tests {
     }
 
     #[test]
-    fn test_navstate_selection_persistence() -> Result<(), Box<dyn error::Error>> {
+    fn navstate_selection_persistence() -> Result<(), Box<dyn error::Error>> {
         let base = tempdir()?;
         let base_path = base.path().to_path_buf();
         let subdir_path = base_path.join("subdir");
@@ -488,7 +488,7 @@ mod tests {
     }
 
     #[test]
-    fn test_navstate_filter_persistence() -> Result<(), Box<dyn error::Error>> {
+    fn navstate_filter_persistence() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let base_path = dir.path().to_path_buf();
 
@@ -542,7 +542,7 @@ mod tests {
     }
 
     #[test]
-    fn test_navstate_marker_persistence() -> Result<(), Box<dyn error::Error>> {
+    fn navstate_marker_persistence() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let base_path = dir.path().to_path_buf();
 

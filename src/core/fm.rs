@@ -213,3 +213,63 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
     }
     Ok(entries)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::{self, File};
+    use std::io::Write;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    #[test]
+    fn file_entry_flags() -> Result<(), Box<dyn std::error::Error>> {
+        let fe_file = FileEntry::new(OsString::from("file.txt"), 0);
+        assert!(!fe_file.is_dir());
+        assert!(!fe_file.is_hidden());
+        assert_eq!(fe_file.name_str(), "file.txt");
+
+        let flags = FileEntry::IS_DIR | FileEntry::IS_HIDDEN;
+        let fe_dir = FileEntry::new(OsString::from(".hidden_folder"), flags);
+        assert!(fe_dir.is_dir());
+        assert!(fe_dir.is_hidden());
+        assert!(!fe_dir.is_system());
+        assert!(!fe_dir.is_symlink());
+        assert_eq!(fe_dir.lowercase_name(), ".hidden_folder");
+        Ok(())
+    }
+
+    #[test]
+    fn file_info_basic_file() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = TempDir::new()?;
+        let file_path = tmp.path().join("hello.txt");
+        let mut file = File::create(&file_path)?;
+        writeln!(file, "abc123")?;
+
+        let info = FileInfo::get_file_info(&file_path)?;
+        assert_eq!(info.file_type(), &FileType::File);
+        assert_eq!(info.name().to_string_lossy(), "hello.txt");
+        assert!(info.size().is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn file_info_directory() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = TempDir::new()?;
+        let dir_path = tmp.path().join("emptydir");
+        fs::create_dir(&dir_path)?;
+
+        let info = FileInfo::get_file_info(&dir_path)?;
+        assert_eq!(info.file_type(), &FileType::Directory);
+        assert_eq!(info.size(), &None);
+        Ok(())
+    }
+
+    #[test]
+    fn browse_dir_nonexistent() -> Result<(), Box<dyn std::error::Error>> {
+        let path = PathBuf::from("/path/does/not/exist");
+        let result = browse_dir(&path);
+        assert!(result.is_err());
+        Ok(())
+    }
+}

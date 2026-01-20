@@ -271,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_recursive_unit() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_recursive_unit() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
 
         let dir = tempdir()?;
@@ -305,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_recursive_empty_query() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_recursive_empty_query() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
         let dir = tempdir()?;
         fs::File::create(dir.path().join("something.txt"))?;
@@ -317,7 +317,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_recursive_subdirectory() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_recursive_subdirectory() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
         let dir = tempdir()?;
         let subdir = dir.path().join("nested");
@@ -340,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_bat_basic() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_bat_basic() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
         let dir = tempdir()?;
@@ -365,7 +365,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_bat_with_args() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_bat_with_args() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
         let dir = tempdir()?;
@@ -381,7 +381,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_bat_nonexistent_file() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_bat_nonexistent_file() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
         let dir = tempfile::tempdir()?;
@@ -393,7 +393,7 @@ mod tests {
     }
 
     #[test]
-    fn test_complete_dirs_with_fd_sandboxed() -> Result<(), Box<dyn std::error::Error>> {
+    fn complete_dirs_with_fd_sandboxed() -> Result<(), Box<dyn std::error::Error>> {
         let dir = tempdir()?;
         let base_path = dir.path();
 
@@ -426,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
+    fn fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
         let sandbox = tempdir()?;
         let non_existent = sandbox.path().join("ghost_zone");
 

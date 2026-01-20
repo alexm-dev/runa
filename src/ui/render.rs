@@ -424,7 +424,7 @@ mod tests {
     use std::error;
 
     #[test]
-    fn test_layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
+    fn layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
         let size = Rect::new(0, 0, 100, 10);
 
         let toml_content = r#"
