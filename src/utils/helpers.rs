@@ -2,6 +2,7 @@
 //!
 //! This module defines constants for the minimum, default, and maximum find result limits used throughout runa.
 //! It also provides utility functions:
+//! - Home directory cache and getter to ensure only a single call to home_dir is made.
 //! - Color parsing from strings or hex codes
 //! - Opening paths/files in the user's chosen editor
 //! - Generating unused filenames to prevent accidental overwrite
@@ -167,6 +168,21 @@ pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     path.display().to_string()
 }
 
+pub(crate) fn readable_path(path: &Path) -> String {
+    #[cfg(windows)]
+    {
+        let display = path.display().to_string();
+        display
+            .strip_prefix(r"\\?\")
+            .unwrap_or(&display)
+            .to_string()
+    }
+    #[cfg(not(windows))]
+    {
+        path.display().to_string()
+    }
+}
+
 pub(crate) fn expand_home_path(input: &str) -> String {
     expand_home_path_buf(input).to_string_lossy().to_string()
 }
@@ -267,21 +283,6 @@ pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
         fs::copy(src, dest)?;
     }
     Ok(())
-}
-
-pub(crate) fn readable_path(path: &Path) -> String {
-    #[cfg(windows)]
-    {
-        let display = path.display().to_string();
-        display
-            .strip_prefix(r"\\?\")
-            .unwrap_or(&display)
-            .to_string()
-    }
-    #[cfg(not(windows))]
-    {
-        path.display().to_string()
-    }
 }
 
 /// Helper utils integration tests
