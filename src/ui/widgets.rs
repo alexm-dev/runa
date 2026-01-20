@@ -8,10 +8,10 @@
 //! - General pane blocks, separators and the status line.
 //! - Configurable dialog/widget style, position and style
 
-pub mod dialog;
-pub mod draw;
+pub(crate) mod dialog;
+pub(crate) mod draw;
 
-pub use dialog::{
+pub(crate) use dialog::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog, get_pane_block,
 };
-pub use draw::*;
+pub(crate) use draw::*;

@@ -91,7 +91,7 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
 /// This map associates specific filenames with their corresponding
 /// Nerd Font icons.
 /// For example, "Cargo.toml" maps to the icon "".
-pub static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "README.md" => "",
     "LICENSE" => "",
     "LICENSE-MIT" => "",
@@ -130,7 +130,7 @@ pub static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map
 /// This map associates specific directory names with their corresponding
 /// Nerd Font icons.
 /// For example, "node_modules" maps to the icon "".
-pub static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "bin" => "",
     "lib" => "",
     "node_modules" => "",
@@ -147,7 +147,7 @@ pub static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map!
 ///
 /// # Arguments
 /// * `entry` - A reference to a `FileEntry` representing the file or directory.
-pub fn nerd_font_icon(entry: &FileEntry) -> &'static str {
+pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
     let lowercase_name = entry.lowercase_name();
 
     if entry.is_dir() {

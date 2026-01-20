@@ -8,10 +8,7 @@
 //!
 //! All of these utilities are used throughout runa for convenience and code clarity.
 
-pub mod cli;
-pub mod helpers;
+pub(crate) mod cli;
+pub(crate) mod helpers;
 
-pub use helpers::{
-    DEFAULT_FIND_RESULTS, as_path_op, clean_display_path, copy_recursive, expand_home_path,
-    get_home, get_unused_path, open_in_editor, parse_color, readable_path, shorten_home_path,
-};
+pub(crate) use helpers::*;

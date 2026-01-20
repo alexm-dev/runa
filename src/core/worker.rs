@@ -15,7 +15,7 @@
 
 use crate::config::display::PreviewMethod;
 use crate::core::{
-    FileEntry, FindResult, Formatter, browse_dir, find, preview_bat, safe_read_preview,
+    FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
 use crate::utils::{copy_recursive, get_unused_path};
 
@@ -29,7 +29,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 
 /// Manages worker threads channels for different task types.
-pub struct Workers {
+pub(crate) struct Workers {
     io_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     preview_tx: Sender<WorkerTask>,
@@ -49,7 +49,7 @@ impl Workers {
     /// Create the worker set.
     ///
     /// Spawns dedicated threads for I/O, preview, find and file operations.
-    pub fn spawn() -> Self {
+    pub(crate) fn spawn() -> Self {
         let (io_tx, io_rx) = unbounded::<WorkerTask>();
         let (preview_tx, preview_rx) = unbounded::<WorkerTask>();
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
@@ -71,27 +71,27 @@ impl Workers {
     }
 
     /// Accessor the I/O worker task sender.
-    pub fn io_tx(&self) -> &Sender<WorkerTask> {
+    pub(crate) fn io_tx(&self) -> &Sender<WorkerTask> {
         &self.io_tx
     }
 
     /// Accessor for the preview worker task sender.
-    pub fn preview_tx(&self) -> &Sender<WorkerTask> {
+    pub(crate) fn preview_tx(&self) -> &Sender<WorkerTask> {
         &self.preview_tx
     }
 
     /// Accessor for the find worker task sender.
-    pub fn find_tx(&self) -> &Sender<WorkerTask> {
+    pub(crate) fn find_tx(&self) -> &Sender<WorkerTask> {
         &self.find_tx
     }
 
     /// Accessor for the file operation worker task sender.
-    pub fn fileop_tx(&self) -> &Sender<WorkerTask> {
+    pub(crate) fn fileop_tx(&self) -> &Sender<WorkerTask> {
         &self.fileop_tx
     }
 
     /// Accessor for the worker response receiver.
-    pub fn response_rx(&self) -> &Receiver<WorkerResponse> {
+    pub(crate) fn response_rx(&self) -> &Receiver<WorkerResponse> {
         &self.response_rx
     }
 }
@@ -99,7 +99,7 @@ impl Workers {
 /// Tasks sent to the worker thread via channel.
 ///
 /// Each variant describes a filesystem or a preview operation to perform.
-pub enum WorkerTask {
+pub(crate) enum WorkerTask {
     LoadDirectory {
         path: PathBuf,
         focus: Option<OsString>,
@@ -120,7 +120,6 @@ pub enum WorkerTask {
     },
     FileOp {
         op: FileOperation,
-        request_id: u64,
     },
     FindRecursive {
         base_dir: PathBuf,
@@ -132,7 +131,7 @@ pub enum WorkerTask {
 }
 
 /// Supported file system operations the worker can perform.
-pub enum FileOperation {
+pub(crate) enum FileOperation {
     Delete(Vec<PathBuf>, bool),
     Rename {
         old: PathBuf,
@@ -154,7 +153,7 @@ pub enum FileOperation {
 ///
 /// Each variant delivers the result or error from a request taks.
 #[derive(Debug)]
-pub enum WorkerResponse {
+pub(crate) enum WorkerResponse {
     DirectoryLoaded {
         path: PathBuf,
         entries: Vec<FileEntry>,
@@ -166,8 +165,6 @@ pub enum WorkerResponse {
         request_id: u64,
     },
     OperationComplete {
-        message: String,
-        request_id: u64,
         need_reload: bool,
         focus: Option<OsString>,
     },
@@ -334,11 +331,11 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
 fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
-            let WorkerTask::FileOp { op, request_id } = task else {
+            let WorkerTask::FileOp { op } = task else {
                 continue;
             };
             let mut focus_target: Option<OsString> = None;
-            let result: Result<String, String> = match op {
+            let result: Result<(), String> = match op {
                 FileOperation::Delete(paths, move_to_trash) => {
                     for p in paths {
                         let res = if move_to_trash {
@@ -361,11 +358,7 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                             );
                         }
                     }
-                    Ok(if move_to_trash {
-                        "Items moved to trash".to_string()
-                    } else {
-                        "Items permanently deleted".to_string()
-                    })
+                    Ok(())
                 }
                 FileOperation::Rename { old, new } => {
                     let target = new;
@@ -377,9 +370,7 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                         ))
                     } else {
                         focus_target = target.file_name().map(|n| n.to_os_string());
-                        std::fs::rename(old, &target)
-                            .map(|_| "Renamed".into())
-                            .map_err(|e| e.to_string())
+                        std::fs::rename(old, &target).map_err(|e| e.to_string())
                     }
                 }
                 FileOperation::Create { path, is_dir } => {
@@ -395,7 +386,7 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                             .open(&target)
                             .map(|_| ())
                     };
-                    res.map(|_| "Created".into()).map_err(|e| e.to_string())
+                    res.map_err(|e| e.to_string())
                 }
                 FileOperation::Copy {
                     src,
@@ -423,15 +414,13 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                             };
                         }
                     }
-                    Ok("Pasted".into())
+                    Ok(())
                 }
             };
 
             match result {
-                Ok(msg) => {
+                Ok(_) => {
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
-                        message: msg,
-                        request_id,
                         need_reload: true,
                         focus: focus_target,
                     });
@@ -733,7 +722,6 @@ mod tests {
                 path: file_path.clone(),
                 is_dir: false,
             },
-            request_id: 4,
         })?;
 
         let r = workers
@@ -750,7 +738,6 @@ mod tests {
 
         workers.fileop_tx().send(WorkerTask::FileOp {
             op: FileOperation::Delete(vec![file_path.clone()], false),
-            request_id: 5,
         })?;
 
         let r = workers

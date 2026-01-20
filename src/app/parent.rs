@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 /// Stores the list of entries in the parent directory, the selected entry (index)
 /// and tracks the request IDs to coordinate updates.
 #[derive(Default)]
-pub struct ParentState {
+pub(crate) struct ParentState {
     entries: Vec<FileEntry>,
     selected_idx: Option<usize>,
     last_path: Option<PathBuf>,
@@ -21,26 +21,29 @@ pub struct ParentState {
 impl ParentState {
     // Getters / accessors
 
-    pub fn request_id(&self) -> u64 {
+    #[inline]
+    pub(crate) fn request_id(&self) -> u64 {
         self.request_id
     }
 
-    pub fn entries(&self) -> &[FileEntry] {
+    #[inline]
+    pub(crate) fn entries(&self) -> &[FileEntry] {
         &self.entries
     }
 
-    pub fn selected_idx(&self) -> Option<usize> {
+    #[inline]
+    pub(crate) fn selected_idx(&self) -> Option<usize> {
         self.selected_idx
     }
 
-    pub fn last_path(&self) -> Option<&PathBuf> {
-        self.last_path.as_ref()
+    pub(crate) fn last_path(&self) -> Option<&Path> {
+        self.last_path.as_deref()
     }
 
     /// Determines if a worker request should be issued for the given parent directory.
     ///
     /// Returns true if entries are empty or if the path has changed since the last refresh
-    pub fn should_request(&self, parent_path: &Path) -> bool {
+    pub(crate) fn should_request(&self, parent_path: &Path) -> bool {
         if self.entries.is_empty() {
             return true;
         }
@@ -50,7 +53,7 @@ impl ParentState {
     /// Updates the state with new entries
     ///
     /// Only applies the update if request ID is the latest
-    pub fn update_from_entries(
+    pub(crate) fn update_from_entries(
         &mut self,
         entries: Vec<FileEntry>,
         current_name: &str,
@@ -69,7 +72,7 @@ impl ParentState {
 
     /// Clears all entries, resets the selected entry index,
     /// resets the last path and increases the request_id
-    pub fn clear(&mut self) {
+    pub(crate) fn clear(&mut self) {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;

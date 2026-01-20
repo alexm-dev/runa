@@ -15,20 +15,12 @@ use ratatui::{
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 
-/// Input keys used to input events.
-///
-/// Used to determine over character keys and named keys.
-pub enum InputKey {
-    Char(char),
-    Name(&'static str),
-}
-
 /// Specifies possible dialog positions within the TUI frame.
 /// Also possible to customize the position via the runa.toml
 ///
 /// Is used to determine where dialog/widgets such as dialogs and input boxes are rendered.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum DialogPosition {
+pub(crate) enum DialogPosition {
     Center,
     Top,
     Bottom,
@@ -97,7 +89,7 @@ impl<'de> Deserialize<'de> for DialogPosition {
 
 /// Preset for all dialogs/widgets sizes as well as a customized size via the runa.toml
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum DialogSize {
+pub(crate) enum DialogSize {
     Small,
     Medium,
     Large,
@@ -137,12 +129,12 @@ impl<'de> Deserialize<'de> for DialogSize {
 /// Struct to hold the dialog style.
 ///
 /// Includes the dialog border, border_style, the background/foreground and the title.
-pub struct DialogStyle {
-    pub border: Borders,
-    pub border_style: Style,
-    pub bg: Style,
-    pub fg: Style,
-    pub title: Option<Span<'static>>,
+pub(crate) struct DialogStyle {
+    pub(crate) border: Borders,
+    pub(crate) border_style: Style,
+    pub(crate) bg: Style,
+    pub(crate) fg: Style,
+    pub(crate) title: Option<Span<'static>>,
 }
 
 impl Default for DialogStyle {
@@ -158,16 +150,16 @@ impl Default for DialogStyle {
 }
 
 /// Struct to hold the overall layout of a dialog widget
-pub struct DialogLayout {
-    pub area: Rect,
-    pub position: DialogPosition,
-    pub size: DialogSize,
+pub(crate) struct DialogLayout {
+    pub(crate) area: Rect,
+    pub(crate) position: DialogPosition,
+    pub(crate) size: DialogSize,
 }
 
 /// Function to correctly calculate the area of the dialog
 ///
 /// Returns the Rect of the calculated are of the dialog
-pub fn dialog_area(area: Rect, size: DialogSize, pos: DialogPosition) -> Rect {
+pub(crate) fn dialog_area(area: Rect, size: DialogSize, pos: DialogPosition) -> Rect {
     let min_w = 7;
     let min_h = 3;
 
@@ -260,7 +252,7 @@ pub fn dialog_area(area: Rect, size: DialogSize, pos: DialogPosition) -> Rect {
 
 /// Draws the dialog widgets
 /// Takes the frame area as a rect, sets the position of the dialog and the overall style.
-pub fn draw_dialog<'a, T>(
+pub(crate) fn draw_dialog<'a, T>(
     frame: &mut Frame,
     layout: DialogLayout,
     border: BorderType,
@@ -294,7 +286,7 @@ pub fn draw_dialog<'a, T>(
 }
 
 /// Getter for the overall pane block,
-pub fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
+pub(crate) fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
     let mut block = Block::default();
     if app.config().display().is_split() {
         block = block

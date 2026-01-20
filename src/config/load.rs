@@ -9,8 +9,7 @@
 use crate::config::Display;
 use crate::config::Theme;
 use crate::config::{Editor, Keys};
-use crate::utils::helpers::clamp_find_results;
-use crate::utils::{DEFAULT_FIND_RESULTS, get_home};
+use crate::utils::{DEFAULT_FIND_RESULTS, clamp_find_results, get_home};
 
 use serde::Deserialize;
 use std::collections::HashSet;
@@ -23,7 +22,7 @@ use std::{fs, io, path::PathBuf};
 /// It uses owned types and is then converted into the main [Config] struct.
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub struct RawConfig {
+pub(crate) struct RawConfig {
     dirs_first: bool,
     show_hidden: bool,
     show_system: bool,
@@ -61,7 +60,7 @@ impl Default for RawConfig {
 /// Main configuration struct for runa
 /// This struct holds the processed configuration options used by runa.
 #[derive(Debug)]
-pub struct Config {
+pub(crate) struct Config {
     dirs_first: bool,
     show_hidden: bool,
     show_system: bool,
@@ -107,7 +106,7 @@ impl Config {
     /// Also applies any necessary overrides to the theme after loading.
     ///
     /// Called by entry point to load config at startup.
-    pub fn load() -> Self {
+    pub(crate) fn load() -> Self {
         let path = Self::default_path();
 
         if !path.exists() {
@@ -134,51 +133,62 @@ impl Config {
 
     // Getters
 
-    pub fn dirs_first(&self) -> bool {
+    #[inline]
+    pub(crate) fn dirs_first(&self) -> bool {
         self.dirs_first
     }
 
-    pub fn show_hidden(&self) -> bool {
+    #[inline]
+    pub(crate) fn show_hidden(&self) -> bool {
         self.show_hidden
     }
 
-    pub fn show_system(&self) -> bool {
+    #[inline]
+    pub(crate) fn show_system(&self) -> bool {
         self.show_system
     }
 
-    pub fn case_insensitive(&self) -> bool {
+    #[inline]
+    pub(crate) fn case_insensitive(&self) -> bool {
         self.case_insensitive
     }
 
-    pub fn always_show(&self) -> &Arc<HashSet<OsString>> {
+    #[inline]
+    pub(crate) fn always_show(&self) -> &Arc<HashSet<OsString>> {
         &self.always_show
     }
 
-    pub fn max_find_results(&self) -> usize {
+    #[inline]
+    pub(crate) fn max_find_results(&self) -> usize {
         self.max_find_results
     }
 
-    pub fn move_to_trash(&self) -> bool {
+    #[inline]
+    pub(crate) fn move_to_trash(&self) -> bool {
         self.move_to_trash
     }
 
-    pub fn display(&self) -> &Display {
+    #[inline]
+    pub(crate) fn display(&self) -> &Display {
         &self.display
     }
 
-    pub fn theme(&self) -> &Theme {
+    #[inline]
+    pub(crate) fn theme(&self) -> &Theme {
         &self.theme
     }
 
-    pub fn editor(&self) -> &Editor {
+    #[inline]
+    pub(crate) fn editor(&self) -> &Editor {
         &self.editor
     }
 
-    pub fn keys(&self) -> &Keys {
+    #[inline]
+    pub(crate) fn keys(&self) -> &Keys {
         &self.keys
     }
 
-    pub fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
+    pub(crate) fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
         self.display
             .preview_options()
             .bat_args(self.theme.bat_theme_name(), pane_width)
@@ -187,10 +197,15 @@ impl Config {
     /// Determine the default configuration file path.
     /// Checks the RUNA_CONFIG environment variable first,
     /// then defaults to ~/.config/runa/runa.toml,
-    pub fn default_path() -> PathBuf {
+    pub(crate) fn default_path() -> PathBuf {
         if let Ok(path) = std::env::var("RUNA_CONFIG") {
             return PathBuf::from(path);
         }
+
+        if let Ok(xdg_config) = std::env::var("XDG_CONFIG_HOME") {
+            return PathBuf::from(xdg_config).join("runa/runa.toml");
+        }
+
         if let Some(home) = get_home() {
             return home.join(".config/runa/runa.toml");
         }
@@ -200,7 +215,7 @@ impl Config {
     /// Generate a default configuration file at the specified path.
     /// If `minimal` is true, generates a minimal config with only essential settings.
     /// If the file already exists, returns an error.
-    pub fn generate_default(path: &PathBuf, minimal: bool) -> std::io::Result<()> {
+    pub(crate) fn generate_default(path: &PathBuf, minimal: bool) -> std::io::Result<()> {
         if path.exists() {
             return Err(io::Error::new(
                 io::ErrorKind::AlreadyExists,
@@ -363,6 +378,7 @@ selection_icon = ""
 # find = ["s"]
 # clear_markers = ["Ctrl+c"]
 # clear_filter = ["Ctrl+f"]
+# alternate_delete = ["Ctrl+d]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration

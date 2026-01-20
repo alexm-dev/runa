@@ -3,13 +3,13 @@
 //! This module holds the submodules and structs necessary to load and represent
 //! configuration options for runa, including display settings, input keybindings,
 
-pub mod display;
-pub mod input;
-pub mod load;
-pub mod presets;
-pub mod theme;
+pub(crate) mod display;
+pub(crate) mod input;
+pub(crate) mod load;
+pub(crate) mod presets;
+pub(crate) mod theme;
 
-pub use display::Display;
-pub use input::{Editor, Keys};
-pub use load::Config;
-pub use theme::Theme;
+pub(crate) use display::Display;
+pub(crate) use input::{Editor, Keys};
+pub(crate) use load::Config;
+pub(crate) use theme::Theme;

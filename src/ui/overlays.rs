@@ -9,54 +9,50 @@ use crate::core::FileInfo;
 use std::slice;
 
 #[derive(Clone)]
-pub enum Overlay {
+pub(crate) enum Overlay {
     ShowInfo { info: FileInfo },
     Message { text: String },
 }
 
-pub struct OverlayStack {
+pub(crate) struct OverlayStack {
     overlays: Vec<Overlay>,
 }
 
 impl OverlayStack {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             overlays: Vec::new(),
         }
     }
 
-    pub fn push(&mut self, overlay: Overlay) {
+    pub(crate) fn push(&mut self, overlay: Overlay) {
         self.overlays.push(overlay);
     }
 
-    pub fn pop(&mut self) -> Option<Overlay> {
+    pub(crate) fn pop(&mut self) -> Option<Overlay> {
         self.overlays.pop()
     }
 
-    pub fn top(&self) -> Option<&Overlay> {
+    pub(crate) fn top(&self) -> Option<&Overlay> {
         self.overlays.last()
     }
 
-    pub fn top_mut(&mut self) -> Option<&mut Overlay> {
-        self.overlays.last_mut()
-    }
-
-    pub fn iter(&self) -> slice::Iter<'_, Overlay> {
+    pub(crate) fn iter(&self) -> slice::Iter<'_, Overlay> {
         self.overlays.iter()
     }
 
-    pub fn retain<F>(&mut self, f: F)
+    pub(crate) fn retain<F>(&mut self, f: F)
     where
         F: FnMut(&Overlay) -> bool,
     {
         self.overlays.retain(f);
     }
 
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut Overlay> {
+    pub(crate) fn get_mut(&mut self, index: usize) -> Option<&mut Overlay> {
         self.overlays.get_mut(index)
     }
 
-    pub fn find_index<F>(&self, f: F) -> Option<usize>
+    pub(crate) fn find_index<F>(&self, f: F) -> Option<usize>
     where
         F: FnMut(&Overlay) -> bool,
     {

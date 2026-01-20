@@ -9,16 +9,12 @@
 //!
 //! Most callers will import [browse_dir], [FileEntry], and [FileInfo] from this module.
 
-pub mod fm;
-pub mod formatter;
-pub mod proc;
-pub mod terminal;
-pub mod worker;
+pub(crate) mod fm;
+pub(crate) mod formatter;
+pub(crate) mod proc;
+pub(crate) mod terminal;
+pub(crate) mod worker;
 
-pub use fm::{FileEntry, FileInfo, FileType, browse_dir};
-pub use formatter::{
-    Formatter, flatten_separators, format_attributes, format_file_size, format_file_time,
-    format_file_type, normalize_separators, preview_directory, safe_read_preview,
-    sanitize_to_exact_width, symlink_target_resolved,
-};
-pub use proc::{FindResult, find, preview_bat};
+pub(crate) use fm::{FileEntry, FileInfo, FileType, browse_dir};
+pub(crate) use formatter::Formatter;
+pub(crate) use proc::{FindResult, find, preview_bat};

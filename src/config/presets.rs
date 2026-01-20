@@ -33,13 +33,13 @@ const TOKYO_DAY: Palette = Palette {
     directory: (52, 90, 183),
 };
 
-pub fn tokyonight_storm() -> Theme {
+pub(crate) fn tokyonight_storm() -> Theme {
     make_theme("tokyonight-storm", TOKYO_STORM, "┃")
 }
-pub fn tokyonight_night() -> Theme {
+pub(crate) fn tokyonight_night() -> Theme {
     make_theme("tokyonight-night", TOKYO_NIGHT, "┃")
 }
-pub fn tokyonight_day() -> Theme {
+pub(crate) fn tokyonight_day() -> Theme {
     make_theme("tokyonight-day", TOKYO_DAY, "┃")
 }
 
@@ -70,13 +70,13 @@ const GRUV_LIGHT: Palette = Palette {
     directory: (7, 102, 120),
 };
 
-pub fn gruvbox_dark_hard() -> Theme {
+pub(crate) fn gruvbox_dark_hard() -> Theme {
     make_theme("gruvbox-dark-hard", GRUV_DARK_HARD, "*")
 }
-pub fn gruvbox_dark() -> Theme {
+pub(crate) fn gruvbox_dark() -> Theme {
     make_theme("gruvbox-dark", GRUV_DARK, "*")
 }
-pub fn gruvbox_light() -> Theme {
+pub(crate) fn gruvbox_light() -> Theme {
     make_theme("gruvbox-light", GRUV_LIGHT, "*")
 }
 
@@ -107,13 +107,13 @@ const LATTE: Palette = Palette {
     directory: (30, 102, 245),
 };
 
-pub fn catppuccin_mocha() -> Theme {
+pub(crate) fn catppuccin_mocha() -> Theme {
     make_theme("catppuccin-mocha", MOCHA, "┃")
 }
-pub fn catppuccin_frappe() -> Theme {
+pub(crate) fn catppuccin_frappe() -> Theme {
     make_theme("catppuccin-frappe", FRAPPE, "┃")
 }
-pub fn catppuccin_latte() -> Theme {
+pub(crate) fn catppuccin_latte() -> Theme {
     make_theme("catppuccin-latte", LATTE, "┃")
 }
 
@@ -135,10 +135,10 @@ const NIGHTFOX: Palette = Palette {
     directory: (113, 161, 236),
 };
 
-pub fn carbonfox() -> Theme {
+pub(crate) fn carbonfox() -> Theme {
     make_theme("carbonfox", CARBON, "┃")
 }
-pub fn nightfox() -> Theme {
+pub(crate) fn nightfox() -> Theme {
     make_theme("nightfox", NIGHTFOX, "┃")
 }
 
@@ -160,10 +160,10 @@ const ROSE_PINE: Palette = Palette {
     directory: (49, 116, 143),
 };
 
-pub fn everforest() -> Theme {
+pub(crate) fn everforest() -> Theme {
     make_theme("everforest", FOREST, "*")
 }
-pub fn rose_pine() -> Theme {
+pub(crate) fn rose_pine() -> Theme {
     make_theme("rose_pine", ROSE_PINE, "*")
 }
 
@@ -176,7 +176,7 @@ const NORD: Palette = Palette {
     directory: (129, 161, 193),
 };
 
-pub fn nord() -> Theme {
+pub(crate) fn nord() -> Theme {
     make_theme("nord", NORD, "*")
 }
 
@@ -189,7 +189,7 @@ const TWO_DARK: Palette = Palette {
     directory: (229, 192, 123),
 };
 
-pub fn two_dark() -> Theme {
+pub(crate) fn two_dark() -> Theme {
     make_theme("two-dark", TWO_DARK, "*")
 }
 
@@ -202,7 +202,7 @@ const ONE_DARK: Palette = Palette {
     directory: (229, 192, 123),
 };
 
-pub fn one_dark() -> Theme {
+pub(crate) fn one_dark() -> Theme {
     make_theme("one-dark", ONE_DARK, "*")
 }
 
@@ -224,11 +224,11 @@ const SOLARIZED_LIGHT: Palette = Palette {
     directory: (42, 161, 152),
 };
 
-pub fn solarized_dark() -> Theme {
+pub(crate) fn solarized_dark() -> Theme {
     make_theme("solarized-dark", SOLARIZED_DARK, "*")
 }
 
-pub fn solarized_light() -> Theme {
+pub(crate) fn solarized_light() -> Theme {
     make_theme("solarized-light", SOLARIZED_LIGHT, "*")
 }
 
@@ -241,7 +241,7 @@ const DRACULA: Palette = Palette {
     directory: (189, 147, 249),
 };
 
-pub fn dracula() -> Theme {
+pub(crate) fn dracula() -> Theme {
     make_theme("dracula", DRACULA, "┃")
 }
 
@@ -254,6 +254,6 @@ const MONOKAI: Palette = Palette {
     directory: (102, 217, 239),
 };
 
-pub fn monokai() -> Theme {
+pub(crate) fn monokai() -> Theme {
     make_theme("monokai", MONOKAI, "┃")
 }

@@ -3,7 +3,7 @@
 //! Provides the FileEntry struct which is used throughout runa.
 //! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
-use crate::core::format_attributes;
+use crate::core::formatter::format_attributes;
 
 use std::borrow::Cow;
 use std::ffi::OsString;
@@ -17,7 +17,7 @@ use std::time::SystemTime;
 /// Used throughout runa for directory browsing and file management
 /// Created and populated by the browse_dir function.
 #[derive(Debug, Clone)]
-pub struct FileEntry {
+pub(crate) struct FileEntry {
     name: OsString,
     lowercase_name: Box<str>,
     flags: u8,
@@ -42,42 +42,38 @@ impl FileEntry {
 
     // Accessors
 
-    pub fn name(&self) -> &OsString {
+    #[inline]
+    pub(crate) fn name(&self) -> &OsString {
         &self.name
     }
 
-    pub fn name_str(&self) -> Cow<'_, str> {
+    pub(crate) fn name_str(&self) -> Cow<'_, str> {
         self.name.to_string_lossy()
     }
 
-    pub fn lowercase_name(&self) -> &str {
+    #[inline]
+    pub(crate) fn lowercase_name(&self) -> &str {
         &self.lowercase_name
     }
 
-    pub fn is_dir(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_dir(&self) -> bool {
         self.flags & Self::IS_DIR != 0
     }
 
-    pub fn is_hidden(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_hidden(&self) -> bool {
         self.flags & Self::IS_HIDDEN != 0
     }
 
-    pub fn is_system(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_system(&self) -> bool {
         self.flags & Self::IS_SYSTEM != 0
     }
 
-    pub fn is_symlink(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_symlink(&self) -> bool {
         self.flags & Self::IS_SYMLINK != 0
-    }
-
-    /// Returns the file extension in lowercase if it exists
-    /// # Returns
-    /// An Option containing the lowercase file extension as a String, or None if no extension exists
-    pub fn extension(&self) -> Option<String> {
-        Path::new(&self.name)
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s.to_ascii_lowercase())
     }
 }
 
@@ -85,7 +81,7 @@ impl FileEntry {
 ///
 /// Hold File, Directory, Symlink and Other types.
 #[derive(Debug, Clone, PartialEq)]
-pub enum FileType {
+pub(crate) enum FileType {
     File,
     Directory,
     Symlink,
@@ -95,7 +91,7 @@ pub enum FileType {
 /// Main FileInfo struct that holds each info field for the ShowInfo overlay widget.
 /// Holds name, size, modified time, attributes string, and file type.
 #[derive(Debug, Clone, PartialEq)]
-pub struct FileInfo {
+pub(crate) struct FileInfo {
     name: OsString,
     size: Option<u64>,
     modified: Option<SystemTime>,
@@ -106,30 +102,35 @@ pub struct FileInfo {
 impl FileInfo {
     // Accessors
 
-    pub fn name(&self) -> &OsString {
+    #[inline]
+    pub(crate) fn name(&self) -> &OsString {
         &self.name
     }
 
-    pub fn size(&self) -> &Option<u64> {
+    #[inline]
+    pub(crate) fn size(&self) -> &Option<u64> {
         &self.size
     }
 
-    pub fn modified(&self) -> &Option<SystemTime> {
+    #[inline]
+    pub(crate) fn modified(&self) -> &Option<SystemTime> {
         &self.modified
     }
 
-    pub fn attributes(&self) -> &str {
+    #[inline]
+    pub(crate) fn attributes(&self) -> &str {
         &self.attributes
     }
 
-    pub fn file_type(&self) -> &FileType {
+    #[inline]
+    pub(crate) fn file_type(&self) -> &FileType {
         &self.file_type
     }
 
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileInfo struct populated with the file's information.
-    pub fn get_file_info(path: &Path) -> io::Result<FileInfo> {
+    pub(crate) fn get_file_info(path: &Path) -> io::Result<FileInfo> {
         let metadata = symlink_metadata(path)?;
         let file_type = if metadata.is_file() {
             FileType::File
@@ -158,7 +159,7 @@ impl FileInfo {
 /// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
 /// # Returns
 /// A Result containing a vector of FileEntry structs or an std::io::Error
-pub fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
+pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
     let mut entries = Vec::with_capacity(256);
 
     for entry in fs::read_dir(path)? {

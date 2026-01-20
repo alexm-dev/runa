@@ -21,7 +21,7 @@ use std::{io, time::Duration};
 /// Returns a error if terminal setup or teardown fails
 ///
 /// Returns an std::io::Error if terminal setup or teardown fails.
-pub fn run_terminal(app: &mut AppState) -> io::Result<()> {
+pub(crate) fn run_terminal(app: &mut AppState) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, Hide)?;
@@ -59,7 +59,7 @@ where
 
                     match result {
                         KeypressResult::Quit => break,
-                        KeypressResult::OpenedEditor => {
+                        KeypressResult::OpenedEditor | KeypressResult::Recovered => {
                             // full clear/reset
                             terminal.clear()?;
                         }

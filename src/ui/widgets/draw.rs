@@ -7,11 +7,13 @@
 
 use crate::app::AppState;
 use crate::app::actions::{ActionMode, InputMode};
-use crate::core::{FileInfo, FileType, format_file_size, format_file_time, format_file_type};
+use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
+use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog,
 };
 use crate::utils::readable_path;
+
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
@@ -23,7 +25,7 @@ use std::time::Instant;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Draws the seperator line when enabled inside runa.toml
-pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
+pub(crate) fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
     frame.render_widget(
         Block::default().borders(Borders::LEFT).border_style(style),
         area,
@@ -32,7 +34,7 @@ pub fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
 
 /// Either for ConfirmDelete or for anything else that requires input.
 /// For other than ConfirmDelete, calculates the exact input field.
-pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
+pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
         let widget = app.config().theme().widget();
         let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
@@ -233,7 +235,7 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
 
 /// Draw the status line at the top right
 /// Used for indication of number of copied/yanked files and the current applied filter
-pub fn draw_status_line(frame: &mut Frame, app: &AppState) {
+pub(crate) fn draw_status_line(frame: &mut Frame, app: &AppState) {
     let area = frame.area();
 
     let count = match app.actions().clipboard() {
@@ -307,7 +309,7 @@ fn input_field_view(input_text: &str, cursor_pos: usize, visible_width: usize) -
 ///
 /// Takes the app state, accent style and the overlay to check if it is ShowInfo
 /// and draws the dialog accordingly.
-pub fn draw_show_info_dialog(
+pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
     accent_style: Style,
@@ -398,7 +400,7 @@ pub fn draw_show_info_dialog(
 /// Draws the input field and the result field as one widget.
 /// Sets a find result indicator in the input line to the right.
 /// Find result indicator being on the input line makes the actual input line smaller.
-pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
+pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let actions = app.actions();
     let widget = app.config().theme().widget();
     let base_dir = app.nav().current_dir();
@@ -542,7 +544,12 @@ pub fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) 
 
 /// Draws a simple message overlay dialog at the bottom right
 /// Used for notifications such as "fd is not available" etc.
-pub fn draw_message_overlay(frame: &mut Frame, app: &AppState, accent_style: Style, text: &str) {
+pub(crate) fn draw_message_overlay(
+    frame: &mut Frame,
+    app: &AppState,
+    accent_style: Style,
+    text: &str,
+) {
     let widget = app.config().theme().widget();
     let position = DialogPosition::BottomRight;
     let border_type = app.config().display().border_shape().as_border_type();

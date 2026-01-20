@@ -4,7 +4,6 @@
 //! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
 
 use crate::app::nav::NavState;
-use crate::core::FileInfo;
 use crate::core::proc::FindResult;
 use crate::core::worker::{FileOperation, WorkerTask};
 
@@ -22,17 +21,16 @@ use std::time::Instant;
 ///
 /// Used by [ActionContext] to track current user action state.
 #[derive(Clone, PartialEq)]
-pub enum ActionMode {
+pub(crate) enum ActionMode {
     Normal,
     Input { mode: InputMode, prompt: String },
-    ShowInfo { info: FileInfo },
 }
 
 /// Enumerates all the available input field modes
 ///
 /// Used to select the prompts, behavior and the style of the input dialog.
 #[derive(Clone, Copy, PartialEq)]
-pub enum InputMode {
+pub(crate) enum InputMode {
     Rename,
     NewFile,
     NewFolder,
@@ -54,7 +52,7 @@ pub enum InputMode {
 ///
 /// Methods to manipulate input, clipboard, and perform file actions.
 /// Also find management methods.
-pub struct ActionContext {
+pub(crate) struct ActionContext {
     mode: ActionMode,
     input_buffer: String,
     input_cursor_pos: usize,
@@ -66,90 +64,98 @@ pub struct ActionContext {
 impl ActionContext {
     // Getters / accessors
 
-    pub fn mode(&self) -> &ActionMode {
+    #[inline]
+    pub(crate) fn mode(&self) -> &ActionMode {
         &self.mode
     }
 
-    pub fn input_buffer(&self) -> &str {
+    #[inline]
+    pub(crate) fn input_buffer(&self) -> &str {
         &self.input_buffer
     }
 
-    pub fn input_cursor_pos(&self) -> usize {
+    #[inline]
+    pub(crate) fn input_cursor_pos(&self) -> usize {
         self.input_cursor_pos
     }
 
-    pub fn clipboard(&self) -> &Option<HashSet<PathBuf>> {
+    #[inline]
+    pub(crate) fn clipboard(&self) -> &Option<HashSet<PathBuf>> {
         &self.clipboard
     }
 
-    pub fn clipboard_mut(&mut self) -> &mut Option<HashSet<PathBuf>> {
+    pub(crate) fn clipboard_mut(&mut self) -> &mut Option<HashSet<PathBuf>> {
         &mut self.clipboard
     }
 
     // Find functions
 
-    pub fn find_state_mut(&mut self) -> &mut FindState {
+    pub(crate) fn find_state_mut(&mut self) -> &mut FindState {
         &mut self.find
     }
 
-    pub fn find_results(&self) -> &[FindResult] {
+    #[inline]
+    pub(crate) fn find_results(&self) -> &[FindResult] {
         self.find.results()
     }
 
-    pub fn find_selected(&self) -> usize {
+    #[inline]
+    pub(crate) fn find_selected(&self) -> usize {
         self.find.selected()
     }
 
-    pub fn set_find_results(&mut self, results: Vec<FindResult>) {
+    pub(crate) fn set_find_results(&mut self, results: Vec<FindResult>) {
         self.find.set_results(results)
     }
 
-    pub fn clear_find_results(&mut self) {
+    pub(crate) fn clear_find_results(&mut self) {
         self.find.clear_results()
     }
 
-    pub fn find_request_id(&self) -> u64 {
+    #[inline]
+    pub(crate) fn find_request_id(&self) -> u64 {
         self.find.request_id()
     }
 
-    pub fn prepare_new_find_request(&mut self) -> u64 {
+    pub(crate) fn prepare_new_find_request(&mut self) -> u64 {
         self.find.prepare_new_request()
     }
 
-    pub fn take_query(&mut self) -> Option<String> {
+    pub(crate) fn take_query(&mut self) -> Option<String> {
         self.find.take_query(&self.input_buffer)
     }
 
-    pub fn find_debounce(&mut self, delay: Duration) {
+    pub(crate) fn find_debounce(&mut self, delay: Duration) {
         self.find.set_debounce(delay);
     }
 
-    pub fn cancel_find(&mut self) {
+    pub(crate) fn cancel_find(&mut self) {
         self.find.cancel_current();
     }
 
-    pub fn set_cancel_find_token(&mut self, token: Arc<AtomicBool>) {
+    pub(crate) fn set_cancel_find_token(&mut self, token: Arc<AtomicBool>) {
         self.find.set_cancel(token);
     }
 
-    pub fn set_input_buffer(&mut self, new_buf: String) {
+    pub(crate) fn set_input_buffer(&mut self, new_buf: String) {
         self.input_cursor_pos = new_buf.len();
         self.input_buffer = new_buf;
     }
 
     // Mode functions
 
-    pub fn is_input_mode(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_input_mode(&self) -> bool {
         matches!(self.mode, ActionMode::Input { .. })
     }
 
-    pub fn enter_mode(&mut self, mode: ActionMode, initial_value: String) {
+    pub(crate) fn enter_mode(&mut self, mode: ActionMode, initial_value: String) {
         self.mode = mode;
         self.input_buffer = initial_value;
         self.input_cursor_pos = self.input_buffer.len();
     }
 
-    pub fn exit_mode(&mut self) {
+    pub(crate) fn exit_mode(&mut self) {
         self.mode = ActionMode::Normal;
         self.input_buffer.clear();
         self.find.reset();
@@ -160,7 +166,7 @@ impl ActionContext {
     /// Deletes the currently marked files or the selected file if no markers exist.
     ///
     /// Sends a delete task to the worker thread via the provided channel.
-    pub fn action_delete(
+    pub(crate) fn action_delete(
         &mut self,
         nav: &mut NavState,
         worker_tx: &Sender<WorkerTask>,
@@ -173,7 +179,6 @@ impl ActionContext {
 
         let _ = worker_tx.send(WorkerTask::FileOp {
             op: FileOperation::Delete(targets.into_iter().collect(), move_to_trash),
-            request_id: nav.prepare_new_request(),
         });
 
         nav.clear_markers();
@@ -182,7 +187,7 @@ impl ActionContext {
     /// Currently, cut/move is not implemented yet. Only copy/yank is used.
     /// This allows for easy addition of a cut/move feature in the future.
     /// Sets the clipboard with the selected files.
-    pub fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
+    pub(crate) fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
         let mut set = HashSet::new();
         if !nav.markers().is_empty() {
             for path in nav.markers() {
@@ -200,7 +205,7 @@ impl ActionContext {
     /// Pastes the files from the clipboard into the current directory.
     ///
     /// Sends a copy task to the worker thread via the provided channel.
-    pub fn action_paste(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
+    pub(crate) fn action_paste(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
         if let Some(source) = &self.clipboard {
             let first_file_name = source
                 .iter()
@@ -215,7 +220,6 @@ impl ActionContext {
                     cut: self.is_cut,
                     focus: first_file_name,
                 },
-                request_id: nav.prepare_new_request(),
             });
             if self.is_cut {
                 self.clipboard = None;
@@ -227,7 +231,7 @@ impl ActionContext {
     /// Applies the current input buffer as a filter to the navigation state.
     ///
     /// Sets the filter string in the navigation state.
-    pub fn action_filter(&mut self, nav: &mut NavState) {
+    pub(crate) fn action_filter(&mut self, nav: &mut NavState) {
         nav.set_filter(self.input_buffer.clone());
     }
 
@@ -236,7 +240,7 @@ impl ActionContext {
     /// Sends a rename task to the worker thread via the provided channel.
     ///
     /// Exits input mode after performing the action.
-    pub fn action_rename(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
+    pub(crate) fn action_rename(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
         if self.input_buffer.is_empty() {
             return;
         }
@@ -249,7 +253,6 @@ impl ActionContext {
                     old: old_path,
                     new: new_path,
                 },
-                request_id: nav.prepare_new_request(),
             });
         }
         self.exit_mode();
@@ -260,7 +263,7 @@ impl ActionContext {
     /// Sends a create task to the worker thread via the provided channel.
     ///
     /// Exits input mode after performing the action.
-    pub fn action_create(
+    pub(crate) fn action_create(
         &mut self,
         nav: &mut NavState,
         is_dir: bool,
@@ -273,12 +276,11 @@ impl ActionContext {
         let path = nav.current_dir().join(&self.input_buffer);
         let _ = worker_tx.send(WorkerTask::FileOp {
             op: FileOperation::Create { path, is_dir },
-            request_id: nav.prepare_new_request(),
         });
         self.exit_mode();
     }
 
-    pub fn actions_move(
+    pub(crate) fn actions_move(
         &mut self,
         nav: &mut NavState,
         destination: PathBuf,
@@ -295,7 +297,6 @@ impl ActionContext {
                 cut: true,
                 focus: None,
             },
-            request_id: nav.prepare_new_request(),
         });
         nav.clear_markers();
     }
@@ -303,21 +304,21 @@ impl ActionContext {
     // Cursor actions
 
     /// Moves the input cursor one position to the left, if possible.
-    pub fn action_move_cursor_left(&mut self) {
+    pub(crate) fn action_move_cursor_left(&mut self) {
         if self.input_cursor_pos > 0 {
             self.input_cursor_pos -= 1;
         }
     }
 
     /// Moves the input cursor one position to the right, if possible.
-    pub fn action_move_cursor_right(&mut self) {
+    pub(crate) fn action_move_cursor_right(&mut self) {
         if self.input_cursor_pos < self.input_buffer.len() {
             self.input_cursor_pos += 1;
         }
     }
 
     /// Inserts a character at the current cursor position in the input buffer.
-    pub fn action_insert_at_cursor(&mut self, ch: char) {
+    pub(crate) fn action_insert_at_cursor(&mut self, ch: char) {
         self.input_buffer.insert(self.input_cursor_pos, ch);
         self.input_cursor_pos += ch.len_utf8();
     }
@@ -325,7 +326,7 @@ impl ActionContext {
     /// Deletes the character before the current cursor position in the input buffer.
     ///
     /// Moves the cursor back accordingly
-    pub fn action_backspace_at_cursor(&mut self) {
+    pub(crate) fn action_backspace_at_cursor(&mut self) {
         if self.input_cursor_pos > 0
             && let Some((previous, _)) = self.input_buffer[..self.input_cursor_pos]
                 .char_indices()
@@ -336,24 +337,13 @@ impl ActionContext {
         }
     }
 
-    /// Deletes the character at the current cursor position in the input buffer.
-    pub fn action_delete_at_cursor(&mut self) {
-        if self.input_cursor_pos < self.input_buffer.len() {
-            let off = self.input_cursor_pos;
-            let mut ch_iter = self.input_buffer[off..].char_indices();
-            if let Some((_, _)) = ch_iter.next() {
-                self.input_buffer.remove(off);
-            }
-        }
-    }
-
     /// Moves the input cursor to the start of the input buffer.
-    pub fn action_cursor_home(&mut self) {
+    pub(crate) fn action_cursor_home(&mut self) {
         self.input_cursor_pos = 0;
     }
 
     /// Moves the input cursor to the end of the input buffer.
-    pub fn action_cursor_end(&mut self) {
+    pub(crate) fn action_cursor_end(&mut self) {
         self.input_cursor_pos = self.input_buffer.len();
     }
 }
@@ -379,7 +369,7 @@ impl Default for ActionContext {
 /// Used by [ActionContext] to manage fuzzy find operations.
 /// Methods to manage results, requests, selection, and cancellation.
 #[derive(Default)]
-pub struct FindState {
+pub(crate) struct FindState {
     cache: Vec<FindResult>,
     request_id: u64,
     debounce: Option<Instant>,
@@ -390,15 +380,17 @@ pub struct FindState {
 
 impl FindState {
     // Getters / Accessors
-
+    #[inline]
     fn results(&self) -> &[FindResult] {
         &self.cache
     }
 
+    #[inline]
     fn request_id(&self) -> u64 {
         self.request_id
     }
 
+    #[inline]
     fn selected(&self) -> usize {
         self.selected
     }
@@ -471,21 +463,16 @@ impl FindState {
     }
 
     /// Moves the selection to the next result in the cached results.
-    pub fn select_next(&mut self) {
+    pub(crate) fn select_next(&mut self) {
         if self.selected + 1 < self.cache.len() {
             self.selected += 1;
         }
     }
 
     /// Moves the selection to the previous result in the cached results.
-    pub fn select_prev(&mut self) {
+    pub(crate) fn select_prev(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
         }
-    }
-
-    /// Resets the selected result index to the first result.
-    pub fn reset_selected(&mut self) {
-        self.selected = 0;
     }
 }
