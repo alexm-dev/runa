@@ -39,7 +39,7 @@ runa is under active development and options may change over time.
 Some advanced featues like `find`, require external tools to be installed.
 
 - **[bat](https://github.com/sharkdp/bat)**:
-    Used for fast, syntax-highlighted file previews when `[display.previews_options.method]` is set to `"bat"`.
+    Used for fast, syntax-highlighted file previews when `[display.previews_options.method]` is set to `"bat"`.  
     _If `bat` is not installed, runa will fall back to the built-in preview method._
 
 - **[fd](https://github.com/sharkdp/fd)**:
