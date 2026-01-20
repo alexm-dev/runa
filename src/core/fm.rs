@@ -266,7 +266,7 @@ mod tests {
     }
 
     #[test]
-    fn browse_dir_nonexistent() -> Result<(), Box<dyn std::error::Error>> {
+    fn browse_nonexistent() -> Result<(), Box<dyn std::error::Error>> {
         let path = PathBuf::from("/path/does/not/exist");
         let result = browse_dir(&path);
         assert!(result.is_err());
