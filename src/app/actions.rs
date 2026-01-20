@@ -37,7 +37,7 @@ pub enum InputMode {
     NewFile,
     NewFolder,
     Filter,
-    ConfirmDelete,
+    ConfirmDelete { is_trash: bool },
     Find,
     MoveFile,
 }

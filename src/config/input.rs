@@ -29,6 +29,7 @@ pub struct Keys {
     find: Vec<String>,
     clear_markers: Vec<String>,
     clear_filter: Vec<String>,
+    alternate_delete: Vec<String>,
 }
 
 /// Editor configuration options
@@ -115,6 +116,10 @@ impl Keys {
     pub fn clear_filter(&self) -> &Vec<String> {
         &self.clear_filter
     }
+
+    pub fn alternate_delete(&self) -> &Vec<String> {
+        &self.alternate_delete
+    }
 }
 
 /// Default input configuration options
@@ -142,6 +147,8 @@ impl Default for Keys {
 
             clear_markers: vec!["Ctrl+c".into()],
             clear_filter: vec!["Ctrl+f".into()],
+
+            alternate_delete: vec!["Ctrl+d".into()],
         }
     }
 }

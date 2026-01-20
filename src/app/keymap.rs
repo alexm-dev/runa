@@ -40,6 +40,7 @@ pub enum FileAction {
     ShowInfo,
     Find,
     MoveFile,
+    AlternateDelete,
 }
 
 /// System actions (quit)
@@ -142,6 +143,10 @@ impl Keymap {
         bind(keys.find(), Action::File(FileAction::Find));
         bind(keys.clear_markers(), Action::Nav(NavAction::ClearMarker));
         bind(keys.clear_filter(), Action::Nav(NavAction::ClearFilter));
+        bind(
+            keys.alternate_delete(),
+            Action::File(FileAction::AlternateDelete),
+        );
 
         Keymap { map }
     }

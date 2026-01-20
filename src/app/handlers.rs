@@ -42,7 +42,7 @@ impl<'a> AppState<'a> {
                     InputMode::NewFolder => self.create_folder(),
                     InputMode::Rename => self.rename_entry(),
                     InputMode::Filter => self.apply_filter(),
-                    InputMode::ConfirmDelete => self.confirm_delete(),
+                    InputMode::ConfirmDelete { .. } => self.confirm_delete(),
                     InputMode::Find => self.handle_find(),
                     InputMode::MoveFile => self.handle_move(),
                 }
@@ -118,7 +118,7 @@ impl<'a> AppState<'a> {
             }
 
             Char(c) => match mode {
-                InputMode::ConfirmDelete => {
+                InputMode::ConfirmDelete { .. } => {
                     self.process_confirm_delete_char(c);
                     KeypressResult::Consumed
                 }
@@ -191,7 +191,14 @@ impl<'a> AppState<'a> {
     pub fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
         match action {
             FileAction::Open => return self.handle_open_file(),
-            FileAction::Delete => self.prompt_delete(),
+            FileAction::Delete => {
+                let is_trash = self.config.move_to_trash();
+                self.prompt_delete(is_trash);
+            }
+            FileAction::AlternateDelete => {
+                let is_trash = !self.config.move_to_trash();
+                self.prompt_delete(is_trash);
+            }
             FileAction::Copy => {
                 self.actions.action_copy(&self.nav, false);
                 self.handle_timed_message(Duration::from_secs(15));
@@ -496,8 +503,18 @@ impl<'a> AppState<'a> {
     /// Confirms deletion of the selected items.
     /// Calls actions::action_delete.
     fn confirm_delete(&mut self) {
+        let move_to_trash = if let ActionMode::Input {
+            mode: InputMode::ConfirmDelete { is_trash },
+            ..
+        } = self.actions.mode()
+        {
+            *is_trash
+        } else {
+            self.config.move_to_trash()
+        };
+
         let fileop_tx = self.workers.fileop_tx();
-        let move_to_trash = self.config.move_to_trash();
+
         self.actions
             .action_delete(&mut self.nav, fileop_tx, move_to_trash);
     }
@@ -505,17 +522,22 @@ impl<'a> AppState<'a> {
     // Prompt functions
 
     /// Prompts the user to confirm deletion of selected items.
-    fn prompt_delete(&mut self) {
+    fn prompt_delete(&mut self, is_trash: bool) {
         let targets = self.nav.get_action_targets();
+        let count = targets.len();
         if targets.is_empty() {
             return;
         }
-        let prompt_text = format!(
-            "Delete {} item{}? [Y/N]",
-            targets.len(),
-            if targets.len() > 1 { "s" } else { "" }
-        );
-        self.enter_input_mode(InputMode::ConfirmDelete, prompt_text, None);
+
+        let action_word = if is_trash { "Trash" } else { "Delete" };
+        let item_label = if count > 1 {
+            format!("{} items", count)
+        } else {
+            "item".to_string()
+        };
+
+        let prompt_text = format!("{} {}? [Y/n]", action_word, item_label);
+        self.enter_input_mode(InputMode::ConfirmDelete { is_trash }, prompt_text, None);
     }
 
     /// Prompts the user to rename the selected entry.

@@ -37,12 +37,11 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
         let widget = app.config().theme().widget();
         let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
         let size = widget.size().unwrap_or(DialogSize::Small);
-        let confirm_size = widget.confirm_size_or(DialogSize::Large);
         let move_size = widget.move_size_or(DialogSize::Custom(70, 14));
         let border_type = app.config().display().border_shape().as_border_type();
-        let move_to_trash = app.config().move_to_trash();
 
-        if *mode == InputMode::ConfirmDelete {
+        if let InputMode::ConfirmDelete { is_trash } = mode {
+            let confirm_size = widget.confirm_size_or(DialogSize::Large);
             let mut targets: Vec<String> = app
                 .nav()
                 .get_action_targets()
@@ -55,7 +54,7 @@ pub fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style)
                 .collect();
             targets.sort();
 
-            let heading = if move_to_trash {
+            let heading = if *is_trash {
                 "Files to move to trash"
             } else {
                 "Files to delete"
