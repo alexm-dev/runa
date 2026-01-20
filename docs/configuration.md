@@ -43,7 +43,7 @@ Some advanced featues like `find`, require external tools to be installed.
     _If `bat` is not installed, runa will fall back to the built-in preview method._
 
 - **[fd](https://github.com/sharkdp/fd)**:
-    Used for blazing fast recursive file/foler search.
+    Used for blazing fast recursive file/folder search.
 
 **Both tools are completely optional** but highly recommended.
 
