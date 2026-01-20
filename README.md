@@ -90,6 +90,8 @@ brew install runa
 
 ### Scoop (Windows)
 
+You can install runa via scoop.
+
 ```bash
 scoop add bucket https://github.com/alexm-dev/scoop-bucket
 scoop install runa
