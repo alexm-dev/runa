@@ -11,10 +11,10 @@
 //!
 //! See submodules [panes] and [widgets] for detailed drawing functions.
 
-pub mod icons;
-pub mod overlays;
-pub mod panes;
-pub mod render;
-pub mod widgets;
+pub(crate) mod icons;
+pub(crate) mod overlays;
+pub(crate) mod panes;
+pub(crate) mod render;
+pub(crate) mod widgets;
 
-pub use render::render;
+pub(crate) use render::render;

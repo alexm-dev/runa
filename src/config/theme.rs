@@ -29,7 +29,7 @@ use std::sync::LazyLock;
 /// ```
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub struct Theme {
+pub(crate) struct Theme {
     name: Option<String>,
     selection: ColorPair,
     underline: ColorPair,
@@ -112,7 +112,7 @@ impl Theme {
     /// Used for fallback when a color is set to Reset
     /// This avoids recreating the default theme multiple times
     /// by using a static Lazy instance.
-    pub fn internal_defaults() -> &'static Self {
+    pub(crate) fn internal_defaults() -> &'static Self {
         static DEFAULT: LazyLock<Theme> = LazyLock::new(Theme::default);
         &DEFAULT
     }
@@ -120,99 +120,100 @@ impl Theme {
     // Getters for various theme properties with fallbacks to internal defaults
     // _style methods for getting Style instances with fallbacks to internal defaults
 
-    pub fn accent_style(&self) -> Style {
+    pub(crate) fn accent_style(&self) -> Style {
         self.accent.style_or(&Theme::internal_defaults().accent)
     }
 
-    pub fn selection_style(&self) -> Style {
+    pub(crate) fn selection_style(&self) -> Style {
         self.selection
             .style_or(&Theme::internal_defaults().selection)
     }
 
-    pub fn underline_style(&self) -> Style {
+    pub(crate) fn underline_style(&self) -> Style {
         self.underline
             .style_or(&Theme::internal_defaults().underline)
     }
 
-    pub fn entry_style(&self) -> Style {
+    pub(crate) fn entry_style(&self) -> Style {
         self.entry.style_or(&Theme::internal_defaults().entry)
     }
 
-    pub fn directory_style(&self) -> Style {
+    pub(crate) fn directory_style(&self) -> Style {
         self.directory
             .style_or(&Theme::internal_defaults().directory)
     }
 
-    pub fn separator_style(&self) -> Style {
+    pub(crate) fn separator_style(&self) -> Style {
         self.separator
             .style_or(&Theme::internal_defaults().separator)
     }
 
-    pub fn path_style(&self) -> Style {
+    pub(crate) fn path_style(&self) -> Style {
         self.path.style_or(&Theme::internal_defaults().path)
     }
 
-    pub fn status_line_style(&self) -> Style {
+    pub(crate) fn status_line_style(&self) -> Style {
         self.status_line
             .style_or(&Theme::internal_defaults().status_line)
     }
 
-    pub fn symlink(&self) -> Color {
+    pub(crate) fn symlink(&self) -> Color {
         self.symlink.or(Theme::internal_defaults().symlink)
     }
 
     // Pane-specific style getters
 
-    pub fn parent_selection_style(&self) -> Style {
+    pub(crate) fn parent_selection_style(&self) -> Style {
         if self.parent.selection_mode == SelectionMode::Off {
             return Style::default();
         }
         self.parent.selection_style(&self.selection)
     }
 
-    pub fn preview_selection_style(&self) -> Style {
+    pub(crate) fn preview_selection_style(&self) -> Style {
         if self.preview.selection_mode == SelectionMode::Off {
             return Style::default();
         }
         self.preview.selection_style(&self.selection)
     }
 
-    pub fn preview_item_style(&self) -> Style {
+    pub(crate) fn preview_item_style(&self) -> Style {
         self.preview.entry_style(&self.entry)
     }
-    pub fn parent_item_style(&self) -> Style {
+    pub(crate) fn parent_item_style(&self) -> Style {
         self.parent.entry_style(&self.entry)
     }
 
     // Accessor methods for various theme properties
 
-    pub fn selection_icon(&self) -> &str {
+    #[inline]
+    pub(crate) fn selection_icon(&self) -> &str {
         &self.selection_icon
     }
 
-    pub fn parent(&self) -> &PaneTheme {
-        &self.parent
-    }
-
-    pub fn preview(&self) -> &PaneTheme {
+    #[inline]
+    pub(crate) fn preview(&self) -> &PaneTheme {
         &self.preview
     }
 
-    pub fn marker(&self) -> &MarkerTheme {
+    #[inline]
+    pub(crate) fn marker(&self) -> &MarkerTheme {
         &self.marker
     }
 
-    pub fn widget(&self) -> &WidgetTheme {
+    #[inline]
+    pub(crate) fn widget(&self) -> &WidgetTheme {
         &self.widget
     }
 
-    pub fn info(&self) -> &WidgetTheme {
+    #[inline]
+    pub(crate) fn info(&self) -> &WidgetTheme {
         &self.info
     }
 
     /// Apply user overrides on top of a preset theme if a known preset name is provided.
     /// If no preset name is provided or the name is unknown, returns the theme as is.
-    pub fn with_overrides(self) -> Self {
+    pub(crate) fn with_overrides(self) -> Self {
         let preset = match self.name.as_deref() {
             Some("gruvbox-dark-hard") => Some(gruvbox_dark_hard()),
             Some("gruvbox-dark") => Some(gruvbox_dark()),
@@ -259,7 +260,7 @@ impl Theme {
     /// Map internal theme name to bat theme name for syntax highlighting.
     /// If no name is set, defaults to "TwoDark".
     /// Returns a static string slice representing the bat theme name.
-    pub fn bat_theme_name(&self) -> &'static str {
+    pub(crate) fn bat_theme_name(&self) -> &'static str {
         self.name
             .as_deref()
             .map(Theme::map_to_bat_theme)
@@ -323,7 +324,7 @@ impl Theme {
 /// ColorPair struct to hold foreground and background colors.
 /// Used throughout the theme configuration.
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
-pub struct ColorPair {
+pub(crate) struct ColorPair {
     #[serde(default, deserialize_with = "deserialize_color_field")]
     fg: Color,
     #[serde(default, deserialize_with = "deserialize_color_field")]
@@ -345,7 +346,7 @@ impl Default for ColorPair {
 /// Provides methods to convert to Style and get effective styles.
 impl ColorPair {
     /// Resolves the ColorPair by replacing Reset colors with those from another ColorPair.
-    pub fn resolve(&self, other: &ColorPair) -> Self {
+    pub(crate) fn resolve(&self, other: &ColorPair) -> Self {
         Self {
             fg: if self.fg == Color::Reset {
                 other.fg
@@ -361,7 +362,7 @@ impl ColorPair {
     }
 
     /// Converts the ColorPair to a Style, falling back to the provided fallback ColorPair for Reset colors.
-    pub fn style_or(&self, fallback: &ColorPair) -> Style {
+    pub(crate) fn style_or(&self, fallback: &ColorPair) -> Style {
         let resovled = self.resolve(fallback);
         Style::default().fg(resovled.fg).bg(resovled.bg)
     }
@@ -379,7 +380,7 @@ enum SelectionMode {
 /// Used for parent and preview panes.
 #[derive(Deserialize, Debug, PartialEq, Clone, Copy, Default)]
 #[serde(default)]
-pub struct PaneTheme {
+pub(crate) struct PaneTheme {
     #[serde(flatten)]
     color: ColorPair,
     selection: Option<ColorPair>,
@@ -392,7 +393,7 @@ impl PaneTheme {
     /// Returns the selection style, falling back to the provided fallback if not set.
     /// If selection is None, falls back to the provided fallback ColorPair.
     /// If selection is Some, uses its style_or method with the fallback.
-    pub fn selection_style(&self, fallback: &ColorPair) -> Style {
+    pub(crate) fn selection_style(&self, fallback: &ColorPair) -> Style {
         let default = &Theme::internal_defaults().selection;
         match self.selection {
             Some(pane_sel) => pane_sel.style_or(&fallback.resolve(default)),
@@ -402,18 +403,18 @@ impl PaneTheme {
 
     /// Returns the entry style, falling back to the provided fallback ColorPair.
     /// If entry color is Reset, uses the fallback.
-    pub fn entry_style(&self, fallback: &ColorPair) -> Style {
+    pub(crate) fn entry_style(&self, fallback: &ColorPair) -> Style {
         self.color.style_or(fallback)
     }
 
     /// Returns the pane color style, falling back to the provided fallback ColorPair.
-    pub fn style_or(&self, fallback: &ColorPair) -> Style {
+    pub(crate) fn style_or(&self, fallback: &ColorPair) -> Style {
         self.color.style_or(fallback)
     }
 
     /// Returns the pane color style, falling back to the internal default theme's entry style.
     /// This method uses the internal default theme as the fallback.
-    pub fn effective_style_or_theme(&self) -> Style {
+    pub(crate) fn effective_style_or_theme(&self) -> Style {
         self.style_or(&Theme::internal_defaults().entry)
     }
 }
@@ -421,7 +422,7 @@ impl PaneTheme {
 /// MarkerTheme struct to hold marker icon and colors.
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(default)]
-pub struct MarkerTheme {
+pub(crate) struct MarkerTheme {
     icon: String,
     #[serde(flatten)]
     color: ColorPair,
@@ -432,17 +433,18 @@ pub struct MarkerTheme {
 
 impl MarkerTheme {
     /// Returns the marker icon.
-    pub fn icon(&self) -> &str {
+    #[inline]
+    pub(crate) fn icon(&self) -> &str {
         &self.icon
     }
 
     /// Returns the marker style, falling back to the internal default theme if colors are Reset.
-    pub fn style_or_theme(&self) -> Style {
+    pub(crate) fn style_or_theme(&self) -> Style {
         self.color.style_or(&MarkerTheme::default().color)
     }
 
     /// Returns the clipboard marker style, falling back to the marker style if clipboard is None.
-    pub fn clipboard_style_or_theme(&self) -> Style {
+    pub(crate) fn clipboard_style_or_theme(&self) -> Style {
         match &self.clipboard {
             Some(c) => c.style_or(&MarkerTheme::default().clipboard.unwrap()),
             None => self.style_or_theme(),
@@ -470,7 +472,7 @@ impl Default for MarkerTheme {
 /// Used by various dialog widgets and overlay widgets.
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(default)]
-pub struct WidgetTheme {
+pub(crate) struct WidgetTheme {
     color: ColorPair,
     border: ColorPair,
     title: ColorPair,
@@ -483,20 +485,23 @@ pub struct WidgetTheme {
 }
 
 impl WidgetTheme {
-    pub fn position(&self) -> &Option<DialogPosition> {
+    #[inline]
+    pub(crate) fn position(&self) -> &Option<DialogPosition> {
         &self.position
     }
 
-    pub fn size(&self) -> &Option<DialogSize> {
+    #[inline]
+    pub(crate) fn size(&self) -> &Option<DialogSize> {
         &self.size
     }
 
-    pub fn confirm_size(&self) -> &Option<DialogSize> {
+    #[inline]
+    pub(crate) fn confirm_size(&self) -> &Option<DialogSize> {
         &self.confirm_size
     }
 
     /// Returns the confirm dialog size, falling back to the general size, and then to the provided fallback.
-    pub fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
+    pub(crate) fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
         self.confirm_size()
             .as_ref()
             .or_else(|| self.size().as_ref())
@@ -504,11 +509,11 @@ impl WidgetTheme {
             .unwrap_or(fallback)
     }
 
-    pub fn move_size(&self) -> &Option<DialogSize> {
+    pub(crate) fn move_size(&self) -> &Option<DialogSize> {
         &self.move_size
     }
 
-    pub fn move_size_or(&self, fallback: DialogSize) -> DialogSize {
+    pub(crate) fn move_size_or(&self, fallback: DialogSize) -> DialogSize {
         self.move_size()
             .as_ref()
             .or_else(|| self.size().as_ref())
@@ -517,7 +522,7 @@ impl WidgetTheme {
     }
 
     /// Returns the border style, falling back to the provided style for Reset colors.
-    pub fn border_style_or(&self, fallback: Style) -> Style {
+    pub(crate) fn border_style_or(&self, fallback: Style) -> Style {
         self.border.style_or(&ColorPair {
             fg: fallback.fg.unwrap_or(Color::Reset),
             bg: fallback.bg.unwrap_or(Color::Reset),
@@ -525,7 +530,7 @@ impl WidgetTheme {
     }
 
     /// Returns the foreground style, falling back to the provided style if Reset.
-    pub fn fg_or(&self, fallback: Style) -> Style {
+    pub(crate) fn fg_or(&self, fallback: Style) -> Style {
         self.color.style_or(&ColorPair {
             fg: fallback.fg.unwrap_or(Color::Reset),
             bg: fallback.bg.unwrap_or(Color::Reset),
@@ -533,7 +538,7 @@ impl WidgetTheme {
     }
 
     /// Returns the background style, falling back to the provided style if Reset.
-    pub fn bg_or(&self, fallback: Style) -> Style {
+    pub(crate) fn bg_or(&self, fallback: Style) -> Style {
         self.color.style_or(&ColorPair {
             fg: fallback.fg.unwrap_or(Color::Reset),
             bg: fallback.bg.unwrap_or(Color::Reset),
@@ -541,35 +546,27 @@ impl WidgetTheme {
     }
 
     /// Returns the foreground style, falling back to the internal default theme if Reset.
-    pub fn fg_or_theme(&self) -> Style {
+    pub(crate) fn fg_or_theme(&self) -> Style {
         self.fg_or(Style::default().fg(Theme::internal_defaults().info.color.fg))
     }
 
     /// Returns the background style, falling back to the internal default theme if Reset.
-    pub fn bg_or_theme(&self) -> Style {
+    pub(crate) fn bg_or_theme(&self) -> Style {
         self.bg_or(Style::default().bg(Theme::internal_defaults().info.color.bg))
     }
 
-    /// Returns the title style, falling back to the provided style for Reset colors.
-    pub fn title_style_or(&self, fallback: Style) -> Style {
-        self.title.style_or(&ColorPair {
-            fg: fallback.fg.unwrap_or(Color::Reset),
-            bg: fallback.bg.unwrap_or(Color::Reset),
-        })
-    }
-
     /// Returns the title style, falling back to the internal default theme if Reset.
-    pub fn title_style_or_theme(&self) -> Style {
+    pub(crate) fn title_style_or_theme(&self) -> Style {
         self.title.style_or(&Theme::internal_defaults().info.title)
     }
 
     /// Returns the number of visible results in the find dialog, falling back to the provided fallback.
-    pub fn find_visible_or(&self, fallback: usize) -> usize {
+    pub(crate) fn find_visible_or(&self, fallback: usize) -> usize {
         self.find_visible_results.unwrap_or(fallback)
     }
 
     /// Returns the width of the find dialog, falling back to the provided fallback.
-    pub fn find_width_or(&self, fallback: u16) -> u16 {
+    pub(crate) fn find_width_or(&self, fallback: u16) -> u16 {
         self.find_width.unwrap_or(fallback)
     }
 }
@@ -625,18 +622,18 @@ fn rgb(c: (u8, u8, u8)) -> Color {
 }
 
 /// Palette struct to apply internal themes to the central [make_theme] function.
-pub struct Palette {
-    pub base: (u8, u8, u8),
-    pub surface: (u8, u8, u8),
-    pub overlay: (u8, u8, u8),
-    pub primary: (u8, u8, u8),
-    pub secondary: (u8, u8, u8),
-    pub directory: (u8, u8, u8),
+pub(crate) struct Palette {
+    pub(crate) base: (u8, u8, u8),
+    pub(crate) surface: (u8, u8, u8),
+    pub(crate) overlay: (u8, u8, u8),
+    pub(crate) primary: (u8, u8, u8),
+    pub(crate) secondary: (u8, u8, u8),
+    pub(crate) directory: (u8, u8, u8),
 }
 
 /// Centralized function to create a Theme from a Palette.
 /// Used by all internal themes to avoid code duplication.
-pub fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
+pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
     let primary = rgb(palette.primary);
     let secondary = rgb(palette.secondary);
     let muted = rgb(palette.overlay);

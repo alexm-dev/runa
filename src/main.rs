@@ -1,16 +1,16 @@
 //! main.rs
 //! Entry point for runa
 
-pub mod app;
-pub mod config;
-pub mod core;
-pub mod ui;
-pub mod utils;
+pub(crate) mod app;
+pub(crate) mod config;
+pub(crate) mod core;
+pub(crate) mod ui;
+pub(crate) mod utils;
 
 use crate::config::Config;
 use crate::core::terminal;
 use crate::utils::cli::{CliAction, handle_args};
-use crate::utils::helpers::{expand_home_path_buf, is_hardened_directory};
+use crate::utils::{is_hardened_directory, resolve_initial_dir};
 
 fn main() -> std::io::Result<()> {
     std::panic::set_hook(Box::new(|info| {
@@ -42,13 +42,13 @@ fn main() -> std::io::Result<()> {
     let initial_path = match action {
         CliAction::RunApp => None,
         CliAction::RunAppAtPath(path_arg) => {
-            let expanded = expand_home_path_buf(&path_arg);
+            let target = resolve_initial_dir(&path_arg);
 
-            if !is_hardened_directory(&expanded) {
+            if !is_hardened_directory(&target) {
                 eprintln!("\n[runa] Error: Path '{}' cannot be opened.", path_arg);
                 std::process::exit(1);
             }
-            Some(expanded)
+            Some(target)
         }
         _ => unreachable!(),
     };

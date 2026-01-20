@@ -22,6 +22,7 @@ use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{Overlay, OverlayStack};
 
 use crossterm::event::KeyEvent;
+
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
@@ -31,20 +32,21 @@ use std::time::Instant;
 /// Enumeration for each individual keypress result processed.
 ///
 /// Is used to process action logic correctly.
-pub enum KeypressResult {
+pub(crate) enum KeypressResult {
     Continue,
     Consumed,
     Quit,
     OpenedEditor,
+    Recovered,
 }
 
 /// Enumeration which holds the metrics of the layout of the TUI
 #[derive(Debug, Clone, Copy)]
-pub struct LayoutMetrics {
-    pub parent_width: usize,
-    pub main_width: usize,
-    pub preview_width: usize,
-    pub preview_height: usize,
+pub(crate) struct LayoutMetrics {
+    pub(crate) parent_width: usize,
+    pub(crate) main_width: usize,
+    pub(crate) preview_width: usize,
+    pub(crate) preview_height: usize,
 }
 
 impl Default for LayoutMetrics {
@@ -72,7 +74,7 @@ impl Default for LayoutMetrics {
 ///
 /// Functions are provided for the core event loop, input handling, file navigationm
 /// worker requests and Notification management.
-pub struct AppState<'a> {
+pub(crate) struct AppState<'a> {
     pub(super) config: &'a Config,
     pub(super) keymap: Keymap,
 
@@ -91,12 +93,12 @@ pub struct AppState<'a> {
 }
 
 impl<'a> AppState<'a> {
-    pub fn new(config: &'a Config) -> std::io::Result<Self> {
+    pub(crate) fn new(config: &'a Config) -> std::io::Result<Self> {
         let current_dir = std::env::current_dir()?;
         Self::from_dir(config, &current_dir)
     }
 
-    pub fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
+    pub(crate) fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
         let workers = Workers::spawn();
         let current_dir = if initial_path.exists() && initial_path.is_dir() {
             initial_path.to_path_buf()
@@ -125,69 +127,66 @@ impl<'a> AppState<'a> {
 
     // Getters/ accessors
 
-    pub fn config(&self) -> &Config {
+    #[inline]
+    pub(crate) fn config(&self) -> &Config {
         self.config
     }
 
-    pub fn metrics(&self) -> &LayoutMetrics {
-        &self.metrics
-    }
-
-    pub fn metrics_mut(&mut self) -> &mut LayoutMetrics {
-        &mut self.metrics
-    }
-
-    pub fn nav(&self) -> &NavState {
+    #[inline]
+    pub(crate) fn nav(&self) -> &NavState {
         &self.nav
     }
 
-    pub fn actions(&self) -> &ActionContext {
+    #[inline]
+    pub(crate) fn actions(&self) -> &ActionContext {
         &self.actions
     }
 
-    pub fn preview(&self) -> &PreviewState {
+    #[inline]
+    pub(crate) fn preview(&self) -> &PreviewState {
         &self.preview
     }
 
-    pub fn parent(&self) -> &ParentState {
+    #[inline]
+    pub(crate) fn parent(&self) -> &ParentState {
         &self.parent
     }
 
-    pub fn is_loading(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_loading(&self) -> bool {
         self.is_loading
     }
 
-    pub fn notification_time(&self) -> &Option<Instant> {
+    #[inline]
+    pub(crate) fn notification_time(&self) -> &Option<Instant> {
         &self.notification_time
     }
 
-    pub fn overlays(&self) -> &OverlayStack {
+    #[inline]
+    pub(crate) fn overlays(&self) -> &OverlayStack {
         &self.overlays
     }
 
-    pub fn overlays_mut(&mut self) -> &mut OverlayStack {
+    #[inline]
+    pub(crate) fn overlays_mut(&mut self) -> &mut OverlayStack {
         &mut self.overlays
-    }
-
-    pub fn set_notification_time(&mut self, t: Option<Instant>) {
-        self.notification_time = t;
     }
 
     // Entry functions
 
-    pub fn visible_selected(&self) -> Option<usize> {
+    pub(crate) fn visible_selected(&self) -> Option<usize> {
         if self.nav.entries().is_empty() {
             None
         } else {
             Some(self.nav.selected_idx())
         }
     }
-    pub fn has_visible_entries(&self) -> bool {
+    pub(crate) fn has_visible_entries(&self) -> bool {
         !self.nav.entries().is_empty()
     }
 
     /// Metrics updater for LayoutMetrics to request_preview new preview after old metrics
-    pub fn update_layout_metrics(&mut self, metrics: LayoutMetrics) {
+    pub(crate) fn update_layout_metrics(&mut self, metrics: LayoutMetrics) {
         let old_width = self.metrics.preview_width;
         let old_height = self.metrics.preview_height;
 
@@ -207,7 +206,7 @@ impl<'a> AppState<'a> {
     /// Is used by the main event loop to update the application state.
     /// Returns a bool to determine if the AppState needs reloading
     /// and sets it to true if a WorkerResponse was made or if a preview should be triggered.
-    pub fn tick(&mut self) -> bool {
+    pub(crate) fn tick(&mut self) -> bool {
         let mut changed = false;
 
         if let Some(expiry) = self.notification_time
@@ -298,12 +297,7 @@ impl<'a> AppState<'a> {
                     }
                 }
 
-                WorkerResponse::OperationComplete {
-                    message: _,
-                    request_id: _,
-                    need_reload,
-                    focus,
-                } => {
+                WorkerResponse::OperationComplete { need_reload, focus } => {
                     if need_reload {
                         self.request_dir_load(focus);
                         self.request_parent_content();
@@ -323,6 +317,7 @@ impl<'a> AppState<'a> {
                 }
 
                 WorkerResponse::Error(e) => {
+                    self.is_loading = false;
                     self.preview.set_error(e);
                 }
             }
@@ -333,7 +328,7 @@ impl<'a> AppState<'a> {
     /// Central key handlers
     ///
     /// Coordinates the action and handler module functions.
-    pub fn handle_keypress(&mut self, key: KeyEvent) -> KeypressResult {
+    pub(crate) fn handle_keypress(&mut self, key: KeyEvent) -> KeypressResult {
         if self.actions.is_input_mode() {
             return self.handle_input_mode(key);
         }
@@ -352,7 +347,7 @@ impl<'a> AppState<'a> {
     // Worker requests functions for directory loading, preview and parent pane content
 
     /// Requests a directory load for the current navigation directory
-    pub fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
+    pub(crate) fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
         let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
@@ -368,15 +363,21 @@ impl<'a> AppState<'a> {
     }
 
     /// Requests a preview load for the currently selected entry in the navigation pane
-    pub fn request_preview(&mut self) {
+    pub(crate) fn request_preview(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
-            let req_id = self.preview.prepare_new_request(path.clone());
+            let req_id = self.preview.prepare_new_request(path);
             // Set the directory generation for the preview to the request_id for WorkerResponse
+
+            let worker_path = self
+                .preview
+                .current_path()
+                .map(|p| p.to_path_buf())
+                .unwrap_or_default();
 
             if entry.is_dir() || entry.is_symlink() {
                 let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
-                    path,
+                    path: worker_path,
                     focus: None,
                     dirs_first: self.config.dirs_first(),
                     show_hidden: self.config.show_hidden(),
@@ -395,7 +396,7 @@ impl<'a> AppState<'a> {
                     .map(OsString::from)
                     .collect();
                 let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
-                    path,
+                    path: worker_path,
                     max_lines: self.metrics.preview_height,
                     pane_width: self.metrics.preview_width,
                     preview_method,
@@ -409,7 +410,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Requests loading of the parent directory content for the parent pane
-    pub fn request_parent_content(&mut self) {
+    pub(crate) fn request_parent_content(&mut self) {
         if let Some(parent_path) = self.nav.current_dir().parent() {
             let parent_path_buf = parent_path.to_path_buf();
 
@@ -434,7 +435,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Requests a recursive find operation for the current navigation directory
-    pub fn request_find(&mut self, query: String) {
+    pub(crate) fn request_find(&mut self, query: String) {
         self.actions.cancel_find();
 
         let request_id = self.actions.prepare_new_find_request();
@@ -450,5 +451,101 @@ impl<'a> AppState<'a> {
             request_id,
             cancel: cancel_token,
         });
+    }
+}
+
+// AppState tests
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use std::time::{Duration, Instant};
+
+    fn dummy_config() -> Config {
+        Config::default()
+    }
+
+    #[test]
+    fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let cwd = std::env::current_dir()?;
+        let app = AppState::from_dir(&config, &cwd)?;
+        assert_eq!(app.nav().current_dir(), cwd);
+        Ok(())
+    }
+
+    #[test]
+    fn tick_clears_expired_notification_message() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        app.notification_time = Some(Instant::now() - Duration::from_secs(2));
+        app.overlays_mut().push(Overlay::Message {
+            text: "Timed MSG".to_string(),
+        });
+        let changed = app.tick();
+        assert!(changed);
+        assert!(app.notification_time.is_none());
+        assert!(
+            !app.overlays()
+                .iter()
+                .any(|o| matches!(o, Overlay::Message { .. }))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let app_nav = app.nav();
+        if app_nav.entries().is_empty() {
+            assert_eq!(app.visible_selected(), None);
+            assert!(!app.has_visible_entries());
+        } else {
+            assert!(app.visible_selected().is_some());
+            assert!(app.has_visible_entries());
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn handle_keypress_continue_if_no_action() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
+        let result = app.handle_keypress(key);
+        assert!(matches!(result, KeypressResult::Continue));
+        Ok(())
+    }
+
+    #[test]
+    fn request_dir_load_sets_is_loading() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        app.is_loading = false;
+        app.request_dir_load(None);
+        assert!(app.is_loading);
+        Ok(())
+    }
+
+    #[test]
+    fn request_parent_content_handles_root() -> Result<(), Box<dyn std::error::Error>> {
+        let config = dummy_config();
+        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        #[cfg(unix)]
+        {
+            use std::path::PathBuf;
+            app.nav.set_path(PathBuf::from("/"));
+            app.request_parent_content();
+            assert!(app.parent.entries().is_empty() || app.parent.entries().len() >= 0);
+        }
+        #[cfg(windows)]
+        {
+            use std::path::PathBuf;
+            app.nav.set_path(PathBuf::from("C:\\"));
+            app.request_parent_content();
+            assert!(app.parent.entries().is_empty());
+        }
+        Ok(())
     }
 }

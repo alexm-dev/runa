@@ -9,7 +9,7 @@ use std::vec;
 /// Input configuration options of all actions
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub struct Keys {
+pub(crate) struct Keys {
     open_file: Vec<String>,
     go_up: Vec<String>,
     go_down: Vec<String>,
@@ -29,91 +29,116 @@ pub struct Keys {
     find: Vec<String>,
     clear_markers: Vec<String>,
     clear_filter: Vec<String>,
+    alternate_delete: Vec<String>,
 }
 
 /// Editor configuration options
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub struct Editor {
+pub(crate) struct Editor {
     cmd: String,
 }
 
 /// Public methods for accessing input configuration options
 impl Keys {
-    pub fn open_file(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn open_file(&self) -> &[String] {
         &self.open_file
     }
 
-    pub fn go_up(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn go_up(&self) -> &[String] {
         &self.go_up
     }
 
-    pub fn go_down(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn go_down(&self) -> &[String] {
         &self.go_down
     }
 
-    pub fn go_parent(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn go_parent(&self) -> &[String] {
         &self.go_parent
     }
 
-    pub fn go_into_dir(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn go_into_dir(&self) -> &[String] {
         &self.go_into_dir
     }
 
-    pub fn quit(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn quit(&self) -> &[String] {
         &self.quit
     }
 
-    pub fn delete(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn delete(&self) -> &[String] {
         &self.delete
     }
 
-    pub fn copy(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn copy(&self) -> &[String] {
         &self.copy
     }
 
-    pub fn paste(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn paste(&self) -> &[String] {
         &self.paste
     }
 
-    pub fn rename(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn rename(&self) -> &[String] {
         &self.rename
     }
 
-    pub fn create(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn create(&self) -> &[String] {
         &self.create
     }
 
-    pub fn create_directory(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn create_directory(&self) -> &[String] {
         &self.create_directory
     }
 
-    pub fn move_file(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn move_file(&self) -> &[String] {
         &self.move_file
     }
 
-    pub fn filter(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn filter(&self) -> &[String] {
         &self.filter
     }
 
-    pub fn toggle_marker(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn toggle_marker(&self) -> &[String] {
         &self.toggle_marker
     }
 
-    pub fn show_info(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn show_info(&self) -> &[String] {
         &self.show_info
     }
 
-    pub fn find(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn find(&self) -> &[String] {
         &self.find
     }
 
-    pub fn clear_markers(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn clear_markers(&self) -> &[String] {
         &self.clear_markers
     }
 
-    pub fn clear_filter(&self) -> &Vec<String> {
+    #[inline]
+    pub(crate) fn clear_filter(&self) -> &[String] {
         &self.clear_filter
+    }
+
+    #[inline]
+    pub(crate) fn alternate_delete(&self) -> &[String] {
+        &self.alternate_delete
     }
 }
 
@@ -142,14 +167,22 @@ impl Default for Keys {
 
             clear_markers: vec!["Ctrl+c".into()],
             clear_filter: vec!["Ctrl+f".into()],
+
+            alternate_delete: vec!["Ctrl+d".into()],
         }
     }
 }
 
 /// Public methods for accessing editor configuration options
 impl Editor {
-    pub fn cmd(&self) -> &str {
-        &self.cmd
+    #[inline]
+    pub(crate) fn cmd(&self) -> &str {
+        let trimmed = self.cmd.trim();
+        if trimmed.is_empty() { "vim" } else { trimmed }
+    }
+
+    pub(crate) fn exists(&self) -> bool {
+        which::which(self.cmd()).is_ok()
     }
 }
 

@@ -6,18 +6,24 @@
 
 use crate::config::Config;
 
-pub enum CliAction {
+pub(crate) enum CliAction {
     RunApp,
     RunAppAtPath(String),
     Exit,
 }
 
-pub fn handle_args() -> CliAction {
+pub(crate) fn handle_args() -> CliAction {
     let args: Vec<String> = std::env::args().collect();
     let config_path = Config::default_path();
 
-    if args.len() <= 1 {
+    if args.len() < 2 {
         return CliAction::RunApp;
+    }
+
+    if args.len() > 2 {
+        eprintln!("Error: runa accepts only one argument at a time.");
+        eprintln!("Usage: runa [PATH] or runa [OPTION]");
+        return CliAction::Exit;
     }
 
     match args[1].as_str() {
@@ -49,7 +55,9 @@ pub fn handle_args() -> CliAction {
             }
             CliAction::Exit
         }
-        arg if !arg.starts_with('-') => CliAction::RunAppAtPath(arg.to_string()),
+        arg if !arg.starts_with('-') && !arg.trim().is_empty() => {
+            CliAction::RunAppAtPath(arg.to_string())
+        }
         arg => {
             eprintln!("Unknown argument: {}", arg);
             eprintln!("Try --help for available options");
@@ -59,7 +67,7 @@ pub fn handle_args() -> CliAction {
 }
 
 fn print_version() {
-    println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    println!("runa {}", env!("CARGO_PKG_VERSION"));
 }
 
 fn print_help() {

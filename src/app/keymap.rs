@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 /// Represents any action in the app: navigation, file, or system.
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Action {
+pub(crate) enum Action {
     Nav(NavAction),
     File(FileAction),
     System(SystemAction),
@@ -16,7 +16,7 @@ pub enum Action {
 
 /// Navigation actions (move, into_parent, markers, etc.)
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum NavAction {
+pub(crate) enum NavAction {
     GoParent,
     GoIntoDir,
     GoUp,
@@ -28,7 +28,7 @@ pub enum NavAction {
 
 /// File actions (delete, copy, open, paste, etc.)
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum FileAction {
+pub(crate) enum FileAction {
     Delete,
     Copy,
     Open,
@@ -40,32 +40,33 @@ pub enum FileAction {
     ShowInfo,
     Find,
     MoveFile,
+    AlternateDelete,
 }
 
 /// System actions (quit)
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum SystemAction {
+pub(crate) enum SystemAction {
     Quit,
 }
 
 /// Key + modifiers as used in keybind/keymap
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
-pub struct Key {
-    pub code: KeyCode,
-    pub modifiers: KeyModifiers,
+pub(crate) struct Key {
+    pub(crate) code: KeyCode,
+    pub(crate) modifiers: KeyModifiers,
 }
 
 /// Stores the mapping from Key to action, which is built in the config
 ///
 /// # Fields
 /// * `map` - HashMap mapping Key to Action
-pub struct Keymap {
+pub(crate) struct Keymap {
     map: HashMap<Key, Action>,
 }
 
 impl Keymap {
     /// Builds the keymap from the config
-    pub fn from_config(config: &crate::config::Config) -> Self {
+    pub(crate) fn from_config(config: &crate::config::Config) -> Self {
         let mut map = HashMap::new();
         let keys = config.keys();
 
@@ -142,12 +143,16 @@ impl Keymap {
         bind(keys.find(), Action::File(FileAction::Find));
         bind(keys.clear_markers(), Action::Nav(NavAction::ClearMarker));
         bind(keys.clear_filter(), Action::Nav(NavAction::ClearFilter));
+        bind(
+            keys.alternate_delete(),
+            Action::File(FileAction::AlternateDelete),
+        );
 
         Keymap { map }
     }
 
     /// Looks up the action for a given key event
-    pub fn lookup(&self, key: KeyEvent) -> Option<Action> {
+    pub(crate) fn lookup(&self, key: KeyEvent) -> Option<Action> {
         let k = Key {
             code: key.code,
             modifiers: key.modifiers,

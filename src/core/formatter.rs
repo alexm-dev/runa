@@ -33,7 +33,7 @@ const BINARY_PEEK_BYTES: usize = 1024;
 
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.
-pub struct Formatter {
+pub(crate) struct Formatter {
     dirs_first: bool,
     show_hidden: bool,
     show_system: bool,
@@ -43,7 +43,7 @@ pub struct Formatter {
 }
 
 impl Formatter {
-    pub fn new(
+    pub(crate) fn new(
         dirs_first: bool,
         show_hidden: bool,
         show_system: bool,
@@ -67,7 +67,7 @@ impl Formatter {
     }
 
     /// Sorts the given file entries in place according to the formatter's settings.
-    pub fn sort_entries(&self, entries: &mut [FileEntry]) {
+    pub(crate) fn sort_entries(&self, entries: &mut [FileEntry]) {
         entries.sort_by(|a, b| {
             if self.dirs_first {
                 match (a.is_dir(), b.is_dir()) {
@@ -85,7 +85,7 @@ impl Formatter {
     }
 
     /// Filters the given file entries in place according to the formatter's settings.
-    pub fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
+    pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         entries.retain(|e| {
             let is_exception = if self.case_insensitive {
                 self.always_show_lowercase.contains(e.lowercase_name())
@@ -113,7 +113,7 @@ impl Formatter {
 ///
 /// # Returns
 /// A string representing the formatted file attributes used by FileInfo
-pub fn format_attributes(meta: &Metadata) -> String {
+pub(crate) fn format_attributes(meta: &Metadata) -> String {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -166,7 +166,7 @@ pub fn format_attributes(meta: &Metadata) -> String {
 /// Formats the FileType enum into a human-readable string.
 /// # Returns
 /// A static string representing the file type.
-pub fn format_file_type(file_type: &FileType) -> &'static str {
+pub(crate) fn format_file_type(file_type: &FileType) -> &'static str {
     match file_type {
         FileType::File => "File",
         FileType::Directory => "Directory",
@@ -178,7 +178,7 @@ pub fn format_file_type(file_type: &FileType) -> &'static str {
 /// Formats the file size into a human-readable string.
 /// # Returns
 /// A string representing the formatted file size or "-" for directories/unknown sizes.
-pub fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
+pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
     if is_dir {
         "-".into()
     } else if let Some(sz) = size {
@@ -191,7 +191,7 @@ pub fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
 /// Formats the file modification time into a human-readable string.
 /// # Returns
 /// A string representing the formatted modification time or "-" if unknown.
-pub fn format_file_time(modified: Option<SystemTime>) -> String {
+pub(crate) fn format_file_time(modified: Option<SystemTime>) -> String {
     modified
         .map(|mtime| {
             let dt: DateTime<Local> = DateTime::from(mtime);
@@ -201,7 +201,7 @@ pub fn format_file_time(modified: Option<SystemTime>) -> String {
 }
 
 /// Normalize a relative path to use forward slashes for consistency across platforms.
-pub fn normalize_relative_path(path: &Path) -> String {
+pub(crate) fn normalize_relative_path(path: &Path) -> String {
     let rel = path.to_string_lossy().into_owned();
     #[cfg(windows)]
     {
@@ -214,7 +214,7 @@ pub fn normalize_relative_path(path: &Path) -> String {
 }
 
 /// Normalize separators in a given string to use forward slashes.
-pub fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
+pub(crate) fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
     if separator.contains('\\') {
         Cow::Owned(separator.replace('\\', "/"))
     } else {
@@ -228,7 +228,7 @@ pub fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
 /// # Examples
 /// let flat = flatten_separators("src/core/proc.rs");
 /// flat = "srccoreprocrs";
-pub fn flatten_separators(separator: &str) -> String {
+pub(crate) fn flatten_separators(separator: &str) -> String {
     let mut buf = String::with_capacity(separator.len());
     for char in separator.chars() {
         if char != '/' && char != '\\' {
@@ -239,7 +239,7 @@ pub fn flatten_separators(separator: &str) -> String {
 }
 
 /// Returns Some(resolved_target) if entry is a symlink and can be resolved, otherwise None.
-pub fn symlink_target_resolved(
+pub(crate) fn symlink_target_resolved(
     entry: &crate::core::FileEntry,
     parent_dir: &Path,
 ) -> Option<PathBuf> {
@@ -267,7 +267,7 @@ pub fn symlink_target_resolved(
 /// and truncating or padding the string to fit exactly.
 /// # Returns
 /// A sanitized string that fits exactly within the specified pane width.
-pub fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
+pub(crate) fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
     let mut out = String::with_capacity(pane_width);
     let mut current_w = 0;
 
@@ -306,7 +306,7 @@ pub fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
 /// Loads a fixed-width preview of a directory entries
 /// # Returns
 /// A vector of strings, each representing a line from the directory preview.
-pub fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
+pub(crate) fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     match browse_dir(path) {
         Ok(entries) => {
             let mut lines = Vec::with_capacity(max_lines);
@@ -351,7 +351,7 @@ pub fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Ve
 ///
 /// # Returns
 /// A vector of strings, each representing a line from the file or directory preview.
-pub fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
+pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
     // Metadata check
@@ -447,11 +447,12 @@ pub fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Ve
 #[cfg(test)]
 mod tests {
 
+    use super::*;
     use crate::core;
     use tempfile::tempdir;
 
     #[test]
-    fn test_ui_sanitization_and_exact_width() {
+    fn ui_sanitization_and_exact_width() {
         let pane_width = 10;
 
         let cases = vec![
@@ -462,7 +463,7 @@ mod tests {
         ];
 
         for (input, expected_width) in cases {
-            let result = core::sanitize_to_exact_width(input, pane_width);
+            let result = sanitize_to_exact_width(input, pane_width);
 
             let actual_width = unicode_width::UnicodeWidthStr::width(result.as_str());
 
@@ -481,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
+    fn core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempdir()?;
         let entries = core::browse_dir(temp_dir.path())?;
 

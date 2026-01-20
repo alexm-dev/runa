@@ -11,7 +11,7 @@ use crate::core::FileInfo;
 use crate::core::formatter::normalize_relative_path;
 use crate::core::proc::complete_dirs_with_fd;
 use crate::ui::overlays::Overlay;
-use crate::utils::{expand_home_path, readable_path};
+use crate::utils::{expand_home_path, open_in_editor, readable_path};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
 
@@ -28,7 +28,7 @@ impl<'a> AppState<'a> {
     ///
     /// If not in an input mode, returns [KeypressResult::Continue].
     /// Consumes keys related to input editing and mode confirmation/cancellation.
-    pub fn handle_input_mode(&mut self, key: KeyEvent) -> KeypressResult {
+    pub(crate) fn handle_input_mode(&mut self, key: KeyEvent) -> KeypressResult {
         let mode = if let ActionMode::Input { mode, .. } = &self.actions().mode() {
             *mode
         } else {
@@ -42,7 +42,7 @@ impl<'a> AppState<'a> {
                     InputMode::NewFolder => self.create_folder(),
                     InputMode::Rename => self.rename_entry(),
                     InputMode::Filter => self.apply_filter(),
-                    InputMode::ConfirmDelete => self.confirm_delete(),
+                    InputMode::ConfirmDelete { .. } => self.confirm_delete(),
                     InputMode::Find => self.handle_find(),
                     InputMode::MoveFile => self.handle_move(),
                 }
@@ -118,7 +118,7 @@ impl<'a> AppState<'a> {
             }
 
             Char(c) => match mode {
-                InputMode::ConfirmDelete => {
+                InputMode::ConfirmDelete { .. } => {
                     self.process_confirm_delete_char(c);
                     KeypressResult::Consumed
                 }
@@ -148,7 +148,7 @@ impl<'a> AppState<'a> {
 
     /// Handles navigation actions (up, down, into dir, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    pub fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
+    pub(crate) fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
         match action {
             NavAction::GoUp => {
                 self.move_nav_if_possible(|nav| nav.move_up());
@@ -188,10 +188,17 @@ impl<'a> AppState<'a> {
 
     /// Handles file actions (open, delete, copy, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    pub fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
+    pub(crate) fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
         match action {
             FileAction::Open => return self.handle_open_file(),
-            FileAction::Delete => self.prompt_delete(),
+            FileAction::Delete => {
+                let is_trash = self.config.move_to_trash();
+                self.prompt_delete(is_trash);
+            }
+            FileAction::AlternateDelete => {
+                let is_trash = !self.config.move_to_trash();
+                self.prompt_delete(is_trash);
+            }
             FileAction::Copy => {
                 self.actions.action_copy(&self.nav, false);
                 self.handle_timed_message(Duration::from_secs(15));
@@ -212,7 +219,12 @@ impl<'a> AppState<'a> {
     }
 
     /// Enters an input mode with the given parameters.
-    pub fn enter_input_mode(&mut self, mode: InputMode, prompt: String, initial: Option<String>) {
+    pub(crate) fn enter_input_mode(
+        &mut self,
+        mode: InputMode,
+        prompt: String,
+        initial: Option<String>,
+    ) {
         let buffer = initial.unwrap_or_default();
         self.actions
             .enter_mode(ActionMode::Input { mode, prompt }, buffer);
@@ -313,17 +325,27 @@ impl<'a> AppState<'a> {
     /// If a file is selected, attempts to open it in the configured editor.
     /// If an error occurs, prints it to stderr.
     fn handle_open_file(&mut self) -> KeypressResult {
+        let editor = self.config.editor();
+        if !editor.exists() {
+            let msg = format!("Editor '{}' not found", editor.cmd());
+            self.push_overlay_message(msg, Duration::from_secs(3));
+            return KeypressResult::Continue;
+        }
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
-            if let Err(e) = crate::utils::open_in_editor(self.config.editor(), &path) {
-                eprintln!("Error: {}", e);
+
+            match open_in_editor(self.config.editor(), &path) {
+                Ok(_) => KeypressResult::OpenedEditor,
+                Err(e) => {
+                    let error_msg = e.to_string();
+                    self.push_overlay_message(error_msg, std::time::Duration::from_secs(3));
+                    KeypressResult::Recovered
+                }
             }
-            KeypressResult::OpenedEditor
         } else {
             KeypressResult::Continue
         }
     }
-
     /// Handles the find action.
     ///
     /// If a result is selected in the find results, navigates to its path.
@@ -441,14 +463,14 @@ impl<'a> AppState<'a> {
     }
 
     /// Handles displaying a timed message overlay.
-    pub fn handle_timed_message(&mut self, duration: Duration) {
+    pub(crate) fn handle_timed_message(&mut self, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
     }
 
     // Input processes
 
     /// Processes a character input for the confirm delete input mode.
-    pub fn process_confirm_delete_char(&mut self, c: char) {
+    pub(crate) fn process_confirm_delete_char(&mut self, c: char) {
         if matches!(c, 'y' | 'Y') {
             self.confirm_delete();
         }
@@ -457,7 +479,7 @@ impl<'a> AppState<'a> {
 
     /// Exits the current input mode.
     /// Simple wrapper around actions::exit_mode.
-    pub fn exit_input_mode(&mut self) {
+    pub(crate) fn exit_input_mode(&mut self) {
         self.actions.exit_mode();
     }
 
@@ -496,8 +518,18 @@ impl<'a> AppState<'a> {
     /// Confirms deletion of the selected items.
     /// Calls actions::action_delete.
     fn confirm_delete(&mut self) {
+        let move_to_trash = if let ActionMode::Input {
+            mode: InputMode::ConfirmDelete { is_trash },
+            ..
+        } = self.actions.mode()
+        {
+            *is_trash
+        } else {
+            self.config.move_to_trash()
+        };
+
         let fileop_tx = self.workers.fileop_tx();
-        let move_to_trash = self.config.move_to_trash();
+
         self.actions
             .action_delete(&mut self.nav, fileop_tx, move_to_trash);
     }
@@ -505,17 +537,22 @@ impl<'a> AppState<'a> {
     // Prompt functions
 
     /// Prompts the user to confirm deletion of selected items.
-    fn prompt_delete(&mut self) {
+    fn prompt_delete(&mut self, is_trash: bool) {
         let targets = self.nav.get_action_targets();
+        let count = targets.len();
         if targets.is_empty() {
             return;
         }
-        let prompt_text = format!(
-            "Delete {} item{}? [Y/N]",
-            targets.len(),
-            if targets.len() > 1 { "s" } else { "" }
-        );
-        self.enter_input_mode(InputMode::ConfirmDelete, prompt_text, None);
+
+        let action_word = if is_trash { "Trash" } else { "Delete" };
+        let item_label = if count > 1 {
+            format!("{} items", count)
+        } else {
+            "item".to_string()
+        };
+
+        let prompt_text = format!("{} {}? [Y/n]", action_word, item_label);
+        self.enter_input_mode(InputMode::ConfirmDelete { is_trash }, prompt_text, None);
     }
 
     /// Prompts the user to rename the selected entry.
@@ -568,7 +605,7 @@ impl<'a> AppState<'a> {
     // Helpers
 
     /// Refreshes the file info overlay if it is currently open.
-    pub fn refresh_show_info_if_open(&mut self) {
+    pub(crate) fn refresh_show_info_if_open(&mut self) {
         let maybe_idx = self
             .overlays()
             .find_index(|o| matches!(o, Overlay::ShowInfo { .. }));
@@ -635,7 +672,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Pushes a message overlay that lasts for the specified duration.
-    pub fn push_overlay_message(&mut self, text: String, duration: Duration) {
+    pub(crate) fn push_overlay_message(&mut self, text: String, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
 
         if matches!(self.overlays.top(), Some(Overlay::Message { .. })) {

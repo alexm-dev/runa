@@ -4,15 +4,15 @@
 //! in response to user input. Submodules handle actions, navigation, key mapping,
 //! preview pane and parent pane requests.
 
-pub mod actions;
+pub(crate) mod actions;
 mod handlers;
 mod keymap;
 mod nav;
 mod parent;
-pub mod preview;
+pub(crate) mod preview;
 mod state;
 
-pub use nav::NavState;
-pub use parent::ParentState;
-pub use preview::{PreviewData, PreviewState};
-pub use state::{AppState, KeypressResult, LayoutMetrics};
+pub(crate) use nav::NavState;
+pub(crate) use parent::ParentState;
+pub(crate) use preview::{PreviewData, PreviewState};
+pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};

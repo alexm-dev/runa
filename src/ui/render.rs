@@ -17,7 +17,7 @@ use crate::{
         overlays::Overlay,
         panes::{PaneContext, PaneStyles, PreviewOptions},
     },
-    utils::{as_path_op, clean_display_path, shorten_home_path},
+    utils::{clean_display_path, shorten_home_path},
 };
 use ratatui::{
     Frame,
@@ -29,7 +29,7 @@ use ratatui::{
 
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
-pub fn render(frame: &mut Frame, app: &mut AppState) {
+pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
     let mut root_area = frame.area();
     let metrics = calculate_layout_metrics(frame.area(), app);
     app.update_layout_metrics(metrics);
@@ -63,8 +63,10 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
 
     // PARENT PANE
     if display_cfg.parent() && pane_idx < chunks.len() {
-        let parent_dir =
-            as_path_op(app.parent().last_path()).or_else(|| app.nav().current_dir().parent());
+        let parent_dir = app
+            .parent()
+            .last_path()
+            .or_else(|| app.nav().current_dir().parent());
         let parent_markers = panes::make_pane_markers(
             markers,
             clipboard,
@@ -167,7 +169,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
             .map(|e| e.is_dir())
             .unwrap_or(false);
 
-        let preview_dir = as_path_op(app.preview().current_path());
+        let preview_dir = app.preview().current_path();
         let preview_markers = panes::make_pane_markers(
             markers,
             clipboard,
@@ -222,7 +224,7 @@ pub fn render(frame: &mut Frame, app: &mut AppState) {
 ///
 /// The result is used for positioning file navigation, parent and preview panes in the layout.
 /// Handles separators and dynamic ratios.
-pub fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
+pub(crate) fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
     let cfg = app.config().display();
     let mut constraints = Vec::new();
     let show_sep = cfg.separators() && !cfg.is_split();
@@ -422,7 +424,7 @@ mod tests {
     use std::error;
 
     #[test]
-    fn test_layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
+    fn layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
         let size = Rect::new(0, 0, 100, 10);
 
         let toml_content = r#"

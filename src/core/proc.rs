@@ -49,7 +49,7 @@ const EXCLUDES: &[&str] = &[
 /// A single result from the find function.
 /// It contains the path and the score of the fuzzy match.
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FindResult {
+pub(crate) struct FindResult {
     path: PathBuf,
     score: i64,
 }
@@ -67,13 +67,11 @@ impl PartialOrd for FindResult {
 }
 
 impl FindResult {
-    pub fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         &self.path
     }
-    pub fn score(&self) -> i64 {
-        self.score
-    }
-    pub fn relative(&self, base: &Path) -> String {
+
+    pub(crate) fn relative(&self, base: &Path) -> String {
         let rel = self.path.strip_prefix(base).unwrap_or(&self.path);
         normalize_relative_path(rel)
     }
@@ -88,7 +86,7 @@ struct RawResult {
 }
 
 /// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
-pub fn find(
+pub(crate) fn find(
     base_dir: &Path,
     query: &str,
     out: &mut Vec<FindResult>,
@@ -180,7 +178,7 @@ pub fn find(
 ///
 /// # Returns
 /// A vector of strings, each representing a line from the file preview.
-pub fn preview_bat(
+pub(crate) fn preview_bat(
     path: &Path,
     max_lines: usize,
     bat_args: &[OsString],
@@ -204,7 +202,10 @@ pub fn preview_bat(
 
 /// Auto completion of directories
 /// Used by MoveFile inputmode to autocomplete the directory paths.
-pub fn complete_dirs_with_fd(base_dir: &Path, prefix: &str) -> Result<Vec<String>, std::io::Error> {
+pub(crate) fn complete_dirs_with_fd(
+    base_dir: &Path,
+    prefix: &str,
+) -> Result<Vec<String>, std::io::Error> {
     let output = Command::new("fd")
         .arg("--type")
         .arg("d")
@@ -270,7 +271,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_recursive_unit() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_recursive_unit() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
 
         let dir = tempdir()?;
@@ -304,7 +305,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_recursive_empty_query() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_recursive_empty_query() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
         let dir = tempdir()?;
         fs::File::create(dir.path().join("something.txt"))?;
@@ -316,7 +317,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_recursive_subdirectory() -> Result<(), Box<dyn std::error::Error>> {
+    fn find_recursive_subdirectory() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
         let dir = tempdir()?;
         let subdir = dir.path().join("nested");
@@ -339,7 +340,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_bat_basic() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_bat_basic() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
         let dir = tempdir()?;
@@ -364,7 +365,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_bat_with_args() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_bat_with_args() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
         let dir = tempdir()?;
@@ -380,7 +381,7 @@ mod tests {
     }
 
     #[test]
-    fn test_preview_bat_nonexistent_file() -> Result<(), Box<dyn std::error::Error>> {
+    fn preview_bat_nonexistent_file() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
         let dir = tempfile::tempdir()?;
@@ -392,7 +393,7 @@ mod tests {
     }
 
     #[test]
-    fn test_complete_dirs_with_fd_sandboxed() -> Result<(), Box<dyn std::error::Error>> {
+    fn complete_dirs_with_fd_sandboxed() -> Result<(), Box<dyn std::error::Error>> {
         let dir = tempdir()?;
         let base_path = dir.path();
 
@@ -425,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    fn test_fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
+    fn fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
         let sandbox = tempdir()?;
         let non_existent = sandbox.path().join("ghost_zone");
 

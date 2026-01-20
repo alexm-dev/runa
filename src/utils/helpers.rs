@@ -16,26 +16,32 @@ use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::OnceLock;
 use std::{fs, io};
 
+use crossterm::{
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+};
+
 /// The minimum results which is set to if the maximum is overset in the runa.toml.
-pub const MIN_FIND_RESULTS: usize = 15;
+pub(crate) const MIN_FIND_RESULTS: usize = 15;
 /// The default find results. Can be overwritten in the runa.toml.
-pub const DEFAULT_FIND_RESULTS: usize = 2000;
+pub(crate) const DEFAULT_FIND_RESULTS: usize = 2000;
 /// The maximum find result limit which is possible.
 /// Can be set higher, but better to set it to a big limit instead of usize::MAX
-pub const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
+pub(crate) const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
 
 /// Shared cache for the home_dir dirs call
 static HOME_DIR_CACHE: OnceLock<Option<PathBuf>> = OnceLock::new();
 
 /// Thread safe for getting home_dir once.
-pub fn get_home() -> Option<&'static PathBuf> {
+#[inline]
+pub(crate) fn get_home() -> Option<&'static PathBuf> {
     HOME_DIR_CACHE.get_or_init(dirs::home_dir).as_ref()
 }
 
 /// Parses a string (color name or hex) into a ratatui::style::color
 ///
 /// Supports standard names (red, green, etc.) as well as hex values (#RRGGBB or #RGB)
-pub fn parse_color(s: &str) -> Color {
+pub(crate) fn parse_color(s: &str) -> Color {
     match s.to_lowercase().as_str() {
         "default" | "reset" => Color::Reset,
         "yellow" => Color::Yellow,
@@ -86,12 +92,7 @@ pub fn parse_color(s: &str) -> Color {
 ///
 /// Temporary disables raw mode and exits alternate sceen while the editor runs.
 /// On return, restores raw mode and alternate sceen.
-pub fn open_in_editor(editor: &Editor, file_path: &std::path::Path) -> std::io::Result<()> {
-    use crossterm::{
-        execute,
-        terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-    };
-
+pub(crate) fn open_in_editor(editor: &Editor, file_path: &std::path::Path) -> std::io::Result<()> {
     let mut stdout = io::stdout();
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
@@ -102,13 +103,23 @@ pub fn open_in_editor(editor: &Editor, file_path: &std::path::Path) -> std::io::
 
     execute!(io::stdout(), EnterAlternateScreen)?;
     enable_raw_mode()?;
-    status.map(|_| ())
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(s) => Err(io::Error::other(format!(
+            "Editor exited with status: {}",
+            s
+        ))),
+        Err(e) => Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Command '{}' not found: {}", editor.cmd(), e),
+        )),
+    }
 }
 
 /// Finds the next available filename by appending _1, _2, etc. if the target exists
 ///
 /// Example: "notes.txt" -> "notes_1.txt"
-pub fn get_unused_path(path: &Path) -> PathBuf {
+pub(crate) fn get_unused_path(path: &Path) -> PathBuf {
     if !path.exists() {
         return path.to_path_buf();
     }
@@ -139,7 +150,7 @@ pub fn get_unused_path(path: &Path) -> PathBuf {
 
 /// Util function to shorten home directory to ~.
 /// Is used by the path_str in the ui.rs render function.
-pub fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
+pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     let path = path.as_ref();
 
     let home_dir = get_home();
@@ -156,11 +167,11 @@ pub fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     path.display().to_string()
 }
 
-pub fn expand_home_path(input: &str) -> String {
+pub(crate) fn expand_home_path(input: &str) -> String {
     expand_home_path_buf(input).to_string_lossy().to_string()
 }
 
-pub fn expand_home_path_buf(input: &str) -> PathBuf {
+pub(crate) fn expand_home_path_buf(input: &str) -> PathBuf {
     let home = get_home();
 
     if let Some(home) = home {
@@ -191,7 +202,7 @@ pub fn expand_home_path_buf(input: &str) -> PathBuf {
     PathBuf::from(input)
 }
 
-pub fn is_hardened_directory(path: &Path) -> bool {
+pub(crate) fn is_hardened_directory(path: &Path) -> bool {
     if !path.exists() || !path.is_dir() {
         return false;
     }
@@ -207,7 +218,16 @@ pub fn is_hardened_directory(path: &Path) -> bool {
     true
 }
 
-pub fn clean_display_path(path: &str) -> &str {
+pub(crate) fn resolve_initial_dir(path_arg: &str) -> PathBuf {
+    let expaned = expand_home_path_buf(path_arg);
+    if expaned.is_file() {
+        expaned.parent().map(|p| p.to_path_buf()).unwrap_or(expaned)
+    } else {
+        expaned
+    }
+}
+
+pub(crate) fn clean_display_path(path: &str) -> &str {
     path.strip_prefix(r"\\?\").unwrap_or(path)
 }
 
@@ -215,7 +235,7 @@ pub fn clean_display_path(path: &str) -> &str {
 ///
 /// If the clamped value does not match the set [MAX_FIND_RESULTS_LIMIT] then its invalid and its
 /// set to the [MIN_FIND_RESULTS] instead.
-pub fn clamp_find_results(value: usize) -> usize {
+pub(crate) fn clamp_find_results(value: usize) -> usize {
     let clamped = value.clamp(MIN_FIND_RESULTS, MAX_FIND_RESULTS_LIMIT);
     if clamped != value {
         eprintln!(
@@ -229,7 +249,7 @@ pub fn clamp_find_results(value: usize) -> usize {
 /// Recursively copies files and directories from `src` to `dest`.
 ///
 /// If `src` is a directory, it creates the directory at `dest` and copies all its contents recursively.
-pub fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
+pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     if dest.starts_with(src) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -249,7 +269,7 @@ pub fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     Ok(())
 }
 
-pub fn readable_path(path: &Path) -> String {
+pub(crate) fn readable_path(path: &Path) -> String {
     #[cfg(windows)]
     {
         let display = path.display().to_string();
@@ -264,11 +284,6 @@ pub fn readable_path(path: &Path) -> String {
     }
 }
 
-/// Helpers to convert Option<&PathBuf> to Option<&Path>
-pub fn as_path_op(opt: Option<&PathBuf>) -> Option<&Path> {
-    opt.map(|pathb| pathb.as_path())
-}
-
 /// Helper utils integration tests
 #[cfg(test)]
 mod tests {
@@ -279,7 +294,7 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn test_path_collision_increments() -> Result<(), Box<dyn error::Error>> {
+    fn path_collision_increments() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let path = dir.path().join("data.csv");
 
@@ -297,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hidden_file_collision() -> Result<(), Box<dyn error::Error>> {
+    fn hidden_file_collision() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let path = dir.path().join(".config");
 
@@ -308,7 +323,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_basic() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_basic() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let file_path = dir.path().join("test.txt");
 
@@ -336,7 +351,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_no_extension() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_no_extension() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let folder_path = dir.path().join("my_folder");
 
@@ -354,7 +369,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_hidden_file() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_hidden_file() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let dot_file = dir.path().join(".gitignore");
 
@@ -371,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_unused_path_complex_extension() -> Result<(), Box<dyn error::Error>> {
+    fn get_unused_path_complex_extension() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let tar_gz = dir.path().join("archive.tar.gz");
 
@@ -388,7 +403,7 @@ mod tests {
     }
 
     #[test]
-    fn test_home_expansion() -> Result<(), Box<dyn error::Error>> {
+    fn home_expansion() -> Result<(), Box<dyn error::Error>> {
         let path = expand_home_path_buf("~");
         assert!(path.is_absolute());
 
@@ -401,7 +416,7 @@ mod tests {
 
     #[test]
     #[cfg(windows)]
-    fn test_windows_drive_normalization() -> Result<(), Box<dyn error::Error>> {
+    fn windows_drive_normalization() -> Result<(), Box<dyn error::Error>> {
         // Test C: -> C:\
         let path = expand_home_path_buf("C:");
         assert_eq!(path.to_str().ok_or("UTF8 error")?, r"C:\");
@@ -421,7 +436,7 @@ mod tests {
     }
 
     #[test]
-    fn test_standard_paths() -> Result<(), Box<dyn error::Error>> {
+    fn standard_paths() -> Result<(), Box<dyn error::Error>> {
         let path = expand_home_path_buf("projects/runa");
         assert_eq!(path, Path::new("projects/runa"));
 

@@ -19,7 +19,7 @@ use serde::Deserialize;
 /// even if the user does not specify certain settings.
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub struct Display {
+pub(crate) struct Display {
     selection_marker: bool,
     dir_marker: bool,
     borders: BorderStyle,
@@ -42,92 +42,113 @@ pub struct Display {
 
 /// Public methods for accessing display configuration options
 impl Display {
-    pub fn selection_marker(&self) -> bool {
+    #[inline]
+    pub(crate) fn selection_marker(&self) -> bool {
         self.selection_marker
     }
 
-    pub fn dir_marker(&self) -> bool {
+    #[inline]
+    pub(crate) fn dir_marker(&self) -> bool {
         self.dir_marker
     }
 
-    pub fn is_unified(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_unified(&self) -> bool {
         matches!(self.borders, BorderStyle::Unified)
     }
 
-    pub fn is_split(&self) -> bool {
+    #[inline]
+    pub(crate) fn is_split(&self) -> bool {
         matches!(self.borders, BorderStyle::Split)
     }
 
-    pub fn border_shape(&self) -> &BorderShape {
+    #[inline]
+    pub(crate) fn border_shape(&self) -> &BorderShape {
         &self.border_shape
     }
 
-    pub fn titles(&self) -> bool {
+    #[inline]
+    pub(crate) fn titles(&self) -> bool {
         self.titles
     }
 
-    pub fn icons(&self) -> bool {
+    #[inline]
+    pub(crate) fn icons(&self) -> bool {
         self.icons
     }
 
-    pub fn separators(&self) -> bool {
+    #[inline]
+    pub(crate) fn separators(&self) -> bool {
         self.separators
     }
 
-    pub fn parent(&self) -> bool {
+    #[inline]
+    pub(crate) fn parent(&self) -> bool {
         self.parent
     }
 
-    pub fn preview(&self) -> bool {
+    #[inline]
+    pub(crate) fn preview(&self) -> bool {
         self.preview
     }
 
-    pub fn parent_ratio(&self) -> u16 {
+    #[inline]
+    pub(crate) fn parent_ratio(&self) -> u16 {
         self.layout.parent_ratio()
     }
 
-    pub fn main_ratio(&self) -> u16 {
+    #[inline]
+    pub(crate) fn main_ratio(&self) -> u16 {
         self.layout.main_ratio()
     }
 
-    pub fn preview_ratio(&self) -> u16 {
+    #[inline]
+    pub(crate) fn preview_ratio(&self) -> u16 {
         self.layout.preview_ratio()
     }
 
-    pub fn preview_underline(&self) -> bool {
+    #[inline]
+    pub(crate) fn preview_underline(&self) -> bool {
         self.preview_underline
     }
 
-    pub fn preview_underline_color(&self) -> bool {
+    #[inline]
+    pub(crate) fn preview_underline_color(&self) -> bool {
         self.preview_underline_color
     }
 
-    pub fn entry_padding(&self) -> u8 {
+    #[inline]
+    pub(crate) fn entry_padding(&self) -> u8 {
         self.entry_padding
     }
 
-    pub fn scroll_padding(&self) -> usize {
+    #[inline]
+    pub(crate) fn scroll_padding(&self) -> usize {
         self.scroll_padding
     }
 
-    pub fn toggle_marker_jump(&self) -> bool {
+    #[inline]
+    pub(crate) fn toggle_marker_jump(&self) -> bool {
         self.toggle_marker_jump
     }
 
-    pub fn instant_preview(&self) -> bool {
+    #[inline]
+    pub(crate) fn instant_preview(&self) -> bool {
         self.instant_preview
     }
 
-    pub fn preview_options(&self) -> &PreviewOptions {
+    #[inline]
+    pub(crate) fn preview_options(&self) -> &PreviewOptions {
         &self.preview_options
     }
 
-    pub fn info(&self) -> &ShowInfoOptions {
+    #[inline]
+    pub(crate) fn info(&self) -> &ShowInfoOptions {
         &self.info
     }
 
     /// Get padding string based on entry_padding
-    pub fn padding_str(&self) -> &'static str {
+    pub(crate) fn padding_str(&self) -> &'static str {
         // ASCII whitespaces
         match self.entry_padding {
             0 => "",
@@ -172,7 +193,7 @@ impl Default for Display {
 /// Layout configuration for the display panes
 /// This struct holds the ratio settings for the parent, main, and preview panes
 #[derive(Deserialize, Debug)]
-pub struct LayoutConfig {
+pub(crate) struct LayoutConfig {
     parent: u16,
     main: u16,
     preview: u16,
@@ -180,14 +201,17 @@ pub struct LayoutConfig {
 
 /// Public methods for accessing layout configuration options
 impl LayoutConfig {
+    #[inline]
     fn parent_ratio(&self) -> u16 {
         self.parent
     }
 
+    #[inline]
     fn main_ratio(&self) -> u16 {
         self.main
     }
 
+    #[inline]
     fn preview_ratio(&self) -> u16 {
         self.preview
     }
@@ -200,7 +224,7 @@ impl LayoutConfig {
 /// Positions can be specified using the DialogPosition enum
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub struct ShowInfoOptions {
+pub(crate) struct ShowInfoOptions {
     name: bool,
     file_type: bool,
     size: bool,
@@ -211,27 +235,33 @@ pub struct ShowInfoOptions {
 
 /// Public methods for accessing show info configuration options
 impl ShowInfoOptions {
-    pub fn name(&self) -> bool {
+    #[inline]
+    pub(crate) fn name(&self) -> bool {
         self.name
     }
 
-    pub fn file_type(&self) -> bool {
+    #[inline]
+    pub(crate) fn file_type(&self) -> bool {
         self.file_type
     }
 
-    pub fn size(&self) -> bool {
+    #[inline]
+    pub(crate) fn size(&self) -> bool {
         self.size
     }
 
-    pub fn modified(&self) -> bool {
+    #[inline]
+    pub(crate) fn modified(&self) -> bool {
         self.modified
     }
 
-    pub fn perms(&self) -> bool {
+    #[inline]
+    pub(crate) fn perms(&self) -> bool {
         self.perms
     }
 
-    pub fn position(&self) -> &Option<DialogPosition> {
+    #[inline]
+    pub(crate) fn position(&self) -> &Option<DialogPosition> {
         &self.position
     }
 }
@@ -256,7 +286,7 @@ impl Default for ShowInfoOptions {
 /// - Bat: Use the external 'bat' command for previewing
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum PreviewMethod {
+pub(crate) enum PreviewMethod {
     Internal,
     Bat,
 }
@@ -268,7 +298,7 @@ pub enum PreviewMethod {
 /// - Full: Full decorations including line numbers and and grid
 #[derive(Deserialize, Debug, Clone, Copy, Default)]
 #[serde(rename_all = "lowercase")]
-pub enum BatStyle {
+pub(crate) enum BatStyle {
     #[default]
     Plain,
     Numbers,
@@ -280,7 +310,7 @@ pub enum BatStyle {
 /// including the preview method, bat style, and text wrapping.
 /// These options can be customized by the user in the configuration file.
 #[derive(Deserialize, Debug, Clone)]
-pub struct PreviewOptions {
+pub(crate) struct PreviewOptions {
     #[serde(default = "PreviewOptions::default_method")]
     method: PreviewMethod,
     #[serde(default)]
@@ -306,44 +336,45 @@ impl PreviewOptions {
         PreviewMethod::Internal
     }
 
+    #[inline]
     fn default_wrap() -> bool {
         true
     }
 
-    pub fn method(&self) -> &PreviewMethod {
+    #[inline]
+    pub(crate) fn method(&self) -> &PreviewMethod {
         &self.method
-    }
-
-    pub fn style(&self) -> BatStyle {
-        self.style
-    }
-
-    pub fn wrap(&self) -> bool {
-        self.wrap
     }
 
     /// Generate command-line arguments for the 'bat' command based on the preview options
     /// and the given theme name and pane width.
     /// # Returns
     /// A vector of strings representing the command-line arguments for 'bat'
-    pub fn bat_args(&self, default_theme: &str, pane_width: usize) -> Vec<String> {
-        let mut args = vec!["--color=always".to_owned(), "--paging=never".to_owned()];
+    pub(crate) fn bat_args(&self, default_theme: &str, pane_width: usize) -> Vec<String> {
+        let mut args = Vec::with_capacity(10);
+        args.push("--color=always".to_string());
+        args.push("--paging=never".to_string());
         args.push(format!("--terminal-width={}", pane_width));
-        match self.style {
-            BatStyle::Plain => args.push("--style=plain".to_owned()),
-            BatStyle::Numbers => args.push("--style=numbers".to_owned()),
-            BatStyle::Full => args.push("--style=full".to_owned()),
-        }
+        args.push(
+            match self.style {
+                BatStyle::Plain => "--style=plain",
+                BatStyle::Numbers => "--style=numbers",
+                BatStyle::Full => "--style=full",
+            }
+            .to_string(),
+        );
 
-        let theme = self.theme.as_deref().unwrap_or(default_theme);
         args.push("--theme".to_owned());
-        args.push(theme.to_owned());
+        args.push(self.theme.as_deref().unwrap_or(default_theme).to_string());
 
-        if self.wrap {
-            args.push("--wrap=character".to_owned());
-        } else {
-            args.push("--wrap=never".to_owned());
-        }
+        args.push(
+            if self.wrap {
+                "--wrap=character"
+            } else {
+                "--wrap=never"
+            }
+            .to_string(),
+        );
 
         args
     }
@@ -353,7 +384,7 @@ impl PreviewOptions {
 /// This enum defines the different border styles that can be used in the UI
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum BorderStyle {
+pub(crate) enum BorderStyle {
     None,
     Unified,
     Split,
@@ -363,7 +394,7 @@ pub enum BorderStyle {
 /// This enum defines the different border shapes that can be used in the UI
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub enum BorderShape {
+pub(crate) enum BorderShape {
     Square,
     Rounded,
     Double,
@@ -372,7 +403,7 @@ pub enum BorderShape {
 
 /// Public methods for accessing border shape options
 impl BorderShape {
-    pub fn as_border_type(&self) -> BorderType {
+    pub(crate) fn as_border_type(&self) -> BorderType {
         match self {
             BorderShape::Square => BorderType::Plain,
             BorderShape::Rounded => BorderType::Rounded,
