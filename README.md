@@ -88,7 +88,7 @@ brew tap alexm-dev/tap
 brew install runa
 ```
 
-### Scoop
+### Scoop (Windows)
 
 ```bash
 scoop add bucket https://github.com/alexm-dev/scoop-bucket
