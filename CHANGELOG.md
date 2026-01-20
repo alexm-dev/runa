@@ -4,10 +4,21 @@ All the changes made to runa are documented here.
 
 ## Unreleased
 
+### Added
+- `alternate_delete`: Keybind to switch between moving files to trash and permanently deleting files.
+
 ### Fixed
 - No filter result flicker: Fixed a flicker showing `[No results for this filter]` when navigating in and out of a filtered dir
 - Unfiltered content flash: Fixed a very subtle stale content update when moving **out** of a filtered dir.
 - Filter selection: Fixed filter removing the selection index after moving out of a filtered entry
+
+### Changed
+- Set pub functions visibility to crate only
+- Hardened open_in_editor logic to handle false arguments
+
+### Internal
+- Added inline attributes to getter functions
+- Added core/fm and app/state integration tests
 
 
 ---
