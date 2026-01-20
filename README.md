@@ -29,7 +29,7 @@
 - **Rich File Actions:** Move, filter, copy, rename, and more, all with the keyboard.
 - **Customizable:** Tweak keybindings, colors, and layout via TOML.
 - **Blazing Fast:** Instant navigation, even in huge directory trees.
-- **Minimal Dependencies:** Extra features are always optional.
+- **Minimal Dependencies:** Only the essential crates; advanced features are opt-in.
 - **Cross-Platform:** Works on Linux, macOS, and Windows.
 - **Keyboard-Driven:** Every action accessible by keybindings. No mouse needed.
 - **Integrated Find (`fd` required):** Blazingly fast file search.
@@ -38,7 +38,7 @@
 <br></br>
 
 <details>
- 
+
 <summary><strong>Why is runa fast?</strong></summary>
 
 - **Multi-threaded engine:** Spawns 4 dedicated worker threads (with `crossbeam_channel`) for I/O, preview, find, and file operations, so UI is never blocked.
