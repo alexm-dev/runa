@@ -159,6 +159,22 @@ impl NavState {
         }
 
         self.selected = self.selected.min(self.entries.len().saturating_sub(1));
+
+        if !self.filter.is_empty() && !self.entries.is_empty() {
+            let selected_entry_name = self
+                .entries
+                .get(self.selected)
+                .map(|e| e.name().to_os_string());
+            if let Some(name) = selected_entry_name {
+                let filtered_idx = self
+                    .shown_entries()
+                    .position(|e| e.name() == name.as_os_str())
+                    .unwrap_or(0);
+                self.selected = filtered_idx
+            } else {
+                self.selected = 0;
+            }
+        }
     }
 
     /// Toggles the marker state of the currently selected entry.
