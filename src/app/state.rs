@@ -537,7 +537,7 @@ mod tests {
             use std::path::PathBuf;
             app.nav.set_path(PathBuf::from("/"));
             app.request_parent_content();
-            assert!(app.parent.entries().is_empty() || app.parent.entries().len() >= 0);
+            assert!(app.parent.entries().is_empty());
         }
         #[cfg(windows)]
         {
