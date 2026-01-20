@@ -15,13 +15,26 @@ runa is under active development and options may change over time.
 
 ## Config File
 
-`runa` is configured via a TOML file located at:
+`runa` is configured via a TOML file. By default, it looks for your config in the following order:
 
-`~/.config/runa/runa.toml` (Linux/macOS)
+1. **Custom Path Override**:
+   If the `RUNA_CONFIG` environment variable is set, runa will use its value as the config file path.
 
-`C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
+2. **XDG Config Directory** (Linux, macOS, and supported environments):
+   If `XDG_CONFIG_HOME` is set, runa looks for
 
-**Override**: You can specify a custom path by setting the `RUNA_CONFIG` environment variable.
+   ```sh
+   $XDG_CONFIG_HOME/runa/runa.toml
+   ```
+
+3. **Default Path**:
+   - `~/.config/runa/runa.toml` (Linux/macOS)
+   - `C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
+
+**Override Example:**
+```sh
+export RUNA_CONFIG=/path/to/myconfig.toml
+```
 
 ## Quick Start
 
@@ -70,6 +83,7 @@ always_show = []
 max_find_results = 2000
 
 # Toggle to move deleted files to the the recycle bin instead of being permanently deleted.
+# This will set the default delete key, the alternate_delete key will then alternate between the toggle.
 move_to_trash = true
 
 
@@ -398,11 +412,12 @@ create              = ["n"]
 create_directory    = ["Shift+n"]
 move_file           = ["m"]
 filter              = ["f"]
-toggle_marker       = [" "]     # space bar
+toggle_marker       = [" "]         # space bar
 info                = ["i"]
 find                = ["s"]
 clear_markers       = ["Ctrl+c"]
 clear_filter        = ["Ctrl+f"]
+alternate_delete    = ["Ctrl+d"]    # Alternates between move_to_trash and permanently delete
 ```
 
 You may remove any binding to let it fall back to the default.
