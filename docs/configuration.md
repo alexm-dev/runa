@@ -18,7 +18,7 @@ runa is under active development and options may change over time.
 `runa` is configured via a TOML file. By default, it looks for your config in the following order:
 
 1. **Custom Path Override**:
-    If the `RUNA_CONFIG` environment variable is set, runa will use its value as the config file path.
+    If the `RUNA_CONFIG` environment variable is set, runa will use its value as the config file path.  
     **Example:**
     ```sh
     export RUNA_CONFIG=/path/to/runa.toml
