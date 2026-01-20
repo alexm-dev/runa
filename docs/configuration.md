@@ -7,6 +7,7 @@ runa is under active development and options may change over time.
 - [Config File Location](#config-file)
 - [Quick Start](#quick-start)
 - [General Settings](#general-settings)
+- [Optional Tool Integration](#optional-tool-integration)
 - [Theme Configuration](#theme-configuration)
 - [Advanced Theme Configuration](#advanced-theme-configuration)
 - [Editor](#editor)
@@ -32,6 +33,26 @@ runa is under active development and options may change over time.
 3. **Default Path**:
     - `~/.config/runa/runa.toml` (Linux/macOS)
     - `C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
+
+## Optional Tool Integration
+
+Some advanced featues like `find`, require external tools to be installed.
+
+- **[bat](https://github.com/sharkdp/bat)**:
+    Used for fast, syntax-highlighted file previews when `[display.previews_options.method]` is set to `"bat"`.
+    _If `bat` is not installed, runa will fall back to the built-in preview method._
+
+- **[fd](https://github.com/sharkdp/fd)**:
+    Used for blazing fast recursive file/foler search.
+
+**Both tools are completely optional** but highly recommended.
+
+You can install them with your package manager:
+```sh
+sudo pacman -S bat fd           # On Arch
+sudo apt install bat fd-find    # On Debian/Ubuntu
+sudo dnf install bat fd-find    # Fedora/RHEL
+```
 
 ## Quick Start
 
