@@ -196,6 +196,7 @@ impl Config {
 
     /// Determine the default configuration file path.
     /// Checks the RUNA_CONFIG environment variable first,
+    /// Checks for XDG_CONFIG_HOME after,
     /// then defaults to ~/.config/runa/runa.toml,
     pub(crate) fn default_path() -> PathBuf {
         if let Ok(path) = std::env::var("RUNA_CONFIG") {
@@ -213,7 +214,6 @@ impl Config {
     }
 
     /// Generate a default configuration file at the specified path.
-    /// If `minimal` is true, generates a minimal config with only essential settings.
     /// If the file already exists, returns an error.
     pub(crate) fn generate_default(path: &PathBuf, minimal: bool) -> std::io::Result<()> {
         if path.exists() {

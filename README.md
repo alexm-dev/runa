@@ -7,7 +7,7 @@
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?label=AUR&color=blue&style=flat-square&logo=archlinux)](https://aur.archlinux.org/packages/runa)
 [![Language](https://img.shields.io/github/languages/top/alexm-dev/runa?style=flat-square&logo=rust&color=%23e67e22&label=Rust)](https://github.com/alexm-dev/runa)
-[![License](https://img.shields.io/badge/License-MIT%20OR%20Apache%202.0-blue?style=flat-square)](#license)
+[![License](https://img.shields.io/badge/License-MIT%20or%20Apache%202.0-blue?style=flat-square)](#license)
 
 </div>
 <div align="center">
@@ -26,11 +26,13 @@
 
 </div>
 
-- **Extremely Customizable:** Every key, theme color, pane, and UI element can be adjusted in an easy TOML config.
-- **Blazing Fast:** Instant navigation, even in large directories.
-- **Minimal Dependencies:** Only uses essential Rust crates; advanced features (like fuzzy search) are fully optional.
-- **Cross-Platform:** Works on Windows, Linux, and macOS.
-- **Keyboard-Driven:** Every action accessible by keybinding. No mouse needed.
+- **Rich File Actions:** Move, filter, copy, rename, and more, all with the keyboard.
+- **Customizable:** Tweak keybindings, colors, and layout via TOML.
+- **Blazing Fast:** Instant navigation, even in huge directory trees.
+- **Minimal Dependencies:** Extra features are always optional.
+- **Cross-Platform:** Works on Linux, macOS, and Windows.
+- **Keyboard-Driven:** Every action accessible by keybindings. No mouse needed.
+- **Integrated Find (`fd` required):** Blazingly fast file search.
 
 <img src="https://github.com/user-attachments/assets/5590719c-016d-41a6-ba83-1acbe32dab1b" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 <br></br>
@@ -153,19 +155,30 @@ After installation, start runa with: `rn`
 
 ## Configuration
 
-runa uses a runa.toml file for [configuration](docs/configuration.md).  
-By default, it is located at:
+By default, runa checks for configuration in these locations, in order:
 
-`$HOME/.config/runa/runa.toml` (on both Unix and Windows, inside the user folder)
+1. If the environment variable `RUNA_CONFIG` is set, its value is used as the config path.
+2. If `XDG_CONFIG_HOME` is set, runa looks for:  
 
-You can override the config path by setting an environment variable:
+    ```sh
+   $XDG_CONFIG_HOME/runa/runa.toml
+    ```
 
-```bash
-# Unix
-export RUNA_CONFIG=/path/to/runa.toml
+3. Otherwise, the fallback is:  
 
-# PowerShell (Windows)
-$env:RUNA_CONFIG="C:\path\to\runa.toml"
+    ```sh
+   $HOME/.config/runa/runa.toml
+   ```
+
+(On Windows, this means inside the user's config folder.)
+
+#### Overriding the config path
+
+You can explicitly set a custom config location by setting the environment variable `RUNA_CONFIG`.
+
+**Example:**  
+```sh
+export RUNA_CONFIG=/path/to/your/custom_runa.toml
 ```
 
 You can generate a default config using the --init or --init-minimal flag:
