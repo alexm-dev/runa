@@ -18,23 +18,20 @@ runa is under active development and options may change over time.
 `runa` is configured via a TOML file. By default, it looks for your config in the following order:
 
 1. **Custom Path Override**:
-   If the `RUNA_CONFIG` environment variable is set, runa will use its value as the config file path.
+    If the `RUNA_CONFIG` environment variable is set, runa will use its value as the config file path.
+    **Example:**
+    ```sh
+    export RUNA_CONFIG=/path/to/runa.toml
 
 2. **XDG Config Directory** (Linux, macOS, and supported environments):
-   If `XDG_CONFIG_HOME` is set, runa looks for
-
-   ```sh
-   $XDG_CONFIG_HOME/runa/runa.toml
-   ```
+    If `XDG_CONFIG_HOME` is set, runa looks for
+    ```sh
+    $XDG_CONFIG_HOME/runa/runa.toml
+    ```
 
 3. **Default Path**:
-   - `~/.config/runa/runa.toml` (Linux/macOS)
-   - `C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
-
-**Override Example:**
-```sh
-export RUNA_CONFIG=/path/to/myconfig.toml
-```
+    - `~/.config/runa/runa.toml` (Linux/macOS)
+    - `C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
 
 ## Quick Start
 
