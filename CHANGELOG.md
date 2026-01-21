@@ -18,8 +18,9 @@ Overall improvement of error handling.
 ### Changed
 - Visibility refactor: Set function visibility to crate only.
 - `fd` check: Hardened how runa checks for `fd` and handles errors if not available.
-- `FileOperation::Copy`: Improved copy error handling
+- `FileOperation::Copy`: Improved copy error handling.
 - `handle_go_into_dir`: Hardened handler to catch recursive loop errors via circular links.
+- `handle_move`: Hardened move handler to catch potential moving of parent dir into subdir logic error.
 
 ### Internal
 - Performance: Optimized worker threads by removing redundant string conversions during message handling.
