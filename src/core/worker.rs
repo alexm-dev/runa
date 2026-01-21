@@ -173,7 +173,7 @@ pub(crate) enum WorkerResponse {
         results: Vec<FindResult>,
         request_id: u64,
     },
-    Error(String),
+    Error(String, u64),
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
@@ -211,7 +211,10 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     });
                 }
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(format!("I/O Error: {}", e)));
+                    let _ = res_tx.send(WorkerResponse::Error(
+                        format!("I/O Error: {}", e),
+                        request_id,
+                    ));
                 }
             }
         }
@@ -457,7 +460,7 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                     });
                 }
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e)));
+                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), 0));
                 }
             }
         }
@@ -507,7 +510,7 @@ mod tests {
                     assert!(!entry.name_str().is_empty());
                 }
             }
-            WorkerResponse::Error(e) => panic!("Worker error: {}", e),
+            WorkerResponse::Error(e, 0) => panic!("Worker error: {}", e),
             _ => panic!("Unexpected worker response"),
         }
         Ok(())
@@ -583,7 +586,7 @@ mod tests {
                         );
                     }
                 }
-                Ok(WorkerResponse::Error(e)) => panic!("Worker error: {}", e),
+                Ok(WorkerResponse::Error(e, 0)) => panic!("Worker error: {}", e),
                 Ok(_) => panic!("Unexpected WorkerResponse variant"),
                 Err(_) => panic!("Missing worker response (timeout)"),
             }
