@@ -2,7 +2,10 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased
+## [0.5.6] - 2026-01-21
+
+Performance improvements and polish.  
+Overall improvement of error handling.
 
 ### Added
 - `alternate_delete`: Keybind to switch between moving files to trash and permanently deleting files.
@@ -14,10 +17,15 @@ All the changes made to runa are documented here.
 
 ### Changed
 - Visibility refactor: Set function visibility to crate only.
-- Editor: Hardened open_in_editor logic to handle false arguments
+- `fd` check: Hardened how runa checks for `fd` and handles errors if not available.
+- `FileOperation::Copy`: Improved copy error handling
+- `handle_go_into_dir`: Hardened handler to catch recursive loop errors via circular links.
 
 ### Internal
 - Performance: Optimized worker threads by removing redundant string conversions during message handling.
+- Performance: Improved performance of `preview_with_bat`
+- Performance: Removed lowercase_name field from FileEntry resulting in less allocations.
+- Performance: Optimized `render_root_and_header` by reducing string allocations.
 - Tests: Added `core/fm` and `app/state` integration tests.
 - Inline attributes: Added inline attributes to getter functions
 - Tests: Added core/fm and app/state integration tests
