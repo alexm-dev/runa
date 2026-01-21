@@ -161,18 +161,16 @@ By default, runa checks for configuration in these locations, in order:
 
 1. If the environment variable `RUNA_CONFIG` is set, its value is used as the config path.
 2. If `XDG_CONFIG_HOME` is set, runa looks for:  
-
     ```sh
-   $XDG_CONFIG_HOME/runa/runa.toml
+    $XDG_CONFIG_HOME/runa/runa.toml
     ```
 
 3. Otherwise, the fallback is:  
-
     ```sh
-   $HOME/.config/runa/runa.toml
-   ```
+    $HOME/.config/runa/runa.toml
+    ```
 
-(On Windows, this means inside the user's config folder.)
+    (On Windows, this means inside the user's config folder.)
 
 #### Overriding the config path
 
@@ -180,7 +178,7 @@ You can explicitly set a custom config location by setting the environment varia
 
 **Example:**  
 ```sh
-export RUNA_CONFIG=/path/to/your/custom_runa.toml
+export RUNA_CONFIG=/path/to/your/runa.toml
 ```
 
 You can generate a default config using the --init or --init-minimal flag:
