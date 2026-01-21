@@ -650,6 +650,10 @@ mod tests {
 
     #[test]
     fn find_worker_finds_file() -> Result<(), Box<dyn std::error::Error>> {
+        if !fd_available() {
+            return Ok(());
+        }
+
         let temp = tempfile::tempdir()?;
         std::fs::File::create(temp.path().join("crab.txt"))?;
 
