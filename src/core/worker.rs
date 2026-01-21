@@ -460,7 +460,8 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                     });
                 }
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), 0));
+                    let req_id = 0;
+                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), req_id));
                 }
             }
         }

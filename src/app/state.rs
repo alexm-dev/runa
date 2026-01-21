@@ -318,10 +318,12 @@ impl<'a> AppState<'a> {
 
                 WorkerResponse::Error(e, request_id) => {
                     self.is_loading = false;
-                    self.push_overlay_message(format!("Error: {}", e), Duration::from_secs(7));
-
-                    if request_id != 0 && request_id == self.preview.request_id() {
-                        self.preview.set_error(e);
+                    if request_id != 0 {
+                        if request_id != 0 && request_id == self.preview.request_id() {
+                            self.preview.set_error(e);
+                        }
+                    } else {
+                        self.push_overlay_message(format!("Error: {}", e), Duration::from_secs(7));
                     }
                 }
             }
