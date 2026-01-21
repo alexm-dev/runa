@@ -29,8 +29,8 @@ use std::ffi::OsString;
 use std::io::{self, BufRead};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, OnceLock};
 
 /// The size of the buffer reader used to read the output of fd
 /// This value is set to 32KB to balance memory usage and performance.
@@ -45,6 +45,36 @@ const EXCLUDES: &[&str] = &[
     ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist", ".local",
     "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj", ".cache",
 ];
+
+/// A OnceLock to store the fd binary name.
+/// This is used to avoid checking for the binary multiple times.
+static FD_BIN: OnceLock<&'static str> = OnceLock::new();
+
+#[inline]
+fn fd_binary() -> io::Result<&'static str> {
+    if let Some(bin) = FD_BIN.get() {
+        return Ok(*bin);
+    }
+
+    let found = if which::which("fd").is_ok() {
+        Some("fd")
+    } else if which::which("fdfind").is_ok() {
+        Some("fdfind")
+    } else {
+        None
+    };
+
+    match found {
+        Some(bin) => {
+            let _ = FD_BIN.set(bin);
+            Ok(bin)
+        }
+        None => Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "fd/fdfind not found. Please install it.",
+        )),
+    }
+}
 
 /// A single result from the find function.
 /// It contains the path and the score of the fuzzy match.
@@ -99,7 +129,10 @@ pub(crate) fn find(
     }
 
     let max_res_str = max_results.to_string();
-    let mut cmd = Command::new("fd");
+
+    let fd_bin = fd_binary()?;
+
+    let mut cmd = Command::new(fd_bin);
     cmd.arg(".")
         .arg(base_dir)
         .arg("--type")
@@ -117,18 +150,9 @@ pub(crate) fn find(
         .arg(&max_res_str)
         .stdout(Stdio::piped());
 
-    let mut proc = match cmd.spawn() {
-        Ok(proc) => proc,
-        Err(e) => {
-            if e.kind() == io::ErrorKind::NotFound {
-                return Err(io::Error::other(
-                    "fd was not found in PATH. Please install fd-find",
-                ));
-            } else {
-                return Err(io::Error::other(format!("Failed to spawn fd: {}", e)));
-            }
-        }
-    };
+    let mut proc = cmd
+        .spawn()
+        .map_err(|_| io::Error::other("fd/fd-find exectuion failed"))?;
 
     let matcher = SkimMatcherV2::default();
     let mut raw_results: Vec<RawResult> = Vec::with_capacity(max_results * 2);
@@ -176,28 +200,39 @@ pub(crate) fn find(
 /// Use bat to preview a file at the given path, returning up to max_lines of output
 /// Uses the provided bat_args for customization.
 ///
-/// # Returns
-/// A vector of strings, each representing a line from the file preview.
+/// Returns a vector of strings, each representing a line from the file preview.
 pub(crate) fn preview_bat(
     path: &Path,
     max_lines: usize,
     bat_args: &[OsString],
 ) -> Result<Vec<String>, std::io::Error> {
-    let mut args = bat_args.to_vec();
-    args.push(path.as_os_str().to_os_string());
-
-    let output = Command::new("bat")
-        .args(&args)
+    let mut output = Command::new("bat")
+        .args(bat_args)
+        .arg(path)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
-        .output()?;
+        .spawn()?;
 
-    if !output.status.success() {
-        return Err(std::io::Error::other("bat command failed"));
+    let mut lines = Vec::with_capacity(max_lines);
+
+    if let Some(stdout) = output.stdout.take() {
+        let reader = io::BufReader::new(stdout);
+        for line in reader.lines().take(max_lines) {
+            match line {
+                Ok(l) => lines.push(l),
+                Err(_) => break,
+            }
+        }
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(stdout.lines().take(max_lines).map(str::to_owned).collect())
+    let _ = output.kill();
+    let _ = output.wait();
+
+    if lines.is_empty() {
+        return Err(std::io::Error::other("bat produced no output"));
+    }
+
+    Ok(lines)
 }
 
 /// Auto completion of directories
@@ -206,7 +241,9 @@ pub(crate) fn complete_dirs_with_fd(
     base_dir: &Path,
     prefix: &str,
 ) -> Result<Vec<String>, std::io::Error> {
-    let output = Command::new("fd")
+    let fd_bin = fd_binary()?;
+
+    let output = Command::new(fd_bin)
         .arg("--type")
         .arg("d")
         .arg("--max-depth")
@@ -394,6 +431,8 @@ mod tests {
 
     #[test]
     fn complete_dirs_with_fd_sandboxed() -> Result<(), Box<dyn std::error::Error>> {
+        skip_if_no_fd!();
+
         let dir = tempdir()?;
         let base_path = dir.path();
 
@@ -427,6 +466,8 @@ mod tests {
 
     #[test]
     fn fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
+        skip_if_no_fd!();
+
         let sandbox = tempdir()?;
         let non_existent = sandbox.path().join("ghost_zone");
 

@@ -383,19 +383,20 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
     // File Read and binary Check
     match File::open(path) {
         Ok(mut file) => {
-            // Peek for the first 8 bytes to handle edge cases
-            let mut header = [0u8; HEADER_PEEK_BYTES];
-            let read_bytes = file.read(&mut header).unwrap_or(0);
-            if read_bytes >= 5 && &header[..5] == b"%PDF-" {
+            // Peek for null bytes to detect binary files
+            let mut buffer = [0u8; BINARY_PEEK_BYTES];
+            let n = file.read(&mut buffer).unwrap_or(0);
+
+            let header_len = std::cmp::min(n, HEADER_PEEK_BYTES);
+            let header = &buffer[..header_len];
+
+            if header.len() >= 5 && &header[..5] == b"%PDF-" {
                 return vec![sanitize_to_exact_width(
                     "[Binary file - preview hidden]",
                     pane_width,
                 )];
             }
 
-            // Peek for null bytes to detect binary files
-            let mut buffer = [0u8; BINARY_PEEK_BYTES];
-            let n = file.read(&mut buffer).unwrap_or(0);
             if buffer[..n].contains(&0) {
                 return vec![sanitize_to_exact_width(
                     "[Binary file - preview hidden]",
