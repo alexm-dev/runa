@@ -27,7 +27,7 @@
 </div>
 
 - **Rich File Actions:** Move, filter, copy, rename, and more, all with the keyboard.
-- **Customizable:** Tweak keybindings, colors, and layout via TOML.
+- **Extremely Customizable:** Tweak keybindings, colors, and layout via TOML.
 - **Blazing Fast:** Instant navigation, even in huge directory trees.
 - **Minimal Dependencies:** Only the essential crates; advanced features are opt-in.
 - **Cross-Platform:** Works on Linux, macOS, and Windows.
