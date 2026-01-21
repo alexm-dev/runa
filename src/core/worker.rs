@@ -337,6 +337,7 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
             let mut focus_target: Option<OsString> = None;
             let result: Result<(), String> = match op {
                 FileOperation::Delete(paths, move_to_trash) => {
+                    let mut op_result = Ok(());
                     for p in paths {
                         let res = if move_to_trash {
                             trash::delete(&p).map_err(|e| e.to_string())
@@ -345,20 +346,13 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                         } else {
                             std::fs::remove_file(&p).map_err(|e| e.to_string())
                         };
+
                         if let Err(e) = res {
-                            eprintln!(
-                                "{}: {}: {}",
-                                if move_to_trash {
-                                    "Failed to move to trash"
-                                } else {
-                                    "Failed to permanently delete"
-                                },
-                                p.display(),
-                                e
-                            );
+                            op_result = Err(format!("{}: {}", p.display(), e));
+                            break;
                         }
                     }
-                    Ok(())
+                    op_result
                 }
                 FileOperation::Rename { old, new } => {
                     let target = new;
@@ -395,6 +389,8 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                     focus,
                 } => {
                     focus_target = focus;
+                    let mut op_result = Ok(());
+
                     for s in src {
                         if let Some(name) = s.file_name() {
                             let target = get_unused_path(&dest.join(name));
@@ -405,16 +401,51 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                                 focus_target = target.file_name().map(|n| n.to_os_string());
                             }
 
-                            let _ = if cut {
-                                std::fs::rename(s, &target)
-                            } else if s.is_dir() {
-                                copy_recursive(&s, &target)
+                            if cut {
+                                if std::fs::rename(&s, &target).is_err() {
+                                    let copy_res = if s.is_dir() {
+                                        copy_recursive(&s, &target)
+                                    } else {
+                                        std::fs::copy(&s, &target).map(|_| ())
+                                    };
+
+                                    match copy_res {
+                                        Ok(_) => {
+                                            let remove_res = if s.is_dir() {
+                                                std::fs::remove_dir_all(&s)
+                                            } else {
+                                                std::fs::remove_file(&s)
+                                            };
+
+                                            if let Err(err) = remove_res {
+                                                op_result = Err(format!(
+                                                    "Copied to destination, but could not remove source: {}",
+                                                    err
+                                                ));
+                                                break;
+                                            }
+                                        }
+                                        Err(e) => {
+                                            op_result = Err(format!("{}: {}", s.display(), e));
+                                            break;
+                                        }
+                                    }
+                                }
                             } else {
-                                std::fs::copy(s, &target).map(|_| ())
-                            };
+                                let res = if s.is_dir() {
+                                    copy_recursive(&s, &target)
+                                } else {
+                                    std::fs::copy(&s, &target).map(|_| ())
+                                };
+
+                                if let Err(e) = res {
+                                    op_result = Err(format!("{}: {}", s.display(), e));
+                                    break;
+                                }
+                            }
                         }
                     }
-                    Ok(())
+                    op_result
                 }
             };
 

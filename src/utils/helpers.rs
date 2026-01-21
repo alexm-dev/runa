@@ -275,19 +275,40 @@ pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     if dest.starts_with(src) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
-            "Cannot copy a directory into itself",
+            "Cannot copy a directory into its own subdirectory",
         ));
     }
 
-    if src.is_dir() {
+    let meta = fs::symlink_metadata(src)?;
+
+    if meta.is_dir() {
         fs::create_dir_all(dest)?;
         for entry in fs::read_dir(src)? {
             let entry = entry?;
             copy_recursive(&entry.path(), &dest.join(entry.file_name()))?;
         }
+    } else if meta.file_type().is_symlink() {
+        let target = fs::read_link(src)?;
+        #[cfg(windows)]
+        {
+            if let Ok(target_meta) = fs::metadata(src) {
+                if target_meta.is_dir() {
+                    let _ = std::os::windows::fs::symlink_dir(target, dest);
+                } else {
+                    let _ = std::os::windows::fs::symlink_file(target, dest);
+                }
+            } else {
+                let _ = std::os::windows::fs::symlink_file(target, dest);
+            }
+        }
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink(target, dest)?;
+        }
     } else {
         fs::copy(src, dest)?;
     }
+
     Ok(())
 }
 
