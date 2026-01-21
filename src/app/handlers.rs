@@ -271,53 +271,35 @@ impl<'a> AppState<'a> {
     /// If the selected entry is a directory, navigates into it, saves the current position,
     /// and requests loading of the new directory and its parent content.
     fn handle_go_into_dir(&mut self) -> KeypressResult {
-        if let Some(entry) = self.nav.selected_shown_entry() {
-            let cur_path = self.nav.current_dir();
-            let entry_path = cur_path.join(entry.name());
+        let Some(entry) = self.nav.selected_shown_entry() else {
+            return KeypressResult::Continue;
+        };
 
-            let target_path = if entry.is_symlink() {
-                let Ok(target) = std::fs::read_link(&entry_path) else {
-                    return KeypressResult::Continue;
-                };
-                if target.is_absolute() {
-                    target
-                } else {
-                    entry_path
-                        .parent()
-                        .unwrap_or_else(|| Path::new(""))
-                        .join(target)
-                }
-            } else {
-                entry_path
-            };
+        let entry_path = self.nav.current_dir().join(entry.name());
 
-            let Ok(meta) = std::fs::metadata(&target_path) else {
-                return KeypressResult::Continue;
-            };
+        let Ok(meta) = std::fs::metadata(&entry_path) else {
+            return KeypressResult::Continue;
+        };
 
-            if !meta.is_dir() {
-                return KeypressResult::Continue;
-            }
-
-            if let Err(e) = std::fs::read_dir(&target_path) {
-                if e.kind() == std::io::ErrorKind::PermissionDenied {
-                    let msg = format!("Permission Denied: {}", e);
-                    self.push_overlay_message(msg, std::time::Duration::from_secs(3));
-                    return KeypressResult::Consumed;
-                } else {
-                    return KeypressResult::Continue;
-                }
-            }
-
-            self.nav.save_position();
-            self.nav.set_path(target_path);
-            self.request_dir_load(None);
-            self.request_parent_content();
-
+        if !meta.is_dir() {
             return KeypressResult::Continue;
         }
 
-        KeypressResult::Continue
+        match std::fs::read_dir(&entry_path) {
+            Ok(_) => {
+                self.nav.save_position();
+                self.nav.set_path(entry_path);
+                self.request_dir_load(None);
+                self.request_parent_content();
+                KeypressResult::Continue
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+                let msg = format!("Permission Denied: {}", e);
+                self.push_overlay_message(msg, std::time::Duration::from_secs(3));
+                KeypressResult::Consumed
+            }
+            Err(_) => KeypressResult::Continue,
+        }
     }
 
     /// Handles the open file action.
