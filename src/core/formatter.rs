@@ -68,42 +68,45 @@ impl Formatter {
 
     /// Sorts the given file entries in place according to the formatter's settings.
     pub(crate) fn sort_entries(&self, entries: &mut [FileEntry]) {
-        entries.sort_by(|a, b| {
-            if self.dirs_first {
-                match (a.is_dir(), b.is_dir()) {
-                    (true, false) => return std::cmp::Ordering::Less,
-                    (false, true) => return std::cmp::Ordering::Greater,
-                    _ => {}
+        if self.case_insensitive {
+            entries.sort_by_cached_key(|e| {
+                (
+                    if self.dirs_first { !e.is_dir() } else { false },
+                    e.name_str().to_lowercase(),
+                )
+            });
+        } else {
+            entries.sort_by(|a, b| {
+                if self.dirs_first {
+                    match (a.is_dir(), b.is_dir()) {
+                        (true, false) => return std::cmp::Ordering::Less,
+                        (false, true) => return std::cmp::Ordering::Greater,
+                        _ => {}
+                    }
                 }
-            }
-            if self.case_insensitive {
-                a.name_str()
-                    .to_lowercase()
-                    .cmp(&b.name_str().to_lowercase())
-            } else {
                 a.name_str().cmp(&b.name_str())
-            }
-        });
+            });
+        }
     }
 
     /// Filters the given file entries in place according to the formatter's settings.
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         entries.retain(|e| {
-            let is_exception = if self.case_insensitive {
+            let hidden_ok = self.show_hidden || !e.is_hidden();
+            let system_ok = self.show_system || !e.is_system();
+
+            if hidden_ok && system_ok {
+                return true;
+            }
+
+            if self.case_insensitive {
                 self.always_show_lowercase
                     .contains(&e.name_str().to_lowercase())
             } else {
                 self.always_show.contains(e.name())
-            };
-
-            if is_exception {
-                return true;
             }
-
-            let hidden_ok = self.show_hidden || !e.is_hidden();
-            let system_ok = self.show_system || !e.is_system();
-            hidden_ok && system_ok
         });
+
         self.sort_entries(entries);
     }
 }

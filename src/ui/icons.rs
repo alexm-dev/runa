@@ -144,38 +144,69 @@ pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = p
 /// This function determines the appropriate icon based on whether
 /// the entry is a directory or a file, and uses the special
 /// filename and extension mappings to find the correct icon.
-///
-/// # Arguments
-/// * `entry` - A reference to a `FileEntry` representing the file or directory.
 pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
-    let lowercase_name = entry.name_str().to_lowercase();
+    let name = entry.name_str();
+
+    if entry.is_symlink() {
+        return if entry.is_dir() { "" } else { "" };
+    }
 
     if entry.is_dir() {
-        if let Some(dir_icon) = SPECIAL_DIR_ICON_MAP.get(lowercase_name.as_str()) {
-            return dir_icon;
+        if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(&name) {
+            return icon;
+        }
+        if name.len() <= 64 {
+            let mut buf = [0u8; 64];
+            let bytes = name.as_bytes();
+            let mut needs_lowering = false;
+            for i in 0..bytes.len() {
+                let b = bytes[i];
+                let l = b.to_ascii_lowercase();
+                if l != b {
+                    needs_lowering = true;
+                }
+                buf[i] = l;
+            }
+            if needs_lowering
+                && let Ok(lowered) = std::str::from_utf8(&buf[..bytes.len()])
+                && let Some(icon) = SPECIAL_DIR_ICON_MAP.get(lowered)
+            {
+                return icon;
+            }
         }
         return "";
     }
 
-    if entry.is_symlink() {
-        if entry.is_dir() {
-            return "";
-        } else {
-            return "";
-        }
-    }
-
-    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(entry.name_str().as_ref()) {
+    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(&name) {
         return icon;
     }
 
-    if let Some(dot_idx) = lowercase_name.rfind('.')
+    if let Some(dot_idx) = name.rfind('.')
         && dot_idx > 0
-        && dot_idx < lowercase_name.len() - 1
+        && dot_idx < name.len() - 1
     {
-        let ext = &lowercase_name[dot_idx + 1..];
+        let ext = &name[dot_idx + 1..];
         if let Some(icon) = EXT_ICON_MAP.get(ext) {
             return icon;
+        }
+        if ext.len() <= 64 {
+            let mut buf = [0u8; 64];
+            let bytes = ext.as_bytes();
+            let mut needs_lowering = false;
+            for i in 0..bytes.len() {
+                let b = bytes[i];
+                let l = b.to_ascii_lowercase();
+                if l != b {
+                    needs_lowering = true;
+                }
+                buf[i] = l;
+            }
+            if needs_lowering
+                && let Ok(lowered) = std::str::from_utf8(&buf[..bytes.len()])
+                && let Some(icon) = EXT_ICON_MAP.get(lowered)
+            {
+                return icon;
+            }
         }
     }
 
