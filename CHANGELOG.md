@@ -25,6 +25,7 @@ Overall improvement of error handling.
 - Performance: Optimized worker threads by removing redundant string conversions during message handling.
 - Performance: Improved performance of `preview_with_bat`
 - Performance: Removed lowercase_name field from FileEntry resulting in less allocations.
+- Performance: Changed `sort_entries` to by sort_by_chached_key instead of simple sort_by.
 - Performance: Optimized `render_root_and_header` by reducing string allocations.
 - Performance: Optimized `ui/icons` lowercase string checks.
 - Tests: Added `core/fm` and `app/state` integration tests.
