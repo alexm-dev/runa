@@ -169,18 +169,24 @@ pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
 }
 
 pub(crate) fn readable_path(path: &Path) -> String {
+    let path_str = path.display().to_string();
+
     #[cfg(windows)]
     {
-        let display = path.display().to_string();
-        display
-            .strip_prefix(r"\\?\")
-            .unwrap_or(&display)
-            .to_string()
+        if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
+            return stripped.to_string();
+        }
+
+        if let Some(stripped) = path_str.strip_prefix("//?/") {
+            return stripped.to_string();
+        }
+
+        if let Some(stripped) = path_str.strip_prefix(r"\??\") {
+            return stripped.to_string();
+        }
     }
-    #[cfg(not(windows))]
-    {
-        path.display().to_string()
-    }
+
+    path_str
 }
 
 pub(crate) fn expand_home_path(input: &str) -> String {

@@ -254,15 +254,29 @@ impl<'a> AppState<'a> {
     /// If the current directory has a parent, navigates to it, saves the current position,
     /// and requests loading of the new directory and its parent content.
     fn handle_go_parent(&mut self) -> KeypressResult {
-        if let Some(parent) = self.nav.current_dir().parent() {
-            let exited_name = self.nav.current_dir().file_name().map(|n| n.to_os_string());
-            let parent_path = parent.to_path_buf();
-            self.nav.save_position();
-            self.nav.set_path(parent_path);
+        let current = self.nav.current_dir();
 
-            self.request_dir_load(exited_name);
-            self.request_parent_content();
+        let Some(parent) = current.parent() else {
+            return KeypressResult::Continue;
+        };
+
+        let parent_path = parent.to_path_buf();
+
+        if std::fs::metadata(&parent_path).is_err() {
+            self.push_overlay_message(
+                "Parent directory is unreachable".to_string(),
+                Duration::from_secs(3),
+            );
+            return KeypressResult::Consumed;
         }
+
+        let exited_name = current.file_name().map(|n| n.to_os_string());
+        self.nav.save_position();
+        self.nav.set_path(parent_path);
+
+        self.request_dir_load(exited_name);
+        self.request_parent_content();
+
         KeypressResult::Continue
     }
 
@@ -328,6 +342,7 @@ impl<'a> AppState<'a> {
             KeypressResult::Continue
         }
     }
+
     /// Handles the find action.
     ///
     /// If a result is selected in the find results, navigates to its path.
@@ -401,6 +416,14 @@ impl<'a> AppState<'a> {
             }
         };
 
+        if !absolute_dest.is_dir() {
+            self.push_overlay_message(
+                "Move failed: not a directory".into(),
+                Duration::from_secs(3),
+            );
+            return;
+        }
+
         if let Err(e) = std::fs::read_dir(&absolute_dest) {
             let norm_msg = normalize_relative_path(&absolute_dest);
             self.push_overlay_message(
@@ -420,18 +443,23 @@ impl<'a> AppState<'a> {
         }
 
         let targets = self.nav.get_action_targets();
-        if targets.iter().any(|src| {
-            src.parent().and_then(|p| p.canonicalize().ok()).as_ref() == Some(&absolute_dest)
-        }) {
-            let norm_msg = normalize_relative_path(&absolute_dest);
-            self.push_overlay_message(
-                format!(
-                    "Move failed: source and destination are the same: {}",
-                    norm_msg
-                ),
-                Duration::from_secs(3),
-            );
-            return;
+        for src in &targets {
+            if let Ok(absolute_src) = src.canonicalize()
+                && absolute_dest.starts_with(&absolute_src)
+            {
+                let msg = if absolute_dest == absolute_src {
+                    "Move failed: source and destination are the same".to_string()
+                } else {
+                    let normalized = normalize_relative_path(&absolute_src);
+                    let display_path = readable_path(Path::new(normalized.as_ref()));
+                    format!(
+                        "Move failed: cannot move directory into its own sub directory: {}",
+                        display_path
+                    )
+                };
+                self.push_overlay_message(msg, Duration::from_secs(3));
+                return;
+            }
         }
 
         let fileop_tx = self.workers.fileop_tx();
