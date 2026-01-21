@@ -8,31 +8,30 @@ Performance improvements and polish.
 Overall improvement of error handling.
 
 ### Added
-- `alternate_delete`: Keybind to switch between moving files to trash and permanently deleting files.
+- `alternate_delete`: Keybind to switch between moving files to trash and permanently deleting files. [(#29)](https://github.com/alexm-dev/runa/pull/29)
 
 ### Fixed
-- No filter result flicker: Fixed a flicker showing `[No results for this filter]` when navigating in and out of a filtered dir
-- Unfiltered content flash: Fixed a very subtle stale content update when moving **out** of a filtered dir.
-- Filter selection: Fixed filter removing the selection index after moving out of a filtered entry
+- No filter result flicker: Fixed a flicker showing `[No results for this filter]` when navigating in and out of a filtered dir. [(1ab1b05)](https://github.com/alexm-dev/runa/commit/1ab1b05a590ea2cc2231470a0d2836fc7365cf10)
+- Unfiltered content flash: Fixed a very subtle stale content update when moving **out** of a filtered dir. [(7ce0469)](https://github.com/alexm-dev/runa/commit/7ce0469d56bea0e2db4482f9128d2820c8af01e5)
+- Filter selection: Fixed filter removing the selection index after moving out of a filtered entry. [(3d82a31)](https://github.com/alexm-dev/runa/commit/3d82a31566417d7c6da3f251bf606d7d3a630424)
 
 ### Changed
-- Visibility refactor: Set function visibility to crate only.
-- `fd` check: Hardened how runa checks for `fd` and handles errors if not available.
-- `FileOperation::Copy`: Improved copy error handling.
-- `handle_go_into_dir`: Hardened handler to catch recursive loop errors via circular links.
-- `handle_move`: Hardened move handler to catch potential moving of parent dir into subdir logic error.
+- Visibility refactor: Set function visibility to crate only. [(#29)](https://github.com/alexm-dev/runa/pull/29)
+- `fd` check: Hardened how runa checks for `fd` and handles errors if not available. [(ea7d9cb)](https://github.com/alexm-dev/runa/commit/ea7d9cb2f074519eac6271f5ebe5a0725d84f014)
+- `FileOperation::Copy`: Improved copy error handling. [(ac0e7ed)](https://github.com/alexm-dev/runa/commit/ac0e7ede08cb38b71102f3f8eb7920085f4552ec)
+- `open_in_editor`: Hardened open in editor logic to catch false argument errors. [(#29)](https://github.com/alexm-dev/runa/pull/29)
+- `handle_go_into_dir`: Hardened handler to catch recursive loop errors via circular links. [(15a258c)](https://github.com/alexm-dev/runa/commit/15a258c5a5ca749c8cf37010efa88b1c824458f0)
+- `handle_move`: Hardened move handler to catch potential moving of parent dir into subdir logic error. [(0292897)](https://github.com/alexm-dev/runa/commit/02928972ab824f44c2427b542409cddd267bee6e)
 
 ### Internal
+- Performance: Improved performance of `preview_with_bat`. [(ea7d9cb)](https://github.com/alexm-dev/runa/commit/ea7d9cb2f074519eac6271f5ebe5a0725d84f014)
+- Performance: Removed lowercase_name field from FileEntry resulting in less allocations. [(7c591f9)](https://github.com/alexm-dev/runa/commit/7c591f9dac9feb368367d3e3cb0827719b4d8c15)
+- Performance: Changed `sort_entries` to by sort_by_chached_key instead of simple sort_by. [(0d1a8c9)](https://github.com/alexm-dev/runa/commit/0d1a8c9c58db438fee2cda4530721affa108b4bf)
+- Performance: Optimized `render_root_and_header` by reducing string allocations. [(fea03f3)](https://github.com/alexm-dev/runa/commit/fea03f3337b7e698f7446e9d1051af009d8f45c9)
+- Performance: Optimized `ui/icons` lowercase string checks. [(0d1a8c9)](https://github.com/alexm-dev/runa/commit/0d1a8c9c58db438fee2cda4530721affa108b4bf)
 - Performance: Optimized worker threads by removing redundant string conversions during message handling.
-- Performance: Improved performance of `preview_with_bat`
-- Performance: Removed lowercase_name field from FileEntry resulting in less allocations.
-- Performance: Changed `sort_entries` to by sort_by_chached_key instead of simple sort_by.
-- Performance: Optimized `render_root_and_header` by reducing string allocations.
-- Performance: Optimized `ui/icons` lowercase string checks.
-- Tests: Added `core/fm` and `app/state` integration tests.
-- Inline attributes: Added inline attributes to getter functions
-- Tests: Added core/fm and app/state integration tests
-
+- Inline attributes: Added inline attributes to getter functions. [(#29)](https://github.com/alexm-dev/runa/pull/29)
+- Tests: Added core/fm and app/state integration tests. [(#29)](https://github.com/alexm-dev/runa/pull/29)
 
 ---
 
