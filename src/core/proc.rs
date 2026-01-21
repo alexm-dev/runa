@@ -206,7 +206,7 @@ pub(crate) fn preview_bat(
     max_lines: usize,
     bat_args: &[OsString],
 ) -> Result<Vec<String>, std::io::Error> {
-    let mut output = Command::new("bat")
+    let mut cmd = Command::new("bat")
         .args(bat_args)
         .arg(path)
         .stdout(Stdio::piped())
@@ -215,7 +215,7 @@ pub(crate) fn preview_bat(
 
     let mut lines = Vec::with_capacity(max_lines);
 
-    if let Some(stdout) = output.stdout.take() {
+    if let Some(stdout) = cmd.stdout.take() {
         let reader = io::BufReader::new(stdout);
         for line in reader.lines().take(max_lines) {
             match line {
@@ -225,8 +225,8 @@ pub(crate) fn preview_bat(
         }
     }
 
-    let _ = output.kill();
-    let _ = output.wait();
+    let _ = cmd.kill();
+    let _ = cmd.wait();
 
     if lines.is_empty() {
         return Err(std::io::Error::other("bat produced no output"));
