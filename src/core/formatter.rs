@@ -201,12 +201,18 @@ pub(crate) fn format_file_time(modified: Option<SystemTime>) -> String {
 }
 
 /// Normalize a relative path to use forward slashes for consistency across platforms.
-pub(crate) fn normalize_relative_path(path: &Path) -> String {
-    let rel = path.to_string_lossy().into_owned();
+pub(crate) fn normalize_relative_path(path: &Path) -> Cow<'_, str> {
+    let rel = path.to_string_lossy();
+
     #[cfg(windows)]
     {
-        rel.replace('\\', "/")
+        if rel.contains('\\') {
+            Cow::Owned(rel.replace('\\', "/"))
+        } else {
+            rel
+        }
     }
+
     #[cfg(not(windows))]
     {
         rel

@@ -24,6 +24,7 @@ use crate::core::formatter::{flatten_separators, normalize_relative_path, normal
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
 
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
 use std::io::{self, BufRead};
@@ -101,7 +102,7 @@ impl FindResult {
         &self.path
     }
 
-    pub(crate) fn relative(&self, base: &Path) -> String {
+    pub(crate) fn relative(&self, base: &Path) -> Cow<'_, str> {
         let rel = self.path.strip_prefix(base).unwrap_or(&self.path);
         normalize_relative_path(rel)
     }

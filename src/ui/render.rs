@@ -6,6 +6,7 @@
 //! This module should stay mostly “pure rendering”: it reads state + config and
 //! produces widgets, without owning runa core logic.
 
+use crate::core::formatter::normalize_relative_path;
 use crate::ui::panes;
 use crate::ui::widgets;
 use crate::{
@@ -26,6 +27,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
+use std::path::Path;
 
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
@@ -288,7 +290,8 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
     let display_cfg = cfg.display();
     let theme_cfg = cfg.theme();
     let path_short = shorten_home_path(app.nav().current_dir());
-    let path_str = clean_display_path(&path_short);
+    let path_norm = normalize_relative_path(Path::new(&path_short));
+    let path_str = clean_display_path(&path_norm);
     let border_type = display_cfg.border_shape().as_border_type();
 
     if display_cfg.is_unified() {
@@ -298,14 +301,11 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
             .border_type(border_type);
 
         if display_cfg.titles() {
-            let mut title_text = " ".to_owned();
-            title_text.push_str(path_str);
-            title_text.push(' ');
-
-            outer_block = outer_block.title(Line::from(vec![Span::styled(
-                title_text,
-                theme_cfg.path_style(),
-            )]));
+            outer_block = outer_block.title(Line::from(vec![
+                Span::raw(" "),
+                Span::styled(path_str, theme_cfg.path_style()),
+                Span::raw(" "),
+            ]));
         }
 
         let inner = outer_block.inner(area);
@@ -317,14 +317,11 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
             .constraints([Constraint::Length(1), Constraint::Min(0)])
             .split(area);
 
-        let mut path_display = path_str.to_string();
-        path_display.push(' ');
-
         frame.render_widget(
-            Paragraph::new(Line::from(vec![Span::styled(
-                path_display,
-                theme_cfg.path_style(),
-            )])),
+            Paragraph::new(Line::from(vec![
+                Span::styled(path_str, theme_cfg.path_style()),
+                Span::raw(" "),
+            ])),
             header_layout[0],
         );
         header_layout[1]
