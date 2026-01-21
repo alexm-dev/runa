@@ -107,11 +107,6 @@ impl PreviewState {
         }
     }
 
-    /// Sets an error message as the preview content
-    pub(crate) fn set_error(&mut self, err: String) {
-        self.data = PreviewData::File(vec![err]);
-    }
-
     /// Clears the preview state
     pub(crate) fn clear(&mut self) {
         self.data = PreviewData::Empty;

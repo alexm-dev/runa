@@ -27,7 +27,7 @@ use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// Enumeration for each individual keypress result processed.
 ///
@@ -318,7 +318,7 @@ impl<'a> AppState<'a> {
 
                 WorkerResponse::Error(e) => {
                     self.is_loading = false;
-                    self.preview.set_error(e);
+                    self.push_overlay_message(format!("Error: {}", e), Duration::from_secs(7));
                 }
             }
         }
