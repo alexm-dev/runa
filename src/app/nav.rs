@@ -241,7 +241,7 @@ impl NavState {
             Box::new(
                 self.entries
                     .iter()
-                    .filter(move |e| e.lowercase_name().contains(&filter_lower)),
+                    .filter(move |e| e.name_str().to_lowercase().contains(&filter_lower)),
             )
         }
     }
@@ -254,7 +254,7 @@ impl NavState {
             let filter_lower = self.filter.to_lowercase();
             self.entries
                 .iter()
-                .filter(|e| e.lowercase_name().contains(&filter_lower))
+                .filter(|e| e.name_str().to_lowercase().contains(&filter_lower))
                 .count()
         }
     }

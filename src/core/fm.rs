@@ -19,7 +19,6 @@ use std::time::SystemTime;
 #[derive(Debug, Clone)]
 pub(crate) struct FileEntry {
     name: OsString,
-    lowercase_name: Box<str>,
     flags: u8,
 }
 
@@ -32,12 +31,7 @@ impl FileEntry {
     const IS_SYMLINK: u8 = 1 << 3;
 
     fn new(name: OsString, flags: u8) -> Self {
-        let lowercase_name = name.to_string_lossy().to_lowercase().into_boxed_str();
-        FileEntry {
-            name,
-            lowercase_name,
-            flags,
-        }
+        FileEntry { name, flags }
     }
 
     // Accessors
@@ -49,11 +43,6 @@ impl FileEntry {
 
     pub(crate) fn name_str(&self) -> Cow<'_, str> {
         self.name.to_string_lossy()
-    }
-
-    #[inline]
-    pub(crate) fn lowercase_name(&self) -> &str {
-        &self.lowercase_name
     }
 
     #[inline]
@@ -235,7 +224,6 @@ mod tests {
         assert!(fe_dir.is_hidden());
         assert!(!fe_dir.is_system());
         assert!(!fe_dir.is_symlink());
-        assert_eq!(fe_dir.lowercase_name(), ".hidden_folder");
         Ok(())
     }
 

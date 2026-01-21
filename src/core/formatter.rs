@@ -77,7 +77,9 @@ impl Formatter {
                 }
             }
             if self.case_insensitive {
-                a.lowercase_name().cmp(b.lowercase_name())
+                a.name_str()
+                    .to_lowercase()
+                    .cmp(&b.name_str().to_lowercase())
             } else {
                 a.name_str().cmp(&b.name_str())
             }
@@ -88,7 +90,8 @@ impl Formatter {
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         entries.retain(|e| {
             let is_exception = if self.case_insensitive {
-                self.always_show_lowercase.contains(e.lowercase_name())
+                self.always_show_lowercase
+                    .contains(&e.name_str().to_lowercase())
             } else {
                 self.always_show.contains(e.name())
             };
@@ -277,33 +280,36 @@ pub(crate) fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
     let mut out = String::with_capacity(pane_width);
     let mut current_w = 0;
 
-    for char in line.chars() {
-        if char == '\t' {
+    for ch in line.chars() {
+        if ch == '\t' {
             let space_count = 4 - (current_w % 4);
             if current_w + space_count > pane_width {
                 break;
             }
-            out.push_str(&" ".repeat(space_count));
+            for _ in 0..space_count {
+                out.push(' ');
+            }
             current_w += space_count;
             continue;
         }
 
-        if char.is_control() {
+        if ch.is_control() {
             continue;
         }
 
-        let w = char.width().unwrap_or(0);
-        if current_w + w > pane_width {
+        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+
+        if current_w + ch_width > pane_width {
             break;
         }
 
-        out.push(char);
-        current_w += w;
+        out.push(ch);
+        current_w += ch_width;
     }
 
-    // If the string is shorter than the pane, fill it with spaces.
-    if current_w < pane_width {
-        out.push_str(&" ".repeat(pane_width - current_w));
+    while current_w < pane_width {
+        out.push(' ');
+        current_w += 1;
     }
 
     out
@@ -319,12 +325,16 @@ pub(crate) fn preview_directory(path: &Path, max_lines: usize, pane_width: usize
             let total_entries = entries.len();
 
             for e in entries.iter().take(max_lines) {
-                let display_name = if e.is_dir() {
-                    e.name().to_string_lossy().clone() + "/"
+                let name_str = e.name_str();
+
+                if e.is_dir() {
+                    let mut dir_name = String::with_capacity(name_str.len() + 1);
+                    dir_name.push_str(&name_str);
+                    dir_name.push('/');
+                    lines.push(sanitize_to_exact_width(&dir_name, pane_width));
                 } else {
-                    e.name().to_string_lossy().clone()
-                };
-                lines.push(sanitize_to_exact_width(&display_name, pane_width));
+                    lines.push(sanitize_to_exact_width(&name_str, pane_width));
+                }
             }
 
             if lines.is_empty() {
@@ -335,16 +345,20 @@ pub(crate) fn preview_directory(path: &Path, max_lines: usize, pane_width: usize
                 *last = sanitize_to_exact_width("...", pane_width);
             }
 
+            let empty_line = " ".repeat(pane_width);
             while lines.len() < max_lines {
-                lines.push(" ".repeat(pane_width));
+                lines.push(empty_line.clone());
             }
             lines
         }
         Err(e) => {
-            let err_msg = "[Error: ".to_owned() + &e.to_string() + "]";
-            let mut err_lines = vec![sanitize_to_exact_width(&err_msg, pane_width)];
+            let err_msg = format!("[Error: {}]", e);
+            let mut err_lines = Vec::with_capacity(max_lines);
+            err_lines.push(sanitize_to_exact_width(&err_msg, pane_width));
+
+            let empty_line = " ".repeat(pane_width);
             while err_lines.len() < max_lines {
-                err_lines.push(" ".repeat(pane_width));
+                err_lines.push(empty_line.clone());
             }
             err_lines
         }

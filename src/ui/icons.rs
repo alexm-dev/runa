@@ -148,10 +148,10 @@ pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = p
 /// # Arguments
 /// * `entry` - A reference to a `FileEntry` representing the file or directory.
 pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
-    let lowercase_name = entry.lowercase_name();
+    let lowercase_name = entry.name_str().to_lowercase();
 
     if entry.is_dir() {
-        if let Some(dir_icon) = SPECIAL_DIR_ICON_MAP.get(lowercase_name) {
+        if let Some(dir_icon) = SPECIAL_DIR_ICON_MAP.get(lowercase_name.as_str()) {
             return dir_icon;
         }
         return "";
