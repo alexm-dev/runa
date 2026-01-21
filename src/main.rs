@@ -1,6 +1,13 @@
 //! main.rs
 //! Entry point for runa
 
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(unix)]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 pub(crate) mod app;
 pub(crate) mod config;
 pub(crate) mod core;
