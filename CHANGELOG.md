@@ -26,6 +26,7 @@ Overall improvement of error handling.
 - Performance: Improved performance of `preview_with_bat`
 - Performance: Removed lowercase_name field from FileEntry resulting in less allocations.
 - Performance: Optimized `render_root_and_header` by reducing string allocations.
+- Performance: Optimized `ui/icons` lowercase string checks.
 - Tests: Added `core/fm` and `app/state` integration tests.
 - Inline attributes: Added inline attributes to getter functions
 - Tests: Added core/fm and app/state integration tests
