@@ -349,8 +349,9 @@ pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
 
 #[inline(always)]
 pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R {
-    if name.len() <= 64 {
-        let mut buf = [0u8; 64];
+    const BUFFER_SIZE: usize = 64;
+    if name.len() <= BUFFER_SIZE {
+        let mut buf = [0u8; BUFFER_SIZE];
         let bytes = name.as_bytes();
         let mut needs_lowering = false;
 
@@ -358,7 +359,7 @@ pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R 
             let b = bytes[i];
             if b.is_ascii_uppercase() {
                 needs_lowering = true;
-                buf[i] = b + 32;
+                buf[i] = b.to_ascii_lowercase();
             } else {
                 buf[i] = b;
             }
@@ -369,13 +370,6 @@ pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R 
         }
     }
     f(name)
-}
-
-#[inline]
-pub(crate) fn cmp_ignore_case(a: &str, b: &str) -> std::cmp::Ordering {
-    let iter_a = a.bytes().map(|b| b.to_ascii_lowercase());
-    let iter_b = b.bytes().map(|b| b.to_ascii_lowercase());
-    iter_a.cmp(iter_b)
 }
 
 /// Helper utils integration tests

@@ -9,8 +9,7 @@
 use crate::core::FileType;
 use crate::core::{FileEntry, browse_dir};
 use crate::utils::{
-    clean_display_path, cmp_ignore_case, normalize_relative_path, shorten_home_path,
-    with_lowered_stack,
+    clean_display_path, normalize_relative_path, shorten_home_path, with_lowered_stack,
 };
 
 use chrono::{DateTime, Local};
@@ -71,24 +70,25 @@ impl Formatter {
 
     /// Sorts the given file entries in place according to the formatter's settings.
     pub(crate) fn sort_entries(&self, entries: &mut [FileEntry]) {
-        entries.sort_by(|a, b| {
-            if self.dirs_first {
-                match (a.is_dir(), b.is_dir()) {
-                    (true, false) => return std::cmp::Ordering::Less,
-                    (false, true) => return std::cmp::Ordering::Greater,
-                    _ => {}
+        if self.case_insensitive {
+            entries.sort_by_cached_key(|e| {
+                (
+                    if self.dirs_first { !e.is_dir() } else { false },
+                    e.name_str().to_lowercase(),
+                )
+            });
+        } else {
+            entries.sort_by(|a, b| {
+                if self.dirs_first {
+                    match (a.is_dir(), b.is_dir()) {
+                        (true, false) => return std::cmp::Ordering::Less,
+                        (false, true) => return std::cmp::Ordering::Greater,
+                        _ => {}
+                    }
                 }
-            }
-
-            let name_a = a.name_str();
-            let name_b = b.name_str();
-
-            if self.case_insensitive {
-                cmp_ignore_case(name_a.as_ref(), name_b.as_ref())
-            } else {
-                name_a.cmp(&name_b)
-            }
-        });
+                a.name_str().cmp(&b.name_str())
+            });
+        }
     }
 
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
@@ -103,10 +103,8 @@ impl Formatter {
                 with_lowered_stack(name.as_ref(), |s| {
                     if self.always_show_lowercase.contains(s) {
                         true
-                    } else if name.len() > 64 {
-                        self.always_show_lowercase.contains(&name.to_lowercase())
                     } else {
-                        false
+                        self.always_show_lowercase.contains(&name.to_lowercase())
                     }
                 })
             } else {
