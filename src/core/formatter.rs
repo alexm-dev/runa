@@ -26,8 +26,8 @@ use std::time::SystemTime;
 
 // Minimum number of lines shown in any preview
 const MIN_PREVIEW_LINES: usize = 3;
-// Maximum file size allowed for preview (10mb)
-const MAX_PREVIEW_SIZE: u64 = 10 * 1024 * 1024;
+// Maximum file size allowed for preview (5gb)
+const MAX_PREVIEW_SIZE: u64 = 5_000 * 1024 * 1024;
 // Number of bytes to peek from file start for header checks (eg. PNG, ZIP, etc..)
 const HEADER_PEEK_BYTES: usize = 8;
 // Bytes to peek for null bytes in binary detections
