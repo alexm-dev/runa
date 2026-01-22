@@ -2,6 +2,22 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased
+
+### Changed
+- `bat` preview method: Made `wrap = false` to default.
+- `MAX_PREVIEW_SIZE`: Set the maximum file size for previews to 5gb.
+Note: Internal preview reads only pane-visible lines, so RAM usage remains minimal regardless of file size. The limit is a precaution against processing excessively large files.
+
+### Internal
+- Performance: `filter_entries` optimized to instead check ASCII stack buffer AND fallback to unicode if file entries are non ascii.
+- Performance: `display_path` is now cached in `NavState` to not create a new path string everytime.
+- Performance: Removed `readable_path` to instead use `clean_display_path` for a optimized path string.
+
+
+---
+
+
 ## [0.5.6] - 2026-01-21
 
 Performance improvements and polish.  

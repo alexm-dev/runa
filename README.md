@@ -201,6 +201,7 @@ runa is in active development, with future releases focusing on expanding functi
 
 ### Planned Features
 
+- [ ] Tabs: Spawn and manage multiple tabs of runa
 - [ ] Image Previews: Support for Sixel/Kitty graphics protocols
 
 ### Completed Features

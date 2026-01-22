@@ -12,7 +12,7 @@ use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog,
 };
-use crate::utils::readable_path;
+use crate::utils::clean_display_path;
 
 use ratatui::{
     Frame,
@@ -125,14 +125,17 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
 
             let preview = if !action_targets.is_empty() {
                 if action_targets.len() == 1 {
-                    format!("File to move: {}", readable_path(action_targets[0]))
+                    format!(
+                        "File to move: {}",
+                        clean_display_path(&action_targets[0].to_string_lossy())
+                    )
                 } else {
                     format!(
                         "Files to move ({}):\n{}",
                         action_targets.len(),
                         action_targets
                             .iter()
-                            .map(|p| format!("  - {}", readable_path(p)))
+                            .map(|p| format!("  - {}", clean_display_path(&p.to_string_lossy())))
                             .collect::<Vec<_>>()
                             .join("\n")
                     )

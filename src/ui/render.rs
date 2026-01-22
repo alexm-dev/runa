@@ -6,28 +6,25 @@
 //! This module should stay mostly “pure rendering”: it reads state + config and
 //! produces widgets, without owning runa core logic.
 
-use crate::core::formatter::normalize_relative_path;
 use crate::ui::panes;
 use crate::ui::widgets;
 use crate::{
     app::{
-        AppState, LayoutMetrics,
         actions::{ActionMode, InputMode},
+        AppState, LayoutMetrics,
     },
     ui::{
         overlays::Overlay,
         panes::{PaneContext, PaneStyles, PreviewOptions},
     },
-    utils::{clean_display_path, shorten_home_path},
 };
 use ratatui::{
-    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
+    Frame,
 };
-use std::path::Path;
 
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
@@ -289,9 +286,7 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
     let cfg = app.config();
     let display_cfg = cfg.display();
     let theme_cfg = cfg.theme();
-    let path_short = shorten_home_path(app.nav().current_dir());
-    let path_norm = normalize_relative_path(Path::new(&path_short));
-    let path_str = clean_display_path(&path_norm);
+    let path_str = app.nav().display_path();
     let border_type = display_cfg.border_shape().as_border_type();
 
     if display_cfg.is_unified() {
@@ -416,8 +411,8 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
 mod tests {
     use super::*;
 
-    use crate::Config;
     use crate::config::load::RawConfig;
+    use crate::Config;
     use std::error;
 
     #[test]

@@ -4,6 +4,8 @@
 //! Provides helpers for pane navigation, selection, filtering, and bulk actions.
 
 use crate::core::FileEntry;
+use crate::core::formatter::format_display_path;
+
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -17,11 +19,13 @@ pub(crate) struct NavState {
     markers: HashSet<PathBuf>,
     filter: String,
     filters: HashMap<PathBuf, String>,
+    display_path: String,
     request_id: u64,
 }
 
 impl NavState {
     pub(crate) fn new(path: PathBuf) -> Self {
+        let display_path = format_display_path(&path);
         Self {
             current_dir: path,
             entries: Vec::new(),
@@ -30,6 +34,7 @@ impl NavState {
             markers: HashSet::new(),
             filter: String::new(),
             filters: HashMap::new(),
+            display_path,
             request_id: 0,
         }
     }
@@ -59,6 +64,11 @@ impl NavState {
     #[inline]
     pub(crate) fn selected_idx(&self) -> usize {
         self.selected
+    }
+
+    #[inline]
+    pub(crate) fn display_path(&self) -> &str {
+        &self.display_path
     }
 
     #[inline]
@@ -138,6 +148,7 @@ impl NavState {
         focus: Option<OsString>,
     ) {
         self.current_dir = path;
+        self.display_path = format_display_path(&self.current_dir);
         self.entries = entries;
 
         self.restore_filter_for_current_dir();

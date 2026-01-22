@@ -328,7 +328,7 @@ impl PreviewOptions {
             method: PreviewMethod::Internal,
             style: BatStyle::Plain,
             theme: None,
-            wrap: true,
+            wrap: false,
         }
     }
 
@@ -338,7 +338,7 @@ impl PreviewOptions {
 
     #[inline]
     fn default_wrap() -> bool {
-        true
+        false
     }
 
     #[inline]
