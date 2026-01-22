@@ -8,10 +8,9 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
-use crate::core::formatter::normalize_relative_path;
 use crate::core::proc::complete_dirs_with_fd;
 use crate::ui::overlays::Overlay;
-use crate::utils::{expand_home_path, open_in_editor, readable_path};
+use crate::utils::{clean_display_path, expand_home_path, normalize_relative_path, open_in_editor};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
 
@@ -451,7 +450,7 @@ impl<'a> AppState<'a> {
                     "Move failed: source and destination are the same".to_string()
                 } else {
                     let normalized = normalize_relative_path(&absolute_src);
-                    let display_path = readable_path(Path::new(normalized.as_ref()));
+                    let display_path = clean_display_path(&normalized);
                     format!(
                         "Move failed: cannot move directory into its own sub directory: {}",
                         display_path
@@ -463,7 +462,10 @@ impl<'a> AppState<'a> {
         }
 
         let fileop_tx = self.workers.fileop_tx();
-        let move_msg = format!("Files moved to: {}", readable_path(&absolute_dest));
+        let move_msg = format!(
+            "Files moved to: {}",
+            clean_display_path(&absolute_dest.to_string_lossy())
+        );
 
         self.actions
             .actions_move(&mut self.nav, absolute_dest, fileop_tx);

@@ -8,12 +8,15 @@
 
 use crate::core::FileType;
 use crate::core::{FileEntry, browse_dir};
+use crate::utils::{
+    clean_display_path, cmp_ignore_case, normalize_relative_path, shorten_home_path,
+    with_lowered_stack,
+};
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
 use unicode_width::UnicodeWidthChar;
 
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
@@ -68,40 +71,44 @@ impl Formatter {
 
     /// Sorts the given file entries in place according to the formatter's settings.
     pub(crate) fn sort_entries(&self, entries: &mut [FileEntry]) {
-        if self.case_insensitive {
-            entries.sort_by_cached_key(|e| {
-                (
-                    if self.dirs_first { !e.is_dir() } else { false },
-                    e.name_str().to_lowercase(),
-                )
-            });
-        } else {
-            entries.sort_by(|a, b| {
-                if self.dirs_first {
-                    match (a.is_dir(), b.is_dir()) {
-                        (true, false) => return std::cmp::Ordering::Less,
-                        (false, true) => return std::cmp::Ordering::Greater,
-                        _ => {}
-                    }
+        entries.sort_by(|a, b| {
+            if self.dirs_first {
+                match (a.is_dir(), b.is_dir()) {
+                    (true, false) => return std::cmp::Ordering::Less,
+                    (false, true) => return std::cmp::Ordering::Greater,
+                    _ => {}
                 }
-                a.name_str().cmp(&b.name_str())
-            });
-        }
+            }
+
+            let name_a = a.name_str();
+            let name_b = b.name_str();
+
+            if self.case_insensitive {
+                cmp_ignore_case(name_a.as_ref(), name_b.as_ref())
+            } else {
+                name_a.cmp(&name_b)
+            }
+        });
     }
 
-    /// Filters the given file entries in place according to the formatter's settings.
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         entries.retain(|e| {
-            let hidden_ok = self.show_hidden || !e.is_hidden();
-            let system_ok = self.show_system || !e.is_system();
-
-            if hidden_ok && system_ok {
+            if (self.show_hidden || !e.is_hidden()) && (self.show_system || !e.is_system()) {
                 return true;
             }
 
             if self.case_insensitive {
-                self.always_show_lowercase
-                    .contains(&e.name_str().to_lowercase())
+                let name = e.name_str();
+
+                with_lowered_stack(name.as_ref(), |s| {
+                    if self.always_show_lowercase.contains(s) {
+                        true
+                    } else if name.len() > 64 {
+                        self.always_show_lowercase.contains(&name.to_lowercase())
+                    } else {
+                        false
+                    }
+                })
             } else {
                 self.always_show.contains(e.name())
             }
@@ -206,48 +213,10 @@ pub(crate) fn format_file_time(modified: Option<SystemTime>) -> String {
         .unwrap_or_else(|| "-".to_string())
 }
 
-/// Normalize a relative path to use forward slashes for consistency across platforms.
-pub(crate) fn normalize_relative_path(path: &Path) -> Cow<'_, str> {
-    let rel = path.to_string_lossy();
-
-    #[cfg(windows)]
-    {
-        if rel.contains('\\') {
-            Cow::Owned(rel.replace('\\', "/"))
-        } else {
-            rel
-        }
-    }
-
-    #[cfg(not(windows))]
-    {
-        rel
-    }
-}
-
-/// Normalize separators in a given string to use forward slashes.
-pub(crate) fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
-    if separator.contains('\\') {
-        Cow::Owned(separator.replace('\\', "/"))
-    } else {
-        Cow::Borrowed(separator)
-    }
-}
-
-/// Flatten separators by removing all '/' and '\' characters from the string.
-/// This is used to create a simplified version of the path for fuzzy matching.
-///
-/// # Examples
-/// let flat = flatten_separators("src/core/proc.rs");
-/// flat = "srccoreprocrs";
-pub(crate) fn flatten_separators(separator: &str) -> String {
-    let mut buf = String::with_capacity(separator.len());
-    for char in separator.chars() {
-        if char != '/' && char != '\\' {
-            buf.push(char);
-        }
-    }
-    buf
+pub(crate) fn format_display_path(path: &Path) -> String {
+    let path_short = shorten_home_path(path);
+    let path_norm = normalize_relative_path(Path::new(&path_short));
+    clean_display_path(&path_norm).to_string()
 }
 
 /// Returns Some(resolved_target) if entry is a symlink and can be resolved, otherwise None.

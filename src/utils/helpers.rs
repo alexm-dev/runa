@@ -13,6 +13,7 @@
 
 use crate::config::Editor;
 use ratatui::style::Color;
+use std::borrow::Cow;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::OnceLock;
 use std::{fs, io};
@@ -149,6 +150,21 @@ pub(crate) fn get_unused_path(path: &Path) -> PathBuf {
     }
 }
 
+pub(crate) fn clean_display_path(path: &str) -> &str {
+    #[cfg(windows)]
+    {
+        if let Some(stripped) = path
+            .strip_prefix(r"\\?\")
+            .or_else(|| path.strip_prefix("//?/"))
+            .or_else(|| path.strip_prefix(r"\??\"))
+        {
+            return stripped;
+        }
+    }
+
+    path
+}
+
 /// Util function to shorten home directory to ~.
 /// Is used by the path_str in the ui.rs render function.
 pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
@@ -168,25 +184,48 @@ pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     path.display().to_string()
 }
 
-pub(crate) fn readable_path(path: &Path) -> String {
-    let path_str = path.display().to_string();
+/// Normalize a relative path to use forward slashes for consistency across platforms.
+pub(crate) fn normalize_relative_path(path: &Path) -> Cow<'_, str> {
+    let rel = path.to_string_lossy();
 
     #[cfg(windows)]
     {
-        if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
-            return stripped.to_string();
-        }
-
-        if let Some(stripped) = path_str.strip_prefix("//?/") {
-            return stripped.to_string();
-        }
-
-        if let Some(stripped) = path_str.strip_prefix(r"\??\") {
-            return stripped.to_string();
+        if rel.contains('\\') {
+            Cow::Owned(rel.replace('\\', "/"))
+        } else {
+            rel
         }
     }
 
-    path_str
+    #[cfg(not(windows))]
+    {
+        rel
+    }
+}
+
+/// Normalize separators in a given string to use forward slashes.
+pub(crate) fn normalize_separators<'a>(separator: &'a str) -> Cow<'a, str> {
+    if separator.contains('\\') {
+        Cow::Owned(separator.replace('\\', "/"))
+    } else {
+        Cow::Borrowed(separator)
+    }
+}
+
+/// Flatten separators by removing all '/' and '\' characters from the string.
+/// This is used to create a simplified version of the path for fuzzy matching.
+///
+/// # Examples
+/// let flat = flatten_separators("src/core/proc.rs");
+/// flat = "srccoreprocrs";
+pub(crate) fn flatten_separators(separator: &str) -> String {
+    let mut buf = String::with_capacity(separator.len());
+    for char in separator.chars() {
+        if char != '/' && char != '\\' {
+            buf.push(char);
+        }
+    }
+    buf
 }
 
 pub(crate) fn expand_home_path(input: &str) -> String {
@@ -249,10 +288,6 @@ pub(crate) fn resolve_initial_dir(path_arg: &str) -> PathBuf {
     }
 }
 
-pub(crate) fn clean_display_path(path: &str) -> &str {
-    path.strip_prefix(r"\\?\").unwrap_or(path)
-}
-
 /// Safely clamp the find result numbers.
 ///
 /// If the clamped value does not match the set [MAX_FIND_RESULTS_LIMIT] then its invalid and its
@@ -310,6 +345,37 @@ pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     }
 
     Ok(())
+}
+
+#[inline(always)]
+pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R {
+    if name.len() <= 64 {
+        let mut buf = [0u8; 64];
+        let bytes = name.as_bytes();
+        let mut needs_lowering = false;
+
+        for i in 0..bytes.len() {
+            let b = bytes[i];
+            if b.is_ascii_uppercase() {
+                needs_lowering = true;
+                buf[i] = b + 32;
+            } else {
+                buf[i] = b;
+            }
+        }
+
+        if needs_lowering && let Ok(lowered) = std::str::from_utf8(&buf[..bytes.len()]) {
+            return f(lowered);
+        }
+    }
+    f(name)
+}
+
+#[inline]
+pub(crate) fn cmp_ignore_case(a: &str, b: &str) -> std::cmp::Ordering {
+    let iter_a = a.bytes().map(|b| b.to_ascii_lowercase());
+    let iter_b = b.bytes().map(|b| b.to_ascii_lowercase());
+    iter_a.cmp(iter_b)
 }
 
 /// Helper utils integration tests

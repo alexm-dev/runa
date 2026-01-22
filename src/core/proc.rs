@@ -19,7 +19,7 @@
 //! This function is used by core/workers.rs to provide file previews in the UI.
 //! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
 
-use crate::core::formatter::{flatten_separators, normalize_relative_path, normalize_separators};
+use crate::utils::{flatten_separators, normalize_relative_path, normalize_separators};
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -249,6 +249,7 @@ pub(crate) fn complete_dirs_with_fd(
         .arg("d")
         .arg("--max-depth")
         .arg("1")
+        .arg("--hidden")
         .arg(prefix)
         .arg(base_dir)
         .output()?;

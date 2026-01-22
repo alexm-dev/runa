@@ -6,6 +6,8 @@
 //! the corresponding Nerd Font icon.
 
 use crate::core::FileEntry;
+use crate::utils::with_lowered_stack;
+
 use phf::phf_map;
 
 /// File extension to icon mapping
@@ -152,32 +154,18 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
     }
 
     if entry.is_dir() {
-        if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(&name) {
+        if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(name.as_ref()) {
             return icon;
         }
-        if name.len() <= 64 {
-            let mut buf = [0u8; 64];
-            let bytes = name.as_bytes();
-            let mut needs_lowering = false;
-            for i in 0..bytes.len() {
-                let b = bytes[i];
-                let l = b.to_ascii_lowercase();
-                if l != b {
-                    needs_lowering = true;
-                }
-                buf[i] = l;
-            }
-            if needs_lowering
-                && let Ok(lowered) = std::str::from_utf8(&buf[..bytes.len()])
-                && let Some(icon) = SPECIAL_DIR_ICON_MAP.get(lowered)
-            {
-                return icon;
-            }
+        if let Some(icon) =
+            with_lowered_stack(name.as_ref(), |s| SPECIAL_DIR_ICON_MAP.get(s).copied())
+        {
+            return icon;
         }
         return "";
     }
 
-    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(&name) {
+    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(name.as_ref()) {
         return icon;
     }
 
@@ -189,24 +177,9 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         if let Some(icon) = EXT_ICON_MAP.get(ext) {
             return icon;
         }
-        if ext.len() <= 64 {
-            let mut buf = [0u8; 64];
-            let bytes = ext.as_bytes();
-            let mut needs_lowering = false;
-            for i in 0..bytes.len() {
-                let b = bytes[i];
-                let l = b.to_ascii_lowercase();
-                if l != b {
-                    needs_lowering = true;
-                }
-                buf[i] = l;
-            }
-            if needs_lowering
-                && let Ok(lowered) = std::str::from_utf8(&buf[..bytes.len()])
-                && let Some(icon) = EXT_ICON_MAP.get(lowered)
-            {
-                return icon;
-            }
+
+        if let Some(icon) = with_lowered_stack(ext, |s| EXT_ICON_MAP.get(s).copied()) {
+            return icon;
         }
     }
 
