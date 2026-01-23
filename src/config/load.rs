@@ -25,6 +25,7 @@ use std::{fs, io, path::PathBuf};
 pub(crate) struct RawConfig {
     dirs_first: bool,
     show_hidden: bool,
+    show_symlink: bool,
     show_system: bool,
     case_insensitive: bool,
     always_show: Vec<String>,
@@ -44,6 +45,7 @@ impl Default for RawConfig {
         RawConfig {
             dirs_first: true,
             show_hidden: true,
+            show_symlink: true,
             show_system: false,
             case_insensitive: true,
             always_show: Vec::new(),
@@ -63,6 +65,7 @@ impl Default for RawConfig {
 pub(crate) struct Config {
     dirs_first: bool,
     show_hidden: bool,
+    show_symlink: bool,
     show_system: bool,
     case_insensitive: bool,
     always_show: Arc<HashSet<OsString>>,
@@ -81,6 +84,7 @@ impl From<RawConfig> for Config {
         Self {
             dirs_first: raw.dirs_first,
             show_hidden: raw.show_hidden,
+            show_symlink: raw.show_symlink,
             show_system: raw.show_system,
             case_insensitive: raw.case_insensitive,
             always_show: Arc::new(
@@ -141,6 +145,11 @@ impl Config {
     #[inline]
     pub(crate) fn show_hidden(&self) -> bool {
         self.show_hidden
+    }
+
+    #[inline]
+    pub(crate) fn show_symlink(&self) -> bool {
+        self.show_symlink
     }
 
     #[inline]
@@ -234,6 +243,7 @@ impl Config {
 # General behavior
 dirs_first = true
 show_hidden = true
+# show_symlink = true
 # show_system = false
 case_insensitive = true
 # always_show = []
@@ -281,6 +291,7 @@ method = "internal"
 name = "default"
 symlink = "default"
 selection_icon = ""
+            show_symlink: self.config.show_symlink(),
 
 # [theme.selection]
 # fg = "default"
@@ -422,6 +433,7 @@ impl Default for Config {
         Config {
             dirs_first: true,
             show_hidden: true,
+            show_symlink: true,
             show_system: false,
             case_insensitive: true,
             always_show: Arc::new(HashSet::new()),

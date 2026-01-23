@@ -48,6 +48,7 @@ impl FileEntry {
         &self.name
     }
 
+    #[inline]
     pub(crate) fn name_str(&self) -> Cow<'_, str> {
         self.name.to_string_lossy()
     }
@@ -234,18 +235,18 @@ mod tests {
     use std::path::PathBuf;
     use tempfile::TempDir;
 
-    // #[test]
-    // fn file_entry_flags() -> Result<(), Box<dyn std::error::Error>> {
-    //     let fe_file = FileEntry::new(OsString::from("file.txt"), 0);
-    //     assert!(!fe_file.is_dir());
-    //     assert_eq!(fe_file.name_str(), "file.txt");
-    //
-    //     let flags = FileEntry::IS_DIR | FileEntry::IS_HIDDEN;
-    //     let fe_dir = FileEntry::new(OsString::from(".hidden_folder"), flags);
-    //     assert!(fe_dir.is_dir());
-    //     assert!(!fe_dir.is_symlink());
-    //     Ok(())
-    // }
+    #[test]
+    fn file_entry_flags() -> Result<(), Box<dyn std::error::Error>> {
+        let fe_file = FileEntry::new(OsString::from("file.txt"), 0, None);
+        assert!(!fe_file.is_dir());
+        assert_eq!(fe_file.name_str(), "file.txt");
+
+        let flags = FileEntry::IS_DIR | FileEntry::IS_HIDDEN;
+        let fe_dir = FileEntry::new(OsString::from(".hidden_folder"), flags, None);
+        assert!(fe_dir.is_dir());
+        assert!(!fe_dir.is_symlink());
+        Ok(())
+    }
 
     #[test]
     fn file_info_basic_file() -> Result<(), Box<dyn std::error::Error>> {

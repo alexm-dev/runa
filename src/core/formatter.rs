@@ -38,6 +38,7 @@ const BINARY_PEEK_BYTES: usize = 1024;
 pub(crate) struct Formatter {
     dirs_first: bool,
     show_hidden: bool,
+    show_symlink: bool,
     show_system: bool,
     case_insensitive: bool,
     always_show: Arc<HashSet<OsString>>,
@@ -51,6 +52,7 @@ impl Formatter {
     pub(crate) fn new(
         dirs_first: bool,
         show_hidden: bool,
+        show_symlink: bool,
         show_system: bool,
         case_insensitive: bool,
         always_show: Arc<HashSet<OsString>>,
@@ -64,6 +66,7 @@ impl Formatter {
         Self {
             dirs_first,
             show_hidden,
+            show_symlink,
             show_system,
             case_insensitive,
             always_show,
@@ -87,10 +90,10 @@ impl Formatter {
         } else {
             entries.sort_by(|a, b| {
                 if self.dirs_first {
-                    let p_a = self.get_prio(a);
-                    let p_b = self.get_prio(b);
-                    if p_a != p_b {
-                        return p_a.cmp(&p_b);
+                    let prio_a = self.get_prio(a);
+                    let prio_b = self.get_prio(b);
+                    if prio_a != prio_b {
+                        return prio_a.cmp(&prio_b);
                     }
                 }
                 a.name().cmp(b.name())
@@ -105,6 +108,9 @@ impl Formatter {
         }
         if !self.show_system {
             hide |= FileEntry::IS_SYSTEM;
+        }
+        if !self.show_symlink {
+            hide |= FileEntry::IS_SYMLINK;
         }
         entries.retain(|e| {
             let flags = e.flags();
