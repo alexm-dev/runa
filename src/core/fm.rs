@@ -197,7 +197,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                         }
                     }
                     Err(_) => {
-                        flags |= FileEntry::IS_BROKEN;
+                        flags |= FileEntry::IS_BROKEN_SYM;
                     }
                 }
             }
