@@ -462,7 +462,7 @@ fn make_entry_row<'a>(
     spans.push(Span::raw(entry.name_str()));
 
     if entry.is_dir() && context.show_marker {
-        spans.push(Span::styled("/", row_style.add_modifier(Modifier::DIM)));
+        spans.push(Span::styled("/", row_style));
     }
 
     if entry.is_symlink()
