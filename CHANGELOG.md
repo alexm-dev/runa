@@ -8,6 +8,26 @@ All the changes made to runa are documented here.
 - `show_symlink`: Symlinks can be toggled now.
 - `entry_count`: Count of the entries in the current directory. Choose between: `"footer", "header"` or `"none`, to choose where to show the entry count or to disable it.
 
+### Breaking Changes
+- `[general]` section in runa.toml: Wrapped the general settings like `dirs_first`, `show_hidden`, etc., to `[general]`.
+- If you had any of these loose settings, you will need to put `"[general]"` above them now or runa will ignore them.
+- Before:
+
+    ```toml
+    dirs_first = true
+    show_hidden = true
+    move_to_trash = true
+    ```
+- Now:
+
+    ```toml
+    [general]
+    dirs_first = true
+    show_hidden = true
+    move_to_trash = true
+    ```
+
+
 ### Changed
 - Symlink sorting: Symlinks now are correctly sorted.
 - `bat` preview method: Made `wrap = false` to default.
