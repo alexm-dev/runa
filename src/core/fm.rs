@@ -172,6 +172,16 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
 
         #[cfg(unix)]
         {
+            if ft.is_symlink() {
+                if let Ok(md) = fs::metadata(entry.path()) {
+                    if md.is_dir() {
+                        flags |= FileEntry::IS_DIR;
+                    }
+                }
+            } else if ft.is_dir() {
+                flags |= FileEntry::IS_DIR;
+            }
+
             use std::os::unix::ffi::OsStrExt;
             if name.as_bytes().first() == Some(&b'.') {
                 flags |= FileEntry::IS_HIDDEN;

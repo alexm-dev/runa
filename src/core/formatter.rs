@@ -73,11 +73,7 @@ impl Formatter {
 
     #[inline(always)]
     fn get_prio(&self, entry: &FileEntry) -> u8 {
-        if !self.dirs_first {
-            return Self::PRIO_DIR;
-        }
-
-        if (entry.flags() & (FileEntry::IS_DIR | FileEntry::IS_SYMLINK)) != 0 {
+        if self.dirs_first && (entry.flags() & FileEntry::IS_DIR) != 0 {
             Self::PRIO_DIR
         } else {
             Self::PRIO_FILE
