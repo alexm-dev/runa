@@ -6,6 +6,7 @@
 use crate::core::formatter::format_attributes;
 
 use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs::{self, symlink_metadata};
 use std::io;
@@ -18,26 +19,29 @@ use std::time::SystemTime;
 /// Created and populated by the browse_dir function.
 #[derive(Debug, Clone)]
 pub(crate) struct FileEntry {
-    name: OsString,
+    name: Box<OsStr>,
     flags: u8,
 }
 
 impl FileEntry {
     // Flag bit definitions
     // These are used to set and check attributes in the flags field
-    const IS_DIR: u8 = 1 << 0;
-    const IS_HIDDEN: u8 = 1 << 1;
-    const IS_SYSTEM: u8 = 1 << 2;
-    const IS_SYMLINK: u8 = 1 << 3;
+    pub(crate) const IS_DIR: u8 = 1 << 0;
+    pub(crate) const IS_HIDDEN: u8 = 1 << 1;
+    pub(crate) const IS_SYSTEM: u8 = 1 << 2;
+    pub(crate) const IS_SYMLINK: u8 = 1 << 3;
 
-    fn new(name: OsString, flags: u8) -> Self {
-        FileEntry { name, flags }
+    pub(crate) fn new(name: OsString, flags: u8) -> Self {
+        FileEntry {
+            name: name.into_boxed_os_str(),
+            flags,
+        }
     }
 
     // Accessors
 
     #[inline]
-    pub(crate) fn name(&self) -> &OsString {
+    pub(crate) fn name(&self) -> &OsStr {
         &self.name
     }
 
@@ -45,19 +49,14 @@ impl FileEntry {
         self.name.to_string_lossy()
     }
 
+    #[inline(always)]
+    pub(crate) fn flags(&self) -> u8 {
+        self.flags
+    }
+
     #[inline]
     pub(crate) fn is_dir(&self) -> bool {
         self.flags & Self::IS_DIR != 0
-    }
-
-    #[inline]
-    pub(crate) fn is_hidden(&self) -> bool {
-        self.flags & Self::IS_HIDDEN != 0
-    }
-
-    #[inline]
-    pub(crate) fn is_system(&self) -> bool {
-        self.flags & Self::IS_SYSTEM != 0
     }
 
     #[inline]
@@ -215,14 +214,11 @@ mod tests {
     fn file_entry_flags() -> Result<(), Box<dyn std::error::Error>> {
         let fe_file = FileEntry::new(OsString::from("file.txt"), 0);
         assert!(!fe_file.is_dir());
-        assert!(!fe_file.is_hidden());
         assert_eq!(fe_file.name_str(), "file.txt");
 
         let flags = FileEntry::IS_DIR | FileEntry::IS_HIDDEN;
         let fe_dir = FileEntry::new(OsString::from(".hidden_folder"), flags);
         assert!(fe_dir.is_dir());
-        assert!(fe_dir.is_hidden());
-        assert!(!fe_dir.is_system());
         assert!(!fe_dir.is_symlink());
         Ok(())
     }

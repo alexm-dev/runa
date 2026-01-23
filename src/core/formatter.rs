@@ -45,6 +45,9 @@ pub(crate) struct Formatter {
 }
 
 impl Formatter {
+    const PRIO_DIR: u8 = 0;
+    const PRIO_FILE: u8 = 1;
+
     pub(crate) fn new(
         dirs_first: bool,
         show_hidden: bool,
@@ -68,51 +71,59 @@ impl Formatter {
         }
     }
 
+    #[inline(always)]
+    fn get_prio(&self, entry: &FileEntry) -> u8 {
+        if !self.dirs_first {
+            return Self::PRIO_DIR;
+        }
+
+        if (entry.flags() & FileEntry::IS_DIR) != 0 {
+            Self::PRIO_DIR
+        } else {
+            Self::PRIO_FILE
+        }
+    }
+
     /// Sorts the given file entries in place according to the formatter's settings.
     pub(crate) fn sort_entries(&self, entries: &mut [FileEntry]) {
         if self.case_insensitive {
-            entries.sort_by_cached_key(|e| {
-                (
-                    if self.dirs_first { !e.is_dir() } else { false },
-                    e.name_str().to_lowercase(),
-                )
-            });
+            entries.sort_by_cached_key(|e| (self.get_prio(e), e.name_str().to_lowercase()));
         } else {
             entries.sort_by(|a, b| {
                 if self.dirs_first {
-                    match (a.is_dir(), b.is_dir()) {
-                        (true, false) => return std::cmp::Ordering::Less,
-                        (false, true) => return std::cmp::Ordering::Greater,
-                        _ => {}
+                    let p_a = self.get_prio(a);
+                    let p_b = self.get_prio(b);
+                    if p_a != p_b {
+                        return p_a.cmp(&p_b);
                     }
                 }
-                a.name_str().cmp(&b.name_str())
+                a.name().cmp(b.name())
             });
         }
     }
 
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
+        let mut hide = 0u8;
+        if !self.show_hidden {
+            hide |= FileEntry::IS_HIDDEN;
+        }
+        if !self.show_system {
+            hide |= FileEntry::IS_SYSTEM;
+        }
         entries.retain(|e| {
-            if (self.show_hidden || !e.is_hidden()) && (self.show_system || !e.is_system()) {
-                return true;
-            }
+            let flags = e.flags();
 
-            if self.case_insensitive {
-                let name = e.name_str();
-
-                with_lowered_stack(name.as_ref(), |s| {
-                    if self.always_show_lowercase.contains(s) {
-                        true
-                    } else {
-                        self.always_show_lowercase.contains(&name.to_lowercase())
-                    }
-                })
-            } else {
-                self.always_show.contains(e.name())
+            if (flags & hide) != 0 {
+                if self.case_insensitive {
+                    return with_lowered_stack(e.name_str().as_ref(), |lowered| {
+                        self.always_show_lowercase.contains(lowered)
+                    });
+                } else {
+                    return self.always_show.contains(e.name());
+                }
             }
+            true
         });
-
-        self.sort_entries(entries);
     }
 }
 

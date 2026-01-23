@@ -154,11 +154,7 @@ impl NavState {
         self.restore_filter_for_current_dir();
 
         if let Some(f) = focus {
-            self.selected = self
-                .entries
-                .iter()
-                .position(|e| e.name() == &f)
-                .unwrap_or(0);
+            self.selected = self.entries.iter().position(|e| e.name() == f).unwrap_or(0);
         } else {
             self.selected = self.positions.get(&self.current_dir).cloned().unwrap_or(0);
         }

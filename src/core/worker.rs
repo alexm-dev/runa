@@ -203,6 +203,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                         always_show,
                     );
                     formatter.filter_entries(&mut entries);
+                    formatter.sort_entries(&mut entries);
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                         path,
                         entries,
