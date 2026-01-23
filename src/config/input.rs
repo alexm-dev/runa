@@ -4,7 +4,6 @@
 //! configuration file.
 
 use serde::Deserialize;
-use std::vec;
 
 /// Input configuration options of all actions
 #[derive(Deserialize, Debug)]

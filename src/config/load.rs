@@ -9,12 +9,10 @@
 use crate::config::Display;
 use crate::config::Theme;
 use crate::config::{Editor, Keys};
-use crate::utils::{DEFAULT_FIND_RESULTS, clamp_find_results, get_home};
+use crate::config::{General, InternalGeneral};
+use crate::utils::get_home;
 
 use serde::Deserialize;
-use std::collections::HashSet;
-use std::ffi::OsString;
-use std::sync::Arc;
 use std::{fs, io, path::PathBuf};
 
 /// Raw configuration as read from the toml file
@@ -23,15 +21,7 @@ use std::{fs, io, path::PathBuf};
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub(crate) struct RawConfig {
-    dirs_first: bool,
-    show_hidden: bool,
-    show_symlink: bool,
-    show_system: bool,
-    case_insensitive: bool,
-    always_show: Vec<String>,
-    #[serde(default = "default_find_results")]
-    max_find_results: usize,
-    move_to_trash: bool,
+    general: General,
     display: Display,
     theme: Theme,
     editor: Editor,
@@ -43,14 +33,7 @@ pub(crate) struct RawConfig {
 impl Default for RawConfig {
     fn default() -> Self {
         RawConfig {
-            dirs_first: true,
-            show_hidden: true,
-            show_symlink: true,
-            show_system: false,
-            case_insensitive: true,
-            always_show: Vec::new(),
-            max_find_results: default_find_results(),
-            move_to_trash: true,
+            general: General::default(),
             display: Display::default(),
             theme: Theme::default(),
             editor: Editor::default(),
@@ -63,14 +46,7 @@ impl Default for RawConfig {
 /// This struct holds the processed configuration options used by runa.
 #[derive(Debug)]
 pub(crate) struct Config {
-    dirs_first: bool,
-    show_hidden: bool,
-    show_symlink: bool,
-    show_system: bool,
-    case_insensitive: bool,
-    always_show: Arc<HashSet<OsString>>,
-    max_find_results: usize,
-    move_to_trash: bool,
+    general: InternalGeneral,
     display: Display,
     theme: Theme,
     editor: Editor,
@@ -82,19 +58,7 @@ pub(crate) struct Config {
 impl From<RawConfig> for Config {
     fn from(raw: RawConfig) -> Self {
         Self {
-            dirs_first: raw.dirs_first,
-            show_hidden: raw.show_hidden,
-            show_symlink: raw.show_symlink,
-            show_system: raw.show_system,
-            case_insensitive: raw.case_insensitive,
-            always_show: Arc::new(
-                raw.always_show
-                    .into_iter()
-                    .map(OsString::from)
-                    .collect::<HashSet<_>>(),
-            ),
-            max_find_results: clamp_find_results(raw.max_find_results),
-            move_to_trash: raw.move_to_trash,
+            general: InternalGeneral::from(raw.general),
             display: raw.display,
             theme: raw.theme,
             editor: raw.editor,
@@ -138,43 +102,8 @@ impl Config {
     // Getters
 
     #[inline]
-    pub(crate) fn dirs_first(&self) -> bool {
-        self.dirs_first
-    }
-
-    #[inline]
-    pub(crate) fn show_hidden(&self) -> bool {
-        self.show_hidden
-    }
-
-    #[inline]
-    pub(crate) fn show_symlink(&self) -> bool {
-        self.show_symlink
-    }
-
-    #[inline]
-    pub(crate) fn show_system(&self) -> bool {
-        self.show_system
-    }
-
-    #[inline]
-    pub(crate) fn case_insensitive(&self) -> bool {
-        self.case_insensitive
-    }
-
-    #[inline]
-    pub(crate) fn always_show(&self) -> &Arc<HashSet<OsString>> {
-        &self.always_show
-    }
-
-    #[inline]
-    pub(crate) fn max_find_results(&self) -> usize {
-        self.max_find_results
-    }
-
-    #[inline]
-    pub(crate) fn move_to_trash(&self) -> bool {
-        self.move_to_trash
+    pub(crate) fn general(&self) -> &InternalGeneral {
+        &self.general
     }
 
     #[inline]
@@ -241,6 +170,7 @@ impl Config {
 # Use hex codes (eg. "#333333") or terminal colors ("cyan")
 
 # General behavior
+[general]
 dirs_first = true
 show_hidden = true
 # show_symlink = true
@@ -266,6 +196,7 @@ preview_underline = true
 # scroll_padding = 5
 # toggle_marker_jump = false
 # instant_preview = false
+# entry_count = "footer"
 
 [display.preview_options]
 method = "internal"
@@ -291,7 +222,6 @@ method = "internal"
 name = "default"
 symlink = "default"
 selection_icon = ""
-            show_symlink: self.config.show_symlink(),
 
 # [theme.selection]
 # fg = "default"
@@ -389,12 +319,13 @@ selection_icon = ""
 # find = ["s"]
 # clear_markers = ["Ctrl+c"]
 # clear_filter = ["Ctrl+f"]
-# alternate_delete = ["Ctrl+d]
+# alternate_delete = ["Ctrl+d"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
 # Only the essentials. The rest uses internal defaults.
 
+[general]
 dirs_first = true
 show_hidden = true
 
@@ -431,23 +362,11 @@ accent.fg = "default"
 impl Default for Config {
     fn default() -> Self {
         Config {
-            dirs_first: true,
-            show_hidden: true,
-            show_symlink: true,
-            show_system: false,
-            case_insensitive: true,
-            always_show: Arc::new(HashSet::new()),
-            max_find_results: DEFAULT_FIND_RESULTS,
-            move_to_trash: true,
+            general: InternalGeneral::from(General::default()),
             display: Display::default(),
             theme: Theme::default(),
             editor: Editor::default(),
             keys: Keys::default(),
         }
     }
-}
-
-/// Helper function for default max_find_results
-fn default_find_results() -> usize {
-    DEFAULT_FIND_RESULTS
 }

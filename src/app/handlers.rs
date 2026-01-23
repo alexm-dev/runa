@@ -191,11 +191,11 @@ impl<'a> AppState<'a> {
         match action {
             FileAction::Open => return self.handle_open_file(),
             FileAction::Delete => {
-                let is_trash = self.config.move_to_trash();
+                let is_trash = self.config.general().move_to_trash();
                 self.prompt_delete(is_trash);
             }
             FileAction::AlternateDelete => {
-                let is_trash = !self.config.move_to_trash();
+                let is_trash = !self.config.general().move_to_trash();
                 self.prompt_delete(is_trash);
             }
             FileAction::Copy => {
@@ -537,7 +537,7 @@ impl<'a> AppState<'a> {
         {
             *is_trash
         } else {
-            self.config.move_to_trash()
+            self.config.general().move_to_trash()
         };
 
         let fileop_tx = self.workers.fileop_tx();
@@ -675,7 +675,8 @@ impl<'a> AppState<'a> {
             (self.nav.current_dir(), expanded.as_str())
         };
 
-        let suggestions = complete_dirs_with_fd(base_dir, prefix).unwrap_or_default();
+        let show_hidden = self.config.general().show_hidden();
+        let suggestions = complete_dirs_with_fd(base_dir, prefix, show_hidden).unwrap_or_default();
 
         if let Some(suggestion) = suggestions.first() {
             let completed = suggestion.to_string();

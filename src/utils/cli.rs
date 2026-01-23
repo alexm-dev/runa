@@ -129,8 +129,10 @@ runa - Full Configuration Guide (runa.toml)
 =========================
  General Settings
 =========================
+[general]
   dirs_first                 Sort directories before files [default: true]
   show_hidden                Show hidden files (dotfiles)
+  show_symlink               Show symlinks
   show_system                Show system/protected files (mainly Windows)
   case_insensitive           Ignore case sensitivity in search/sort [default: true]
   always_show                Hidden entries always shown, e.g. [".config", "Downloads"]
@@ -156,6 +158,7 @@ runa - Full Configuration Guide (runa.toml)
   scroll_padding             Reserved rows when scrolling
   toggle_marker_jump         Toggle marker jumping to first entry
   instant_preview            Toggle instant previews on every selection change
+  entry_count                "footer", "header" or "none" to disable the entry count
 
 [display.layout]
   parent                     Width % for parent pane

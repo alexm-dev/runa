@@ -123,6 +123,7 @@ pub(crate) fn find(
     out: &mut Vec<FindResult>,
     cancel: Arc<AtomicBool>,
     max_results: usize,
+    show_hidden: bool,
 ) -> io::Result<()> {
     out.clear();
     if query.is_empty() {
@@ -139,9 +140,11 @@ pub(crate) fn find(
         .arg("--type")
         .arg("f")
         .arg("--type")
-        .arg("d")
-        .arg("--hidden");
+        .arg("d");
 
+    if show_hidden {
+        cmd.arg("--hidden");
+    }
     for excl in EXCLUDES {
         cmd.arg("--exclude").arg(excl);
     }
@@ -241,18 +244,17 @@ pub(crate) fn preview_bat(
 pub(crate) fn complete_dirs_with_fd(
     base_dir: &Path,
     prefix: &str,
+    show_hidden: bool,
 ) -> Result<Vec<String>, std::io::Error> {
     let fd_bin = fd_binary()?;
 
-    let output = Command::new(fd_bin)
-        .arg("--type")
-        .arg("d")
-        .arg("--max-depth")
-        .arg("1")
-        .arg("--hidden")
-        .arg(prefix)
-        .arg(base_dir)
-        .output()?;
+    let mut cmd = Command::new(fd_bin);
+    cmd.arg("--type").arg("d").arg("--max-depth").arg("1");
+    if show_hidden {
+        cmd.arg("--hidden");
+    }
+    cmd.arg(prefix).arg(base_dir);
+    let output = cmd.output()?;
 
     if !output.status.success() {
         return Err(std::io::Error::other(format!(
@@ -318,7 +320,7 @@ mod tests {
         std::fs::File::create(dir.path().join("other.txt"))?;
         let cancel = Arc::new(AtomicBool::new(false));
         let mut out = Vec::new();
-        find(dir.path(), "crab", &mut out, cancel, 11)?;
+        find(dir.path(), "crab", &mut out, cancel, 11, false)?;
         let candidate = out
             .iter()
             .find(|r| r.path().file_name().unwrap() == "crab.txt");
@@ -350,7 +352,7 @@ mod tests {
         fs::File::create(dir.path().join("something.txt"))?;
         let cancel = Arc::new(AtomicBool::new(false));
         let mut out = Vec::new();
-        find(dir.path(), "", &mut out, cancel, 10)?;
+        find(dir.path(), "", &mut out, cancel, 10, false)?;
         assert!(out.is_empty());
         Ok(())
     }
@@ -364,7 +366,7 @@ mod tests {
         std::fs::File::create(subdir.join("crabby.rs"))?;
         let cancel = Arc::new(AtomicBool::new(false));
         let mut out = Vec::new();
-        find(dir.path(), "crabby", &mut out, cancel, 10)?;
+        find(dir.path(), "crabby", &mut out, cancel, 10, false)?;
         let candidate = out
             .iter()
             .find(|r| r.path().file_name().unwrap() == "crabby.rs");
@@ -445,7 +447,7 @@ mod tests {
 
         std::fs::write(base_path.join("not_a_dir.txt"), "hello")?;
 
-        let results = complete_dirs_with_fd(base_path, "p")?;
+        let results = complete_dirs_with_fd(base_path, "p", true)?;
 
         assert!(
             results.iter().any(|r| r.contains("photos")),
@@ -460,7 +462,7 @@ mod tests {
             "Should not find files"
         );
 
-        let all_results = complete_dirs_with_fd(base_path, "")?;
+        let all_results = complete_dirs_with_fd(base_path, "", true)?;
         assert!(all_results.len() >= 2);
 
         Ok(())
@@ -473,7 +475,7 @@ mod tests {
         let sandbox = tempdir()?;
         let non_existent = sandbox.path().join("ghost_zone");
 
-        let result = complete_dirs_with_fd(&non_existent, "");
+        let result = complete_dirs_with_fd(&non_existent, "", true);
         assert!(result.is_err(), "Expected error for non-existent path");
 
         Ok(())

@@ -127,6 +127,7 @@ pub(crate) enum WorkerTask {
         query: String,
         max_results: usize,
         cancel: Arc<AtomicBool>,
+        show_hidden: bool,
         request_id: u64,
     },
 }
@@ -285,8 +286,9 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                 mut base_dir,
                 mut query,
                 mut max_results,
-                mut request_id,
                 mut cancel,
+                mut show_hidden,
+                mut request_id,
             } = task
             else {
                 continue;
@@ -297,15 +299,17 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                     base_dir: base,
                     query: q,
                     max_results: max,
-                    request_id: id,
                     cancel: c,
+                    show_hidden: sh,
+                    request_id: id,
                 } = next
                 {
                     base_dir = base;
                     query = q;
                     max_results = max;
-                    request_id = id;
                     cancel = c;
+                    show_hidden = sh;
+                    request_id = id;
                 }
             }
 
@@ -316,6 +320,7 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                 &mut results,
                 Arc::clone(&cancel),
                 max_results,
+                show_hidden,
             );
             if results.len() > max_results {
                 results.truncate(max_results);
@@ -632,6 +637,7 @@ mod tests {
             query: "crab".to_string(),
             max_results: 10,
             cancel: Arc::new(AtomicBool::new(false)),
+            show_hidden: false,
             request_id: req_id,
         })?;
 
@@ -699,12 +705,12 @@ mod tests {
         std::fs::File::create(temp.path().join("crab.txt"))?;
 
         let workers = Workers::spawn();
-        let cancel = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         workers.find_tx().send(WorkerTask::FindRecursive {
             base_dir: temp.path().to_path_buf(),
             query: "crab".to_string(),
             max_results: 5,
-            cancel: cancel.clone(),
+            cancel: Arc::new(AtomicBool::new(false)),
+            show_hidden: false,
             request_id: 2,
         })?;
 

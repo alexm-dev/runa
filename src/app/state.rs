@@ -359,12 +359,12 @@ impl<'a> AppState<'a> {
         let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
-            dirs_first: self.config.dirs_first(),
-            show_hidden: self.config.show_hidden(),
-            show_symlink: self.config.show_symlink(),
-            show_system: self.config.show_system(),
-            case_insensitive: self.config.case_insensitive(),
-            always_show: Arc::clone(self.config.always_show()),
+            dirs_first: self.config.general().dirs_first(),
+            show_hidden: self.config.general().show_hidden(),
+            show_symlink: self.config.general().show_symlink(),
+            show_system: self.config.general().show_system(),
+            case_insensitive: self.config.general().case_insensitive(),
+            always_show: Arc::clone(self.config.general().always_show()),
             request_id,
         });
     }
@@ -386,12 +386,12 @@ impl<'a> AppState<'a> {
                 let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
                     path: worker_path,
                     focus: None,
-                    dirs_first: self.config.dirs_first(),
-                    show_hidden: self.config.show_hidden(),
-                    show_symlink: self.config.show_symlink(),
-                    show_system: self.config.show_system(),
-                    case_insensitive: self.config.case_insensitive(),
-                    always_show: Arc::clone(self.config.always_show()),
+                    dirs_first: self.config.general().dirs_first(),
+                    show_hidden: self.config.general().show_hidden(),
+                    show_symlink: self.config.general().show_symlink(),
+                    show_system: self.config.general().show_system(),
+                    case_insensitive: self.config.general().case_insensitive(),
+                    always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
                 });
             } else {
@@ -428,12 +428,12 @@ impl<'a> AppState<'a> {
                 let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
                     path: parent_path_buf,
                     focus: None,
-                    dirs_first: self.config.dirs_first(),
-                    show_hidden: self.config.show_hidden(),
-                    show_symlink: self.config.show_symlink(),
-                    show_system: self.config.show_system(),
-                    case_insensitive: self.config.case_insensitive(),
-                    always_show: Arc::clone(self.config.always_show()),
+                    dirs_first: self.config.general().dirs_first(),
+                    show_hidden: self.config.general().show_hidden(),
+                    show_symlink: self.config.general().show_symlink(),
+                    show_system: self.config.general().show_system(),
+                    case_insensitive: self.config.general().case_insensitive(),
+                    always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
                 });
             }
@@ -450,14 +450,17 @@ impl<'a> AppState<'a> {
         let request_id = self.actions.prepare_new_find_request();
         let cancel_token = Arc::new(AtomicBool::new(false));
 
+        let show_hidden = self.config.general().show_hidden();
+
         self.actions
             .set_cancel_find_token(Arc::clone(&cancel_token));
 
         let _ = self.workers.find_tx().send(WorkerTask::FindRecursive {
             base_dir: self.nav.current_dir().to_path_buf(),
             query,
-            max_results: self.config().max_find_results(),
+            max_results: self.config().general().max_find_results(),
             request_id,
+            show_hidden,
             cancel: cancel_token,
         });
     }
