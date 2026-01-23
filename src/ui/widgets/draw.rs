@@ -260,10 +260,15 @@ pub(crate) fn draw_status_line(frame: &mut Frame, app: &AppState) {
 
     if app.config().display().entry_count() == EntryCountPosition::Header {
         let total = app.nav().shown_entries_len();
-        if total > 0
-            && let Some(idx) = app.visible_selected()
-        {
-            parts.push(format!("{}/{}", idx + 1, total));
+        if total == 0 {
+            parts.push("0/0".to_string());
+        } else {
+            let idx_text = app
+                .visible_selected()
+                .map(|idx| (idx + 1).to_string())
+                .unwrap_or_else(|| "0".to_string());
+
+            parts.push(format!("{}/{}", idx_text, total));
         }
     }
 
@@ -289,28 +294,31 @@ pub(crate) fn draw_footer_line(frame: &mut Frame, app: &AppState) {
         return;
     }
 
-    let area = frame.area();
     let total = app.nav().shown_entries_len();
-    if total == 0 {
-        return;
-    }
-    if let Some(idx) = app.visible_selected() {
-        let style = app.config().theme().status_line_style();
 
-        let msg = format!("{}/{}", idx + 1, total);
+    let msg = if total == 0 {
+        "0/0".to_string()
+    } else {
+        let idx = app.visible_selected().map(|i| i + 1).unwrap_or(0);
+        format!("{}/{}", idx, total)
+    };
 
-        let rect = Rect {
-            x: area.x,
-            y: area.y + area.height - 1,
-            width: area.width,
-            height: 1,
-        };
-        let span = Span::styled(msg, style);
-        let line = Line::from(span);
-        let para = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
+    let area = frame.area();
+    let rect = Rect {
+        x: area.x,
+        y: area.y + area.height - 1,
+        width: area.width,
+        height: 1,
+    };
 
-        frame.render_widget(para, rect);
-    }
+    let style = app.config().theme().status_line_style();
+    let para = Paragraph::new(Line::from(Span::styled(msg, style)))
+        .alignment(Alignment::Right)
+        .block(
+            ratatui::widgets::Block::default().padding(ratatui::widgets::Padding::horizontal(1)),
+        );
+
+    frame.render_widget(para, rect);
 }
 
 /// Helper function to calculate cursor offset for cursor moving
