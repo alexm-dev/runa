@@ -32,6 +32,7 @@ impl FileEntry {
     pub(super) const IS_HIDDEN: u8 = 1 << 1;
     pub(super) const IS_SYSTEM: u8 = 1 << 2;
     pub(super) const IS_SYMLINK: u8 = 1 << 3;
+    pub(super) const IS_BROKEN_SYM: u8 = 1 << 4;
 
     pub(crate) fn new(name: OsString, flags: u8, symlink: Option<PathBuf>) -> Self {
         FileEntry {
@@ -71,6 +72,11 @@ impl FileEntry {
     #[inline]
     pub(crate) fn is_symlink(&self) -> bool {
         self.flags & Self::IS_SYMLINK != 0
+    }
+
+    #[inline]
+    pub(crate) fn is_broken_sym(&self) -> bool {
+        self.flags & Self::IS_BROKEN_SYM != 0
     }
 }
 
@@ -184,9 +190,14 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
             use std::os::unix::ffi::OsStrExt;
 
             if (flags & FileEntry::IS_SYMLINK) != 0 {
-                if let Ok(md) = fs::metadata(entry.path()) {
-                    if md.is_dir() {
-                        flags |= FileEntry::IS_DIR;
+                match fs::metadata(entry.path()) {
+                    Ok(md) => {
+                        if md.is_dir() {
+                            flags |= FileEntry::IS_DIR;
+                        }
+                    }
+                    Err(_) => {
+                        flags |= FileEntry::IS_BROKEN;
                     }
                 }
             }
@@ -208,13 +219,21 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                 if attrs & 0x4 != 0 {
                     flags |= FileEntry::IS_SYSTEM;
                 }
-                if attrs & 0x10 != 0 {
+
+                if (flags & FileEntry::IS_SYMLINK) != 0 {
+                    match fs::metadata(entry.path()) {
+                        Ok(target_md) => {
+                            if target_md.is_dir() {
+                                flags |= FileEntry::IS_DIR;
+                            }
+                        }
+                        Err(_) => {
+                            flags |= FileEntry::IS_BROKEN_SYM;
+                        }
+                    }
+                } else if attrs & 0x10 != 0 {
                     flags |= FileEntry::IS_DIR;
                 }
-            }
-
-            if flags & FileEntry::IS_HIDDEN == 0 && name.to_string_lossy().starts_with('.') {
-                flags |= FileEntry::IS_HIDDEN;
             }
         }
         let symlink = if (flags & FileEntry::IS_SYMLINK) != 0 {

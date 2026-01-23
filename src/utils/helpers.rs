@@ -56,6 +56,12 @@ pub(crate) fn parse_color(s: &str) -> Color {
         "black" => Color::Black,
         "gray" => Color::Gray,
         "darkgray" => Color::DarkGray,
+        "lightred" => Color::LightRed,
+        "lightgreen" => Color::LightGreen,
+        "lightyellow" => Color::LightYellow,
+        "lightblue" => Color::LightBlue,
+        "lightmagenta" => Color::LightMagenta,
+        "lightcyan" => Color::LightCyan,
         _ => {
             if let Some(color) = s.strip_prefix('#') {
                 match color.len() {

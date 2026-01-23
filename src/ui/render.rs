@@ -40,7 +40,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
     let accent_style = theme_cfg.accent_style();
     let selection_style = theme_cfg.selection_style();
 
-    let symlink_style = theme_cfg.symlink();
+    let symlink_theme = theme_cfg.symlink_theme();
 
     let padding_str = display_cfg.padding_str();
     let border_type = display_cfg.border_shape().as_border_type();
@@ -79,7 +79,9 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             item: theme_cfg.parent_item_style(),
             dir: theme_cfg.directory_style(),
             selection: theme_cfg.parent_selection_style(),
-            symlink: symlink_style,
+            symlink_file: symlink_theme.file(),
+            symlink_dir: symlink_theme.directory(),
+            symlink_target: symlink_theme.target(),
         };
 
         panes::draw_parent(
@@ -124,7 +126,9 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             item: theme_cfg.entry_style(),
             dir: theme_cfg.directory_style(),
             selection: selection_style,
-            symlink: symlink_style,
+            symlink_file: symlink_theme.file(),
+            symlink_dir: symlink_theme.directory(),
+            symlink_target: symlink_theme.target(),
         };
 
         panes::draw_main(
@@ -181,7 +185,9 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             item: theme_cfg.preview_item_style(),
             dir: theme_cfg.directory_style(),
             selection: theme_cfg.preview_selection_style(),
-            symlink: symlink_style,
+            symlink_file: symlink_theme.file(),
+            symlink_dir: symlink_theme.directory(),
+            symlink_target: symlink_theme.target(),
         };
 
         panes::draw_preview(

@@ -42,8 +42,7 @@ pub(crate) struct Theme {
     preview: PaneTheme,
     path: ColorPair,
     status_line: ColorPair,
-    #[serde(deserialize_with = "deserialize_color_field")]
-    symlink: Color,
+    symlink: SymlinkTheme,
     marker: MarkerTheme,
     widget: WidgetTheme,
     /// info does not honor the .size field from widget.
@@ -81,7 +80,7 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             status_line: ColorPair::default(),
-            symlink: Color::Magenta,
+            symlink: SymlinkTheme::default(),
             marker: MarkerTheme::default(),
             widget: WidgetTheme::default(),
             info: WidgetTheme {
@@ -157,8 +156,14 @@ impl Theme {
             .style_or(&Theme::internal_defaults().status_line)
     }
 
-    pub(crate) fn symlink(&self) -> Color {
-        self.symlink.or(Theme::internal_defaults().symlink)
+    /// Symlink theme getter to use SymlinkTheme fields directly
+    pub(crate) fn symlink_theme(&self) -> SymlinkTheme {
+        let defaults = Theme::internal_defaults().symlink;
+        SymlinkTheme {
+            directory: self.symlink.directory.or(defaults.directory),
+            file: self.symlink.file.or(defaults.file),
+            target: self.symlink.target.or(defaults.target),
+        }
     }
 
     // Pane-specific style getters
@@ -588,6 +593,41 @@ impl Default for WidgetTheme {
     }
 }
 
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(default)]
+pub(crate) struct SymlinkTheme {
+    #[serde(deserialize_with = "deserialize_color_field")]
+    directory: Color,
+    #[serde(deserialize_with = "deserialize_color_field")]
+    file: Color,
+    #[serde(deserialize_with = "deserialize_color_field")]
+    target: Color,
+}
+
+impl Default for SymlinkTheme {
+    fn default() -> Self {
+        Self {
+            directory: Color::Cyan,
+            file: Color::Indexed(111),
+            target: Color::Magenta,
+        }
+    }
+}
+
+impl SymlinkTheme {
+    pub(crate) fn directory(&self) -> Color {
+        self.directory
+    }
+
+    pub(crate) fn file(&self) -> Color {
+        self.file
+    }
+
+    pub(crate) fn target(&self) -> Color {
+        self.target
+    }
+}
+
 /// Trait to provide a fallback color if the original color is Reset.
 /// Is used when a field is Color::Reset to fallback to another color.
 /// Useful for when a field is ratatui::style::Color instead of ColorPair.
@@ -667,7 +707,11 @@ pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
             fg: Color::Reset,
             bg: base_bg,
         },
-        symlink: secondary,
+        symlink: SymlinkTheme {
+            directory: secondary,
+            file: secondary,
+            target: Color::Magenta,
+        },
         marker: MarkerTheme {
             icon: icon.to_string(),
             color: ColorPair {
