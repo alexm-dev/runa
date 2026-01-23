@@ -6,11 +6,11 @@ All the changes made to runa are documented here.
 
 ### Added
 - `show_symlink`: Symlinks can be toggled now.
-- `entry_count`: Count of the entries in the current directory. Choose between: `"footer", "header"` or `"none`, to choose where to show the entry count or to disable it.
+- `entry_count`: Count of the entries in the current directory. Choose between: `"footer"`, `"header"` or `"none"`, to choose where to show the entry count or to disable it.
 
 ### Breaking Changes
 - `[general]` section in runa.toml: Wrapped the general settings like `dirs_first`, `show_hidden`, etc., to `[general]`.
-- If you had any of these loose settings, you will need to put `"[general]"` above them now or runa will ignore them.
+- If you had any of these settings, you will need to put `"[general]"` above them now or runa will ignore them.
 - Before:
 
     ```toml
@@ -38,6 +38,7 @@ Note: Internal preview reads only pane-visible lines, so RAM usage remains minim
 - Performance: `filter_entries` optimized to instead check ASCII stack buffer AND fallback to unicode if file entries are non ascii.
 - Performance: `display_path` is now cached in `NavState` to not create a new path string everytime.
 - Performance: Removed `readable_path` to instead use `clean_display_path` for a optimized path string.
+- Performance: Cache symlink status in FileEntry to avoid recalculating symlink flags during UI rendering.
 
 
 ---
