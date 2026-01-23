@@ -7,6 +7,7 @@
 
 use crate::app::AppState;
 use crate::app::actions::{ActionMode, InputMode};
+use crate::config::display::EntryCountPosition;
 use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
 use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
@@ -257,6 +258,15 @@ pub(crate) fn draw_status_line(frame: &mut Frame, app: &AppState) {
         parts.push(format!("Filter: \"{filter}\""));
     }
 
+    if app.config().display().entry_count() == EntryCountPosition::Header {
+        let total = app.nav().shown_entries_len();
+        if total > 0
+            && let Some(idx) = app.visible_selected()
+        {
+            parts.push(format!("{}/{}", idx + 1, total));
+        }
+    }
+
     let msg = parts.join(" | ");
     if !msg.is_empty() {
         let pad = 2;
@@ -271,6 +281,35 @@ pub(crate) fn draw_status_line(frame: &mut Frame, app: &AppState) {
         let line = Line::from(Span::styled(msg, style));
         let paragraph = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
         frame.render_widget(paragraph, rect);
+    }
+}
+
+pub(crate) fn draw_footer_line(frame: &mut Frame, app: &AppState) {
+    if app.config().display().entry_count() != EntryCountPosition::Footer {
+        return;
+    }
+
+    let area = frame.area();
+    let total = app.nav().shown_entries_len();
+    if total == 0 {
+        return;
+    }
+    if let Some(idx) = app.visible_selected() {
+        let style = app.config().theme().status_line_style();
+
+        let msg = format!("{}/{}", idx + 1, total);
+
+        let rect = Rect {
+            x: area.x,
+            y: area.y + area.height - 1,
+            width: area.width,
+            height: 1,
+        };
+        let span = Span::styled(msg, style);
+        let line = Line::from(span);
+        let para = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
+
+        frame.render_widget(para, rect);
     }
 }
 
@@ -583,15 +622,21 @@ pub(crate) fn draw_message_overlay(
         title: Some(Span::styled(" Message ", widget.title_style_or_theme())),
     };
 
-    let dialog_layout = DialogLayout {
-        area,
-        position,
+    let mut dialog_rect = dialog_area(area, dialog_size, position);
+
+    if dialog_rect.y + dialog_rect.height >= area.y + area.height && dialog_rect.y > area.y {
+        dialog_rect.y -= 1;
+    }
+
+    let custom_layout = DialogLayout {
+        area: dialog_rect,
+        position: DialogPosition::BottomLeft,
         size: dialog_size,
     };
 
     draw_dialog(
         frame,
-        dialog_layout,
+        custom_layout,
         border_type,
         &dialog_style,
         text,

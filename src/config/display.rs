@@ -35,6 +35,7 @@ pub(crate) struct Display {
     scroll_padding: usize,
     toggle_marker_jump: bool,
     instant_preview: bool,
+    entry_count: EntryCountPosition,
     preview_options: PreviewOptions,
     layout: LayoutConfig,
     info: ShowInfoOptions,
@@ -138,6 +139,11 @@ impl Display {
     }
 
     #[inline]
+    pub(crate) fn entry_count(&self) -> EntryCountPosition {
+        self.entry_count
+    }
+
+    #[inline]
     pub(crate) fn preview_options(&self) -> &PreviewOptions {
         &self.preview_options
     }
@@ -184,6 +190,7 @@ impl Default for Display {
             scroll_padding: 5,
             toggle_marker_jump: false,
             instant_preview: false,
+            entry_count: EntryCountPosition::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
         }
@@ -215,6 +222,17 @@ impl LayoutConfig {
     fn preview_ratio(&self) -> u16 {
         self.preview
     }
+}
+
+/// Entry count position options
+/// This enum defines the possible positions for displaying the entry count
+#[derive(Deserialize, Debug, Default, Clone, Copy, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum EntryCountPosition {
+    #[default]
+    Footer,
+    Header,
+    None,
 }
 
 /// Options for showing file information in the info dialog
@@ -274,7 +292,7 @@ impl Default for ShowInfoOptions {
             file_type: false,
             size: true,
             modified: true,
-            perms: false,
+            perms: true,
             position: None,
         }
     }

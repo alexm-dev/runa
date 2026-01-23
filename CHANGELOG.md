@@ -4,7 +4,12 @@ All the changes made to runa are documented here.
 
 ## Unreleased
 
+### Added
+- `show_symlink`: Symlinks can be toggled now.
+- `entry_count`: Count of the entries in the current directory. Choose between: `"footer", "header"` or `"none`, to choose where to show the entry count or to disable it.
+
 ### Changed
+- Symlink sorting: Symlinks now are correctly sorted.
 - `bat` preview method: Made `wrap = false` to default.
 - `MAX_PREVIEW_SIZE`: Set the maximum file size for previews to 5gb.
 Note: Internal preview reads only pane-visible lines, so RAM usage remains minimal regardless of file size. The limit is a precaution against processing excessively large files.

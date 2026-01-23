@@ -214,6 +214,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
     }
 
     widgets::draw_status_line(frame, app);
+    widgets::draw_footer_line(frame, app);
     render_overlays(frame, app, accent_style);
 }
 
