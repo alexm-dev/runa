@@ -10,8 +10,8 @@ use crate::ui::panes;
 use crate::ui::widgets;
 use crate::{
     app::{
-        actions::{ActionMode, InputMode},
         AppState, LayoutMetrics,
+        actions::{ActionMode, InputMode},
     },
     ui::{
         overlays::Overlay,
@@ -19,11 +19,11 @@ use crate::{
     },
 };
 use ratatui::{
+    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
-    Frame,
 };
 
 /// Render function which renders the entire terminal UI for runa on each frame.
@@ -83,7 +83,6 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
         };
 
         panes::draw_parent(
-            parent_dir,
             frame,
             PaneContext {
                 area: chunks[pane_idx],
@@ -186,7 +185,6 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
         };
 
         panes::draw_preview(
-            preview_dir,
             frame,
             PaneContext {
                 area: chunks[pane_idx],
@@ -411,8 +409,8 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
 mod tests {
     use super::*;
 
-    use crate::config::load::RawConfig;
     use crate::Config;
+    use crate::config::load::RawConfig;
     use std::error;
 
     #[test]

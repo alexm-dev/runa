@@ -6,7 +6,7 @@
 //! Used internally by ui::render
 
 use crate::app::{AppState, PreviewData};
-use crate::core::{FileEntry, formatter::symlink_target_resolved};
+use crate::core::FileEntry;
 use crate::ui::icons::nerd_font_icon;
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
@@ -136,7 +136,6 @@ pub(crate) fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext)
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
         items.push(make_entry_row(
             entry,
-            Some(current_dir),
             is_selected,
             entry_style,
             &context,
@@ -170,7 +169,6 @@ pub(crate) fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext)
 ///
 /// Also applies underline/selection styles and manages cursor position
 pub(crate) fn draw_preview(
-    path: Option<&Path>,
     frame: &mut Frame,
     context: PaneContext,
     preview: &PreviewData,
@@ -217,7 +215,6 @@ pub(crate) fn draw_preview(
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
                 items.push(make_entry_row(
                     entry,
-                    path,
                     is_selected,
                     style,
                     &context,
@@ -248,7 +245,6 @@ pub(crate) fn draw_preview(
 
 /// Draws the parent directory of the current working directory.
 pub(crate) fn draw_parent(
-    path: Option<&Path>,
     frame: &mut Frame,
     context: PaneContext,
     entries: &[FileEntry],
@@ -266,7 +262,6 @@ pub(crate) fn draw_parent(
         let style = context.styles.get_style(entry.is_dir(), is_selected);
         items.push(make_entry_row(
             entry,
-            path,
             is_selected,
             style,
             &context,
@@ -382,7 +377,6 @@ fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneM
 /// * `ListItem` - The constructed ListItem for the file entry.
 fn make_entry_row<'a>(
     entry: &'a FileEntry,
-    current_dir: Option<&Path>,
     is_selected: bool,
     style: Style,
     context: &PaneContext,
@@ -466,8 +460,7 @@ fn make_entry_row<'a>(
     }
 
     if entry.is_symlink()
-        && let Some(dir) = current_dir
-        && let Some(target) = symlink_target_resolved(entry, dir)
+        && let Some(target) = entry.symlink()
     {
         let target_str = target.to_string_lossy();
         let mut sym_text = String::with_capacity(4 + target_str.len());

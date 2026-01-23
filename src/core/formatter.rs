@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::SystemTime;
 
@@ -222,30 +222,6 @@ pub(crate) fn format_display_path(path: &Path) -> String {
     let path_short = shorten_home_path(path);
     let path_norm = normalize_relative_path(Path::new(&path_short));
     clean_display_path(&path_norm).to_string()
-}
-
-/// Returns Some(resolved_target) if entry is a symlink and can be resolved, otherwise None.
-pub(crate) fn symlink_target_resolved(
-    entry: &crate::core::FileEntry,
-    parent_dir: &Path,
-) -> Option<PathBuf> {
-    if !entry.is_symlink() {
-        return None;
-    }
-    let entry_path = parent_dir.join(entry.name());
-    if let Ok(target) = std::fs::read_link(&entry_path) {
-        let resolved = if target.is_absolute() {
-            target
-        } else {
-            entry_path
-                .parent()
-                .unwrap_or_else(|| Path::new(""))
-                .join(target)
-        };
-        Some(resolved)
-    } else {
-        None
-    }
 }
 
 /// Calculating the pane widht and clean the output to the widht of the pane
