@@ -28,10 +28,10 @@ pub(crate) struct FileEntry {
 impl FileEntry {
     // Flag bit definitions
     // These are used to set and check attributes in the flags field
-    pub(crate) const IS_DIR: u8 = 1 << 0;
-    pub(crate) const IS_HIDDEN: u8 = 1 << 1;
-    pub(crate) const IS_SYSTEM: u8 = 1 << 2;
-    pub(crate) const IS_SYMLINK: u8 = 1 << 3;
+    pub(super) const IS_DIR: u8 = 1 << 0;
+    pub(super) const IS_HIDDEN: u8 = 1 << 1;
+    pub(super) const IS_SYSTEM: u8 = 1 << 2;
+    pub(super) const IS_SYMLINK: u8 = 1 << 3;
 
     pub(crate) fn new(name: OsString, flags: u8, symlink: Option<PathBuf>) -> Self {
         FileEntry {

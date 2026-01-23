@@ -150,6 +150,9 @@ pub(crate) fn get_unused_path(path: &Path) -> PathBuf {
     }
 }
 
+/// Helper to clean path strings by removing applied prefixes applied by caonicalized paths.
+/// Mostly useful for windows.
+/// On unix, it justs passes the path string back.
 pub(crate) fn clean_display_path(path: &str) -> &str {
     #[cfg(windows)]
     {
@@ -228,10 +231,12 @@ pub(crate) fn flatten_separators(separator: &str) -> String {
     buf
 }
 
+/// Expands the home path (~ to `home/<user>/`) and returns the string of the path.
 pub(crate) fn expand_home_path(input: &str) -> String {
     expand_home_path_buf(input).to_string_lossy().to_string()
 }
 
+/// Expands the home path and returns the PathBuf of the home path.
 pub(crate) fn expand_home_path_buf(input: &str) -> PathBuf {
     let home = get_home();
 
@@ -263,6 +268,8 @@ pub(crate) fn expand_home_path_buf(input: &str) -> PathBuf {
     PathBuf::from(input)
 }
 
+/// Hardened directory check to make sure passed path is actually a directory and not
+/// innaccessible.
 pub(crate) fn is_hardened_directory(path: &Path) -> bool {
     if !path.exists() || !path.is_dir() {
         return false;
@@ -279,6 +286,12 @@ pub(crate) fn is_hardened_directory(path: &Path) -> bool {
     true
 }
 
+/// Helper to resolve the initial loaded for path string.
+/// Checks if the path arg is a file and then loads the parent directory of that file.
+/// Used by cli path args.
+/// # Example
+/// `rn ~/test.txt`
+/// -> runa started at `~`
 pub(crate) fn resolve_initial_dir(path_arg: &str) -> PathBuf {
     let expaned = expand_home_path_buf(path_arg);
     if expaned.is_file() {
@@ -347,6 +360,9 @@ pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
     Ok(())
 }
 
+/// Calls f closure with a lowercase (ASCII) version of a entry name if any are uppercase ASCII.
+/// Using a stack buffer for names <= 64 bytes or with unchanged name otherwise.
+/// Falls through for Unicode and long strings with no heap allocations.
 #[inline(always)]
 pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R {
     const BUFFER_SIZE: usize = 64;
