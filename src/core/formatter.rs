@@ -77,7 +77,7 @@ impl Formatter {
             return Self::PRIO_DIR;
         }
 
-        if (entry.flags() & FileEntry::IS_DIR) != 0 {
+        if (entry.flags() & (FileEntry::IS_DIR | FileEntry::IS_SYMLINK)) != 0 {
             Self::PRIO_DIR
         } else {
             Self::PRIO_FILE
