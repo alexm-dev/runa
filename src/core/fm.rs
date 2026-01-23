@@ -190,13 +190,15 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                 if attrs & 0x4 != 0 {
                     flags |= FileEntry::IS_SYSTEM;
                 }
+                if attrs & 0x10 != 0 {
+                    flags |= FileEntry::IS_DIR;
+                }
             }
 
             if flags & FileEntry::IS_HIDDEN == 0 && name.to_string_lossy().starts_with('.') {
                 flags |= FileEntry::IS_HIDDEN;
             }
         }
-
         entries.push(FileEntry::new(name, flags));
     }
     Ok(entries)
