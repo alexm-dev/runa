@@ -220,8 +220,8 @@ method = "internal"
 
 [theme]
 name = "default"
-symlink = "default"
 selection_icon = ""
+# exe_color = "default"
 
 # [theme.selection]
 # fg = "default"
@@ -264,6 +264,11 @@ selection_icon = ""
 # [theme.path]
 # fg = "magenta"
 # bg = "default"
+
+# [theme.symlink]
+# directory = "default"
+# file = "default"
+# target = "default"
 
 # [theme.marker]
 # icon = "*"

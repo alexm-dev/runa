@@ -178,6 +178,7 @@ runa - Full Configuration Guide (runa.toml)
 [theme]
   name                       Theme name, e.g. "gruvbox-dark"
   selection_icon             Symbol for selection (">" or " ")
+  exe_color                  Coloring for executables
 
 # Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"):
 [theme.selection]            Selection bar (fg, bg)
@@ -187,6 +188,7 @@ runa - Full Configuration Guide (runa.toml)
 [theme.separator]            Vertical separators (fg, bg)
 [theme.parent]               Parent pane text (fg, bg, selection_fg, selection_bg)
 [theme.preview]              Preview pane text (fg, bg, selection_fg, selection_bg)
+[theme.symlink]              Symlink coloring (directory, file, target)
 [theme.marker]               Multi-select marker (icon, fg, bg, clipboard)
 [theme.underline]            Preview underline (fg, bg)
 [theme.path]                 Path bar at the top (fg, bg)
@@ -246,6 +248,7 @@ runa - Full Configuration Guide (runa.toml)
 =========================
  Examples
 =========================
+[display]
 borders = "split"
 
 [display.layout]
