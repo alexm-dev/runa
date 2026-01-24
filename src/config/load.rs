@@ -181,7 +181,7 @@ case_insensitive = true
 # move_to_trash = true
 
 [display]
-# selection_marker = true
+# selection_marker = false
 # dir_marker = true
 borders = "unified"
 border_shape = "square"

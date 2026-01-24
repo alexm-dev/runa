@@ -231,7 +231,7 @@ name = "default"
 #   "dracula"
 #   "monokai"
 
-# The symbol for the current selection. Use "" or " " to disable.
+# The symbol for the current selection. Use "" or " " to disable or set [display] selection_marker to false.
 selection_icon = ">"
 
 # Set the colors of binaries/executables only on UNIX. 

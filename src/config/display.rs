@@ -170,7 +170,7 @@ impl Display {
 impl Default for Display {
     fn default() -> Self {
         Display {
-            selection_marker: true,
+            selection_marker: false,
             dir_marker: true,
             borders: BorderStyle::Unified,
             border_shape: BorderShape::Square,
