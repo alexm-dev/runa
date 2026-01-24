@@ -46,7 +46,7 @@
 - **Direct terminal rendering:** Uses [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
 - **Blazingly lightweight:** The `rn` binary is compact (typically 1.3–2 MB, depending on operating system and architecture).
-- **Minimal memory footprint**: Optimized to for low RAM usage.
+- **Minimal memory footprint**: Optimized for low RAM usage.
 
 </details>
 
