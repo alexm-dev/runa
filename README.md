@@ -182,7 +182,7 @@ You can explicitly set a custom config location by setting the environment varia
 export RUNA_CONFIG=/path/to/your/runa.toml
 ```
 
-You can generate a default config using the --init or --init-minimal flag:
+You can generate a default config using the --init or --init-full flag:
 
 ```bash
 rn --init
