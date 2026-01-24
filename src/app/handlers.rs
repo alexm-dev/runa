@@ -10,12 +10,14 @@ use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
 use crate::core::proc::complete_dirs_with_fd;
 use crate::ui::overlays::Overlay;
-use crate::utils::{clean_display_path, expand_home_path, normalize_relative_path, open_in_editor};
+use crate::utils::{
+    clean_display_path, expand_home_path, expand_home_path_buf, normalize_relative_path,
+    open_in_editor,
+};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
 
 use std::path::MAIN_SEPARATOR;
-use std::path::Path;
 use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
@@ -396,9 +398,9 @@ impl<'a> AppState<'a> {
             return;
         }
 
-        let input_path = Path::new(dest_dir.trim());
+        let input_path = expand_home_path_buf(dest_dir.trim());
         let resolved_path = if input_path.is_absolute() {
-            input_path.to_path_buf()
+            input_path
         } else {
             self.nav.current_dir().join(input_path)
         };
