@@ -6,11 +6,14 @@ All the changes made to runa are documented here.
 
 ### Added
 - `show_symlink`: Symlinks can be toggled now.
+- Symlink coloring: Added coloring for symlinks beyond just the symlink target coloring.
+- `exe_color`: Added coloring for executables/binaries on unix.
 - `entry_count`: Count of the entries in the current directory. Choose between: `"footer"`, `"header"` or `"none"`, to choose where to show the entry count or to disable it.
+- Symlink tracking: Added symlink logic to indicate if links are broken or not.
 
 ### Breaking Changes
 - `[general]` section in runa.toml: Wrapped the general settings like `dirs_first`, `show_hidden`, etc., to `[general]`.
-- If you had any of these settings, you will need to put `"[general]"` above them now or runa will ignore them.
+- If runa feels "reset" after the update, ensure your settings are under the new `[general]` header..
 - Before:
 
     ```toml
@@ -31,7 +34,7 @@ All the changes made to runa are documented here.
 ### Changed
 - Symlink sorting: Symlinks now are correctly sorted.
 - `bat` preview method: Made `wrap = false` to default.
-- `MAX_PREVIEW_SIZE`: Set the maximum file size for previews to 5gb.
+- `MAX_PREVIEW_SIZE`: Set the maximum file size for previews to 5gb.  
 Note: Internal preview reads only pane-visible lines, so RAM usage remains minimal regardless of file size. The limit is a precaution against processing excessively large files.
 
 ### Internal
