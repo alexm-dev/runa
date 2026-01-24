@@ -4,7 +4,7 @@ All the changes made to runa are documented here.
 
 ## Unreleased
 
-Improved symlink support, improvements to theming and performance optimizations.
+Improved symlink support, improvements to theming and performance optimizations.  
 **Note:** Some settings in your `runa.toml` config **must now be placed under a `[general]` section** (see Breaking Changes).
 
 ### Added
