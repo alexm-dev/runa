@@ -1,7 +1,7 @@
 # `runa - rn`
 
 <div align="center">
- 
+
 [![Build](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=flat-square&logo=github&label=Build)](https://github.com/alexm-dev/runa/actions/workflows/rust.yml)
 [![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=Release)](https://github.com/alexm-dev/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
@@ -39,13 +39,14 @@
 
 <details>
 
-<summary><strong>Why is runa fast?</strong></summary>
+<summary><strong>What makes runa fast?</strong></summary>
 
 - **Multi-threaded engine:** Spawns 4 dedicated worker threads (with `crossbeam_channel`) for I/O, preview, find, and file operations, so UI is never blocked.
 - **Essential-only Rust crates:** No external TUI frameworks or bloat.
 - **Direct terminal rendering:** Uses [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
-- **Small, native binary:** The `rn` binary is compact (typically 1.3–2 MB, depending on operating system and architecture).
+- **Blazingly lightweight:** The `rn` binary is compact (typically 1.3–2 MB, depending on operating system and architecture).
+- **Minimal memory footprint**: Optimized to for low RAM usage.
 
 </details>
 

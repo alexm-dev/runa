@@ -4,6 +4,9 @@ All the changes made to runa are documented here.
 
 ## Unreleased
 
+Improved symlink support, improvements to theming and performance optimizations.
+**Note:** Some settings in your `runa.toml` config **must now be placed under a `[general]` section** (see Breaking Changes).
+
 ### Added
 - `show_symlink`: Symlinks can be toggled now.
 - Symlink coloring: Added coloring for symlinks beyond just the symlink target coloring.
@@ -12,8 +15,8 @@ All the changes made to runa are documented here.
 - Symlink tracking: Added symlink logic to indicate if links are broken or not.
 
 ### Breaking Changes
-- `[general]` section in runa.toml: Wrapped the general settings like `dirs_first`, `show_hidden`, etc., to `[general]`.
-- If runa feels "reset" after the update, ensure your settings are under the new `[general]` header..
+- `[general]` section in runa.toml: Wrapped the general settings like `dirs_first`, `show_hidden`, etc., to `[general]`.  
+If runa feels "reset" after the update, ensure your settings are under the new `[general]` header..
 - Before:
 
     ```toml
