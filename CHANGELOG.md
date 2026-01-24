@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased
+## [0.5.7] - 2026-01-24
 
 Improved symlink support, improvements to theming and performance optimizations.  
 **Note:** Some settings in your `runa.toml` config **must now be placed under a `[general]` section** (see Breaking Changes).

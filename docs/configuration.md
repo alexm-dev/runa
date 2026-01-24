@@ -79,11 +79,15 @@ If you don't have a config file yet, you can generate one automatically:
 # ANY unused / default options can be removed from runa.toml.
 # Removed / unused options will default to the internal defaults as seen below.
 
+[general]
 # Sort directories before files
 dirs_first = true
 
 # Show hidden files (dotfiles)
-show_hidden = false
+show_hidden = true
+
+# Show symlinks and the targets
+show_symlink = true
 
 # Show hidden system files (mostly for Windows)
 show_system = false
@@ -152,6 +156,10 @@ toggle_marker_jump = false
 # Default = false which results in pending preview when holding down a navigation key.
 instant_preview = false
 
+# Set the position or disable the entry count for the current directory
+# Available options: "footer", "header" or "none" to disable
+entry_count = "footer"
+
 # Options for the preview method used by the preview pane.
 # Options: "internal" and "bat". For "bat" you will need to have `bat` installed otherwise it will fallback to internal.
 [display.previews_options]
@@ -169,7 +177,7 @@ theme = "default"
 # Toggle wrapping the bat output to the pane width.
 # If false, long lines stay on onle line and go off-screen
 # If true, all the lines are wrapped to the pane width
-wrap = "true"
+wrap = "false"
 
 [display.layout]
 # Display ratios for panes (will be scaled to 100%)
@@ -223,11 +231,12 @@ name = "default"
 #   "dracula"
 #   "monokai"
 
-# Coloring option for the symling indicator on the entries.
-symlink = "default"
-
 # The symbol for the current selection. Use "" or " " to disable.
 selection_icon = ">"
+
+# Set the colors of binaries/executables only on UNIX. 
+# By default LightGreen.
+exe_color = "default"
 
 # You can set each color field directly in [theme] instead.
 # There is now need to create each [theme] subsection for overriding and or creating custom themes.
@@ -235,6 +244,7 @@ selection_icon = ">"
 selection.fg = "#EEBBAA"
 directory.fg = "#7BA"
 widget.border.fg = "#555555"
+symlink.directory = "#8aA"
 # and so on
 ```
 
@@ -316,6 +326,16 @@ selection_mode = "on"
 # Overrides the central [theme.selection] for just the preview pane
 selection.fg = "default"
 selection.bg = "default"
+
+[theme.symlink]
+# Set the symlink colors for symlinks who are linked to directories
+directory = "default"
+
+# Set color for symlink who are linked to files
+file = "default"
+
+# Set the target path color of the symlink
+target = "default"
 
 [theme.marker]        # Multi-select marker
 icon = "*"
@@ -447,6 +467,7 @@ You may remove any binding to let it fall back to the default.
 ## EXAMPLES
 
 ```toml
+[display]
 borders = "split"
 
 [display.layout]
