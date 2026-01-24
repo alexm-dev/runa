@@ -615,7 +615,7 @@ impl Default for SymlinkTheme {
     fn default() -> Self {
         Self {
             directory: Color::Cyan,
-            file: Color::Indexed(111),
+            file: Color::Indexed(150),
             target: Color::Magenta,
         }
     }
