@@ -322,37 +322,60 @@ pub(crate) fn clamp_find_results(value: usize) -> usize {
     clamped
 }
 
-/// Recursively copies files and directories from `src` to `dest`.
+/// Recursively copies files and directories from `src` to `dest`, with safety checks.
 ///
-/// If `src` is a directory, it creates the directory at `dest` and copies all its contents recursively.
+/// Safety checks prevent copying a directory into its own subdirectory,
+/// Returns an Error if such an operation is attempted.
 pub(crate) fn copy_recursive(src: &Path, dest: &Path) -> io::Result<()> {
-    if dest.starts_with(src) {
+    let src_canon = src.canonicalize()?;
+    let dest_parent = dest
+        .parent()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Destination has no parent"))?;
+    let dest_parent_canon = dest_parent.canonicalize().map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Destination parent does not exist",
+        )
+    })?;
+    let file_name = dest.file_name().ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "Destination has no file name")
+    })?;
+    let dest_canon = dest_parent_canon.join(file_name);
+
+    if dest_canon.starts_with(&src_canon) {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             "Cannot copy a directory into its own subdirectory",
         ));
     }
 
+    copy_recursive_inner(src, dest)
+}
+
+/// Internal helper function to perform the actual recursive copy.
+/// Handles directories, files, and symbolic links appropriately.
+/// This function is called by [copy_recursive] after performing safety checks.
+fn copy_recursive_inner(src: &Path, dest: &Path) -> io::Result<()> {
     let meta = fs::symlink_metadata(src)?;
 
     if meta.is_dir() {
+        let entries = fs::read_dir(src)?;
         fs::create_dir_all(dest)?;
-        for entry in fs::read_dir(src)? {
+
+        for entry in entries {
             let entry = entry?;
-            copy_recursive(&entry.path(), &dest.join(entry.file_name()))?;
+            copy_recursive_inner(&entry.path(), &dest.join(entry.file_name()))?;
         }
     } else if meta.file_type().is_symlink() {
         let target = fs::read_link(src)?;
         #[cfg(windows)]
         {
-            if let Ok(target_meta) = fs::metadata(src) {
-                if target_meta.is_dir() {
-                    let _ = std::os::windows::fs::symlink_dir(target, dest);
-                } else {
-                    let _ = std::os::windows::fs::symlink_file(target, dest);
-                }
+            let is_dir_target = fs::metadata(src).map(|m| m.is_dir()).unwrap_or(false);
+
+            if is_dir_target {
+                std::os::windows::fs::symlink_dir(&target, dest)?;
             } else {
-                let _ = std::os::windows::fs::symlink_file(target, dest);
+                std::os::windows::fs::symlink_file(&target, dest)?;
             }
         }
         #[cfg(unix)]
@@ -558,6 +581,59 @@ mod tests {
 
         assert_eq!(result, absolute_input);
         assert!(result.is_absolute());
+
+        Ok(())
+    }
+
+    #[test]
+    fn copy_recursive_basic_file() -> Result<(), Box<dyn error::Error>> {
+        let src_dir = tempdir()?;
+        let dest_dir = tempdir()?;
+
+        let file_path = src_dir.path().join("test.txt");
+        fs::write(&file_path, "hello runa")?;
+
+        let dest_path = dest_dir.path().join("test_copied.txt");
+        copy_recursive(&file_path, &dest_path)?;
+
+        assert!(dest_path.exists());
+        assert_eq!(fs::read_to_string(dest_path)?, "hello runa");
+        Ok(())
+    }
+
+    #[test]
+    fn copy_recursive_directory_structure() -> Result<(), Box<dyn error::Error>> {
+        let src_dir = tempdir()?;
+        let dest_base = tempdir()?;
+        let dest_path = dest_base.path().join("backup");
+
+        let subdir = src_dir.path().join("subdir");
+        fs::create_dir(&subdir)?;
+        fs::write(subdir.join("inner.txt"), "nested data")?;
+
+        copy_recursive(src_dir.path(), &dest_path)?;
+
+        assert!(dest_path.join("subdir").is_dir());
+        assert_eq!(
+            fs::read_to_string(dest_path.join("subdir").join("inner.txt"))?,
+            "nested data"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn copy_recursive_prevention_subdir() -> Result<(), Box<dyn error::Error>> {
+        let src_dir = tempdir()?;
+        let src_path = src_dir.path();
+
+        let dest_path = src_path.join("backup");
+
+        let result = copy_recursive(src_path, &dest_path);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidInput);
+        assert!(err.to_string().contains("subdirectory"));
 
         Ok(())
     }
