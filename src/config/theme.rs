@@ -43,7 +43,7 @@ pub(crate) struct Theme {
     path: ColorPair,
     status_line: ColorPair,
     #[serde(deserialize_with = "deserialize_color_field")]
-    executable: Color,
+    exe_color: Color,
     symlink: SymlinkTheme,
     marker: MarkerTheme,
     widget: WidgetTheme,
@@ -82,7 +82,7 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             status_line: ColorPair::default(),
-            executable: Color::LightGreen,
+            exe_color: Color::LightGreen,
             symlink: SymlinkTheme::default(),
             marker: MarkerTheme::default(),
             widget: WidgetTheme::default(),
@@ -195,7 +195,7 @@ impl Theme {
     // Accessor methods for various theme properties
 
     pub(crate) fn exe_color(&self) -> Color {
-        self.executable
+        self.exe_color
     }
 
     #[inline]
