@@ -22,7 +22,7 @@
 <a href="docs/configuration.md#quick-start">Quick Start</a> • 
 <a href="docs/configuration.md#general-settings">General Settings</a> • 
 <a href="docs/configuration.md#theme-configuration">Theme Configuration</a> • 
-<a href="docs/configuration.md#key-bindings">Key Bindings</a> • 
+<a href="docs/configuration.md#key-bindings">Key Bindings</a>
 
 </div>
 
