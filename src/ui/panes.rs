@@ -31,6 +31,7 @@ pub(crate) struct PaneStyles {
     pub(crate) symlink_dir: Color,
     pub(crate) symlink_file: Color,
     pub(crate) symlink_target: Color,
+    pub(crate) executable_fg: Color,
 }
 
 impl PaneStyles {
@@ -449,6 +450,10 @@ fn make_entry_row<'a>(
         context.styles.symlink_file
     };
 
+    if entry.is_executable() && !entry.is_dir() && !entry.is_symlink() {
+        row_style = row_style.fg(context.styles.executable_fg);
+    }
+
     if context.show_icons {
         let icon = nerd_font_icon(entry);
         let mut icon_col = String::with_capacity(icon.len() + 1);
@@ -482,11 +487,12 @@ fn make_entry_row<'a>(
     if entry.is_symlink() {
         if let Some(target) = entry.symlink() {
             let target_str = target.to_string_lossy();
-            let mut sym_text = String::with_capacity(4 + target_str.len());
+            let mut sym_text = String::with_capacity(target_str.len() + 20);
             sym_text.push_str(" -> ");
             sym_text.push_str(&target_str);
 
             let target_style = if entry.is_broken_sym() {
+                sym_text.push_str(" [broken]");
                 row_style.fg(symlink_fg)
             } else {
                 row_style.fg(context.styles.symlink_target)

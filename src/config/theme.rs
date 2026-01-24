@@ -42,6 +42,8 @@ pub(crate) struct Theme {
     preview: PaneTheme,
     path: ColorPair,
     status_line: ColorPair,
+    #[serde(deserialize_with = "deserialize_color_field")]
+    executable: Color,
     symlink: SymlinkTheme,
     marker: MarkerTheme,
     widget: WidgetTheme,
@@ -80,6 +82,7 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             status_line: ColorPair::default(),
+            executable: Color::LightGreen,
             symlink: SymlinkTheme::default(),
             marker: MarkerTheme::default(),
             widget: WidgetTheme::default(),
@@ -190,6 +193,10 @@ impl Theme {
     }
 
     // Accessor methods for various theme properties
+
+    pub(crate) fn exe_color(&self) -> Color {
+        self.executable
+    }
 
     #[inline]
     pub(crate) fn selection_icon(&self) -> &str {

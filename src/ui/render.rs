@@ -82,6 +82,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             symlink_file: symlink_theme.file(),
             symlink_dir: symlink_theme.directory(),
             symlink_target: symlink_theme.target(),
+            executable_fg: theme_cfg.exe_color(),
         };
 
         panes::draw_parent(
@@ -129,6 +130,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             symlink_file: symlink_theme.file(),
             symlink_dir: symlink_theme.directory(),
             symlink_target: symlink_theme.target(),
+            executable_fg: theme_cfg.exe_color(),
         };
 
         panes::draw_main(
@@ -188,6 +190,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             symlink_file: symlink_theme.file(),
             symlink_dir: symlink_theme.directory(),
             symlink_target: symlink_theme.target(),
+            executable_fg: theme_cfg.exe_color(),
         };
 
         panes::draw_preview(

@@ -33,6 +33,12 @@ impl FileEntry {
     pub(super) const IS_SYSTEM: u8 = 1 << 2;
     pub(super) const IS_SYMLINK: u8 = 1 << 3;
     pub(super) const IS_BROKEN_SYM: u8 = 1 << 4;
+    pub(super) const IS_EXECUTABLE: u8 = 1 << 5;
+
+    /// Used to set the IS_EXECUTABLE flag for files which can be executed.
+    /// Used for coloring executable files in UI
+    #[cfg(unix)]
+    pub(super) const EXEC_FLAG: u32 = 0o111;
 
     pub(crate) fn new(name: OsString, flags: u8, symlink: Option<PathBuf>) -> Self {
         FileEntry {
@@ -77,6 +83,11 @@ impl FileEntry {
     #[inline]
     pub(crate) fn is_broken_sym(&self) -> bool {
         self.flags & Self::IS_BROKEN_SYM != 0
+    }
+
+    #[inline]
+    pub(crate) fn is_executable(&self) -> bool {
+        self.flags & Self::IS_EXECUTABLE != 0
     }
 }
 
@@ -188,18 +199,24 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
+            use std::os::unix::fs::PermissionsExt;
 
-            if (flags & FileEntry::IS_SYMLINK) != 0 {
-                match fs::metadata(entry.path()) {
-                    Ok(md) => {
-                        if md.is_dir() {
-                            flags |= FileEntry::IS_DIR;
-                        }
-                    }
-                    Err(_) => {
-                        flags |= FileEntry::IS_BROKEN_SYM;
-                    }
+            let md_res = if (flags & FileEntry::IS_SYMLINK) != 0 {
+                fs::metadata(entry.path())
+            } else {
+                entry.metadata()
+            };
+
+            if let Ok(md) = md_res {
+                if md.is_dir() {
+                    flags |= FileEntry::IS_DIR;
                 }
+
+                if md.permissions().mode() & FileEntry::EXEC_FLAG != 0 {
+                    flags |= FileEntry::IS_EXECUTABLE;
+                }
+            } else if (flags & FileEntry::IS_SYMLINK) != 0 {
+                flags |= FileEntry::IS_BROKEN_SYM;
             }
 
             if name.as_bytes().first() == Some(&b'.') {
