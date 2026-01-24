@@ -2,6 +2,18 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased
+
+Fixes to copy logic.
+
+### Fixed
+- Copy: Hardened copy logic to correctly check paths before attemting a copy action
+- Folders: No longer create a destination folder if the copy/move operation fails due to a permission error or other failure. This prevents creation of empty or partially-created directories on failed operations.
+
+
+---
+
+
 ## [0.5.7] - 2026-01-24
 
 Improved symlink support, improvements to theming and performance optimizations.  
