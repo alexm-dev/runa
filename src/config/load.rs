@@ -78,9 +78,9 @@ impl Config {
         let path = Self::default_path();
 
         if !path.exists() {
-            eprintln!("No config file found at {:?}", path);
-            eprintln!("Tip: Run 'rn --init' or '--init-full' to generate a default configuration.");
-            eprintln!("Starting with internal defaults...\n");
+            eprintln!(
+                "No runa.toml config file found. Using internal defaults. (Tip: run 'rn --init' to generate a config file.)"
+            );
             return Self::default();
         }
 
