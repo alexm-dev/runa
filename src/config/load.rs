@@ -331,7 +331,7 @@ name = "default"
 
         let minimal_toml = r##"# runa.toml - minimal configuration
 # Only a few basic options. The rest uses internal defaults.
-# For advanced options, see runa documentation or runa --config-help.
+# For advanced options, see runa documentation or rn --config-help.
 
 [general]
 dirs_first = true
