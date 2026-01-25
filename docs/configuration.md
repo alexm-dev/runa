@@ -111,19 +111,19 @@ move_to_trash = true
 
 [display]
 # Show the selection icon next to the file/directory name
-selection_marker = true
+selection_marker = false
 
 # Show the default '/' symbol next to directory names
 dir_marker = true
 
 # Border style: "none", "unified", or "split"
-borders = "split"
+borders = "unified"
 
 # Border shape: "square", "rounded" or "double"
 border_shape = "square"
 
 # Show pane titles at the top (e.g., "Main", "Preview")
-titles = false
+titles = true
 
 # Show Nerd Font icons. Requires a Nerd Font to be installed and used.
 icons = false
@@ -171,7 +171,7 @@ method = "internal"
 style = "plain"
 
 # Options to set the bat theme of the bat preview method
-# All available bat themes are supported
+# All available bat themes are supported. See bat --list-themes
 theme = "default"
 
 # Toggle wrapping the bat output to the pane width.
@@ -232,7 +232,7 @@ name = "default"
 #   "monokai"
 
 # The symbol for the current selection. Use "" or " " to disable or set [display] selection_marker to false.
-selection_icon = ">"
+selection_icon = ""
 
 # Set the colors of binaries/executables only on UNIX. 
 # By default LightGreen.
@@ -241,10 +241,11 @@ exe_color = "default"
 # You can set each color field directly in [theme] instead.
 # There is now need to create each [theme] subsection for overriding and or creating custom themes.
 # Example:
-selection.fg = "#EEBBAA"
-directory.fg = "#7BA"
-widget.border.fg = "#555555"
-symlink.directory = "#8aA"
+# [theme]
+# selection.fg = "#EEBBAA"
+# directory.fg = "#7BA"
+# widget.border.fg = "#555555"
+# symlink.directory = "#8aA"
 # and so on
 ```
 
@@ -282,11 +283,11 @@ These options are optional and can be omitted.
 # The global selection coloring section.
 # Can be overwritten for each pane.
 [theme.selection]     # Selection bar colors
-fg = "default"
+fg = "#303030"
 bg = "default"
 
 [theme.accent]        # Borders/titles
-fg = "default"
+fg = "#444444"
 bg = "default"
 
 [theme.entry]         # Normal entries
@@ -294,11 +295,11 @@ fg = "default"
 bg = "default"
 
 [theme.directory]     # Directory entries
-fg = "cyan"
+fg = "blue"
 bg = "default"
 
 [theme.separator]     # Vertical separators
-fg = "default"
+fg = "#444444"
 bg = "default"
 
 [theme.parent]        # Parent pane text
@@ -339,7 +340,7 @@ target = "default"
 
 [theme.marker]        # Multi-select marker
 icon = "*"
-fg = "yellow"
+fg = "default"
 bg = "default"
 # Change the color of the clipboard when you copy a entry via multiselect or via normal yank/copy
 clipboard.fg = "default"
@@ -388,10 +389,10 @@ find_visible_results = 5
 find_width = 40
 
 # Coloring for the widgets
-color.fg = "white"
-color.bg = "black"
+color.fg = "default"
+color.bg = "default"
 
-border.fg = "magenta"
+border.fg = "default"
 border.bg = "default"
 
 title.fg = "default"
@@ -399,7 +400,7 @@ title.bg = "default"
 
 # Configuration for the status_line
 [theme.status_line]
-fg = "magenta"
+fg = "default"
 bg = "default"
 
 # Configuration for the File info widget
@@ -410,7 +411,7 @@ color.bg = "default"
 border.fg = "default"
 border.bg = "default"
 
-title.fg = "default"
+title.fg = "magenta"
 title.bg = "default"
 
 position = "bottom_left"
