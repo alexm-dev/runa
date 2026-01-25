@@ -84,7 +84,7 @@ impl Config {
             return Self::default();
         }
 
-        match std::fs::read_to_string(&path) {
+        match fs::read_to_string(&path) {
             Ok(content) => match toml::from_str::<RawConfig>(&content) {
                 Ok(mut raw) => {
                     raw.theme = raw.theme.with_overrides();
@@ -167,7 +167,8 @@ impl Config {
 
 # Note:
 # Commented values are the internal defaults of runa
-# Use hex codes (eg. "#333333") or terminal colors ("cyan")
+# Use hex codes (eg. "#RRGGBB") or terminal colors ("cyan")
+# To get configuration help, check out the runa documentation.
 
 # General behavior
 [general]
@@ -175,7 +176,7 @@ dirs_first = true
 show_hidden = true
 # show_symlink = true
 # show_system = false
-case_insensitive = true
+# case_insensitive = true
 # always_show = []
 # max_find_results = 2000
 # move_to_trash = true
@@ -184,13 +185,13 @@ case_insensitive = true
 # selection_marker = false
 # dir_marker = true
 borders = "unified"
-border_shape = "square"
+# border_shape = "square"
 # titles = true
-# icons = false
+icons = false
 # separators = true
-# parent = true
-# preview = true
-preview_underline = true
+parent = true
+preview = true
+# preview_underline = true
 # preview_underline_color = false
 # entry_padding = 1
 # scroll_padding = 5
@@ -198,10 +199,10 @@ preview_underline = true
 # instant_preview = false
 # entry_count = "footer"
 
-[display.preview_options]
-method = "internal"
+# [display.preview_options]
+# method = "internal"
 # bat related options if method = "bat"
-# theme = "TwoDark"
+# theme = "default"
 # style = "plain"
 # wrap = true
 
@@ -220,7 +221,7 @@ method = "internal"
 
 [theme]
 name = "default"
-selection_icon = ""
+# selection_icon = ""
 # exe_color = "default"
 
 # [theme.selection]
@@ -236,7 +237,7 @@ selection_icon = ""
 # bg = "default"
 
 # [theme.directory]
-# fg = "blue"
+# fg = "default"
 # bg = "default"
 
 # [theme.separator]
@@ -262,7 +263,7 @@ selection_icon = ""
 # bg = "default"
 
 # [theme.path]
-# fg = "magenta"
+# fg = "default"
 # bg = "default"
 
 # [theme.symlink]
@@ -282,7 +283,8 @@ selection_icon = ""
 # position = "center"       # "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 # confirm_size = "large"
 # move_size = [70, 14]
-# find_size = "medium"
+# find_visible_results = 5
+# find_width = 40
 # color.fg = "default"
 # color.bg = "default"
 # border.fg = "default"
@@ -328,7 +330,8 @@ selection_icon = ""
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
-# Only the essentials. The rest uses internal defaults.
+# Only a few basic options. The rest uses internal defaults.
+# For advanced options, see runa documentation or runa --config-help.
 
 [general]
 dirs_first = true
@@ -337,18 +340,12 @@ show_hidden = true
 [display]
 borders = "unified"
 icons = false
-entry_padding = 1
+parent = true
+preview = true
 
 [theme]
 name = "default"
-selection_icon = ""
 accent.fg = "default"
-
-# [theme.path]
-# fg = "magenta"
-
-# [editor]
-# cmd = "nvim"
 "##;
 
         let content = if minimal { minimal_toml } else { full_toml };
