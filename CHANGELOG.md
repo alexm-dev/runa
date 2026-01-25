@@ -16,6 +16,7 @@ Patch and fixes to copy logic.
 
 ### Changed
 - Icons: Changed the default file nerd font icon from `\uf0f6` to `\uf15b`
+- Initial cli: Changed inital cli message after running runa for the first time and no `runa.toml` exists.
 
 
 ---
