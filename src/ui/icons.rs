@@ -24,6 +24,9 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "json" => "",
     "xml" => "",
     "sh" => "",
+    "bash" => "",
+    "zsh" => "",
+    "fish" => "",
     "go" => "󰟓",
     "java" => "",
     "c" => "",
@@ -45,6 +48,8 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "zip" => "",
     "tar" => "",
     "gz" => "",
+    "rar" => "",
+    "zst" => "",
     "mp3" => "",
     "mp4" => "",
     "png" => "",
@@ -61,7 +66,7 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "pptx" => "",
     "txt" => "",
     "log" => "",
-    "cfg" => "",
+    "cfg" => "",
     "config" => "",
     "ini" => "",
     "bat" => "",
@@ -131,8 +136,13 @@ pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = 
 /// Special directory names
 /// This map associates specific directory names with their corresponding
 /// Nerd Font icons.
-/// For example, "node_modules" maps to the icon "".
 pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+    "Desktop" => "󰍹",
+    "Documents" => "󱔗",
+    "Downloads" => "",
+    "Pictures" => "󰉔",
+    "Music" => "󱍙",
+    "Videos" => "",
     "bin" => "",
     "lib" => "",
     "node_modules" => "",
@@ -168,6 +178,11 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         return icon;
     }
 
+    #[cfg(unix)]
+    if entry.is_executable() && !entry.is_dir() {
+        return "";
+    }
+
     if let Some(dot_idx) = name.rfind('.')
         && dot_idx > 0
         && dot_idx < name.len() - 1
@@ -182,5 +197,5 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         }
     }
 
-    ""
+    ""
 }
