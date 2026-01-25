@@ -16,6 +16,7 @@ use phf::phf_map;
 /// For example, "rs" maps to the Rust icon "".
 static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "rs" => "",
+    "rlib" => "",
     "py" => "",
     "js" => "",
     "md" => "",
@@ -72,7 +73,6 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "bat" => "",
     "ps1" => "󰨊",
     "cmd" => "",
-    "dll" => "󰪶",
     "yml" => "",
     "yaml" => "",
     "toml" => "",
@@ -92,8 +92,10 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "diff" => "",
     "ebuild" => "",
     "spec" => "",
-    "a" => "󰪶",
-    "so" => "󰪶",
+    "dll" => "󰪶",
+    "a" => "",
+    "so" => "",
+    "lib" => "",
     "o" => "",
 };
 
