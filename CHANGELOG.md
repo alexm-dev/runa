@@ -11,14 +11,16 @@ Patch and fixes to copy logic.
 
 ### Fixed
 - Copy: Hardened copy logic to correctly check paths before attempting a copy action
-- Folders: No longer create a destination folder if the copy/move operation fails due to a permission error or other failure. This prevents creation of empty or partially-created directories on failed operations.
+- Folders: No longer create a destination folder if the copy/move action fails due to a permission error or other failure. This prevents creation of empty or partially-created directories on failed actions.
 - Move: Input of move action now accepts `~` as a valid path to the home directory.
 
 ### Changed
 - Icons: Changed the default file nerd font icon from `\uf0f6` to `\uf15b`
 - Initial CLI: Changed initial CLI message after running runa for the first time and no `runa.toml` exists.
 
+
 ---
+
 
 ## [0.5.8] and [0.5.9] - void
 
