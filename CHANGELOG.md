@@ -10,7 +10,7 @@ Patch and fixes to copy logic.
 - Icons: Added more nerd font icon variants to special folders and files.
 
 ### Fixed
-- Copy: Hardened copy logic to correctly check paths before attemting a copy action
+- Copy: Hardened copy logic to correctly check paths before attempting a copy action
 - Folders: No longer create a destination folder if the copy/move operation fails due to a permission error or other failure. This prevents creation of empty or partially-created directories on failed operations.
 - Move: Input of move action now accepts `~` as a valid path to the home directory.
 
