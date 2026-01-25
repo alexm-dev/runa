@@ -97,14 +97,22 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
 /// Special file names
 /// This map associates specific filenames with their corresponding
 /// Nerd Font icons.
-/// For example, "Cargo.toml" maps to the icon "".
-pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+pub(super) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "README.md" => "",
     "LICENSE" => "",
     "LICENSE-MIT" => "",
     "LICENSE-APACHE" => "",
     "COPYING" => "",
     "LICENSE.txt" => "",
+    "LICENSE-MIT.txt" => "",
+    "LICENSE-APACHE.txt" => "",
+    "COPYING.txt" => "",
+    "LICENSE.md" => "",
+    "CHANGELOG" => "",
+    "CHANGELOG.md" => "",
+    "CHANGELOG.txt" => "",
+    "SECURITY" => "󰒃",
+    "SECURITY.md" => "󰒃",
     "Makefile" => "",
     ".gitignore" => "",
     ".gitconfig" => "",
@@ -122,7 +130,6 @@ pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = 
     ".env.local" => "",
     ".env.production" => "",
     ".env.development" => "",
-    "README" => "",
     "TODO" => "",
     "Dockerfile.dev" => "",
     "Dockerfile.prod" => "",
@@ -136,7 +143,7 @@ pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = 
 /// Special directory names
 /// This map associates specific directory names with their corresponding
 /// Nerd Font icons.
-pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
+pub(super) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "Desktop" => "󰍹",
     "Documents" => "󱔗",
     "Downloads" => "",
