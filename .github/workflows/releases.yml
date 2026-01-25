@@ -120,15 +120,22 @@ jobs:
             exit 1
           fi
 
-      - name: Create or Update Release and Upload
+      - name: Fail if Release Exists
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release edit "$TAG" --notes-file release_notes.md
-          else
-            gh release create "$TAG" --title "runa $TAG" --notes-file release_notes.md
+            echo "Release $TAG already exists. Aborting."
+            exit 1
           fi
-          gh release upload "$TAG" dist/* --clobber
+
+      - name: Create Release and Upload Assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          gh release create "$TAG" --title "runa $TAG" --notes-file release_notes.md
+          gh release upload "$TAG" dist/*
