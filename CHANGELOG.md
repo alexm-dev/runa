@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.5.10] - 2026-01-25
+## [0.5.11] - 2026-01-25
 
 Patch and fixes to copy logic.
 
