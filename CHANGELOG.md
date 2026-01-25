@@ -6,9 +6,15 @@ All the changes made to runa are documented here.
 
 Fixes to copy logic.
 
+### Added
+- Icons: Added more icon variants to special folders and files.
+
 ### Fixed
 - Copy: Hardened copy logic to correctly check paths before attemting a copy action
 - Folders: No longer create a destination folder if the copy/move operation fails due to a permission error or other failure. This prevents creation of empty or partially-created directories on failed operations.
+
+### Changed
+- Icons: Changed the default file icon from `\uf0f6` to `\uf15b`
 
 
 ---
