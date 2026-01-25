@@ -72,7 +72,7 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "bat" => "",
     "ps1" => "󰨊",
     "cmd" => "",
-    "dll" => "",
+    "dll" => "󰪶",
     "yml" => "",
     "yaml" => "",
     "toml" => "",
@@ -92,6 +92,9 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "diff" => "",
     "ebuild" => "",
     "spec" => "",
+    "a" => "󰪶",
+    "so" => "󰪶",
+    "o" => "",
 };
 
 /// Special file names
@@ -150,7 +153,6 @@ pub(super) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = p
     "Pictures" => "󰉔",
     "Music" => "󱍙",
     "Videos" => "",
-    "bin" => "",
     "lib" => "",
     "node_modules" => "",
     ".git" => "",
