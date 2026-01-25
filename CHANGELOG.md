@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.5.8] - 2026-01-25
+## [0.5.9] - 2026-01-25
 
 Patch and fixes to copy logic.
 
@@ -16,8 +16,14 @@ Patch and fixes to copy logic.
 
 ### Changed
 - Icons: Changed the default file nerd font icon from `\uf0f6` to `\uf15b`
-- Initial cli: Changed inital cli message after running runa for the first time and no `runa.toml` exists.
+- Initial CLI: Changed initial CLI message after running runa for the first time and no `runa.toml` exists.
 
+---
+
+## [0.5.8] - void
+
+Skipped version due to issues with release creation after enabling immutable releases.
+The planned changes for 0.5.8 are now in 0.5.9
 
 ---
 
