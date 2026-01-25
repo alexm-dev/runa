@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.5.9] - 2026-01-25
+## [0.5.10] - 2026-01-25
 
 Patch and fixes to copy logic.
 
@@ -20,10 +20,11 @@ Patch and fixes to copy logic.
 
 ---
 
-## [0.5.8] - void
+## [0.5.8] and [0.5.9] - void
 
-Skipped version due to issues with release creation after enabling immutable releases.
-The planned changes for 0.5.8 are now in 0.5.9
+Skipped releases: v0.5.8 and v0.5.9 were not published due to release process issues with immutable releases.  
+No assets or release notes exist for these versions.  
+All planned changes and fixes from 0.5.8 are included in v0.5.10.
 
 ---
 
