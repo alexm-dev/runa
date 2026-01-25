@@ -12,6 +12,7 @@ Patch and fixes to copy logic.
 ### Fixed
 - Copy: Hardened copy logic to correctly check paths before attemting a copy action
 - Folders: No longer create a destination folder if the copy/move operation fails due to a permission error or other failure. This prevents creation of empty or partially-created directories on failed operations.
+- Move: Input of move action now accepts `~` as a valid path to the home directory.
 
 ### Changed
 - Icons: Changed the default file nerd font icon from `\uf0f6` to `\uf15b`
