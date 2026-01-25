@@ -21,12 +21,13 @@ Patch and fixes to copy logic.
 
 ---
 
+## [0.5.8], [0.5.9], [0.5.10] - void
 
-## [0.5.8] and [0.5.9] - void
+**Skipped releases:**  
+Versions `v0.5.8`, `v0.5.9`, and `v0.5.10` were not published due to release process issues related to enabling immutable releases on GitHub.
+No assets or release notes exist for these versions.
 
-Skipped releases: v0.5.8 and v0.5.9 were not published due to release process issues with immutable releases.  
-No assets or release notes exist for these versions.  
-All planned changes and fixes from 0.5.8 are included in v0.5.10.
+All planned changes and fixes from 0.5.8 are included in `v0.5.11`.
 
 ---
 
