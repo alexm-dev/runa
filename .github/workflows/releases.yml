@@ -137,5 +137,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ github.event.inputs.tag }}
         run: |
-          gh release create "$TAG" --title "runa $TAG" --notes-file release_notes.md
-          gh release upload "$TAG" dist/*
+          gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
