@@ -1,14 +1,11 @@
 //! The general configuration settings for runa.
 //!
 //! This module defines the [General] struct for deserializing
-//! general settings from a configuration file and the [InternalGeneral] struct
-//! for internal use within runa.
+//! general settings from the runa.toml configuration file
+//! and the [InternalGeneral] struct for internal use within runa.
 //!
 //! It includes settings such as display options, case sensitivity,
 //! and file handling preferences.
-//!
-//! The [General] struct is deserialized directly from the configuration file,
-//! while the [InternalGeneral] struct is used internally with optimized types.
 
 use crate::utils::{DEFAULT_FIND_RESULTS, clamp_find_results};
 
