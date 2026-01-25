@@ -92,11 +92,12 @@ static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
     "diff" => "",
     "ebuild" => "",
     "spec" => "",
-    "dll" => "󰪶",
-    "a" => "",
-    "so" => "",
-    "lib" => "",
+    "dll" => "󱉟",
+    "a" => "󱉟",
+    "so" => "󱉟",
+    "lib" => "󱉟",
     "o" => "",
+    "d" => "",
 };
 
 /// Special file names
