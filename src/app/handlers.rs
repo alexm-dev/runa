@@ -332,7 +332,10 @@ impl<'a> AppState<'a> {
             let path = self.nav.current_dir().join(entry.name());
 
             match open_in_editor(self.config.editor(), &path) {
-                Ok(_) => KeypressResult::OpenedEditor,
+                Ok(_) => {
+                    self.request_preview();
+                    KeypressResult::OpenedEditor
+                }
                 Err(e) => {
                     let error_msg = e.to_string();
                     self.push_overlay_message(error_msg, std::time::Duration::from_secs(3));
