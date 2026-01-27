@@ -2,6 +2,18 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased
+
+### Fixed
+- File preview: Correctly update file previews after opening or editing a file and closing the editor afterwards.
+
+### Internal
+- Removed legacy directory preview function that was never used since worker threads update.
+
+
+---
+
+
 ## [0.5.11] - 2026-01-25
 
 Patch and fixes to copy logic.
