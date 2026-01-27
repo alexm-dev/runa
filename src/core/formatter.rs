@@ -6,8 +6,7 @@
 //!
 //! Also formatts FileTypes to be used by FileInfo and ShowInfo overlay widget.
 
-use crate::core::FileType;
-use crate::core::{FileEntry, browse_dir};
+use crate::core::{FileEntry, FileType};
 use crate::utils::{
     clean_display_path, normalize_relative_path, shorten_home_path, with_lowered_stack,
 };
@@ -274,56 +273,6 @@ pub(crate) fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
     out
 }
 
-/// Loads a fixed-width preview of a directory entries
-/// # Returns
-/// A vector of strings, each representing a line from the directory preview.
-pub(crate) fn preview_directory(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
-    match browse_dir(path) {
-        Ok(entries) => {
-            let mut lines = Vec::with_capacity(max_lines);
-            let total_entries = entries.len();
-
-            for e in entries.iter().take(max_lines) {
-                let name_str = e.name_str();
-
-                if e.is_dir() {
-                    let mut dir_name = String::with_capacity(name_str.len() + 1);
-                    dir_name.push_str(&name_str);
-                    dir_name.push('/');
-                    lines.push(sanitize_to_exact_width(&dir_name, pane_width));
-                } else {
-                    lines.push(sanitize_to_exact_width(&name_str, pane_width));
-                }
-            }
-
-            if lines.is_empty() {
-                lines.push(sanitize_to_exact_width("[empty directory]", pane_width));
-            } else if total_entries > max_lines
-                && let Some(last) = lines.last_mut()
-            {
-                *last = sanitize_to_exact_width("...", pane_width);
-            }
-
-            let empty_line = " ".repeat(pane_width);
-            while lines.len() < max_lines {
-                lines.push(empty_line.clone());
-            }
-            lines
-        }
-        Err(e) => {
-            let err_msg = format!("[Error: {}]", e);
-            let mut err_lines = Vec::with_capacity(max_lines);
-            err_lines.push(sanitize_to_exact_width(&err_msg, pane_width));
-
-            let empty_line = " ".repeat(pane_width);
-            while err_lines.len() < max_lines {
-                err_lines.push(empty_line.clone());
-            }
-            err_lines
-        }
-    }
-}
-
 /// Loads a preview for any path (directory or file), returning an error or a padded lines for
 /// display.
 /// large binaries/unreadable and unsupported files are replaced with a notice.
@@ -340,11 +289,6 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
             pane_width,
         )];
     };
-
-    // Directory Check
-    if meta.is_dir() {
-        return preview_directory(path, max_lines, pane_width);
-    }
 
     // Size Check
     if meta.len() > MAX_PREVIEW_SIZE {
