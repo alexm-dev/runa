@@ -49,32 +49,38 @@ const EXCLUDES: &[&str] = &[
 
 /// A OnceLock to store the fd binary name.
 /// This is used to avoid checking for the binary multiple times.
-static FD_BIN: OnceLock<&'static str> = OnceLock::new();
+static FD_BIN: OnceLock<Option<&'static str>> = OnceLock::new();
+
+/// OnceLock cache to store the bat binary name.
+/// This is used to avoid checking for the binary multiple times.
+/// If bat is not found, the value will be None.
+static BAT_BIN: OnceLock<Option<&'static str>> = OnceLock::new();
+
+fn cached_binary(
+    cache: &'static OnceLock<Option<&'static str>>,
+    binaries: &[&'static str],
+    err_msg: &'static str,
+) -> io::Result<&'static str> {
+    cache
+        .get_or_init(|| {
+            binaries
+                .iter()
+                .find(|&&bin| which::which(bin).is_ok())
+                .copied()
+        })
+        .as_ref()
+        .copied()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, err_msg))
+}
 
 #[inline]
-fn fd_binary() -> io::Result<&'static str> {
-    if let Some(bin) = FD_BIN.get() {
-        return Ok(*bin);
-    }
+pub(crate) fn fd_binary() -> io::Result<&'static str> {
+    cached_binary(&FD_BIN, &["fd", "fd-find"], "fd/fd-find not found")
+}
 
-    let found = if which::which("fd").is_ok() {
-        Some("fd")
-    } else if which::which("fdfind").is_ok() {
-        Some("fdfind")
-    } else {
-        None
-    };
-
-    match found {
-        Some(bin) => {
-            let _ = FD_BIN.set(bin);
-            Ok(bin)
-        }
-        None => Err(io::Error::new(
-            io::ErrorKind::NotFound,
-            "fd/fdfind not found. Please install it.",
-        )),
-    }
+#[inline]
+fn bat_binary() -> io::Result<&'static str> {
+    cached_binary(&BAT_BIN, &["bat"], "bat not found")
 }
 
 /// A single result from the find function.
@@ -210,7 +216,9 @@ pub(crate) fn preview_bat(
     max_lines: usize,
     bat_args: &[OsString],
 ) -> Result<Vec<String>, std::io::Error> {
-    let mut cmd = Command::new("bat")
+    let bat_bin = bat_binary()?;
+
+    let mut cmd = Command::new(bat_bin)
         .args(bat_args)
         .arg(path)
         .stdout(Stdio::piped())
@@ -286,7 +294,7 @@ mod tests {
     /// Returns true if `fd` is found, otherwise false.
     /// Uses which crate to check for the presence of `fd`.
     fn fd_available() -> bool {
-        which::which("fd").is_ok()
+        which::which("fd").is_ok() || which::which("fd-find").is_ok()
     }
 
     fn bat_available() -> bool {
@@ -309,6 +317,24 @@ mod tests {
                 return Ok(());
             }
         };
+    }
+
+    #[test]
+    fn finds_fd_binary_if_available() -> Result<(), Box<dyn std::error::Error>> {
+        skip_if_no_fd!();
+        let bin = fd_binary()?;
+        assert!(bin == "fd" || bin == "fd-find");
+        assert!(which::which(bin).is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn finds_bat_binary_if_available() -> Result<(), Box<dyn std::error::Error>> {
+        skip_if_no_bat!();
+        let bin = bat_binary()?;
+        assert_eq!(bin, "bat");
+        assert!(which::which(bin).is_ok());
+        Ok(())
     }
 
     #[test]

@@ -8,7 +8,7 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{FileAction, NavAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
-use crate::core::proc::complete_dirs_with_fd;
+use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::Overlay;
 use crate::utils::{
     clean_display_path, expand_home_path, expand_home_path_buf, normalize_relative_path,
@@ -107,7 +107,7 @@ impl<'a> AppState<'a> {
 
             Tab => {
                 if matches!(mode, InputMode::MoveFile) {
-                    if which::which("fd").is_ok() {
+                    if fd_binary().is_ok() {
                         self.move_tab_autocomplete();
                         KeypressResult::Consumed
                     } else {
@@ -604,7 +604,7 @@ impl<'a> AppState<'a> {
     /// Requires the `fd` tool to be installed.
     /// If `fd` is not found, displays a temporary overlay message.
     fn prompt_find(&mut self) {
-        if which::which("fd").is_err() {
+        if fd_binary().is_err() {
             self.push_overlay_message(
                 "Fuzzy Find requires the `fd` tool.".to_string(),
                 Duration::from_secs(5),
@@ -667,7 +667,7 @@ impl<'a> AppState<'a> {
 
     /// Handles the autocomplete for move to directory action
     fn move_tab_autocomplete(&mut self) {
-        if which::which("fd").is_err() {
+        if fd_binary().is_err() {
             return;
         }
         let input = self.actions.input_buffer();
