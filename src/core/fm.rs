@@ -27,7 +27,7 @@ pub(crate) struct FileEntry {
 }
 
 impl FileEntry {
-    // Flag bit definitions
+    // Bitflags definitions
     // These are used to set and check attributes in the flags field
     pub(super) const IS_DIR: u8 = 1 << 0;
     pub(super) const IS_HIDDEN: u8 = 1 << 1;
@@ -94,7 +94,7 @@ impl FileEntry {
     #[cfg(windows)]
     pub(super) fn match_executable_extension(ext: &str, flags: &mut u8) {
         with_lowered_stack(ext, |lowered| match lowered {
-            "exe" | "com" | "bat" | "cmd" | "ps1" => *flags |= FileEntry::IS_EXECUTABLE,
+            "exe" | "com" | "bat" | "cmd" | "ps1" => *flags |= Self::IS_EXECUTABLE,
             _ => {}
         })
     }
