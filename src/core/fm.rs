@@ -4,6 +4,7 @@
 //! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
 use crate::core::formatter::format_attributes;
+use crate::utils::with_lowered_stack;
 
 use std::borrow::Cow;
 use std::ffi::OsStr;
@@ -88,6 +89,14 @@ impl FileEntry {
     #[inline]
     pub(crate) fn is_executable(&self) -> bool {
         self.flags & Self::IS_EXECUTABLE != 0
+    }
+
+    #[cfg(windows)]
+    pub(super) fn match_executable_extension(ext: &str, flags: &mut u8) {
+        with_lowered_stack(ext, |lowered| match lowered {
+            "exe" | "com" | "bat" | "cmd" | "ps1" => *flags |= FileEntry::IS_EXECUTABLE,
+            _ => {}
+        })
     }
 }
 
@@ -250,6 +259,14 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                     }
                 } else if attrs & 0x10 != 0 {
                     flags |= FileEntry::IS_DIR;
+                }
+            }
+
+            if ft.is_file() {
+                let path = Path::new(&name);
+
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    FileEntry::match_executable_extension(ext, &mut flags);
                 }
             }
         }
