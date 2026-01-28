@@ -2,9 +2,6 @@
 //!
 //! This module implements the [find] and the [preview_bat] function, the [FindResult] and the RawResult structs.
 //!
-//! The [FindResult] struct is used to correctly display the calculated results of the
-//! find function. It is used mainly by ui/actions.
-//!
 //! The RawResult struct is an internal struct used to store intermediate results
 //! during the find process.
 //!
@@ -18,6 +15,9 @@
 //! to preview the contents of a file, returning a specified number of lines from the file.
 //! This function is used by core/workers.rs to provide file previews in the UI.
 //! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
+//!
+//! The module also includes [complete_dirs_with_fd] function to enable the move file function to have
+//! auto-completion of paths via fd.
 
 use crate::utils::{flatten_separators, normalize_relative_path, normalize_separators};
 
@@ -28,6 +28,7 @@ use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
 use std::io::{self, BufRead};
+use std::path::MAIN_SEPARATOR;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::atomic::AtomicBool;
@@ -273,7 +274,7 @@ pub(crate) fn complete_dirs_with_fd(
 
     let dirs = String::from_utf8_lossy(&output.stdout)
         .lines()
-        .map(|s| s.trim_end_matches(std::path::MAIN_SEPARATOR).to_string())
+        .map(|s| s.trim_end_matches(MAIN_SEPARATOR).to_string())
         .collect();
 
     Ok(dirs)
