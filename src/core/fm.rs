@@ -4,6 +4,8 @@
 //! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
 use crate::core::formatter::format_attributes;
+
+#[cfg(windows)]
 use crate::utils::with_lowered_stack;
 
 use std::borrow::Cow;
