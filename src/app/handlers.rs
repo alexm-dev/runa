@@ -329,6 +329,14 @@ impl<'a> AppState<'a> {
             return KeypressResult::Continue;
         }
         if let Some(entry) = self.nav.selected_shown_entry() {
+            if entry.is_executable() && !entry.is_dir() && !entry.is_symlink() {
+                let msg = format!(
+                    "Cannot open executable: '{}'",
+                    entry.name().to_string_lossy()
+                );
+                self.push_overlay_message(msg, Duration::from_secs(3));
+                return KeypressResult::Continue;
+            }
             let path = self.nav.current_dir().join(entry.name());
 
             match open_in_editor(self.config.editor(), &path) {
@@ -338,7 +346,7 @@ impl<'a> AppState<'a> {
                 }
                 Err(e) => {
                     let error_msg = e.to_string();
-                    self.push_overlay_message(error_msg, std::time::Duration::from_secs(3));
+                    self.push_overlay_message(error_msg, Duration::from_secs(3));
                     KeypressResult::Recovered
                 }
             }
