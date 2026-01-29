@@ -189,7 +189,7 @@ impl Default for Display {
             entry_padding: 1,
             scroll_padding: 5,
             toggle_marker_jump: false,
-            instant_preview: false,
+            instant_preview: true,
             entry_count: EntryCountPosition::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
