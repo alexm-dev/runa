@@ -10,7 +10,7 @@ use crate::ui::panes;
 use crate::ui::widgets;
 use crate::{
     app::{
-        AppState, LayoutMetrics,
+        AppState, LayoutMetrics, PreviewData,
         actions::{ActionMode, InputMode},
     },
     ui::{
@@ -167,12 +167,6 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
         let bg_filler = Block::default().style(theme_cfg.preview().effective_style_or_theme());
         frame.render_widget(bg_filler, area);
 
-        let is_dir = app
-            .nav()
-            .selected_entry()
-            .map(|e| e.is_dir())
-            .unwrap_or(false);
-
         let preview_dir = app.preview().current_path();
         let preview_markers = panes::make_pane_markers(
             markers,
@@ -193,6 +187,14 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             executable_fg: theme_cfg.exe_color(),
         };
 
+        let (preview_data, selected_idx) = {
+            let preview = app.preview();
+            match preview.data() {
+                PreviewData::Directory(_) => (preview.data(), Some(preview.selected_idx())),
+                _ => (preview.data(), None),
+            }
+        };
+
         panes::draw_preview(
             frame,
             PaneContext {
@@ -207,12 +209,8 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
                 show_icons: display_cfg.icons(),
                 show_marker: display_cfg.dir_marker(),
             },
-            app.preview().data(),
-            if is_dir {
-                Some(app.preview().selected_idx())
-            } else {
-                None
-            },
+            preview_data,
+            selected_idx,
             PreviewOptions {
                 use_underline: display_cfg.preview_underline(),
                 underline_match_text: display_cfg.preview_underline_color(),
