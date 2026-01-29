@@ -2,13 +2,22 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased
+## [0.5.12] - 2026-01-29
+
+### Added
+- Executables coloring: Added executable coloring to Windows.
 
 ### Fixed
-- File preview: Correctly update file previews after opening or editing a file and closing the editor afterwards.
+- File preview: Correctly update file previews after opening or editing a file and closing the editor.
+- `fd` and `bat` checks: Fixed cached checks for `bat` and `fd` to now correctly apply the actually found binary instead of re-checking.
+- Preview selection: Selection highlight now synchronizes exactly with directory/file preview changes. No more flicker or mismatch.
+
+### Changed
+- `instant_preview`: Now set to true by default.
+- Preview debounce: Reduced debounce interval from 75ms to 50ms for a snappier preview.
 
 ### Internal
-- Removed legacy directory preview function that was never used since worker threads update.
+- Removed legacy directory preview function that was never used by internal preview since the worker threads update.
 
 
 ---
