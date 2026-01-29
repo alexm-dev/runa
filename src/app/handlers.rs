@@ -15,8 +15,10 @@ use crate::utils::{
     open_in_editor,
 };
 
-use crossterm::event::{KeyCode::*, KeyEvent};
+#[cfg(windows)]
+use crate::utils::is_win_binary;
 
+use crossterm::event::{KeyCode::*, KeyEvent};
 use std::path::MAIN_SEPARATOR;
 use std::time::{Duration, Instant};
 
@@ -330,13 +332,16 @@ impl<'a> AppState<'a> {
         }
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
-            if entry.is_executable() && !entry.is_dir() {
-                let msg = format!(
-                    "Cannot open executable: '{}'",
-                    entry.name().to_string_lossy()
-                );
-                self.push_overlay_message(msg, Duration::from_secs(3));
-                return KeypressResult::Continue;
+            #[cfg(windows)]
+            {
+                if is_win_binary(entry.name()) && entry.is_executable() && !entry.is_dir() {
+                    let msg = format!(
+                        "Cannot open executable: '{}'",
+                        entry.name().to_string_lossy()
+                    );
+                    self.push_overlay_message(msg, Duration::from_secs(3));
+                    return KeypressResult::Continue;
+                }
             }
 
             match open_in_editor(self.config.editor(), &path) {
