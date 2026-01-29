@@ -1,9 +1,7 @@
 /target
-*.swp
-*.swo
-Thumbs.db
-Desktop.ini
-.DS_Store
-runner.toml
+debug
+release
+*.pdb
+**/*.rs.bk
+**/mutants.out*/
 runa.toml
-/secrets
