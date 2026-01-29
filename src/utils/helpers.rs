@@ -14,7 +14,6 @@
 use crate::config::Editor;
 use ratatui::style::Color;
 use std::borrow::Cow;
-use std::ffi::OsStr;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::OnceLock;
 use std::{fs, io};
@@ -416,16 +415,6 @@ pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R 
         }
     }
     f(name)
-}
-
-#[cfg(windows)]
-pub(crate) fn is_win_binary(name: &OsStr) -> bool {
-    use std::path::Path;
-    Path::new(name)
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|s| matches!(s.to_ascii_lowercase().as_str(), "exe" | "com"))
-        .unwrap_or(false)
 }
 
 /// Helper utils integration tests
