@@ -153,8 +153,8 @@ scroll_padding = 5
 toggle_marker_jump = false
 
 # Toggle previews to instantly render on every selection change
-# Default = false which results in pending preview when holding down a navigation key.
-instant_preview = false
+# False results in pending preview when holding down a navigation key.
+instant_preview = true
 
 # Set the position or disable the entry count for the current directory
 # Available options: "footer", "header" or "none" to disable
@@ -234,7 +234,7 @@ name = "default"
 # The symbol for the current selection. Use "" or " " to disable or set [display] selection_marker to false.
 selection_icon = ""
 
-# Set the colors of binaries/executables only on UNIX. 
+# Set the colors of binaries/executables.
 # By default LightGreen.
 exe_color = "default"
 
