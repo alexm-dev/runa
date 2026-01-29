@@ -10,14 +10,14 @@ All the changes made to runa are documented here.
 ### Fixed
 - File preview: Correctly update file previews after opening or editing a file and closing the editor.
 - `fd` and `bat` checks: Fixed cached checks for `bat` and `fd` to now correctly apply the actually found binary instead of re-checking.
-- Preview selection: Selection highlight now synchronizes exactly with directory/file preview changes. No more flicker or mismatch.
+- Preview selection: Selection highlight now synchronizes exactly with directory/file preview changes.
 
 ### Changed
 - `instant_preview`: Now set to true by default.
 - Preview debounce: Reduced debounce interval from 75ms to 50ms for a snappier preview.
 
 ### Internal
-- Removed legacy directory preview function that was never used by internal preview since the worker threads update.
+- Preview directory: Removed legacy directory preview function that was never used by internal preview since the worker threads update.
 
 
 ---
