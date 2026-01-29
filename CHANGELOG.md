@@ -5,7 +5,7 @@ All the changes made to runa are documented here.
 ## [0.5.12] - 2026-01-29
 
 ### Added
-- Executables coloring: Added executable coloring to Windows.
+- `exe_color`: Added executable coloring to Windows.
 
 ### Fixed
 - File preview: Correctly update file previews after opening or editing a file and closing the editor.
