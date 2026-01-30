@@ -83,6 +83,7 @@ OPTIONS:
     --init-full           Generate the full config
     --config-help         Display all the configuration options
     --keybinds            Display all the default keybinds
+    --version, -v         Display the current installed version of runa
 
 ENVIRONMENT:
     RUNA_CONFIG         Override the default config path
