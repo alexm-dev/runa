@@ -22,7 +22,7 @@ pub(crate) fn handle_args() -> CliAction {
 
     if args.len() > 2 {
         eprintln!("Error: runa accepts only one argument at a time.");
-        eprintln!("Usage: runa [PATH] or runa [OPTION]");
+        eprintln!("Usage: rn [PATH] or runa [OPTION]");
         return CliAction::Exit;
     }
 
