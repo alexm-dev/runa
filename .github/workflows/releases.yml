@@ -84,17 +84,37 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create archives
+      - name: Organize release assets for archiving
         run: |
-          mkdir dist
           for dir in artifacts/bin-*; do
             platform=${dir#artifacts/bin-}
+            outdir="$dir/runa-$platform"
+            mkdir -p "$outdir/docs"
+
+            if [ -f "$dir/rn.exe" ]; then
+              mv "$dir/rn.exe" "$outdir/"
+            elif [ -f "$dir/rn" ]; then
+              mv "$dir/rn" "$outdir/"
+            fi
+            cp README.md LICENSE-MIT LICENSE-APACHE "$outdir/"
+            cp docs/configuration.md "$outdir/docs/"
+            cp CHANGELOG.md "$outdir/docs/"
+          done
+
+      - name: Create archives
+        run: |
+          mkdir -p dist
+          for dir in artifacts/bin-*; do
+            platform=${dir#artifacts/bin-}
+            outdir="runa-$platform"
+
             if [[ "$platform" == *"windows"* ]]; then
-              zip -j "dist/runa-$platform.zip" "$dir/rn.exe"
+              (cd "$dir" && zip -r "../../dist/${outdir}.zip" "$outdir")
             else
-              tar -czvf "dist/runa-$platform.tar.gz" -C "$dir" rn
+              tar -czvf "dist/${outdir}.tar.gz" -C "$dir" "$outdir"
             fi
           done
+
 
       - name: Calculate SHA256SUMS
         run: |
