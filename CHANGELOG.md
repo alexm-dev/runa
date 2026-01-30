@@ -4,7 +4,7 @@ All the changes made to runa are documented here.
 
 ### [0.5.13] - 2026-01-30
 
-Small update to release archives.
+Small packaging update.
 
 ### Added
 - Release assets: Added Windows ARM64 (aarch64) binary to release archives.
