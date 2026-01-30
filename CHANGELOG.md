@@ -2,6 +2,23 @@
 
 All the changes made to runa are documented here.
 
+### [0.5.13] - 2026-01-30
+
+Small update to release archives.
+
+### Added
+- Release assets: Added Windows ARM64 (aarch64) binary to release archives.
+- CLI help: Added `--version, -v` to cli `--help` message.
+
+### Changed
+- Artifact structure and release workflow: Release archives now always include a top-level folder. Assets include full documentation and license files.
+- Release process: All release tags from this version onward are signed
+- Branding: Updated terminology to describe `runa` as a `file manager` rather than a `file browser` (no functional changes).
+
+
+---
+
+
 ## [0.5.12] - 2026-01-29
 
 ### Added
