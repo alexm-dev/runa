@@ -72,7 +72,7 @@ fn print_version() {
 
 fn print_help() {
     println!(
-        r#"runa - A fast and lightweight console file browser written in Rust
+        r#"runa - A fast and lightweight terminal file manager written in Rust
 
 USAGE:
     rn [OPTIONS]

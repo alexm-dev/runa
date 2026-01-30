@@ -4,7 +4,7 @@
 pkgname=runa
 pkgver=0.5.12
 pkgrel=1
-pkgdesc="A fast and lightweight console file browser written in Rust"
+pkgdesc="A fast and lightweight terminal file manager written in Rust"
 arch=('x86_64' 'aarch64')
 url="https://github.com/alexm-dev/runa"
 license=('MIT' 'Apache-2.0')

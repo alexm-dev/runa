@@ -12,7 +12,7 @@
 </div>
 <div align="center">
 
-> **A fast, ultra-lightweight, and extremely customizable terminal file browser carved in Rust.**
+> **A fast, ultra-lightweight, and extremely customizable terminal file manager carved in Rust.**
 
 </div>
 <div align="center">
