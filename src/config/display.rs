@@ -179,17 +179,13 @@ impl Default for Display {
             separators: true,
             parent: true,
             preview: true,
-            layout: LayoutConfig {
-                parent: 20,
-                main: 40,
-                preview: 40,
-            },
             preview_underline: true,
             preview_underline_color: false,
             entry_padding: 1,
             scroll_padding: 5,
             toggle_marker_jump: false,
             instant_preview: true,
+            layout: LayoutConfig::default(),
             entry_count: EntryCountPosition::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
@@ -200,6 +196,7 @@ impl Default for Display {
 /// Layout configuration for the display panes
 /// This struct holds the ratio settings for the parent, main, and preview panes
 #[derive(Deserialize, Debug)]
+#[serde(default)]
 pub(crate) struct LayoutConfig {
     parent: u16,
     main: u16,
@@ -221,6 +218,16 @@ impl LayoutConfig {
     #[inline]
     fn preview_ratio(&self) -> u16 {
         self.preview
+    }
+}
+
+impl Default for LayoutConfig {
+    fn default() -> Self {
+        Self {
+            parent: 20,
+            main: 40,
+            preview: 40,
+        }
     }
 }
 
