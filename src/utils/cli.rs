@@ -75,18 +75,21 @@ fn print_help() {
         r#"runa - A fast and lightweight terminal file manager written in Rust
 
 USAGE:
-    rn [OPTIONS]
+  rn [PATH]
+
+PATH:
+  Directory to open (defaults to current directory)
 
 OPTIONS:
-    --help, -h            Print help information
-    --init                Generate a default config at ~/.config/runa/runa.toml
-    --init-full           Generate the full config
-    --config-help         Display all the configuration options
-    --keybinds            Display all the default keybinds
-    --version, -v         Display the current installed version of runa
+      --init              Generate a minimal default configuration
+      --init-full         Generate the full configuration with all options
+      --config-help       Display all the configuration options
+      --keybinds          Display all the default keybinds
+  -h, --help              Print help information
+  -v, --version           Display the current installed version of runa
 
 ENVIRONMENT:
-    RUNA_CONFIG         Override the default config path
+  RUNA_CONFIG             Override the default config path
 "#
     );
 }
@@ -98,7 +101,7 @@ fn print_keybinds() {
  Key Bindings
 =========================
 [keys]
-  open_file                 e.g. ["Enter"]
+  open_file                 ["Enter"]
   go_up                     ["k", "Up"]
   go_down                   ["j", "Down"]
   go_parent                 ["h", "Left", "Backspace"]
@@ -117,6 +120,7 @@ fn print_keybinds() {
   find                      ["s"]
   clear_markers             ["Ctrl+c"]
   clear_filter              ["Ctrl+f"]
+  alternate_delete          ["Ctrl+d"]
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
     "##
@@ -161,12 +165,18 @@ runa - Full Configuration Guide (runa.toml)
   instant_preview            Toggle instant previews on every selection change
   entry_count                "footer", "header" or "none" to disable the entry count
 
+[display.preview_option]
+  method                     Set the preview method ("bat" or "internal")
+  theme                      Set the bat method theme. (only works if method = "bat")
+  style                      Set the bat style. (only works if method = "bat")
+  wrap                       Toggle line wrapping in the preview pane (only works if method = "bat")
+
 [display.layout]
   parent                     Width % for parent pane
   main                       Width % for main pane
   preview                    Width % for preview pane
 
-[display.info] (toggle display file info attributes)
+[display.info]               Toggle display file info attributes
   name
   file_type
   size
@@ -181,18 +191,19 @@ runa - Full Configuration Guide (runa.toml)
   selection_icon             Symbol for selection (">" or " ")
   exe_color                  Coloring for executables
 
-# Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"):
-[theme.selection]            Selection bar (fg, bg)
-[theme.accent]               Borders/titles (fg, bg)
+Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"):
+
 [theme.entry]                Normal entries (fg, bg)
+[theme.accent]               Borders/titles (fg, bg)
+[theme.selection]            Selection bar (fg, bg)
 [theme.directory]            Directory entries (fg, bg)
 [theme.separator]            Vertical separators (fg, bg)
 [theme.parent]               Parent pane text (fg, bg, selection_fg, selection_bg)
 [theme.preview]              Preview pane text (fg, bg, selection_fg, selection_bg)
-[theme.symlink]              Symlink coloring (directory, file, target)
-[theme.marker]               Multi-select marker (icon, fg, bg, clipboard)
 [theme.underline]            Preview underline (fg, bg)
 [theme.path]                 Path bar at the top (fg, bg)
+[theme.symlink]              Symlink coloring (directory, file, target)
+[theme.marker]               Multi-select marker (icon, fg, bg, clipboard)
 
 [theme.status_line]          Status line color bar
   fg                         Foreground color for the status line
@@ -209,10 +220,10 @@ runa - Full Configuration Guide (runa.toml)
   title.fg/bg                Widget Title colors
 
 [theme.info]                 File Info overlay widget
- color.fg/bg,
- border.fg/bg,
- title.fg/bg,
- position                   "center", "top_left", [x, y], { x, y }
+  color.fg/bg,
+  border.fg/bg,
+  title.fg/bg,
+  position                   "center", "top_left", [x, y], { x, y }
 
 =========================
  Editor
@@ -243,21 +254,9 @@ runa - Full Configuration Guide (runa.toml)
   find                      ["s"]
   clear_markers             ["Ctrl+c"]
   clear_filter              ["Ctrl+f"]
+  alternate_delete          ["Ctrl+d"]
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
-
-=========================
- Examples
-=========================
-[display]
-borders = "split"
-
-[display.layout]
-main = 40
-
-[theme.accent]
-fg = "#00ff00"
-bg = "default"
 "##;
 
     println!("{}", help_text);
