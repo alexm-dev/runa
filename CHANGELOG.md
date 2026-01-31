@@ -2,6 +2,19 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased
+
+### Fixed
+- Empty parent content: Fixed parent pane being blank when starting runa in a empty directory.
+- Display layout: Fixed `[display.layout]` being forced to always include all the layout options keys.
+
+### Changed
+- AUR PKGBUILD: Moved the PKGBUILD and the aur.yml action workflow into a dedicated [runa-packaging](https://github.com/alexm-dev/runa-packaging).
+
+
+---
+
+
 ### [0.5.13] - 2026-01-30
 
 Small packaging update.
