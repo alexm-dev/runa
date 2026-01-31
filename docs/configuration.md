@@ -36,7 +36,7 @@ runa is under active development and options may change over time.
 
 ## Optional Tool Integration
 
-Some advanced featues like `find`, require external tools to be installed.
+Some advanced features like `find`, require external tools to be installed.
 
 - **[bat](https://github.com/sharkdp/bat)**:
     Used for fast, syntax-highlighted file previews when `[display.previews_options.method]` is set to `"bat"`.  
@@ -104,7 +104,7 @@ always_show = []
 # Maximum allowed: 1_000_000 (values above this will be clamped)
 max_find_results = 2000
 
-# Toggle to move deleted files to the the recycle bin instead of being permanently deleted.
+# Toggle to move deleted files to the recycle bin instead of being permanently deleted.
 # This will set the default delete key, the alternate_delete key will then alternate between the toggle.
 move_to_trash = true
 
@@ -175,7 +175,7 @@ style = "plain"
 theme = "default"
 
 # Toggle wrapping the bat output to the pane width.
-# If false, long lines stay on onle line and go off-screen
+# If false, long lines stay on one line and go off-screen
 # If true, all the lines are wrapped to the pane width
 wrap = "false"
 
@@ -185,7 +185,7 @@ parent = 20
 main = 40
 preview = 40
 
-# Diplay the file info attributes.
+# Display the file info attributes.
 [display.info]
 name = true
 file_type = true
@@ -263,7 +263,7 @@ These options are optional and can be omitted.
 # bg = "default"
 #
 # For larger sections such as [theme.widget] or [theme.info], you may use either
-# dot notation (e.g. color.fg, border.bg) OR define subtables like [theme.widget.color]:
+# dot notation (e.g. color.fg, border.bg) OR define sub-tables like [theme.widget.color]:
 #
 # [theme.widget]
 # color.fg = "white"
@@ -342,7 +342,7 @@ target = "default"
 icon = "*"
 fg = "default"
 bg = "default"
-# Change the color of the clipboard when you copy a entry via multiselect or via normal yank/copy
+# Change the color of the clipboard when you copy a entry via multi-select or via normal yank/copy
 clipboard.fg = "default"
 clipboard.bg = "default"
 
@@ -358,13 +358,13 @@ bg = "default"
 
 [theme.widget]
 # Leave blank or omit to use the regular defaults.
-# Popup position: choose one of the following styles
+# Widget position: choose one of the following styles
 #   - Preset string:    "center", "top_left", "bottom_right", etc. Also possible to write "topleft", "bottomright", etc..
 #   - List:             [x, y]             # percent of screen, e.g., [38, 32]
 #   - Table/object:     { x = 25, y = 60 } # percent of screen
 position = "center"
 
-# Popup size: choose one of:
+# Widget size: choose one of:
 #   - Preset string:    "small", "medium", "large"
 #   - List:             [width, height]    # **cells (columns x rows)**, e.g., [60, 12]
 #   - Table/object:     { w = 60, h = 12 } # **cells**
@@ -385,7 +385,7 @@ move_size = [70, 14]
 # Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
 find_visible_results = 5
 
-# Option to configure the find widget widht
+# Option to configure the find widget width
 find_width = 40
 
 # Coloring for the widgets
