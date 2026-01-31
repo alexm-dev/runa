@@ -50,6 +50,14 @@ impl ParentState {
         Some(parent_path) != self.last_path.as_deref()
     }
 
+    pub(crate) fn prepare_new_request(&mut self, path: &Path) -> u64 {
+        if Some(path) != self.last_path.as_deref() {
+            self.request_id = self.request_id.wrapping_add(1);
+            self.last_path = Some(path.to_path_buf());
+        }
+        self.request_id
+    }
+
     /// Updates the state with new entries
     ///
     /// Only applies the update if request ID is the latest
@@ -76,6 +84,5 @@ impl ParentState {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;
-        self.request_id = self.request_id.wrapping_add(1);
     }
 }

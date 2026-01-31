@@ -423,7 +423,7 @@ impl<'a> AppState<'a> {
             let parent_path_buf = parent_path.to_path_buf();
 
             if self.parent.should_request(&parent_path_buf) {
-                let req_id = self.parent.request_id();
+                let req_id = self.parent.prepare_new_request(&parent_path_buf);
 
                 let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
                     path: parent_path_buf,
