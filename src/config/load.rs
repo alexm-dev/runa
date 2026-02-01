@@ -329,6 +329,11 @@ name = "default"
 # clear_markers = ["Ctrl+c"]
 # clear_filter = ["Ctrl+f"]
 # alternate_delete = ["Ctrl+d"]
+
+# Keys triggered by pressing "g" once
+# go_to_top = ["g"]
+# go_to_home = ["h"]
+# go_to_path = ["p"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration

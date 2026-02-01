@@ -464,11 +464,12 @@ alternate_delete    = ["Ctrl+d"]    # Alternates between move_to_trash and perma
 
 # Keys that are triggered by the "g" prefix
 go_to_top           = ["g"]
+go_to_home          = ["h"]
 go_to_path          = ["p"]
 ```
 
 **Note:**
-- `go_to_top` and `go_to_path` are triggered using the `"g"` prefix.  
+- `go_to_top`, `go_to_path` and `go_to_home` are triggered using the `"g"` prefix.  
   For example, press `"g"` then `"p"` to activate "go to path".
 
 You may remove any binding to let it fall back to the default.

@@ -122,11 +122,12 @@ fn print_keybinds() {
   clear_filter              ["Ctrl+f"]
   alternate_delete          ["Ctrl+d"]
   go_to_top                 ["g"]     (press "g" then "g" again)
+  go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
 
-    Note: The go_to_top and go_to_path bindings work after pressing the "g" prefix.
+    Note: The go_to bindings work after pressing the "g" prefix.
           For example: "g" + "g" for top, "g" + "p" for path
     "##
     )
@@ -263,11 +264,12 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   clear_filter              ["Ctrl+f"]
   alternate_delete          ["Ctrl+d"]
   go_to_top                 ["g"]     (press "g" then "g" again)
+  go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
 
-    Note: The go_to_top and go_to_path bindings work after pressing the "g" prefix.
+    Note: The go_to bindings work after pressing the "g" prefix.
           For example: "g" + "g" for top, "g" + "p" for path
 "##;
 
