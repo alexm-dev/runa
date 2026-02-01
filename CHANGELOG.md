@@ -4,7 +4,7 @@ All the changes made to runa are documented here.
 
 ## [0.6.0] - 2026-02-01
 
-New overlay and keybindings for easier navigation of directories and entries.
+### New overlay and keybindings for easier navigation of directories and entries.
 
 ### Added
 - **`g` prefix navigation:** Implemented the `"g"` prefix to quickly jump to the first selection (`go_to_top`), to the home (`go_to_home`) or a specific path (`go_to_path`).
