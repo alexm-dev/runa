@@ -17,7 +17,7 @@ use crate::config::display::PreviewMethod;
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
-use crate::utils::{copy_recursive, get_unused_path};
+use crate::utils::{copy_recursive, get_unused_path, is_preview_deny};
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -263,15 +263,20 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
             }
 
             let lines = match preview_method {
-                // Use internal preview method
                 PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width),
-                PreviewMethod::Bat => match preview_bat(&path, max_lines, args.as_slice()) {
-                    // Bat preview succeeded
-                    // If bat fails, fallback to internal preview
-                    // If bat is not installed or returns error, we fallback to internal preview
-                    Ok(lines) => lines,
-                    Err(_) => safe_read_preview(&path, max_lines, pane_width),
-                },
+                PreviewMethod::Bat => {
+                    if is_preview_deny(&path) {
+                        safe_read_preview(&path, max_lines, pane_width)
+                    } else {
+                        match preview_bat(&path, max_lines, args.as_slice()) {
+                            // Bat preview succeeded
+                            // If bat fails, fallback to internal preview
+                            // If bat is not installed or returns error, we fallback to internal preview
+                            Ok(lines) => lines,
+                            Err(_) => safe_read_preview(&path, max_lines, pane_width),
+                        }
+                    }
+                }
             };
             let _ = res_tx.send(WorkerResponse::PreviewLoaded { lines, request_id });
         }

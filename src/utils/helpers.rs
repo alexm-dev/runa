@@ -14,6 +14,7 @@
 use crate::config::Editor;
 use ratatui::style::Color;
 use std::borrow::Cow;
+use std::ffi::OsStr;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::sync::OnceLock;
 use std::{fs, io};
@@ -30,6 +31,9 @@ pub(crate) const DEFAULT_FIND_RESULTS: usize = 2000;
 /// The maximum find result limit which is possible.
 /// Can be set higher, but better to set it to a big limit instead of usize::MAX
 pub(crate) const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
+
+/// Deny previews of certain file extensions
+const DENY: &[&str] = &["a", "o", "so"];
 
 /// Shared cache for the home_dir dirs call
 static HOME_DIR_CACHE: OnceLock<Option<PathBuf>> = OnceLock::new();
@@ -415,6 +419,14 @@ pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R 
         }
     }
     f(name)
+}
+
+/// Check for file extension to deny file previews
+pub(crate) fn is_preview_deny(path: &Path) -> bool {
+    match path.extension() {
+        Some(ext) => DENY.iter().any(|&s| ext == OsStr::new(s)),
+        None => false,
+    }
 }
 
 /// Helper utils integration tests
