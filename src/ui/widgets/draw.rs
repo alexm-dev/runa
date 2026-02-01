@@ -596,15 +596,16 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
     let go_to_top_keys = app.config().keys().go_to_top();
     let go_to_path_keys = app.config().keys().go_to_path();
 
-    let mut g_prefixes: Vec<(String, &'static str)> = vec![];
-    for k in go_to_top_keys {
+    let mut g_prefixes: Vec<(String, &'static str)> =
+        Vec::with_capacity(go_to_top_keys.len() + go_to_path_keys.len());
+    if let Some(k) = go_to_top_keys.first() {
         g_prefixes.push((k.clone(), "Go to top"));
     }
-    for k in go_to_path_keys {
+    if let Some(k) = go_to_path_keys.first() {
         g_prefixes.push((k.clone(), "Go to path"));
     }
 
-    let mut spans = Vec::new();
+    let mut spans = Vec::with_capacity(4 * g_prefixes.len() + 2);
     for (i, (ch, desc)) in g_prefixes.iter().enumerate() {
         if i > 0 {
             spans.push(Span::raw("    "));
@@ -613,19 +614,37 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
         spans.push(Span::raw(" "));
         spans.push(Span::raw(*desc));
     }
+
+    spans.push(Span::raw(" "));
     let line = Line::from(spans);
 
+    let widget = app.config().theme().widget();
     let area = frame.area();
-    let width = area.width.min(line.width() as u16 + 4);
-    let rect = ratatui::layout::Rect {
-        x: area.x + (area.width.saturating_sub(width)) / 2,
-        y: area.y + area.height.saturating_sub(2),
-        width,
-        height: 1,
-    };
-    let para = Paragraph::new(line).alignment(Alignment::Center);
 
-    frame.render_widget(para, rect);
+    let size = widget.go_to_help_size();
+    let position = widget.go_to_help_position();
+
+    let border_type = app.config().display().border_shape().as_border_type();
+    let dialog_style = DialogStyle {
+        border: Borders::ALL,
+        border_style: widget.border_style_or(accent_style),
+        bg: widget.bg_or_theme(),
+        fg: widget.fg_or_theme(),
+        title: Some(Span::styled("Go to", widget.title_style_or_theme())),
+    };
+
+    draw_dialog(
+        frame,
+        DialogLayout {
+            area,
+            position,
+            size,
+        },
+        border_type,
+        &dialog_style,
+        line,
+        Some(Alignment::Center),
+    );
 }
 
 /// Draws a simple message overlay dialog at the bottom right
