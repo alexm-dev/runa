@@ -289,7 +289,7 @@ name = "default"
 # move_size = [70, 14]
 # find_visible_results = 5
 # find_width = 40
-# goto_help.size = [38, 3]
+# goto_help.size = [58, 3]
 # goto_help.position = "bottom"
 
 # [theme.status_line]

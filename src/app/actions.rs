@@ -500,8 +500,14 @@ pub(crate) struct AutocompleteState {
 }
 
 impl AutocompleteState {
+    #[inline]
     pub(crate) fn suggestions(&self) -> &Vec<String> {
         &self.suggestions
+    }
+
+    #[inline]
+    pub(crate) fn last_input(&self) -> &str {
+        &self.last_input
     }
 
     pub(crate) fn reset(&mut self) {
@@ -524,9 +530,5 @@ impl AutocompleteState {
 
     pub(crate) fn current(&self) -> Option<&String> {
         self.suggestions.get(self.index)
-    }
-
-    pub(crate) fn last_input(&self) -> &str {
-        &self.last_input
     }
 }

@@ -399,7 +399,7 @@ title.fg = "default"
 title.bg = "default"
 
 # Set the size and position of the go to help widet when pressing "g"
-goto_help.size = [38, 3]
+goto_help.size = [58, 3]
 goto_help.position = "bottom"
 
 # Configuration for the status_line
