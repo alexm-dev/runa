@@ -9,6 +9,7 @@ All the changes made to runa are documented here.
 - **`go_to_path` function:** Added the ability to jump to a specific path using `fd`-powered auto-complete.
 - **Go To Help overlay:** Introduced a smart overlay widget that visualizes available `"g"` prefix navigation options.
 - **Configurable `go_to` bindings:** `go_to_top`, `go_to_path`, `go_to_home` actions in `[keys]` config; these are triggered by the `"g"` prefix (e.g., `"g"` + `"g"` for top, `"g"` + `"p"` for path, `"g"` + `"h"` for home).
+- **Cycling directory autocomplete:** Added stateful, cycling directory autocomplete with Tab in path entry prompts, allowing to cycle and select directory completions from the current input.
 
 ### Fixed
 - Empty parent content: Fixed parent pane being blank when starting runa in a empty directory.
