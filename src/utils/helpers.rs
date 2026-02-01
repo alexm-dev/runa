@@ -33,7 +33,7 @@ pub(crate) const DEFAULT_FIND_RESULTS: usize = 2000;
 pub(crate) const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
 
 /// Deny previews of certain file extensions
-const DENY: &[&str] = &["a", "o", "so"];
+const DENY: &[&str] = &["a"];
 
 /// Shared cache for the home_dir dirs call
 static HOME_DIR_CACHE: OnceLock<Option<PathBuf>> = OnceLock::new();
