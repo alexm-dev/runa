@@ -362,7 +362,7 @@ impl Default for ActionContext {
             input_buffer: String::new(),
             input_cursor_pos: 0,
             clipboard: None,
-            prefix_recognizer: KeyPrefix::new(Duration::from_secs(2)),
+            prefix_recognizer: KeyPrefix::new(Duration::from_secs(4)),
             is_cut: false,
             find: FindState::default(),
         }

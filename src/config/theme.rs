@@ -680,7 +680,7 @@ pub(super) struct GoToHelpTheme {
 impl Default for GoToHelpTheme {
     fn default() -> Self {
         GoToHelpTheme {
-            size: Some(DialogSize::Custom(38, 3)),
+            size: Some(DialogSize::Custom(58, 3)),
             position: Some(DialogPosition::Bottom),
         }
     }

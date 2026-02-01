@@ -593,13 +593,18 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
 }
 
 pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
-    let go_to_top_keys = app.config().keys().go_to_top();
-    let go_to_path_keys = app.config().keys().go_to_path();
+    let keys = app.config().keys();
+    let go_to_top_keys = keys.go_to_top();
+    let go_to_home_keys = keys.go_to_home();
+    let go_to_path_keys = keys.go_to_path();
 
     let mut g_prefixes: Vec<(String, &'static str)> =
         Vec::with_capacity(go_to_top_keys.len() + go_to_path_keys.len());
     if let Some(k) = go_to_top_keys.first() {
         g_prefixes.push((k.clone(), "Go to top"));
+    }
+    if let Some(k) = go_to_home_keys.first() {
+        g_prefixes.push((k.clone(), "Go to home"));
     }
     if let Some(k) = go_to_path_keys.first() {
         g_prefixes.push((k.clone(), "Go to path"));

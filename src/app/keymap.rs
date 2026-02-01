@@ -22,8 +22,9 @@ pub(crate) enum NavAction {
     GoIntoDir,
     GoUp,
     GoDown,
-    GoToPath,
     GoToTop,
+    GoToPath,
+    GoToHome,
     ToggleMarker,
     ClearMarker,
     ClearFilter,
@@ -121,7 +122,11 @@ impl Keymap {
             Action::Nav(NavAction::GoToTop),
             PrefixCommand::Nav(NavAction::GoToTop)
         );
-
+        bind_prefix!(
+            keys.go_to_home(),
+            Action::Nav(NavAction::GoToHome),
+            PrefixCommand::Nav(NavAction::GoToHome)
+        );
         bind_prefix!(
             keys.go_to_path(),
             Action::Nav(NavAction::GoToPath),

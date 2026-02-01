@@ -11,7 +11,7 @@ use crate::core::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::Overlay;
 use crate::utils::{
-    clean_display_path, expand_home_path, expand_home_path_buf, normalize_relative_path,
+    clean_display_path, expand_home_path, expand_home_path_buf, get_home, normalize_relative_path,
     open_in_editor,
 };
 
@@ -227,6 +227,7 @@ impl<'a> AppState<'a> {
     pub(crate) fn handle_prefix_action(&mut self, prefix: PrefixCommand) -> bool {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => self.handle_go_to_top(),
+            PrefixCommand::Nav(NavAction::GoToHome) => self.handle_go_to_home(),
             PrefixCommand::Nav(NavAction::GoToPath) => self.prompt_go_to_path(),
             _ => return false,
         }
@@ -509,6 +510,15 @@ impl<'a> AppState<'a> {
 
         self.exit_input_mode();
         self.push_overlay_message(move_msg, Duration::from_secs(3));
+    }
+
+    fn handle_go_to_home(&mut self) {
+        if let Some(home_path) = get_home() {
+            self.nav.save_position();
+            self.nav.set_path(home_path.clone());
+            self.request_dir_load(None);
+            self.request_parent_content();
+        }
     }
 
     fn handle_go_to_path(&mut self) {

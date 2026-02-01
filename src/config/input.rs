@@ -30,6 +30,7 @@ pub(crate) struct Keys {
     clear_filter: Vec<String>,
     alternate_delete: Vec<String>,
     go_to_top: Vec<String>,
+    go_to_home: Vec<String>,
     go_to_path: Vec<String>,
 }
 
@@ -148,6 +149,11 @@ impl Keys {
     }
 
     #[inline]
+    pub(crate) fn go_to_home(&self) -> &[String] {
+        &self.go_to_home
+    }
+
+    #[inline]
     pub(crate) fn go_to_path(&self) -> &[String] {
         &self.go_to_path
     }
@@ -183,6 +189,7 @@ impl Default for Keys {
             alternate_delete: vec!["Ctrl+d".into()],
 
             go_to_top: vec!["g".into()],
+            go_to_home: vec!["h".into()],
             go_to_path: vec!["p".into()],
         }
     }
