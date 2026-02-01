@@ -2,6 +2,17 @@
 
 All the changes made to runa are documented here.
 
+## [0.6.1] - 2026-02-01
+
+### Patch to keymap
+
+### Fixed
+- Keymap: Prefix actions (e.g., `g` + `h` for "Go to home") no longer overwrite or conflict with single-key actions (`h`, `p`, etc.) after removing their insertion into the main keymap. Now you can use the same keys both for navigation and for prefix commands.
+
+
+---
+
+
 ## [0.6.0] - 2026-02-01
 
 ### New overlay and keybindings for easier navigation of directories and entries.
