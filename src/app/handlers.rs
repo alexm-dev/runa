@@ -762,7 +762,8 @@ impl<'a> AppState<'a> {
         if fd_binary().is_err() {
             return;
         }
-        let input = self.actions.input_buffer();
+
+        let input = self.actions.input_buffer().to_string();
         let expanded = expand_home_path(input.trim());
 
         let (base_dir, prefix) = if let Some(idx) = expanded.rfind(MAIN_SEPARATOR) {
@@ -773,11 +774,34 @@ impl<'a> AppState<'a> {
         };
 
         let show_hidden = self.config.general().show_hidden();
-        let suggestions = complete_dirs_with_fd(base_dir, prefix, show_hidden).unwrap_or_default();
 
-        if let Some(suggestion) = suggestions.first() {
-            let completed = suggestion.to_string();
-            self.actions.set_input_buffer(completed);
+        let suggestion_opt = {
+            let ac = self.actions.autocomplete_mut();
+
+            let needs_update = ac.last_input() != input || ac.suggestions().is_empty();
+            if needs_update {
+                let suggestions =
+                    complete_dirs_with_fd(base_dir, prefix, show_hidden).unwrap_or_default();
+                ac.update(suggestions, &input);
+            }
+
+            let suggestion = ac.current().cloned();
+
+            if suggestion.is_some() {
+                ac.advance();
+            }
+
+            suggestion
+        };
+
+        if let Some(suggestion) = suggestion_opt {
+            let mut completed_path = base_dir.to_path_buf();
+            completed_path.push(&suggestion);
+            let mut out = completed_path.to_string_lossy().to_string();
+            if !out.ends_with(MAIN_SEPARATOR) {
+                out.push(MAIN_SEPARATOR);
+            }
+            self.actions.set_input_buffer(out);
         }
     }
 

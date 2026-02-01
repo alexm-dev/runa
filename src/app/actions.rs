@@ -59,6 +59,7 @@ pub(crate) struct ActionContext {
     input_buffer: String,
     input_cursor_pos: usize,
     clipboard: Option<HashSet<PathBuf>>,
+    autocomplete: AutocompleteState,
     prefix_recognizer: KeyPrefix,
     is_cut: bool,
     find: FindState,
@@ -93,6 +94,10 @@ impl ActionContext {
 
     pub(crate) fn clipboard_mut(&mut self) -> &mut Option<HashSet<PathBuf>> {
         &mut self.clipboard
+    }
+
+    pub(crate) fn autocomplete_mut(&mut self) -> &mut AutocompleteState {
+        &mut self.autocomplete
     }
 
     // Find functions
@@ -166,6 +171,7 @@ impl ActionContext {
         self.mode = ActionMode::Normal;
         self.input_buffer.clear();
         self.find.reset();
+        self.autocomplete.reset();
     }
 
     // Actions functions
@@ -362,6 +368,7 @@ impl Default for ActionContext {
             input_buffer: String::new(),
             input_cursor_pos: 0,
             clipboard: None,
+            autocomplete: AutocompleteState::default(),
             prefix_recognizer: KeyPrefix::new(Duration::from_secs(4)),
             is_cut: false,
             find: FindState::default(),
@@ -482,5 +489,44 @@ impl FindState {
         if self.selected > 0 {
             self.selected -= 1;
         }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct AutocompleteState {
+    suggestions: Vec<String>,
+    index: usize,
+    last_input: String,
+}
+
+impl AutocompleteState {
+    pub(crate) fn suggestions(&self) -> &Vec<String> {
+        &self.suggestions
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.suggestions.clear();
+        self.index = 0;
+        self.last_input.clear();
+    }
+
+    pub(crate) fn update(&mut self, suggestions: Vec<String>, input: &str) {
+        self.suggestions = suggestions;
+        self.index = 0;
+        self.last_input = input.to_string();
+    }
+
+    pub(crate) fn advance(&mut self) {
+        if !self.suggestions.is_empty() {
+            self.index = (self.index + 1) % self.suggestions.len();
+        }
+    }
+
+    pub(crate) fn current(&self) -> Option<&String> {
+        self.suggestions.get(self.index)
+    }
+
+    pub(crate) fn last_input(&self) -> &str {
+        &self.last_input
     }
 }
