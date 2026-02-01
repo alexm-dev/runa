@@ -29,6 +29,8 @@ pub(crate) struct Keys {
     clear_markers: Vec<String>,
     clear_filter: Vec<String>,
     alternate_delete: Vec<String>,
+    go_to_top: Vec<String>,
+    go_to_path: Vec<String>,
 }
 
 /// Editor configuration options
@@ -139,6 +141,16 @@ impl Keys {
     pub(crate) fn alternate_delete(&self) -> &[String] {
         &self.alternate_delete
     }
+
+    #[inline]
+    pub(crate) fn go_to_top(&self) -> &[String] {
+        &self.go_to_top
+    }
+
+    #[inline]
+    pub(crate) fn go_to_path(&self) -> &[String] {
+        &self.go_to_path
+    }
 }
 
 /// Default input configuration options
@@ -150,6 +162,7 @@ impl Default for Keys {
             go_down: vec!["j".into(), "Down".into()],
             go_parent: vec!["h".into(), "Left".into(), "Backspace".into()],
             go_into_dir: vec!["l".into(), "Right".into()],
+
             quit: vec!["q".into(), "Esc".into()],
 
             delete: vec!["d".into()],
@@ -168,6 +181,9 @@ impl Default for Keys {
             clear_filter: vec!["Ctrl+f".into()],
 
             alternate_delete: vec!["Ctrl+d".into()],
+
+            go_to_top: vec!["g".into()],
+            go_to_path: vec!["p".into()],
         }
     }
 }

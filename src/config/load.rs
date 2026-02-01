@@ -279,16 +279,18 @@ name = "default"
 # clipboard.bg = "default"
 
 # [theme.widget]
+# color.fg = "default"
+# color.bg = "default"
+# border.fg = "default"
+# border.bg = "default"
 # size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
 # position = "center"       # "center", "top_left", "bottomright", or [x, y] (percent) or { x = 42, y = 80 }.
 # confirm_size = "large"
 # move_size = [70, 14]
 # find_visible_results = 5
 # find_width = 40
-# color.fg = "default"
-# color.bg = "default"
-# border.fg = "default"
-# border.bg = "default"
+# goto_help.size = [38, 3]
+# goto_help.position = "bottom"
 
 # [theme.status_line]
 # fg = "default"

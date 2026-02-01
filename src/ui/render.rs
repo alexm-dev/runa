@@ -363,6 +363,9 @@ fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
             Overlay::Message { text } => {
                 widgets::draw_message_overlay(frame, app, accent_style, text);
             }
+            Overlay::PreifxHelp => {
+                widgets::draw_prefix_help_overlay(frame, app, accent_style);
+            }
         }
     }
 }

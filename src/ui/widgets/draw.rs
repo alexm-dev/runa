@@ -592,6 +592,61 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     frame.set_cursor_position((dialog_rect.x + 1 + cursor_x as u16, dialog_rect.y + 1));
 }
 
+pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    let go_to_top_keys = app.config().keys().go_to_top();
+    let go_to_path_keys = app.config().keys().go_to_path();
+
+    let mut g_prefixes: Vec<(String, &'static str)> =
+        Vec::with_capacity(go_to_top_keys.len() + go_to_path_keys.len());
+    if let Some(k) = go_to_top_keys.first() {
+        g_prefixes.push((k.clone(), "Go to top"));
+    }
+    if let Some(k) = go_to_path_keys.first() {
+        g_prefixes.push((k.clone(), "Go to path"));
+    }
+
+    let mut spans = Vec::with_capacity(4 * g_prefixes.len() + 2);
+    for (i, (ch, desc)) in g_prefixes.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("    "));
+        }
+        spans.push(Span::styled(format!("[{}]", ch), accent_style));
+        spans.push(Span::raw(" "));
+        spans.push(Span::raw(*desc));
+    }
+
+    spans.push(Span::raw(" "));
+    let line = Line::from(spans);
+
+    let widget = app.config().theme().widget();
+    let area = frame.area();
+
+    let size = widget.go_to_help_size();
+    let position = widget.go_to_help_position();
+
+    let border_type = app.config().display().border_shape().as_border_type();
+    let dialog_style = DialogStyle {
+        border: Borders::ALL,
+        border_style: widget.border_style_or(accent_style),
+        bg: widget.bg_or_theme(),
+        fg: widget.fg_or_theme(),
+        title: Some(Span::styled("Go to", widget.title_style_or_theme())),
+    };
+
+    draw_dialog(
+        frame,
+        DialogLayout {
+            area,
+            position,
+            size,
+        },
+        border_type,
+        &dialog_style,
+        line,
+        Some(Alignment::Center),
+    );
+}
+
 /// Draws a simple message overlay dialog at the bottom right
 /// Used for notifications such as "fd is not available" etc.
 pub(crate) fn draw_message_overlay(

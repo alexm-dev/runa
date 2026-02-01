@@ -220,6 +220,13 @@ impl<'a> AppState<'a> {
             changed = true;
         }
 
+        let prefix_recognizer = self.actions.prefix_recognizer_mut();
+        if prefix_recognizer.is_g_state() && prefix_recognizer.expired() {
+            prefix_recognizer.cancel();
+            self.hide_prefix_help();
+            changed = true;
+        }
+
         // Handle preview debounc
         if self.preview.should_trigger() {
             self.request_preview();

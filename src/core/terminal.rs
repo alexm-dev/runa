@@ -55,6 +55,13 @@ where
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
+                    if let Some(prefix) = app.handle_prefix_key(&key)
+                        && app.handle_prefix_action(prefix)
+                    {
+                        terminal.draw(|f| ui::render(f, app))?;
+                        continue;
+                    }
+
                     let result = app.handle_keypress(key);
 
                     match result {

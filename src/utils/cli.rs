@@ -121,8 +121,13 @@ fn print_keybinds() {
   clear_markers             ["Ctrl+c"]
   clear_filter              ["Ctrl+f"]
   alternate_delete          ["Ctrl+d"]
+  go_to_top                 ["g"]     (press "g" then "g" again)
+  go_to_path                ["p"]     (press "g" then "p")
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
+
+    Note: The go_to_top and go_to_path bindings work after pressing the "g" prefix.
+          For example: "g" + "g" for top, "g" + "p" for path
     "##
     )
 }
@@ -218,6 +223,8 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   color.fg/bg                Text/background color
   border.fg/bg               Widget Border colors
   title.fg/bg                Widget Title colors
+  go_to_help.size            Size of the go_to dialog when pressing the "g" prefix
+  go_to_help.position        Position of the go_to dialog when pressing the "g" prefix
 
 [theme.info]                 File Info overlay widget
   color.fg/bg,
@@ -255,8 +262,13 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   clear_markers             ["Ctrl+c"]
   clear_filter              ["Ctrl+f"]
   alternate_delete          ["Ctrl+d"]
+  go_to_top                 ["g"]     (press "g" then "g" again)
+  go_to_path                ["p"]     (press "g" then "p")
 
     (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
+
+    Note: The go_to_top and go_to_path bindings work after pressing the "g" prefix.
+          For example: "g" + "g" for top, "g" + "p" for path
 "##;
 
     println!("{}", help_text);

@@ -3,6 +3,7 @@
 //! Contains the [ActionContext] struct, tracking user input state, clipboard, and action modes.
 //! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
 
+use crate::app::keymap::KeyPrefix;
 use crate::app::nav::NavState;
 use crate::core::proc::FindResult;
 use crate::core::worker::{FileOperation, WorkerTask};
@@ -38,6 +39,7 @@ pub(crate) enum InputMode {
     ConfirmDelete { is_trash: bool },
     Find,
     MoveFile,
+    GoToPath,
 }
 
 /// Tracks current user action and input buffer state for file operations and commands.
@@ -57,6 +59,7 @@ pub(crate) struct ActionContext {
     input_buffer: String,
     input_cursor_pos: usize,
     clipboard: Option<HashSet<PathBuf>>,
+    prefix_recognizer: KeyPrefix,
     is_cut: bool,
     find: FindState,
 }
@@ -77,6 +80,10 @@ impl ActionContext {
     #[inline]
     pub(crate) fn input_cursor_pos(&self) -> usize {
         self.input_cursor_pos
+    }
+
+    pub(crate) fn prefix_recognizer_mut(&mut self) -> &mut KeyPrefix {
+        &mut self.prefix_recognizer
     }
 
     #[inline]
@@ -355,6 +362,7 @@ impl Default for ActionContext {
             input_buffer: String::new(),
             input_cursor_pos: 0,
             clipboard: None,
+            prefix_recognizer: KeyPrefix::new(Duration::from_secs(2)),
             is_cut: false,
             find: FindState::default(),
         }

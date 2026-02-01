@@ -494,6 +494,7 @@ pub(crate) struct WidgetTheme {
     move_size: Option<DialogSize>,
     find_visible_results: Option<usize>,
     find_width: Option<u16>,
+    go_to_help: GoToHelpTheme,
 }
 
 impl WidgetTheme {
@@ -581,6 +582,20 @@ impl WidgetTheme {
     pub(crate) fn find_width_or(&self, fallback: u16) -> u16 {
         self.find_width.unwrap_or(fallback)
     }
+
+    pub(crate) fn go_to_help_size(&self) -> DialogSize {
+        self.go_to_help
+            .size
+            .or(Theme::internal_defaults().widget.go_to_help.size)
+            .unwrap_or(DialogSize::Custom(38, 3))
+    }
+
+    pub(crate) fn go_to_help_position(&self) -> DialogPosition {
+        self.go_to_help
+            .position
+            .or(Theme::internal_defaults().widget.go_to_help.position)
+            .unwrap_or(DialogPosition::Bottom)
+    }
 }
 
 /// Default implementation for WidgetTheme
@@ -596,6 +611,7 @@ impl Default for WidgetTheme {
             move_size: Some(DialogSize::Custom(70, 14)),
             find_visible_results: Some(5),
             find_width: Some(40),
+            go_to_help: GoToHelpTheme::default(),
         }
     }
 }
@@ -650,6 +666,22 @@ impl ColorFallback for Color {
             fallback
         } else {
             self
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(default)]
+pub(super) struct GoToHelpTheme {
+    size: Option<DialogSize>,
+    position: Option<DialogPosition>,
+}
+
+impl Default for GoToHelpTheme {
+    fn default() -> Self {
+        GoToHelpTheme {
+            size: Some(DialogSize::Custom(38, 3)),
+            position: Some(DialogPosition::Bottom),
         }
     }
 }
