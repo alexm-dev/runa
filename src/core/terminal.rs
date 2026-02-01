@@ -3,7 +3,6 @@
 //! Handles setup/teardown of raw mode, alternate screen, redraws,
 //! and events (keypress, resize) to app logic.
 
-use crate::app::keymap::KeyPrefix;
 use crate::app::{AppState, KeypressResult};
 use crate::ui;
 use crossterm::{
@@ -44,8 +43,6 @@ fn event_loop<B: ratatui::backend::Backend>(
 where
     io::Error: From<<B as Backend>::Error>,
 {
-    let mut prefix_recognizer = KeyPrefix::new(Duration::from_millis(450));
-
     loop {
         // App Tick
         // If tick returns true, something changed internally that needs a redraw.
@@ -58,8 +55,8 @@ where
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    if let Some(prefix) = prefix_recognizer.feed(&key, app.keymap().gmap())
-                        && app.handle_prefix(prefix)
+                    if let Some(prefix) = app.handle_prefix_key(&key)
+                        && app.handle_prefix_action(prefix)
                     {
                         terminal.draw(|f| ui::render(f, app))?;
                         continue;

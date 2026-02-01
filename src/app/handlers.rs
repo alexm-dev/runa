@@ -224,13 +224,32 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
-    pub(crate) fn handle_prefix(&mut self, prefix: PrefixCommand) -> bool {
+    pub(crate) fn handle_prefix_action(&mut self, prefix: PrefixCommand) -> bool {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => self.handle_go_to_top(),
             PrefixCommand::Nav(NavAction::GoToPath) => self.prompt_go_to_path(),
             _ => return false,
         }
         true
+    }
+
+    pub(crate) fn handle_prefix_key(&mut self, key: &KeyEvent) -> Option<PrefixCommand> {
+        let gmap = self.keymap.gmap();
+
+        let (started, exited, result) = {
+            let prefix = self.actions.prefix_recognizer_mut();
+
+            let result = prefix.feed(key, gmap);
+            (prefix.started_prefix(), prefix.exited_prefix(), result)
+        };
+
+        if started {
+            self.show_prefix_help();
+        }
+        if exited {
+            self.hide_prefix_help();
+        }
+        result
     }
 
     /// Enters an input mode with the given parameters.
@@ -492,7 +511,7 @@ impl<'a> AppState<'a> {
         self.push_overlay_message(move_msg, Duration::from_secs(3));
     }
 
-    pub(crate) fn handle_go_to_path(&mut self) {
+    fn handle_go_to_path(&mut self) {
         let path = self.actions.input_buffer();
         if path.trim().is_empty() {
             self.push_overlay_message("Error: No path entered".to_string(), Duration::from_secs(3));
@@ -523,20 +542,20 @@ impl<'a> AppState<'a> {
         }
     }
 
-    pub(crate) fn handle_go_to_top(&mut self) {
+    fn handle_go_to_top(&mut self) {
         self.nav.first_selected();
         self.request_preview();
     }
 
     /// Handles displaying a timed message overlay.
-    pub(crate) fn handle_timed_message(&mut self, duration: Duration) {
+    fn handle_timed_message(&mut self, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
     }
 
     // Input processes
 
     /// Processes a character input for the confirm delete input mode.
-    pub(crate) fn process_confirm_delete_char(&mut self, c: char) {
+    fn process_confirm_delete_char(&mut self, c: char) {
         if matches!(c, 'y' | 'Y') {
             self.confirm_delete();
         }
@@ -545,7 +564,7 @@ impl<'a> AppState<'a> {
 
     /// Exits the current input mode.
     /// Simple wrapper around actions::exit_mode.
-    pub(crate) fn exit_input_mode(&mut self) {
+    fn exit_input_mode(&mut self) {
         self.actions.exit_mode();
     }
 
@@ -668,11 +687,9 @@ impl<'a> AppState<'a> {
         self.enter_input_mode(InputMode::MoveFile, prompt, None);
     }
 
-    pub(crate) fn prompt_go_to_path(&mut self) {
+    fn prompt_go_to_path(&mut self) {
         self.enter_input_mode(InputMode::GoToPath, "Go To Path:".to_string(), None);
     }
-
-    // Helpers
 
     /// Refreshes the file info overlay if it is currently open.
     pub(crate) fn refresh_show_info_if_open(&mut self) {
@@ -715,6 +732,18 @@ impl<'a> AppState<'a> {
                 .retain(|o| !matches!(o, Overlay::ShowInfo { .. }));
         } else {
             self.show_file_info();
+        }
+    }
+
+    fn show_prefix_help(&mut self) {
+        if !matches!(self.overlays().top(), Some(Overlay::PreifxHelp)) {
+            self.overlays_mut().push(Overlay::PreifxHelp);
+        }
+    }
+
+    pub(crate) fn hide_prefix_help(&mut self) {
+        if matches!(self.overlays().top(), Some(Overlay::PreifxHelp)) {
+            self.overlays_mut().pop();
         }
     }
 

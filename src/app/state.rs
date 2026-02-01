@@ -133,11 +133,6 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn keymap(&self) -> &Keymap {
-        &self.keymap
-    }
-
-    #[inline]
     pub(crate) fn nav(&self) -> &NavState {
         &self.nav
     }
@@ -222,6 +217,13 @@ impl<'a> AppState<'a> {
             self.overlays_mut()
                 .retain(|o| !matches!(o, Overlay::Message { .. }));
 
+            changed = true;
+        }
+
+        let prefix_recognizer = self.actions.prefix_recognizer_mut();
+        if prefix_recognizer.is_g_state() && prefix_recognizer.expired() {
+            prefix_recognizer.cancel();
+            self.hide_prefix_help();
             changed = true;
         }
 

@@ -592,6 +592,42 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     frame.set_cursor_position((dialog_rect.x + 1 + cursor_x as u16, dialog_rect.y + 1));
 }
 
+pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    let go_to_top_keys = app.config().keys().go_to_top();
+    let go_to_path_keys = app.config().keys().go_to_path();
+
+    let mut g_prefixes: Vec<(String, &'static str)> = vec![];
+    for k in go_to_top_keys {
+        g_prefixes.push((k.clone(), "Go to top"));
+    }
+    for k in go_to_path_keys {
+        g_prefixes.push((k.clone(), "Go to path"));
+    }
+
+    let mut spans = Vec::new();
+    for (i, (ch, desc)) in g_prefixes.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw("    "));
+        }
+        spans.push(Span::styled(format!("[{}]", ch), accent_style));
+        spans.push(Span::raw(" "));
+        spans.push(Span::raw(*desc));
+    }
+    let line = Line::from(spans);
+
+    let area = frame.area();
+    let width = area.width.min(line.width() as u16 + 4);
+    let rect = ratatui::layout::Rect {
+        x: area.x + (area.width.saturating_sub(width)) / 2,
+        y: area.y + area.height.saturating_sub(2),
+        width,
+        height: 1,
+    };
+    let para = Paragraph::new(line).alignment(Alignment::Center);
+
+    frame.render_widget(para, rect);
+}
+
 /// Draws a simple message overlay dialog at the bottom right
 /// Used for notifications such as "fd is not available" etc.
 pub(crate) fn draw_message_overlay(

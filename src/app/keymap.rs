@@ -65,9 +65,6 @@ pub(crate) struct Key {
 }
 
 /// Stores the mapping from Key to action, which is built in the config
-///
-/// # Fields
-/// * `map` - HashMap mapping Key to Action
 pub(crate) struct Keymap {
     map: HashMap<Key, Action>,
     gmap: HashMap<KeyCode, PrefixCommand>,
@@ -152,6 +149,8 @@ pub(crate) struct KeyPrefix {
     state: PrefixState,
     last_time: Option<Instant>,
     timeout: Duration,
+    started: bool,
+    exited: bool,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -166,6 +165,8 @@ impl KeyPrefix {
             state: PrefixState::None,
             last_time: None,
             timeout,
+            started: false,
+            exited: false,
         }
     }
 
@@ -174,12 +175,15 @@ impl KeyPrefix {
         key: &KeyEvent,
         gmap: &HashMap<KeyCode, PrefixCommand>,
     ) -> Option<PrefixCommand> {
+        self.started = false;
+        self.exited = false;
         let now = Instant::now();
         match self.state {
             PrefixState::None => {
                 if key.code == KeyCode::Char('g') && key.modifiers.is_empty() {
                     self.state = PrefixState::G;
                     self.last_time = Some(now);
+                    self.started = true;
                     None
                 } else {
                     None
@@ -191,6 +195,7 @@ impl KeyPrefix {
                     .map_or(Duration::MAX, |t| now.duration_since(t));
                 self.state = PrefixState::None;
                 self.last_time = None;
+                self.exited = true;
                 if elapsed <= self.timeout {
                     gmap.get(&key.code).copied()
                 } else {
@@ -198,6 +203,31 @@ impl KeyPrefix {
                 }
             }
         }
+    }
+
+    pub(crate) fn started_prefix(&self) -> bool {
+        self.started
+    }
+
+    pub(crate) fn exited_prefix(&self) -> bool {
+        self.exited
+    }
+
+    pub(crate) fn is_g_state(&self) -> bool {
+        self.state == PrefixState::G
+    }
+
+    pub(crate) fn expired(&self) -> bool {
+        self.state == PrefixState::G
+            && self
+                .last_time
+                .is_some_and(|time| time.elapsed() >= self.timeout)
+    }
+
+    pub(crate) fn cancel(&mut self) {
+        self.state = PrefixState::None;
+        self.last_time = None;
+        self.exited = true;
     }
 }
 
