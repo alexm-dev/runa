@@ -398,6 +398,10 @@ border.bg = "default"
 title.fg = "default"
 title.bg = "default"
 
+# Set the size and position of the go to help widet when pressing "g"
+goto_help.size = [38, 3]
+goto_help.position = "bottom"
+
 # Configuration for the status_line
 [theme.status_line]
 fg = "default"
@@ -457,7 +461,15 @@ find                = ["s"]
 clear_markers       = ["Ctrl+c"]
 clear_filter        = ["Ctrl+f"]
 alternate_delete    = ["Ctrl+d"]    # Alternates between move_to_trash and permanently delete
+
+# Keys that are triggered by the "g" prefix
+go_to_top           = ["g"]
+go_to_path          = ["p"]
 ```
+
+**Note:**
+- `go_to_top` and `go_to_path` are triggered using the `"g"` prefix.  
+  For example, press `"g"` then `"p"` to activate "go to path".
 
 You may remove any binding to let it fall back to the default.
 
