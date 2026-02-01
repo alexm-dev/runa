@@ -14,6 +14,8 @@ pub(crate) struct Keys {
     go_down: Vec<String>,
     go_parent: Vec<String>,
     go_into_dir: Vec<String>,
+    go_to_path: Vec<String>,
+    go_to_top: Vec<String>,
     quit: Vec<String>,
     delete: Vec<String>,
     copy: Vec<String>,
@@ -63,6 +65,16 @@ impl Keys {
     #[inline]
     pub(crate) fn go_into_dir(&self) -> &[String] {
         &self.go_into_dir
+    }
+
+    #[inline]
+    pub(crate) fn go_to_path(&self) -> &[String] {
+        &self.go_to_path
+    }
+
+    #[inline]
+    pub(crate) fn go_to_top(&self) -> &[String] {
+        &self.go_to_top
     }
 
     #[inline]
@@ -150,6 +162,10 @@ impl Default for Keys {
             go_down: vec!["j".into(), "Down".into()],
             go_parent: vec!["h".into(), "Left".into(), "Backspace".into()],
             go_into_dir: vec!["l".into(), "Right".into()],
+
+            go_to_path: vec!["p".into()],
+            go_to_top: vec!["g".into()],
+
             quit: vec!["q".into(), "Esc".into()],
 
             delete: vec!["d".into()],

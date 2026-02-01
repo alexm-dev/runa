@@ -133,6 +133,11 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
+    pub(crate) fn keymap(&self) -> &Keymap {
+        &self.keymap
+    }
+
+    #[inline]
     pub(crate) fn nav(&self) -> &NavState {
         &self.nav
     }

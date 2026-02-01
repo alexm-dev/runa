@@ -38,6 +38,7 @@ pub(crate) enum InputMode {
     ConfirmDelete { is_trash: bool },
     Find,
     MoveFile,
+    GoToPath,
 }
 
 /// Tracks current user action and input buffer state for file operations and commands.

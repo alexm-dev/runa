@@ -80,6 +80,11 @@ impl NavState {
         self.selected_shown_entry()
     }
 
+    pub(crate) fn first_selected(&mut self) -> usize {
+        self.selected = 0;
+        self.selected
+    }
+
     // Navigation functions
 
     /// Prepares a new request by incrementing the request ID.

@@ -5,7 +5,7 @@
 
 use crate::app::NavState;
 use crate::app::actions::{ActionMode, InputMode};
-use crate::app::keymap::{FileAction, NavAction};
+use crate::app::keymap::{FileAction, NavAction, PrefixCommand};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
@@ -45,6 +45,7 @@ impl<'a> AppState<'a> {
                     InputMode::ConfirmDelete { .. } => self.confirm_delete(),
                     InputMode::Find => self.handle_find(),
                     InputMode::MoveFile => self.handle_move(),
+                    InputMode::GoToPath => self.handle_go_to_path(),
                 }
                 self.exit_input_mode();
                 KeypressResult::Consumed
@@ -105,9 +106,9 @@ impl<'a> AppState<'a> {
             }
 
             Tab => {
-                if matches!(mode, InputMode::MoveFile) {
+                if matches!(mode, InputMode::MoveFile | InputMode::GoToPath) {
                     if fd_binary().is_ok() {
-                        self.move_tab_autocomplete();
+                        self.tab_autocomplete();
                         KeypressResult::Consumed
                     } else {
                         KeypressResult::Continue
@@ -137,6 +138,10 @@ impl<'a> AppState<'a> {
                     KeypressResult::Consumed
                 }
                 InputMode::MoveFile => {
+                    self.actions.action_insert_at_cursor(c);
+                    KeypressResult::Consumed
+                }
+                InputMode::GoToPath => {
                     self.actions.action_insert_at_cursor(c);
                     KeypressResult::Consumed
                 }
@@ -182,6 +187,7 @@ impl<'a> AppState<'a> {
                 self.nav.clear_filters();
                 self.request_preview();
             }
+            _ => {}
         }
         KeypressResult::Continue
     }
@@ -216,6 +222,15 @@ impl<'a> AppState<'a> {
             FileAction::MoveFile => self.prompt_move(),
         }
         KeypressResult::Continue
+    }
+
+    pub(crate) fn handle_prefix(&mut self, prefix: PrefixCommand) -> bool {
+        match prefix {
+            PrefixCommand::Nav(NavAction::GoToTop) => self.handle_go_to_top(),
+            PrefixCommand::Nav(NavAction::GoToPath) => self.prompt_go_to_path(),
+            _ => return false,
+        }
+        true
     }
 
     /// Enters an input mode with the given parameters.
@@ -477,6 +492,42 @@ impl<'a> AppState<'a> {
         self.push_overlay_message(move_msg, Duration::from_secs(3));
     }
 
+    pub(crate) fn handle_go_to_path(&mut self) {
+        let path = self.actions.input_buffer();
+        if path.trim().is_empty() {
+            self.push_overlay_message("Error: No path entered".to_string(), Duration::from_secs(3));
+            return;
+        }
+
+        let expaned = expand_home_path_buf(path);
+        let abs_path = if expaned.is_absolute() {
+            expaned
+        } else {
+            self.nav.current_dir().join(expaned)
+        };
+
+        if let Ok(meta) = std::fs::metadata(&abs_path) {
+            if meta.is_dir() {
+                self.nav.save_position();
+                self.nav.set_path(abs_path.clone());
+                self.request_dir_load(None);
+                self.request_parent_content();
+            } else {
+                self.push_overlay_message(
+                    "Error: Not a directory".to_string(),
+                    Duration::from_secs(3),
+                );
+            }
+        } else {
+            self.push_overlay_message("Error: Invalid path".to_string(), Duration::from_secs(3));
+        }
+    }
+
+    pub(crate) fn handle_go_to_top(&mut self) {
+        self.nav.first_selected();
+        self.request_preview();
+    }
+
     /// Handles displaying a timed message overlay.
     pub(crate) fn handle_timed_message(&mut self, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
@@ -617,6 +668,10 @@ impl<'a> AppState<'a> {
         self.enter_input_mode(InputMode::MoveFile, prompt, None);
     }
 
+    pub(crate) fn prompt_go_to_path(&mut self) {
+        self.enter_input_mode(InputMode::GoToPath, "Go To Path:".to_string(), None);
+    }
+
     // Helpers
 
     /// Refreshes the file info overlay if it is currently open.
@@ -664,7 +719,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Handles the autocomplete for move to directory action
-    fn move_tab_autocomplete(&mut self) {
+    fn tab_autocomplete(&mut self) {
         if fd_binary().is_err() {
             return;
         }
