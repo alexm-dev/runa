@@ -86,7 +86,7 @@ impl Keymap {
 
         macro_rules! bind_prefix {
             ($keys:expr, $action:expr, $prefix:expr) => {
-                bind_prefix($keys, $action, $prefix, &mut map, &mut gmap);
+                bind_prefix($keys, $prefix, &mut gmap);
             };
         }
 
@@ -284,19 +284,15 @@ fn bind(key_list: &[String], action: Action, map: &mut HashMap<Key, Action>) {
 
 fn bind_prefix(
     key_list: &[String],
-    action: Action,
     prefix: PrefixCommand,
-    map: &mut HashMap<Key, Action>,
     gmap: &mut HashMap<KeyCode, PrefixCommand>,
 ) {
     for k in key_list {
-        if let Some(key) = parse_key(k) {
-            map.insert(key, action);
-            if key.modifiers.is_empty()
-                && let KeyCode::Char(c) = key.code
-            {
-                gmap.insert(KeyCode::Char(c), prefix);
-            }
+        if let Some(key) = parse_key(k)
+            && key.modifiers.is_empty()
+            && let KeyCode::Char(c) = key.code
+        {
+            gmap.insert(KeyCode::Char(c), prefix);
         }
     }
 }
