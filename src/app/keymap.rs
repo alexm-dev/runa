@@ -205,10 +205,12 @@ impl KeyPrefix {
         }
     }
 
+    #[inline]
     pub(crate) fn started_prefix(&self) -> bool {
         self.started
     }
 
+    #[inline]
     pub(crate) fn exited_prefix(&self) -> bool {
         self.exited
     }
