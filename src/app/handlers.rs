@@ -235,6 +235,10 @@ impl<'a> AppState<'a> {
     }
 
     pub(crate) fn handle_prefix_key(&mut self, key: &KeyEvent) -> Option<PrefixCommand> {
+        if self.actions.is_input_mode() {
+            return None;
+        }
+
         let gmap = self.keymap.gmap();
 
         let (started, exited, result) = {

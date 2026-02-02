@@ -330,7 +330,7 @@ impl<'a> AppState<'a> {
                             self.preview.set_error(e);
                         }
                     } else {
-                        self.push_overlay_message(format!("Error: {}", e), Duration::from_secs(7));
+                        self.push_overlay_message(e.to_string(), Duration::from_secs(7));
                     }
                 }
             }
