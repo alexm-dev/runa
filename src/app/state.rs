@@ -233,11 +233,6 @@ impl<'a> AppState<'a> {
             changed = true;
         }
 
-        let current_selection_path = self
-            .nav
-            .selected_entry()
-            .map(|entry| self.nav.current_dir().join(entry.name()));
-
         // Find handling with debounce
         if let ActionMode::Input {
             mode: InputMode::Find,
@@ -256,6 +251,12 @@ impl<'a> AppState<'a> {
         // Process worker response
         while let Ok(response) = self.workers.response_rx().try_recv() {
             changed = true;
+
+            let current_selection_path = self
+                .nav
+                .selected_entry()
+                .map(|entry| self.nav.current_dir().join(entry.name()));
+
             match response {
                 WorkerResponse::DirectoryLoaded {
                     path,
@@ -299,7 +300,10 @@ impl<'a> AppState<'a> {
                     }
                 }
                 WorkerResponse::PreviewLoaded { lines, request_id } => {
-                    if request_id == self.preview.request_id() {
+                    if request_id == self.preview.request_id()
+                        && let Some(selection_path) = &current_selection_path
+                        && self.preview.current_path() == Some(selection_path.as_path())
+                    {
                         self.preview.update_content(lines, request_id);
                     }
                 }
@@ -363,7 +367,7 @@ impl<'a> AppState<'a> {
     pub(crate) fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
-        let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
+        let _ = self.workers.nav_io_tx().send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
             dirs_first: self.config.general().dirs_first(),
@@ -380,18 +384,12 @@ impl<'a> AppState<'a> {
     pub(crate) fn request_preview(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
-            let req_id = self.preview.prepare_new_request(path);
+            let req_id = self.preview.prepare_new_request(path.clone());
             // Set the directory generation for the preview to the request_id for WorkerResponse
 
-            let worker_path = self
-                .preview
-                .current_path()
-                .map(|p| p.to_path_buf())
-                .unwrap_or_default();
-
             if entry.is_dir() || entry.is_symlink() {
-                let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
-                    path: worker_path,
+                let _ = self.workers.aux_io_tx().send(WorkerTask::LoadDirectory {
+                    path,
                     focus: None,
                     dirs_first: self.config.general().dirs_first(),
                     show_hidden: self.config.general().show_hidden(),
@@ -411,7 +409,7 @@ impl<'a> AppState<'a> {
                     .map(OsString::from)
                     .collect();
                 let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
-                    path: worker_path,
+                    path,
                     max_lines: self.metrics.preview_height,
                     pane_width: self.metrics.preview_width,
                     preview_method,
@@ -432,7 +430,7 @@ impl<'a> AppState<'a> {
             if self.parent.should_request(&parent_path_buf) {
                 let req_id = self.parent.prepare_new_request(&parent_path_buf);
 
-                let _ = self.workers.io_tx().send(WorkerTask::LoadDirectory {
+                let _ = self.workers.aux_io_tx().send(WorkerTask::LoadDirectory {
                     path: parent_path_buf,
                     focus: None,
                     dirs_first: self.config.general().dirs_first(),
