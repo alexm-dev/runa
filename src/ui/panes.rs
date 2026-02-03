@@ -8,8 +8,6 @@
 use crate::app::{AppState, PreviewData};
 use crate::core::FileEntry;
 use crate::ui::icons::nerd_font_icon;
-use ansi_to_tui::IntoText;
-use ratatui::text::Text;
 use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
@@ -67,7 +65,6 @@ pub(crate) struct PaneContext<'a> {
     pub(crate) accent_style: Style,
     pub(crate) styles: PaneStyles,
     pub(crate) highlight_symbol: &'a str,
-    pub(crate) entry_padding: u8,
     pub(crate) padding_str: &'static str,
     pub(crate) show_icons: bool,
     pub(crate) show_marker: bool,
@@ -94,19 +91,12 @@ pub(crate) struct PaneMarkers<'a> {
 /// Highlights selection, markers and directories and handles styling for items.
 pub(crate) fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
     let selected_idx = app.visible_selected();
-    let entry_padding = context.entry_padding as usize;
     let current_dir = app.nav().current_dir();
-
-    let padding_str = if entry_padding > 1 {
-        " ".repeat(entry_padding - 1)
-    } else {
-        String::new()
-    };
 
     if !app.is_loading() && app.nav().shown_entries_len() == 0 && !app.nav().filter().is_empty() {
         let style = context.styles.item;
         let line = Line::from(vec![
-            Span::raw(&padding_str),
+            Span::raw(context.padding_str),
             Span::styled("[No results for this filter]", style),
         ]);
         frame.render_widget(Paragraph::new(line).block(context.block), context.area);
@@ -181,12 +171,10 @@ pub(crate) fn draw_preview(
             frame.render_widget(Paragraph::new("").block(context.block), context.area);
         }
 
-        PreviewData::File(lines) => {
-            let raw = lines.join("\n");
-            let text = raw.into_text().unwrap_or_else(|_| Text::from(raw));
-
+        PreviewData::File(text) => {
             frame.render_widget(
-                Paragraph::new(text).block(context.block.border_style(context.accent_style)),
+                Paragraph::new(text.clone())
+                    .block(context.block.border_style(context.accent_style)),
                 context.area,
             );
         }

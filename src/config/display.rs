@@ -119,11 +119,6 @@ impl Display {
     }
 
     #[inline]
-    pub(crate) fn entry_padding(&self) -> u8 {
-        self.entry_padding
-    }
-
-    #[inline]
     pub(crate) fn scroll_padding(&self) -> usize {
         self.scroll_padding
     }

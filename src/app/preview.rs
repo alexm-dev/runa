@@ -4,6 +4,8 @@
 //! data, debounce for background rendering, selection within the preview and request tracking
 
 use crate::core::FileEntry;
+use ansi_to_tui::IntoText;
+use ratatui::text::Text;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -13,7 +15,7 @@ use std::time::Instant;
 /// Used to display or render file/folder content in the preview pane
 pub(crate) enum PreviewData {
     Directory(Vec<FileEntry>),
-    File(Vec<String>),
+    File(Text<'static>),
     Empty,
 }
 
@@ -64,7 +66,7 @@ impl PreviewState {
     pub(crate) fn set_selected_idx(&mut self, idx: usize) {
         let len = match &self.data {
             PreviewData::Directory(entries) => entries.len(),
-            PreviewData::File(lines) => lines.len(),
+            PreviewData::File(_) => 1,
             PreviewData::Empty => 0,
         };
         self.selected_idx = idx.min(len.saturating_sub(1));
@@ -78,7 +80,7 @@ impl PreviewState {
 
     // Debounce timing for preview render
     pub(crate) fn should_trigger(&self) -> bool {
-        self.pending && self.last_input_time.elapsed().as_millis() > 25
+        self.pending && self.last_input_time.elapsed().as_millis() > 35
     }
 
     /// Prepares a new preview request for the given path
@@ -94,7 +96,9 @@ impl PreviewState {
     /// Only applies the update if the request ID matches the latest
     pub(crate) fn update_content(&mut self, lines: Vec<String>, request_id: u64) {
         if request_id == self.request_id {
-            self.data = PreviewData::File(lines);
+            let raw = lines.join("\n");
+            let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
+            self.data = PreviewData::File(text);
         }
     }
 
@@ -109,7 +113,7 @@ impl PreviewState {
 
     /// Sets an error message as the preview content
     pub(crate) fn set_error(&mut self, err: String) {
-        self.data = PreviewData::File(vec![err]);
+        self.data = PreviewData::File(Text::from(err));
     }
 
     /// Clears the preview state
@@ -127,7 +131,7 @@ impl PreviewData {
     pub(crate) fn is_empty(&self) -> bool {
         match self {
             PreviewData::Directory(v) => v.is_empty(),
-            PreviewData::File(v) => v.is_empty(),
+            PreviewData::File(text) => text.lines.is_empty(),
             PreviewData::Empty => true,
         }
     }
