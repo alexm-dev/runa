@@ -268,8 +268,8 @@ impl<'a> AppState<'a> {
                     if request_id == self.nav.request_id() && path == self.nav.current_dir() {
                         self.nav.update_from_worker(path, entries, focus);
                         self.is_loading = false;
-                        self.request_preview();
                         self.request_parent_content();
+                        self.request_preview();
                         self.refresh_show_info_if_open();
                     }
                     // PREVIEW CHECK: Must match the current preview request
@@ -300,10 +300,7 @@ impl<'a> AppState<'a> {
                     }
                 }
                 WorkerResponse::PreviewLoaded { lines, request_id } => {
-                    if request_id == self.preview.request_id()
-                        && let Some(selection_path) = &current_selection_path
-                        && self.preview.current_path() == Some(selection_path.as_path())
-                    {
+                    if request_id == self.preview.request_id() {
                         self.preview.update_content(lines, request_id);
                     }
                 }
@@ -385,20 +382,22 @@ impl<'a> AppState<'a> {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
-            // Set the directory generation for the preview to the request_id for WorkerResponse
 
             if entry.is_dir() || entry.is_symlink() {
-                let _ = self.workers.aux_io_tx().send(WorkerTask::LoadDirectory {
-                    path,
-                    focus: None,
-                    dirs_first: self.config.general().dirs_first(),
-                    show_hidden: self.config.general().show_hidden(),
-                    show_symlink: self.config.general().show_symlink(),
-                    show_system: self.config.general().show_system(),
-                    case_insensitive: self.config.general().case_insensitive(),
-                    always_show: Arc::clone(self.config.general().always_show()),
-                    request_id: req_id,
-                });
+                let _ = self
+                    .workers
+                    .preview_io_tx()
+                    .send(WorkerTask::LoadDirectory {
+                        path,
+                        focus: None,
+                        dirs_first: self.config.general().dirs_first(),
+                        show_hidden: self.config.general().show_hidden(),
+                        show_symlink: self.config.general().show_symlink(),
+                        show_system: self.config.general().show_system(),
+                        case_insensitive: self.config.general().case_insensitive(),
+                        always_show: Arc::clone(self.config.general().always_show()),
+                        request_id: req_id,
+                    });
             } else {
                 let preview_options = self.config.display().preview_options();
                 let preview_method = preview_options.method().clone();
@@ -408,14 +407,17 @@ impl<'a> AppState<'a> {
                     .into_iter()
                     .map(OsString::from)
                     .collect();
-                let _ = self.workers.preview_tx().send(WorkerTask::LoadPreview {
-                    path,
-                    max_lines: self.metrics.preview_height,
-                    pane_width: self.metrics.preview_width,
-                    preview_method,
-                    args: bat_args,
-                    request_id: req_id,
-                });
+                let _ = self
+                    .workers
+                    .preview_file_tx()
+                    .send(WorkerTask::LoadPreview {
+                        path,
+                        max_lines: self.metrics.preview_height,
+                        pane_width: self.metrics.preview_width,
+                        preview_method,
+                        args: bat_args,
+                        request_id: req_id,
+                    });
             }
         } else {
             self.preview.clear();
@@ -430,7 +432,7 @@ impl<'a> AppState<'a> {
             if self.parent.should_request(&parent_path_buf) {
                 let req_id = self.parent.prepare_new_request(&parent_path_buf);
 
-                let _ = self.workers.aux_io_tx().send(WorkerTask::LoadDirectory {
+                let _ = self.workers.parent_io_tx().send(WorkerTask::LoadDirectory {
                     path: parent_path_buf,
                     focus: None,
                     dirs_first: self.config.general().dirs_first(),

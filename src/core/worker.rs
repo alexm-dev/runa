@@ -31,9 +31,10 @@ use std::thread;
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
-    aux_io_tx: Sender<WorkerTask>,
+    preview_io_tx: Sender<WorkerTask>,
+    parent_io_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
-    preview_tx: Sender<WorkerTask>,
+    preview_file_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
 }
@@ -52,22 +53,25 @@ impl Workers {
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
         let (nav_io_tx, nav_io_rx) = unbounded::<WorkerTask>();
-        let (aux_io_tx, aux_io_rx) = unbounded::<WorkerTask>();
-        let (preview_tx, preview_rx) = unbounded::<WorkerTask>();
+        let (preview_io_tx, preview_io_rx) = unbounded::<WorkerTask>();
+        let (parent_io_tx, parent_io_rx) = unbounded::<WorkerTask>();
+        let (preview_file_tx, preview_file_rx) = unbounded::<WorkerTask>();
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
         start_nav_io_worker(nav_io_rx, res_tx.clone());
-        start_aux_io_worker(aux_io_rx, res_tx.clone());
-        start_preview_worker(preview_rx, res_tx.clone());
+        start_aux_io_worker(preview_io_rx, res_tx.clone());
+        start_aux_io_worker(parent_io_rx, res_tx.clone());
+        start_preview_worker(preview_file_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone());
 
         Self {
             nav_io_tx,
-            aux_io_tx,
-            preview_tx,
+            preview_io_tx,
+            parent_io_tx,
+            preview_file_tx,
             find_tx,
             fileop_tx,
             response_rx,
@@ -80,15 +84,22 @@ impl Workers {
         &self.nav_io_tx
     }
 
+    /// Accessor the I/O preview worker for preview in dirs.
     #[inline]
-    pub(crate) fn aux_io_tx(&self) -> &Sender<WorkerTask> {
-        &self.aux_io_tx
+    pub(crate) fn preview_io_tx(&self) -> &Sender<WorkerTask> {
+        &self.preview_io_tx
+    }
+
+    /// Accessor the I/O parent io worker for the parent dirs.
+    #[inline]
+    pub(crate) fn parent_io_tx(&self) -> &Sender<WorkerTask> {
+        &self.parent_io_tx
     }
 
     /// Accessor for the preview worker task sender.
     #[inline]
-    pub(crate) fn preview_tx(&self) -> &Sender<WorkerTask> {
-        &self.preview_tx
+    pub(crate) fn preview_file_tx(&self) -> &Sender<WorkerTask> {
+        &self.preview_file_tx
     }
 
     /// Accessor for the find worker task sender.
@@ -830,7 +841,7 @@ mod tests {
         let preview_file = temp.path().join("preview.txt");
         std::fs::write(&preview_file, "A\nB\nC\nD\n")?;
         let workers = Workers::spawn();
-        workers.preview_tx().send(WorkerTask::LoadPreview {
+        workers.preview_file_tx().send(WorkerTask::LoadPreview {
             path: preview_file.clone(),
             max_lines: 2,
             pane_width: 40,
