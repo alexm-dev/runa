@@ -30,7 +30,8 @@ use std::thread;
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
-    io_tx: Sender<WorkerTask>,
+    nav_io_tx: Sender<WorkerTask>,
+    aux_io_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     preview_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
@@ -50,19 +51,22 @@ impl Workers {
     ///
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
-        let (io_tx, io_rx) = unbounded::<WorkerTask>();
+        let (nav_io_tx, nav_io_rx) = unbounded::<WorkerTask>();
+        let (aux_io_tx, aux_io_rx) = unbounded::<WorkerTask>();
         let (preview_tx, preview_rx) = unbounded::<WorkerTask>();
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
-        start_io_worker(io_rx, res_tx.clone());
+        start_nav_io_worker(nav_io_rx, res_tx.clone());
+        start_aux_io_worker(aux_io_rx, res_tx.clone());
         start_preview_worker(preview_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone());
 
         Self {
-            io_tx,
+            nav_io_tx,
+            aux_io_tx,
             preview_tx,
             find_tx,
             fileop_tx,
@@ -71,26 +75,36 @@ impl Workers {
     }
 
     /// Accessor the I/O worker task sender.
-    pub(crate) fn io_tx(&self) -> &Sender<WorkerTask> {
-        &self.io_tx
+    #[inline]
+    pub(crate) fn nav_io_tx(&self) -> &Sender<WorkerTask> {
+        &self.nav_io_tx
+    }
+
+    #[inline]
+    pub(crate) fn aux_io_tx(&self) -> &Sender<WorkerTask> {
+        &self.aux_io_tx
     }
 
     /// Accessor for the preview worker task sender.
+    #[inline]
     pub(crate) fn preview_tx(&self) -> &Sender<WorkerTask> {
         &self.preview_tx
     }
 
     /// Accessor for the find worker task sender.
+    #[inline]
     pub(crate) fn find_tx(&self) -> &Sender<WorkerTask> {
         &self.find_tx
     }
 
     /// Accessor for the file operation worker task sender.
+    #[inline]
     pub(crate) fn fileop_tx(&self) -> &Sender<WorkerTask> {
         &self.fileop_tx
     }
 
     /// Accessor for the worker response receiver.
+    #[inline]
     pub(crate) fn response_rx(&self) -> &Receiver<WorkerResponse> {
         &self.response_rx
     }
@@ -179,7 +193,7 @@ pub(crate) enum WorkerResponse {
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
-fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+fn start_nav_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::LoadDirectory {
@@ -196,6 +210,79 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
             else {
                 continue;
             };
+            match browse_dir(&path) {
+                Ok(mut entries) => {
+                    let formatter = Formatter::new(
+                        dirs_first,
+                        show_hidden,
+                        show_symlink,
+                        show_system,
+                        case_insensitive,
+                        always_show,
+                    );
+                    formatter.filter_entries(&mut entries);
+                    formatter.sort_entries(&mut entries);
+                    let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
+                        path,
+                        entries,
+                        focus,
+                        request_id,
+                    });
+                }
+                Err(e) => {
+                    let _ = res_tx.send(WorkerResponse::Error(
+                        format!("I/O Error: {}", e),
+                        request_id,
+                    ));
+                }
+            }
+        }
+    });
+}
+
+fn start_aux_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(task) = task_rx.recv() {
+            let WorkerTask::LoadDirectory {
+                mut path,
+                mut focus,
+                mut dirs_first,
+                mut show_hidden,
+                mut show_symlink,
+                mut show_system,
+                mut case_insensitive,
+                mut always_show,
+                mut request_id,
+            } = task
+            else {
+                continue;
+            };
+
+            while let Ok(next) = task_rx.try_recv() {
+                if let WorkerTask::LoadDirectory {
+                    path: p,
+                    focus: f,
+                    dirs_first: df,
+                    show_hidden: sh,
+                    show_symlink: sl,
+                    show_system: sy,
+                    case_insensitive: ci,
+                    always_show: aset,
+                    request_id: rid,
+                } = next
+                {
+                    path = p;
+                    focus = f;
+                    dirs_first = df;
+                    show_hidden = sh;
+                    show_symlink = sl;
+                    show_system = sy;
+                    case_insensitive = ci;
+                    always_show = aset;
+                    request_id = rid;
+                }
+            }
+
             match browse_dir(&path) {
                 Ok(mut entries) => {
                     let formatter = Formatter::new(
@@ -500,7 +587,7 @@ mod tests {
     #[test]
     fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
-        let task_tx = workers.io_tx();
+        let task_tx = workers.nav_io_tx();
         let res_rx = workers.response_rx();
 
         let curr_dir = env::current_dir()?;
@@ -546,7 +633,7 @@ mod tests {
         let requests_per_thread = 25;
 
         let workers = Workers::spawn();
-        let task_tx = workers.io_tx();
+        let task_tx = workers.nav_io_tx();
         let res_rx = workers.response_rx();
 
         // Spawn threads to send requests in parallel
