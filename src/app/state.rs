@@ -252,11 +252,6 @@ impl<'a> AppState<'a> {
         while let Ok(response) = self.workers.response_rx().try_recv() {
             changed = true;
 
-            let current_selection_path = self
-                .nav
-                .selected_entry()
-                .map(|entry| self.nav.current_dir().join(entry.name()));
-
             match response {
                 WorkerResponse::DirectoryLoaded {
                     path,
@@ -274,14 +269,14 @@ impl<'a> AppState<'a> {
                     }
                     // PREVIEW CHECK: Must match the current preview request
                     else if request_id == self.preview.request_id() {
-                        if current_selection_path.as_ref() == Some(&path) {
+                        if let Some(entry) = self.nav.selected_entry()
+                            && path.parent() == Some(self.nav.current_dir())
+                            && path.file_name() == Some(entry.name())
+                        {
                             self.preview.update_from_entries(entries, request_id);
 
-                            let pos = current_selection_path
-                                .as_ref()
-                                .and_then(|p| self.nav.get_position().get(p))
-                                .copied()
-                                .unwrap_or(0);
+                            let sel_path = self.nav.current_dir().join(entry.name());
+                            let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
 
                             self.preview.set_selected_idx(pos);
                         }
@@ -326,10 +321,8 @@ impl<'a> AppState<'a> {
 
                 WorkerResponse::Error(e, request_id) => {
                     self.is_loading = false;
-                    if request_id != 0 {
-                        if request_id != 0 && request_id == self.preview.request_id() {
-                            self.preview.set_error(e);
-                        }
+                    if request_id != 0 && request_id == self.preview.request_id() {
+                        self.preview.set_error(e);
                     } else {
                         self.push_overlay_message(e.to_string(), Duration::from_secs(7));
                     }
@@ -462,7 +455,7 @@ impl<'a> AppState<'a> {
         self.actions
             .set_cancel_find_token(Arc::clone(&cancel_token));
 
-        let _ = self.workers.find_tx().send(WorkerTask::FindRecursive {
+        let _ = self.workers.find_tx().try_send(WorkerTask::FindRecursive {
             base_dir: self.nav.current_dir().to_path_buf(),
             query,
             max_results: self.config().general().max_find_results(),

@@ -41,7 +41,7 @@ pub(crate) struct Workers {
 
 /// Manages worker thread channels for different task types.
 ///
-/// Each major operation (I/O, preview, find, file-ops) has its own dedicated worker thread.
+/// Each major operation (I/O (nav, preview, parent), preview, find, file-ops) has its own dedicated worker thread.
 ///
 /// The find worker uses a bounded channel of size 1: this design ensures that only the
 /// latest find request will be processed, automatically skipping obsolete queued requests
@@ -278,8 +278,8 @@ fn start_aux_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                     show_symlink: sl,
                     show_system: sy,
                     case_insensitive: ci,
-                    always_show: aset,
-                    request_id: rid,
+                    always_show: aw,
+                    request_id: id,
                 } = next
                 {
                     path = p;
@@ -289,8 +289,8 @@ fn start_aux_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                     show_symlink = sl;
                     show_system = sy;
                     case_insensitive = ci;
-                    always_show = aset;
-                    request_id = rid;
+                    always_show = aw;
+                    request_id = id;
                 }
             }
 

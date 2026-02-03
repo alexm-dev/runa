@@ -229,7 +229,7 @@ pub(crate) fn preview_bat(
     let mut lines = Vec::with_capacity(max_lines);
 
     if let Some(stdout) = cmd.stdout.take() {
-        let reader = io::BufReader::new(stdout);
+        let reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
         for line in reader.lines().take(max_lines) {
             match line {
                 Ok(l) => lines.push(l),

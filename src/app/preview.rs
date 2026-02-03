@@ -78,7 +78,7 @@ impl PreviewState {
 
     // Debounce timing for preview render
     pub(crate) fn should_trigger(&self) -> bool {
-        self.pending && self.last_input_time.elapsed().as_millis() > 50
+        self.pending && self.last_input_time.elapsed().as_millis() > 25
     }
 
     /// Prepares a new preview request for the given path
