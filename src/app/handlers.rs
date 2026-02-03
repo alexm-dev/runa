@@ -5,7 +5,7 @@
 
 use crate::app::NavState;
 use crate::app::actions::{ActionMode, InputMode};
-use crate::app::keymap::{FileAction, NavAction, PrefixCommand};
+use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
@@ -28,7 +28,7 @@ impl<'a> AppState<'a> {
     ///
     /// If not in an input mode, returns [KeypressResult::Continue].
     /// Consumes keys related to input editing and mode confirmation/cancellation.
-    pub(crate) fn handle_input_mode(&mut self, key: KeyEvent) -> KeypressResult {
+    pub(super) fn handle_input_mode(&mut self, key: KeyEvent) -> KeypressResult {
         let mode = if let ActionMode::Input { mode, .. } = &self.actions().mode() {
             *mode
         } else {
@@ -153,7 +153,7 @@ impl<'a> AppState<'a> {
 
     /// Handles navigation actions (up, down, into dir, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    pub(crate) fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
+    pub(super) fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
         match action {
             NavAction::GoUp => {
                 self.move_nav_if_possible(|nav| nav.move_up());
@@ -194,7 +194,7 @@ impl<'a> AppState<'a> {
 
     /// Handles file actions (open, delete, copy, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    pub(crate) fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
+    pub(super) fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
         match action {
             FileAction::Open => return self.handle_open_file(),
             FileAction::Delete => {
@@ -224,7 +224,55 @@ impl<'a> AppState<'a> {
         KeypressResult::Continue
     }
 
-    pub(crate) fn handle_prefix_action(&mut self, prefix: PrefixCommand) -> bool {
+    pub(super) fn handle_sys_action(&mut self, action: SystemAction) -> KeypressResult {
+        match action {
+            SystemAction::Quit => KeypressResult::Quit,
+            SystemAction::KeyBindHelp => {
+                self.toggle_keybind_help();
+                KeypressResult::Consumed
+            }
+        }
+    }
+
+    pub(super) fn handle_prefix_dispatch(&mut self, key: &KeyEvent) -> Option<KeypressResult> {
+        let gmap = self.keymap.gmap();
+
+        let (started, exited, result, consumed) = {
+            let prefix = self.actions.prefix_recognizer_mut();
+            let was_g = prefix.is_g_state();
+
+            let result = prefix.feed(key, gmap);
+
+            let consumed = was_g && key.code == Esc;
+
+            (
+                prefix.started_prefix(),
+                prefix.exited_prefix(),
+                result,
+                consumed,
+            )
+        };
+
+        if started {
+            self.show_prefix_help();
+        }
+        if exited {
+            self.hide_prefix_help();
+        }
+
+        if consumed {
+            return Some(KeypressResult::Consumed);
+        }
+
+        if let Some(cmd) = result {
+            let _ = self.handle_prefix_action(cmd);
+            return Some(KeypressResult::Consumed);
+        }
+
+        None
+    }
+
+    fn handle_prefix_action(&mut self, prefix: PrefixCommand) -> bool {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => self.handle_go_to_top(),
             PrefixCommand::Nav(NavAction::GoToHome) => self.handle_go_to_home(),
@@ -234,27 +282,22 @@ impl<'a> AppState<'a> {
         true
     }
 
-    pub(crate) fn handle_prefix_key(&mut self, key: &KeyEvent) -> Option<PrefixCommand> {
-        if self.actions.is_input_mode() {
+    pub(super) fn handle_esc_close_overlays(&mut self, key: &KeyEvent) -> Option<KeypressResult> {
+        if key.code != Esc {
             return None;
         }
 
-        let gmap = self.keymap.gmap();
-
-        let (started, exited, result) = {
-            let prefix = self.actions.prefix_recognizer_mut();
-
-            let result = prefix.feed(key, gmap);
-            (prefix.started_prefix(), prefix.exited_prefix(), result)
-        };
-
-        if started {
-            self.show_prefix_help();
+        if self
+            .overlays()
+            .iter()
+            .any(|o| matches!(o, Overlay::KeybindHelp))
+        {
+            self.overlays_mut()
+                .retain(|o| !matches!(o, Overlay::KeybindHelp));
+            return Some(KeypressResult::Consumed);
         }
-        if exited {
-            self.hide_prefix_help();
-        }
-        result
+
+        None
     }
 
     /// Enters an input mode with the given parameters.
@@ -758,6 +801,20 @@ impl<'a> AppState<'a> {
     pub(crate) fn hide_prefix_help(&mut self) {
         if matches!(self.overlays().top(), Some(Overlay::PreifxHelp)) {
             self.overlays_mut().pop();
+        }
+    }
+
+    fn toggle_keybind_help(&mut self) {
+        let is_open = self
+            .overlays()
+            .iter()
+            .any(|o| matches!(o, Overlay::KeybindHelp));
+
+        if is_open {
+            self.overlays_mut()
+                .retain(|o| !matches!(o, Overlay::KeybindHelp));
+        } else {
+            self.overlays_mut().push(Overlay::KeybindHelp);
         }
     }
 

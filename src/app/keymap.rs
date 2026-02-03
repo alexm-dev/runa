@@ -51,6 +51,7 @@ pub(crate) enum FileAction {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum SystemAction {
     Quit,
+    KeyBindHelp,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -116,6 +117,10 @@ impl Keymap {
             keys.alternate_delete(),
             Action::File(FileAction::AlternateDelete)
         );
+        bind!(
+            keys.keybind_help(),
+            Action::System(SystemAction::KeyBindHelp)
+        );
 
         bind_prefix!(
             keys.go_to_top(),
@@ -142,7 +147,19 @@ impl Keymap {
             code: key.code,
             modifiers: key.modifiers,
         };
-        self.map.get(&k).copied()
+
+        if let Some(action) = self.map.get(&k).copied() {
+            return Some(action);
+        }
+
+        if matches!(key.code, KeyCode::Char(_)) && key.modifiers.contains(KeyModifiers::SHIFT) {
+            let k2 = Key {
+                code: key.code,
+                modifiers: key.modifiers - KeyModifiers::SHIFT,
+            };
+            return self.map.get(&k2).copied();
+        }
+        None
     }
 
     pub(crate) fn gmap(&self) -> &HashMap<KeyCode, PrefixCommand> {

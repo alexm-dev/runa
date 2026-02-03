@@ -15,7 +15,7 @@
 //! This is the primary context/state object passed to most UI/Terminal event logic.
 
 use crate::app::actions::{ActionContext, ActionMode, InputMode};
-use crate::app::keymap::{Action, Keymap, SystemAction};
+use crate::app::keymap::{Action, Keymap};
 use crate::app::{NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
@@ -340,9 +340,17 @@ impl<'a> AppState<'a> {
             return self.handle_input_mode(key);
         }
 
+        if let Some(res) = self.handle_esc_close_overlays(&key) {
+            return res;
+        }
+
+        if let Some(res) = self.handle_prefix_dispatch(&key) {
+            return res;
+        }
+
         if let Some(action) = self.keymap.lookup(key) {
             match action {
-                Action::System(SystemAction::Quit) => return KeypressResult::Quit,
+                Action::System(sys_act) => return self.handle_sys_action(sys_act),
                 Action::Nav(nav_act) => return self.handle_nav_action(nav_act),
                 Action::File(file_act) => return self.handle_file_action(file_act),
             }

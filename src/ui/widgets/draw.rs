@@ -712,6 +712,180 @@ pub(crate) fn draw_message_overlay(
     );
 }
 
+pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    let keys = app.config().keys();
+    let widget = app.config().theme().widget();
+    let area = frame.area();
+
+    let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
+
+    let size = DialogSize::Custom(
+        area.width.saturating_sub(6).clamp(40, 90),
+        area.height.saturating_sub(6).clamp(12, 28),
+    );
+
+    let border_type = app.config().display().border_shape().as_border_type();
+
+    let fmt_keys = |list: &[String]| -> String {
+        if list.is_empty() {
+            "—".to_string()
+        } else {
+            list.join(", ")
+        }
+    };
+
+    let sections: Vec<(&str, Vec<(String, &'static str)>)> = vec![
+        (
+            "Navigation",
+            vec![
+                (fmt_keys(keys.go_up()), "Move selection up"),
+                (fmt_keys(keys.go_down()), "Move selection down"),
+                (fmt_keys(keys.go_parent()), "Go to parent directory"),
+                (fmt_keys(keys.go_into_dir()), "Enter directory"),
+                (fmt_keys(keys.toggle_marker()), "Toggle marker"),
+                (fmt_keys(keys.clear_markers()), "Clear markers"),
+                (fmt_keys(keys.clear_filter()), "Clear filter"),
+            ],
+        ),
+        (
+            "File",
+            vec![
+                (fmt_keys(keys.open_file()), "Open file in editor"),
+                (fmt_keys(keys.copy()), "Copy/Yank selection"),
+                (fmt_keys(keys.paste()), "Paste"),
+                (fmt_keys(keys.rename()), "Rename"),
+                (fmt_keys(keys.create()), "Create file"),
+                (fmt_keys(keys.create_directory()), "Create directory"),
+                (fmt_keys(keys.delete()), "Delete / move to trash"),
+                (fmt_keys(keys.alternate_delete()), "Alternate delete mode"),
+                (fmt_keys(keys.filter()), "Filter entries"),
+                (fmt_keys(keys.find()), "Find (fuzzy)"),
+                (fmt_keys(keys.move_file()), "Move file(s)"),
+                (fmt_keys(keys.show_info()), "Toggle file info"),
+            ],
+        ),
+        (
+            "System",
+            vec![
+                (fmt_keys(keys.quit()), "Quit"),
+                (fmt_keys(keys.keybind_help()), "Toggle keybind help"),
+            ],
+        ),
+        (
+            "Prefix",
+            vec![
+                (fmt_keys(keys.go_to_top()), "g … Go to top"),
+                (fmt_keys(keys.go_to_home()), "g … Go to home"),
+                (fmt_keys(keys.go_to_path()), "g … Go to path"),
+            ],
+        ),
+    ];
+
+    let mut all_rows: Vec<Line> = Vec::new();
+
+    let header_style = Style::default().add_modifier(Modifier::BOLD);
+    let key_style = accent_style.add_modifier(Modifier::BOLD);
+
+    let dialog_rect = dialog_area(area, size, position);
+    let inner_width = dialog_rect.width.saturating_sub(2) as usize;
+    let two_col = inner_width >= 70;
+
+    let col_gap = 4;
+    let col_width = if two_col {
+        (inner_width.saturating_sub(col_gap)) / 2
+    } else {
+        inner_width
+    };
+
+    for (section_name, rows) in sections {
+        all_rows.push(Line::from(Span::styled(
+            format!("{section_name}:"),
+            header_style,
+        )));
+
+        let mut rendered: Vec<String> = rows
+            .into_iter()
+            .map(|(k, desc)| format!("{:<18}  {}", k, desc))
+            .collect();
+
+        if two_col {
+            let left_count = rendered.len().div_ceil(2);
+            let (left, right) = rendered.split_at(left_count);
+
+            for i in 0..left_count {
+                let l = left.get(i).cloned().unwrap_or_default();
+                let r = right.get(i).cloned().unwrap_or_default();
+
+                let l = if l.len() > col_width {
+                    format!("{}…", &l[..col_width.saturating_sub(1)])
+                } else {
+                    l
+                };
+                let r = if r.len() > col_width {
+                    format!("{}…", &r[..col_width.saturating_sub(1)])
+                } else {
+                    r
+                };
+
+                let pad = col_width.saturating_sub(l.len());
+                let combined = if r.is_empty() {
+                    l
+                } else {
+                    let mut s = String::with_capacity(col_width + col_gap + r.len());
+                    s.push_str(&l);
+                    s.push_str(&" ".repeat(pad));
+                    s.push_str(&" ".repeat(col_gap));
+                    s.push_str(&r);
+                    s
+                };
+
+                let (kpart, rest) = combined.split_once("  ").unwrap_or((combined.as_str(), ""));
+                all_rows.push(Line::from(vec![
+                    Span::styled(kpart.to_string(), key_style),
+                    Span::raw("  "),
+                    Span::raw(rest.to_string()),
+                ]));
+            }
+        } else {
+            for s in rendered.drain(..) {
+                let (kpart, rest) = s.split_once("  ").unwrap_or((s.as_str(), ""));
+                all_rows.push(Line::from(vec![
+                    Span::styled(kpart.to_string(), key_style),
+                    Span::raw("  "),
+                    Span::raw(rest.to_string()),
+                ]));
+            }
+        }
+
+        all_rows.push(Line::raw(""));
+    }
+
+    while matches!(all_rows.last(), Some(l) if l.width() == 0) {
+        all_rows.pop();
+    }
+
+    let dialog_style = DialogStyle {
+        border: Borders::ALL,
+        border_style: widget.border_style_or(accent_style),
+        bg: widget.bg_or_theme(),
+        fg: widget.fg_or_theme(),
+        title: Some(Span::styled(" Keybinds ", widget.title_style_or_theme())),
+    };
+
+    draw_dialog(
+        frame,
+        DialogLayout {
+            area,
+            position,
+            size,
+        },
+        border_type,
+        &dialog_style,
+        Text::from(all_rows),
+        Some(Alignment::Left),
+    );
+}
+
 /// Helper function to make adjusted dialog positions for unified borders
 /// Returns a dialog position adjusted for unified borders (app-wide title/status).
 fn adjusted_dialog_position(pos: DialogPosition, is_unified: bool) -> DialogPosition {

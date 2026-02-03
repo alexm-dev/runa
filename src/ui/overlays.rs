@@ -13,6 +13,7 @@ pub(crate) enum Overlay {
     ShowInfo { info: FileInfo },
     Message { text: String },
     PreifxHelp,
+    KeybindHelp,
 }
 
 pub(crate) struct OverlayStack {
