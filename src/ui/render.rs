@@ -363,6 +363,9 @@ fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
             Overlay::PreifxHelp => {
                 widgets::draw_prefix_help_overlay(frame, app, accent_style);
             }
+            Overlay::KeybindHelp => {
+                widgets::draw_keybind_help(frame, app, accent_style);
+            }
         }
     }
 }

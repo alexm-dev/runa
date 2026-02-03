@@ -32,6 +32,7 @@ pub(crate) struct Keys {
     go_to_top: Vec<String>,
     go_to_home: Vec<String>,
     go_to_path: Vec<String>,
+    keybind_help: Vec<String>,
 }
 
 /// Editor configuration options
@@ -41,123 +42,45 @@ pub(crate) struct Editor {
     cmd: String,
 }
 
-/// Public methods for accessing input configuration options
-impl Keys {
-    #[inline]
-    pub(crate) fn open_file(&self) -> &[String] {
-        &self.open_file
-    }
-
-    #[inline]
-    pub(crate) fn go_up(&self) -> &[String] {
-        &self.go_up
-    }
-
-    #[inline]
-    pub(crate) fn go_down(&self) -> &[String] {
-        &self.go_down
-    }
-
-    #[inline]
-    pub(crate) fn go_parent(&self) -> &[String] {
-        &self.go_parent
-    }
-
-    #[inline]
-    pub(crate) fn go_into_dir(&self) -> &[String] {
-        &self.go_into_dir
-    }
-
-    #[inline]
-    pub(crate) fn quit(&self) -> &[String] {
-        &self.quit
-    }
-
-    #[inline]
-    pub(crate) fn delete(&self) -> &[String] {
-        &self.delete
-    }
-
-    #[inline]
-    pub(crate) fn copy(&self) -> &[String] {
-        &self.copy
-    }
-
-    #[inline]
-    pub(crate) fn paste(&self) -> &[String] {
-        &self.paste
-    }
-
-    #[inline]
-    pub(crate) fn rename(&self) -> &[String] {
-        &self.rename
-    }
-
-    #[inline]
-    pub(crate) fn create(&self) -> &[String] {
-        &self.create
-    }
-
-    #[inline]
-    pub(crate) fn create_directory(&self) -> &[String] {
-        &self.create_directory
-    }
-
-    #[inline]
-    pub(crate) fn move_file(&self) -> &[String] {
-        &self.move_file
-    }
-
-    #[inline]
-    pub(crate) fn filter(&self) -> &[String] {
-        &self.filter
-    }
-
-    #[inline]
-    pub(crate) fn toggle_marker(&self) -> &[String] {
-        &self.toggle_marker
-    }
-
-    #[inline]
-    pub(crate) fn show_info(&self) -> &[String] {
-        &self.show_info
-    }
-
-    #[inline]
-    pub(crate) fn find(&self) -> &[String] {
-        &self.find
-    }
-
-    #[inline]
-    pub(crate) fn clear_markers(&self) -> &[String] {
-        &self.clear_markers
-    }
-
-    #[inline]
-    pub(crate) fn clear_filter(&self) -> &[String] {
-        &self.clear_filter
-    }
-
-    #[inline]
-    pub(crate) fn alternate_delete(&self) -> &[String] {
-        &self.alternate_delete
-    }
-
-    #[inline]
-    pub(crate) fn go_to_top(&self) -> &[String] {
-        &self.go_to_top
-    }
-
-    #[inline]
-    pub(crate) fn go_to_home(&self) -> &[String] {
-        &self.go_to_home
-    }
-
-    #[inline]
-    pub(crate) fn go_to_path(&self) -> &[String] {
-        &self.go_to_path
-    }
+macro_rules! accessor {
+    ($($name:ident),+ $(,)?) => {
+        impl Keys {
+            $(
+                #[inline]
+                pub(crate) fn $name(&self) -> &[String] {
+                    &self.$name
+                }
+            )+
+        }
+    };
 }
+
+accessor!(
+    open_file,
+    go_up,
+    go_down,
+    go_parent,
+    go_into_dir,
+    quit,
+    delete,
+    copy,
+    paste,
+    rename,
+    create,
+    create_directory,
+    move_file,
+    filter,
+    toggle_marker,
+    show_info,
+    find,
+    clear_markers,
+    clear_filter,
+    alternate_delete,
+    go_to_top,
+    go_to_home,
+    go_to_path,
+    keybind_help,
+);
 
 /// Default input configuration options
 impl Default for Keys {
@@ -191,6 +114,8 @@ impl Default for Keys {
             go_to_top: vec!["g".into()],
             go_to_home: vec!["h".into()],
             go_to_path: vec!["p".into()],
+
+            keybind_help: vec!["?".into()],
         }
     }
 }
