@@ -103,6 +103,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     " Confirm Delete ",
                     Style::default().fg(Color::Red),
                 )),
+                ..Default::default()
             };
 
             let dialog_layout = DialogLayout {
@@ -154,6 +155,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     format!(" {} ", prompt),
                     widget.title_style_or_theme(),
                 )),
+                ..Default::default()
             };
 
             let dialog_layout = DialogLayout {
@@ -206,6 +208,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     format!(" {} ", prompt),
                     widget.title_style_or_theme(),
                 )),
+                ..Default::default()
             };
 
             let dialog_layout = DialogLayout {
@@ -370,7 +373,7 @@ pub(crate) fn draw_show_info_dialog(
     let info_cfg = &app.config().display().info();
 
     let label_style = theme.directory_style();
-    let value_style = theme.entry_style();
+    let value_style = theme.widget().field_style_or_theme();
 
     let position = dialog_position_unified(info_cfg.position(), app, DialogPosition::BottomLeft);
     let border_type = app.config().display().border_shape().as_border_type();
@@ -427,6 +430,7 @@ pub(crate) fn draw_show_info_dialog(
             " File Info ",
             widget_info.title_style_or_theme(),
         )),
+        ..Default::default()
     };
 
     let dialog_layout = DialogLayout {
@@ -575,6 +579,7 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
         bg: widget.bg_or_theme(),
         fg: widget.fg_or_theme(),
         title: Some(Span::styled(" Find ", widget.title_style_or_theme())),
+        ..Default::default()
     };
 
     draw_dialog(
@@ -636,6 +641,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
         bg: widget.bg_or_theme(),
         fg: widget.fg_or_theme(),
         title: Some(Span::styled("Go to", widget.title_style_or_theme())),
+        ..Default::default()
     };
 
     draw_dialog(
@@ -688,6 +694,7 @@ pub(crate) fn draw_message_overlay(
         bg: widget.bg_or_theme(),
         fg: widget.fg_or_theme(),
         title: Some(Span::styled(" Message ", widget.title_style_or_theme())),
+        ..Default::default()
     };
 
     let mut dialog_rect = dialog_area(area, dialog_size, position);
@@ -719,20 +726,40 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
 
     let position = dialog_position_unified(widget.position(), app, DialogPosition::Center);
 
-    let size = DialogSize::Custom(
-        area.width.saturating_sub(6).clamp(40, 90),
-        area.height.saturating_sub(6).clamp(12, 28),
-    );
-
     let border_type = app.config().display().border_shape().as_border_type();
+    let header_style = app.config().theme().directory_style();
+    let dim_style = Style::default().add_modifier(Modifier::DIM);
+    let key_style = app.config().theme().widget().field_style_or_theme();
+
+    let max_keys_to_show: usize = 3;
+    let key_pad: usize = 3;
+
+    let fmt_key_token = |k: &str| -> String {
+        if k == " " || k.trim().is_empty() || k.eq_ignore_ascii_case("space") {
+            "Space".to_string()
+        } else {
+            k.to_string()
+        }
+    };
 
     let fmt_keys = |list: &[String]| -> String {
         if list.is_empty() {
-            "—".to_string()
-        } else {
-            list.join(", ")
+            return "-".to_string();
         }
+        let mut out: Vec<String> = list
+            .iter()
+            .take(max_keys_to_show)
+            .map(|k| fmt_key_token(k))
+            .collect();
+        out.reverse();
+        if list.len() > max_keys_to_show {
+            out.push("...".to_string());
+        }
+        out.join(", ")
     };
+
+    let fmt_prefix =
+        |leader: &str, list: &[String]| -> String { format!("{leader} + {}", fmt_keys(list)) };
 
     let sections: Vec<(&str, Vec<(String, &'static str)>)> = vec![
         (
@@ -774,95 +801,58 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         (
             "Prefix",
             vec![
-                (fmt_keys(keys.go_to_top()), "g … Go to top"),
-                (fmt_keys(keys.go_to_home()), "g … Go to home"),
-                (fmt_keys(keys.go_to_path()), "g … Go to path"),
+                (fmt_prefix("g", keys.go_to_top()), "Go to top"),
+                (fmt_prefix("g", keys.go_to_home()), "Go to home"),
+                (fmt_prefix("g", keys.go_to_path()), "Go to path"),
             ],
         ),
     ];
 
-    let mut all_rows: Vec<Line> = Vec::new();
+    let key_w: usize = sections
+        .iter()
+        .flat_map(|(_, rows)| rows.iter().map(|(k, _)| k.len()))
+        .max()
+        .unwrap_or(10)
+        .clamp(10, 28);
 
-    let header_style = Style::default().add_modifier(Modifier::BOLD);
-    let key_style = accent_style.add_modifier(Modifier::BOLD);
+    let mk_line = |key_text: &str, desc: &str| -> Line<'static> {
+        let key_string = format!("{:>width$}", key_text, width = key_w);
 
-    let dialog_rect = dialog_area(area, size, position);
-    let inner_width = dialog_rect.width.saturating_sub(2) as usize;
-    let two_col = inner_width >= 70;
-
-    let col_gap = 4;
-    let col_width = if two_col {
-        (inner_width.saturating_sub(col_gap)) / 2
-    } else {
-        inner_width
+        Line::from(vec![
+            Span::styled(key_string, key_style),
+            Span::styled(" ".repeat(key_pad), dim_style),
+            Span::raw(desc.to_string()),
+        ])
     };
 
+    let mut lines: Vec<Line> = Vec::new();
+    let section_title_indent = " ".repeat(key_w + key_pad);
+
     for (section_name, rows) in sections {
-        all_rows.push(Line::from(Span::styled(
-            format!("{section_name}:"),
-            header_style,
-        )));
+        lines.push(Line::from(vec![
+            Span::raw(&section_title_indent),
+            Span::styled(format!("{section_name}:"), header_style),
+        ]));
 
-        let mut rendered: Vec<String> = rows
-            .into_iter()
-            .map(|(k, desc)| format!("{:<18}  {}", k, desc))
-            .collect();
-
-        if two_col {
-            let left_count = rendered.len().div_ceil(2);
-            let (left, right) = rendered.split_at(left_count);
-
-            for i in 0..left_count {
-                let l = left.get(i).cloned().unwrap_or_default();
-                let r = right.get(i).cloned().unwrap_or_default();
-
-                let l = if l.len() > col_width {
-                    format!("{}…", &l[..col_width.saturating_sub(1)])
-                } else {
-                    l
-                };
-                let r = if r.len() > col_width {
-                    format!("{}…", &r[..col_width.saturating_sub(1)])
-                } else {
-                    r
-                };
-
-                let pad = col_width.saturating_sub(l.len());
-                let combined = if r.is_empty() {
-                    l
-                } else {
-                    let mut s = String::with_capacity(col_width + col_gap + r.len());
-                    s.push_str(&l);
-                    s.push_str(&" ".repeat(pad));
-                    s.push_str(&" ".repeat(col_gap));
-                    s.push_str(&r);
-                    s
-                };
-
-                let (kpart, rest) = combined.split_once("  ").unwrap_or((combined.as_str(), ""));
-                all_rows.push(Line::from(vec![
-                    Span::styled(kpart.to_string(), key_style),
-                    Span::raw("  "),
-                    Span::raw(rest.to_string()),
-                ]));
-            }
-        } else {
-            for s in rendered.drain(..) {
-                let (kpart, rest) = s.split_once("  ").unwrap_or((s.as_str(), ""));
-                all_rows.push(Line::from(vec![
-                    Span::styled(kpart.to_string(), key_style),
-                    Span::raw("  "),
-                    Span::raw(rest.to_string()),
-                ]));
-            }
+        for (k, desc) in rows {
+            lines.push(mk_line(&k, desc));
         }
-
-        all_rows.push(Line::raw(""));
+        lines.push(Line::raw(""));
+    }
+    while matches!(lines.last(), Some(l) if l.width() == 0) {
+        lines.pop();
     }
 
-    while matches!(all_rows.last(), Some(l) if l.width() == 0) {
-        all_rows.pop();
-    }
+    lines.push(Line::raw(""));
+
+    let content_height = lines.len() as u16;
+
+    let dynamic_width = (area.width * 60 / 100).clamp(45, 80);
+
+    let max_allowed_height = (area.height * 80 / 100).max(12);
+    let dynamic_height = (content_height + 1).min(max_allowed_height);
+
+    let size = DialogSize::Custom(dynamic_width, dynamic_height);
 
     let dialog_style = DialogStyle {
         border: Borders::ALL,
@@ -870,6 +860,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         bg: widget.bg_or_theme(),
         fg: widget.fg_or_theme(),
         title: Some(Span::styled(" Keybinds ", widget.title_style_or_theme())),
+        ..Default::default()
     };
 
     draw_dialog(
@@ -881,7 +872,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         },
         border_type,
         &dialog_style,
-        Text::from(all_rows),
+        Text::from(lines),
         Some(Alignment::Left),
     );
 }

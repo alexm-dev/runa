@@ -488,6 +488,7 @@ pub(crate) struct WidgetTheme {
     color: ColorPair,
     border: ColorPair,
     title: ColorPair,
+    field: ColorPair,
     position: Option<DialogPosition>,
     size: Option<DialogSize>,
     confirm_size: Option<DialogSize>,
@@ -596,6 +597,11 @@ impl WidgetTheme {
             .or(Theme::internal_defaults().widget.go_to_help.position)
             .unwrap_or(DialogPosition::Bottom)
     }
+
+    pub(crate) fn field_style_or_theme(&self) -> Style {
+        self.field
+            .style_or(&Theme::internal_defaults().widget.field)
+    }
 }
 
 /// Default implementation for WidgetTheme
@@ -605,6 +611,10 @@ impl Default for WidgetTheme {
             color: ColorPair::default(),
             border: ColorPair::default(),
             title: ColorPair::default(),
+            field: ColorPair {
+                fg: Color::Cyan,
+                ..ColorPair::default()
+            },
             position: Some(DialogPosition::Center),
             size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),

@@ -135,6 +135,7 @@ pub(crate) struct DialogStyle {
     pub(crate) bg: Style,
     pub(crate) fg: Style,
     pub(crate) title: Option<Span<'static>>,
+    pub(crate) title_alignment: Option<Alignment>,
 }
 
 impl Default for DialogStyle {
@@ -145,6 +146,7 @@ impl Default for DialogStyle {
             bg: Style::default().bg(Color::Black),
             fg: Style::default().fg(Color::Reset),
             title: None,
+            title_alignment: Some(Alignment::Left),
         }
     }
 }
@@ -274,6 +276,10 @@ pub(crate) fn draw_dialog<'a, T>(
 
     if let Some(title) = &style.title {
         block = block.title(title.clone());
+
+        if let Some(align) = style.title_alignment {
+            block = block.title_alignment(align);
+        }
     }
 
     // Now uses T: Into<Text>, which is way faster for Vec<Line>

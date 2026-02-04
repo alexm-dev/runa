@@ -258,11 +258,30 @@ impl KeyPrefix {
 fn parse_key(s: &str) -> Option<Key> {
     let mut modifiers = KeyModifiers::NONE;
     let mut code: Option<KeyCode> = None;
-    for part in s.split('+') {
+
+    let mut input = s.trim_start_matches('<').trim_end_matches('>').to_string();
+
+    if input.contains('-') {
+        let parts: Vec<&str> = input.split('-').collect();
+
+        for &prefix in parts.iter().take(parts.len().saturating_sub(1)) {
+            match prefix.to_lowercase().as_str() {
+                "c" | "ctrl" | "control" => modifiers |= KeyModifiers::CONTROL,
+                "s" | "shift" => modifiers |= KeyModifiers::SHIFT,
+                "a" | "m" | "alt" | "meta" => modifiers |= KeyModifiers::ALT,
+                _ => return None,
+            }
+        }
+        input = parts.last()?.to_string();
+    }
+
+    let normalized = input.replace('-', "+");
+    for part in normalized.split('+') {
         match part {
             "Ctrl" | "Control" => modifiers |= KeyModifiers::CONTROL,
             "Shift" => modifiers |= KeyModifiers::SHIFT,
-            "Alt" => modifiers |= KeyModifiers::ALT,
+            "Alt" | "Meta" => modifiers |= KeyModifiers::ALT,
+
             "Up" => code = Some(KeyCode::Up),
             "Down" => code = Some(KeyCode::Down),
             "Left" => code = Some(KeyCode::Left),
@@ -271,20 +290,24 @@ fn parse_key(s: &str) -> Option<Key> {
             "Esc" => code = Some(KeyCode::Esc),
             "Backspace" => code = Some(KeyCode::Backspace),
             "Tab" => code = Some(KeyCode::Tab),
+            "Space" => code = Some(KeyCode::Char(' ')),
+
             p if p.starts_with('F') => {
                 let n = p[1..].parse().ok()?;
                 code = Some(KeyCode::F(n));
             }
             p if p.len() == 1 => {
-                let mut char = p.chars().next()?;
+                let mut c = p.chars().next()?;
                 if modifiers.contains(KeyModifiers::SHIFT) {
-                    char = char.to_ascii_uppercase();
+                    c = c.to_ascii_uppercase();
                 }
-                code = Some(KeyCode::Char(char));
+                code = Some(KeyCode::Char(c));
             }
+            "" => continue,
             _ => return None,
         }
     }
+
     Some(Key {
         code: code?,
         modifiers,
