@@ -2,6 +2,24 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased - 2026-04-02
+
+### Added:
+- **Worker threads**: `runa` runs on a 6 (+1) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
+- **`aux_io_worker`**: Added coalescing worker function to start `preview_io` and `parent_io`.
+- **Key-bind help**: A new overlay widget to showcase all the mapped key-bindigs defined in `runa.toml`. Triggered by `?`.
+
+### Fixed:
+- **Stale preview content**: Fixed edge-case that incorrectly updates preview content in bigger directories.
+- Stale parent pane: Fixed incorrectly update of parent pane content in very fast directory switching.
+
+### Changed:
+- Prefix key: Possible to close prefix menu with `esc` now.
+
+
+---
+
+
 ## [0.6.2] - 2026-02-02
 
 ### Patch to input mode
