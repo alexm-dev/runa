@@ -32,7 +32,6 @@ use std::thread;
 pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
-    parent_io_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
@@ -54,7 +53,6 @@ impl Workers {
     pub(crate) fn spawn() -> Self {
         let (nav_io_tx, nav_io_rx) = unbounded::<WorkerTask>();
         let (preview_io_tx, preview_io_rx) = unbounded::<WorkerTask>();
-        let (parent_io_tx, parent_io_rx) = unbounded::<WorkerTask>();
         let (preview_file_tx, preview_file_rx) = unbounded::<WorkerTask>();
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
@@ -62,7 +60,6 @@ impl Workers {
 
         start_io_worker(nav_io_rx, res_tx.clone());
         start_aux_io_worker(preview_io_rx, res_tx.clone());
-        start_aux_io_worker(parent_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone());
@@ -70,7 +67,6 @@ impl Workers {
         Self {
             nav_io_tx,
             preview_io_tx,
-            parent_io_tx,
             preview_file_tx,
             find_tx,
             fileop_tx,
@@ -88,12 +84,6 @@ impl Workers {
     #[inline]
     pub(crate) fn preview_io_tx(&self) -> &Sender<WorkerTask> {
         &self.preview_io_tx
-    }
-
-    /// Accessor the I/O parent io worker for the parent dirs.
-    #[inline]
-    pub(crate) fn parent_io_tx(&self) -> &Sender<WorkerTask> {
-        &self.parent_io_tx
     }
 
     /// Accessor for the preview worker task sender.
