@@ -266,32 +266,41 @@ impl<'a> AppState<'a> {
                         self.request_parent_content();
                         self.request_preview();
                         self.refresh_show_info_if_open();
+                        continue;
                     }
                     // PREVIEW CHECK: Must match the current preview request
-                    else if request_id == self.preview.request_id() {
-                        if let Some(entry) = self.nav.selected_entry()
-                            && path.parent() == Some(self.nav.current_dir())
-                            && path.file_name() == Some(entry.name())
-                        {
-                            self.preview.update_from_entries(entries, request_id);
+                    if request_id == self.preview.request_id()
+                        && let Some(entry) = self.nav.selected_entry()
+                        && path.parent() == Some(self.nav.current_dir())
+                        && path.file_name() == Some(entry.name())
+                    {
+                        self.preview.update_from_entries(entries, request_id);
 
-                            let sel_path = self.nav.current_dir().join(entry.name());
-                            let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
+                        let sel_path = self.nav.current_dir().join(entry.name());
+                        let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
 
-                            self.preview.set_selected_idx(pos);
-                        }
+                        self.preview.set_selected_idx(pos);
+                        continue;
                     }
                     // PARENT CHECK: Must match the current parent request
-                    else if request_id == self.parent.request_id() {
-                        let current_name = self
-                            .nav
-                            .current_dir()
-                            .file_name()
-                            .map(|n| n.to_string_lossy().to_string())
-                            .unwrap_or_default();
+                    if request_id == self.parent.request_id() {
+                        let expected_parent = self.nav.current_dir().parent();
+                        if expected_parent == Some(path.as_path()) {
+                            let current_name = self
+                                .nav
+                                .current_dir()
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_default();
 
-                        self.parent
-                            .update_from_entries(entries, &current_name, request_id, &path);
+                            self.parent.update_from_entries(
+                                entries,
+                                &current_name,
+                                request_id,
+                                &path,
+                            );
+                            continue;
+                        }
                     }
                 }
                 WorkerResponse::PreviewLoaded { lines, request_id } => {
@@ -430,21 +439,19 @@ impl<'a> AppState<'a> {
         if let Some(parent_path) = self.nav.current_dir().parent() {
             let parent_path_buf = parent_path.to_path_buf();
 
-            if self.parent.should_request(&parent_path_buf) {
-                let req_id = self.parent.prepare_new_request(&parent_path_buf);
+            let req_id = self.parent.prepare_new_request(&parent_path_buf);
 
-                let _ = self.workers.parent_io_tx().send(WorkerTask::LoadDirectory {
-                    path: parent_path_buf,
-                    focus: None,
-                    dirs_first: self.config.general().dirs_first(),
-                    show_hidden: self.config.general().show_hidden(),
-                    show_symlink: self.config.general().show_symlink(),
-                    show_system: self.config.general().show_system(),
-                    case_insensitive: self.config.general().case_insensitive(),
-                    always_show: Arc::clone(self.config.general().always_show()),
-                    request_id: req_id,
-                });
-            }
+            let _ = self.workers.parent_io_tx().send(WorkerTask::LoadDirectory {
+                path: parent_path_buf,
+                focus: None,
+                dirs_first: self.config.general().dirs_first(),
+                show_hidden: self.config.general().show_hidden(),
+                show_symlink: self.config.general().show_symlink(),
+                show_system: self.config.general().show_system(),
+                case_insensitive: self.config.general().case_insensitive(),
+                always_show: Arc::clone(self.config.general().always_show()),
+                request_id: req_id,
+            });
         } else {
             // at root.
             self.parent.clear();

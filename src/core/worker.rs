@@ -33,8 +33,8 @@ pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
     parent_io_tx: Sender<WorkerTask>,
-    find_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
+    find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
 }
@@ -60,7 +60,7 @@ impl Workers {
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
-        start_nav_io_worker(nav_io_rx, res_tx.clone());
+        start_io_worker(nav_io_rx, res_tx.clone());
         start_aux_io_worker(preview_io_rx, res_tx.clone());
         start_aux_io_worker(parent_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
@@ -204,7 +204,7 @@ pub(crate) enum WorkerResponse {
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
-fn start_nav_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::LoadDirectory {
@@ -251,6 +251,7 @@ fn start_nav_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
     });
 }
 
+/// Starts the auxillary I/O worker thread (used by parent_io and preview_io threads)
 fn start_aux_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {

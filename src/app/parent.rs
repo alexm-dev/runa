@@ -40,21 +40,9 @@ impl ParentState {
         self.last_path.as_deref()
     }
 
-    /// Determines if a worker request should be issued for the given parent directory.
-    ///
-    /// Returns true if entries are empty or if the path has changed since the last refresh
-    pub(crate) fn should_request(&self, parent_path: &Path) -> bool {
-        if self.entries.is_empty() {
-            return true;
-        }
-        Some(parent_path) != self.last_path.as_deref()
-    }
-
     pub(crate) fn prepare_new_request(&mut self, path: &Path) -> u64 {
-        if Some(path) != self.last_path.as_deref() {
-            self.request_id = self.request_id.wrapping_add(1);
-            self.last_path = Some(path.to_path_buf());
-        }
+        self.request_id = self.request_id.wrapping_add(1);
+        self.last_path = Some(path.to_path_buf());
         self.request_id
     }
 
@@ -84,5 +72,6 @@ impl ParentState {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;
+        self.request_id = self.request_id.wrapping_add(1);
     }
 }
