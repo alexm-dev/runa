@@ -772,6 +772,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
                 (fmt_keys(keys.toggle_marker()), "Toggle marker"),
                 (fmt_keys(keys.clear_markers()), "Clear markers"),
                 (fmt_keys(keys.clear_filter()), "Clear filter"),
+                (fmt_keys(keys.go_to_bottom()), "Go to bottom"),
             ],
         ),
         (
@@ -815,10 +816,14 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         .unwrap_or(10)
         .clamp(10, 28);
 
+    let margin = 6;
+    let margin_spacer = " ".repeat(margin);
+
     let mk_line = |key_text: &str, desc: &str| -> Line<'static> {
         let key_string = format!("{:>width$}", key_text, width = key_w);
 
         Line::from(vec![
+            Span::raw(margin_spacer.to_string()),
             Span::styled(key_string, key_style),
             Span::styled(" ".repeat(key_pad), dim_style),
             Span::raw(desc.to_string()),
@@ -830,6 +835,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
 
     for (section_name, rows) in sections {
         lines.push(Line::from(vec![
+            Span::raw(margin_spacer.to_string()),
             Span::raw(&section_title_indent),
             Span::styled(format!("{section_name}:"), header_style),
         ]));
