@@ -187,6 +187,11 @@ impl<'a> AppState<'a> {
                 self.nav.clear_filters();
                 self.request_preview();
             }
+            NavAction::GoToBottom => {
+                self.nav.last_selected();
+                self.refresh_show_info_if_open();
+                self.request_preview();
+            }
             _ => {}
         }
         KeypressResult::Continue
@@ -274,9 +279,18 @@ impl<'a> AppState<'a> {
 
     fn handle_prefix_action(&mut self, prefix: PrefixCommand) -> bool {
         match prefix {
-            PrefixCommand::Nav(NavAction::GoToTop) => self.handle_go_to_top(),
-            PrefixCommand::Nav(NavAction::GoToHome) => self.handle_go_to_home(),
-            PrefixCommand::Nav(NavAction::GoToPath) => self.prompt_go_to_path(),
+            PrefixCommand::Nav(NavAction::GoToTop) => {
+                self.handle_go_to_top();
+                self.refresh_show_info_if_open();
+            }
+            PrefixCommand::Nav(NavAction::GoToHome) => {
+                self.handle_go_to_home();
+                self.refresh_show_info_if_open();
+            }
+            PrefixCommand::Nav(NavAction::GoToPath) => {
+                self.prompt_go_to_path();
+                self.refresh_show_info_if_open();
+            }
             _ => return false,
         }
         true

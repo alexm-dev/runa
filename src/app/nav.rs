@@ -85,6 +85,12 @@ impl NavState {
         self.selected
     }
 
+    pub(crate) fn last_selected(&mut self) {
+        if !self.entries.is_empty() {
+            self.selected = self.entries.len().saturating_sub(1);
+        }
+    }
+
     // Navigation functions
 
     /// Prepares a new request by incrementing the request ID.

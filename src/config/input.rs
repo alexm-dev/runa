@@ -32,6 +32,7 @@ pub(crate) struct Keys {
     go_to_top: Vec<String>,
     go_to_home: Vec<String>,
     go_to_path: Vec<String>,
+    go_to_bottom: Vec<String>,
     keybind_help: Vec<String>,
 }
 
@@ -79,6 +80,7 @@ accessor!(
     go_to_top,
     go_to_home,
     go_to_path,
+    go_to_bottom,
     keybind_help,
 );
 
@@ -86,34 +88,36 @@ accessor!(
 impl Default for Keys {
     fn default() -> Self {
         Keys {
-            open_file: vec!["Enter".into()],
-            go_up: vec!["k".into(), "Up".into()],
-            go_down: vec!["j".into(), "Down".into()],
-            go_parent: vec!["h".into(), "Left".into(), "Backspace".into()],
-            go_into_dir: vec!["l".into(), "Right".into()],
+            open_file: vec!["enter".into()],
+            go_up: vec!["k".into(), "up".into()],
+            go_down: vec!["j".into(), "down".into()],
+            go_parent: vec!["h".into(), "left".into(), "back".into()],
+            go_into_dir: vec!["l".into(), "right".into()],
 
-            quit: vec!["q".into(), "Esc".into()],
+            quit: vec!["q".into(), "esc".into()],
 
             delete: vec!["d".into()],
             copy: vec!["y".into()],
             paste: vec!["p".into()],
             rename: vec!["r".into()],
             create: vec!["n".into()],
-            create_directory: vec!["Shift+n".into()],
+            create_directory: vec!["N".into()],
             move_file: vec!["m".into()],
             filter: vec!["f".into()],
-            toggle_marker: vec![" ".into()],
+            toggle_marker: vec!["<space>".into()],
             show_info: vec!["i".into()],
             find: vec!["s".into()],
 
-            clear_markers: vec!["Ctrl+c".into()],
-            clear_filter: vec!["Ctrl+f".into()],
+            clear_markers: vec!["<c-c>".into()],
+            clear_filter: vec!["<c-f>".into()],
 
-            alternate_delete: vec!["Ctrl+d".into()],
+            alternate_delete: vec!["<c-d>".into()],
 
             go_to_top: vec!["g".into()],
             go_to_home: vec!["h".into()],
             go_to_path: vec!["p".into()],
+
+            go_to_bottom: vec!["G".into()],
 
             keybind_help: vec!["?".into()],
         }

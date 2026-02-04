@@ -23,6 +23,7 @@ pub(crate) enum NavAction {
     GoUp,
     GoDown,
     GoToTop,
+    GoToBottom,
     GoToPath,
     GoToHome,
     ToggleMarker,
@@ -121,6 +122,7 @@ impl Keymap {
             keys.keybind_help(),
             Action::System(SystemAction::KeyBindHelp)
         );
+        bind!(keys.go_to_bottom(), Action::Nav(NavAction::GoToBottom));
 
         bind_prefix!(
             keys.go_to_top(),
@@ -259,16 +261,17 @@ fn parse_key(s: &str) -> Option<Key> {
     let mut modifiers = KeyModifiers::NONE;
     let mut code: Option<KeyCode> = None;
 
+    let is_bracketed = s.starts_with('<') && s.ends_with('>');
     let mut input = s.trim_start_matches('<').trim_end_matches('>').to_string();
 
-    if input.contains('-') {
+    if is_bracketed && input.contains('-') {
         let parts: Vec<&str> = input.split('-').collect();
 
         for &prefix in parts.iter().take(parts.len().saturating_sub(1)) {
             match prefix.to_lowercase().as_str() {
-                "c" | "ctrl" | "control" => modifiers |= KeyModifiers::CONTROL,
+                "c" | "ctrl" => modifiers |= KeyModifiers::CONTROL,
+                "a" | "m" | "alt" => modifiers |= KeyModifiers::ALT,
                 "s" | "shift" => modifiers |= KeyModifiers::SHIFT,
-                "a" | "m" | "alt" | "meta" => modifiers |= KeyModifiers::ALT,
                 _ => return None,
             }
         }
@@ -277,34 +280,41 @@ fn parse_key(s: &str) -> Option<Key> {
 
     let normalized = input.replace('-', "+");
     for part in normalized.split('+') {
-        match part {
-            "Ctrl" | "Control" => modifiers |= KeyModifiers::CONTROL,
-            "Shift" => modifiers |= KeyModifiers::SHIFT,
-            "Alt" | "Meta" => modifiers |= KeyModifiers::ALT,
+        let p_low = part.to_lowercase();
+        match p_low.as_str() {
+            "ctrl" | "control" => modifiers |= KeyModifiers::CONTROL,
+            "alt" | "meta" => modifiers |= KeyModifiers::ALT,
+            "shift" => modifiers |= KeyModifiers::SHIFT,
 
-            "Up" => code = Some(KeyCode::Up),
-            "Down" => code = Some(KeyCode::Down),
-            "Left" => code = Some(KeyCode::Left),
-            "Right" => code = Some(KeyCode::Right),
-            "Enter" => code = Some(KeyCode::Enter),
-            "Esc" => code = Some(KeyCode::Esc),
-            "Backspace" => code = Some(KeyCode::Backspace),
-            "Tab" => code = Some(KeyCode::Tab),
-            "Space" => code = Some(KeyCode::Char(' ')),
+            "up" => code = Some(KeyCode::Up),
+            "down" => code = Some(KeyCode::Down),
+            "left" => code = Some(KeyCode::Left),
+            "right" => code = Some(KeyCode::Right),
+            "enter" => code = Some(KeyCode::Enter),
+            "esc" => code = Some(KeyCode::Esc),
+            "backspace" | "back" => code = Some(KeyCode::Backspace),
+            "tab" => code = Some(KeyCode::Tab),
+            "space" | "spc" => code = Some(KeyCode::Char(' ')),
 
-            p if p.starts_with('F') => {
-                let n = p[1..].parse().ok()?;
-                code = Some(KeyCode::F(n));
-            }
-            p if p.len() == 1 => {
-                let mut c = p.chars().next()?;
-                if modifiers.contains(KeyModifiers::SHIFT) {
-                    c = c.to_ascii_uppercase();
+            _ => {
+                if part.len() == 1 {
+                    let mut c = part.chars().next()?;
+                    if modifiers.contains(KeyModifiers::SHIFT) {
+                        c = c.to_ascii_uppercase();
+                    }
+                    code = Some(KeyCode::Char(c));
+                } else if p_low.starts_with('f')
+                    && p_low.len() > 1
+                    && p_low[1..].chars().all(|c| c.is_ascii_digit())
+                {
+                    let n = p_low[1..].parse().ok()?;
+                    code = Some(KeyCode::F(n));
+                } else if part.is_empty() {
+                    continue;
+                } else {
+                    return None;
                 }
-                code = Some(KeyCode::Char(c));
             }
-            "" => continue,
-            _ => return None,
         }
     }
 

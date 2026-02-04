@@ -281,6 +281,8 @@ name = "default"
 # [theme.widget]
 # color.fg = "default"
 # color.bg = "default"
+# field.fg = "cyan"
+# field.bg = "default"
 # border.fg = "default"
 # border.bg = "default"
 # size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
@@ -334,6 +336,8 @@ name = "default"
 # go_to_top = ["g"]
 # go_to_home = ["h"]
 # go_to_path = ["p"]
+
+# go_to_bottom = ["G"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
