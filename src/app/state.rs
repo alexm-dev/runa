@@ -441,7 +441,7 @@ impl<'a> AppState<'a> {
 
             let req_id = self.parent.prepare_new_request(&parent_path_buf);
 
-            let _ = self.workers.nav_io_tx().send(WorkerTask::LoadDirectory {
+            let _ = self.workers.parent_io_tx().send(WorkerTask::LoadDirectory {
                 path: parent_path_buf,
                 focus: None,
                 dirs_first: self.config.general().dirs_first(),
