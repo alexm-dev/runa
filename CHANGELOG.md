@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased - 2026-04-02
+## Unreleased - 2026-05-02
 
 ### Added:
 - **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
