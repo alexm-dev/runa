@@ -59,7 +59,7 @@ pub(crate) struct ActionContext {
     input_buffer: String,
     input_cursor_pos: usize,
     clipboard: Option<HashSet<PathBuf>>,
-    autocomplete: AutocompleteState,
+    autocomplete: AutoCompleteState,
     prefix_recognizer: KeyPrefix,
     is_cut: bool,
     find: FindState,
@@ -96,7 +96,7 @@ impl ActionContext {
         &mut self.clipboard
     }
 
-    pub(crate) fn autocomplete_mut(&mut self) -> &mut AutocompleteState {
+    pub(crate) fn autocomplete_mut(&mut self) -> &mut AutoCompleteState {
         &mut self.autocomplete
     }
 
@@ -197,9 +197,8 @@ impl ActionContext {
         nav.clear_markers();
     }
 
-    /// Currently, cut/move is not implemented yet. Only copy/yank is used.
-    /// This allows for easy addition of a cut/move feature in the future.
-    /// Sets the clipboard with the selected files.
+    /// Copies or cuts the currently marked files or the selected file if no markers exist.
+    /// Stores the paths in the clipboard along with the cut flag.
     pub(crate) fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
         let mut set = HashSet::new();
         if !nav.markers().is_empty() {
@@ -368,7 +367,7 @@ impl Default for ActionContext {
             input_buffer: String::new(),
             input_cursor_pos: 0,
             clipboard: None,
-            autocomplete: AutocompleteState::default(),
+            autocomplete: AutoCompleteState::default(),
             prefix_recognizer: KeyPrefix::new(Duration::from_secs(4)),
             is_cut: false,
             find: FindState::default(),
@@ -493,13 +492,13 @@ impl FindState {
 }
 
 #[derive(Default)]
-pub(crate) struct AutocompleteState {
+pub(crate) struct AutoCompleteState {
     suggestions: Vec<String>,
     index: usize,
     last_input: String,
 }
 
-impl AutocompleteState {
+impl AutoCompleteState {
     #[inline]
     pub(crate) fn suggestions(&self) -> &Vec<String> {
         &self.suggestions

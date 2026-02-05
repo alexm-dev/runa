@@ -12,7 +12,7 @@ use std::slice;
 pub(crate) enum Overlay {
     ShowInfo { info: FileInfo },
     Message { text: String },
-    PreifxHelp,
+    PrefixHelp,
     KeybindHelp,
 }
 

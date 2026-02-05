@@ -807,13 +807,13 @@ impl<'a> AppState<'a> {
     }
 
     fn show_prefix_help(&mut self) {
-        if !matches!(self.overlays().top(), Some(Overlay::PreifxHelp)) {
-            self.overlays_mut().push(Overlay::PreifxHelp);
+        if !matches!(self.overlays().top(), Some(Overlay::PrefixHelp)) {
+            self.overlays_mut().push(Overlay::PrefixHelp);
         }
     }
 
     pub(crate) fn hide_prefix_help(&mut self) {
-        if matches!(self.overlays().top(), Some(Overlay::PreifxHelp)) {
+        if matches!(self.overlays().top(), Some(Overlay::PrefixHelp)) {
             self.overlays_mut().pop();
         }
     }
