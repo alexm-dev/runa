@@ -26,7 +26,7 @@ use crossterm::event::KeyEvent;
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 /// Enumeration for each individual keypress result processed.
@@ -89,6 +89,7 @@ pub(crate) struct AppState<'a> {
     pub(super) is_loading: bool,
 
     pub(super) notification_time: Option<Instant>,
+    pub(super) worker_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
 }
 
@@ -117,6 +118,7 @@ impl<'a> AppState<'a> {
             workers,
             is_loading: false,
             notification_time: None,
+            worker_time: None,
             overlays: OverlayStack::new(),
         };
 
@@ -153,6 +155,11 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
+    pub(crate) fn workers(&self) -> &Workers {
+        &self.workers
+    }
+
+    #[inline]
     pub(crate) fn is_loading(&self) -> bool {
         self.is_loading
     }
@@ -160,6 +167,11 @@ impl<'a> AppState<'a> {
     #[inline]
     pub(crate) fn notification_time(&self) -> &Option<Instant> {
         &self.notification_time
+    }
+
+    #[inline]
+    pub(crate) fn worker_time(&self) -> &Option<Instant> {
+        &self.worker_time
     }
 
     #[inline]
@@ -217,6 +229,18 @@ impl<'a> AppState<'a> {
             self.overlays_mut()
                 .retain(|o| !matches!(o, Overlay::Message { .. }));
 
+            changed = true;
+        }
+
+        let active = self.workers.active().load(Ordering::Relaxed);
+        if active > 0 {
+            let start = *self.worker_time.get_or_insert_with(Instant::now);
+
+            if start.elapsed() >= Duration::from_millis(200) {
+                changed = true;
+            }
+        } else if self.worker_time.is_some() {
+            self.worker_time = None;
             changed = true;
         }
 
@@ -330,10 +354,13 @@ impl<'a> AppState<'a> {
 
                 WorkerResponse::Error(e, request_id) => {
                     self.is_loading = false;
-                    if request_id != 0 && request_id == self.preview.request_id() {
-                        self.preview.set_error(e);
-                    } else {
-                        self.push_overlay_message(e.to_string(), Duration::from_secs(7));
+                    match request_id {
+                        Some(id) if id == self.preview.request_id() => {
+                            self.preview.set_error(e);
+                        }
+                        _ => {
+                            self.push_overlay_message(e.to_string(), Duration::from_secs(7));
+                        }
                     }
                 }
             }

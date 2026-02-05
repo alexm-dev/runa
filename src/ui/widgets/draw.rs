@@ -22,7 +22,8 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph},
 };
-use std::time::Instant;
+use std::sync::atomic::Ordering;
+use std::time::{Duration, Instant};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Draws the seperator line when enabled inside runa.toml
@@ -293,20 +294,99 @@ pub(crate) fn draw_status_line(frame: &mut Frame, app: &AppState) {
 }
 
 pub(crate) fn draw_footer_line(frame: &mut Frame, app: &AppState) {
-    if app.config().display().entry_count() != EntryCountPosition::Footer {
+    let area = frame.area();
+    let display_cfg = app.config().display();
+    let use_icons = display_cfg.icons();
+    let status_cfg = display_cfg.status();
+    let footer_base_style = app.config().theme().status_line_style();
+    let marker_theme = app.config().theme().marker();
+
+    let mut spans = Vec::new();
+    let separator = Span::styled(" | ", footer_base_style);
+
+    if status_cfg.clipboard()
+        && let Some(clipboard_set) = app.actions().clipboard()
+    {
+        let count = clipboard_set.len();
+        if count > 0 {
+            let icon = if use_icons { "󰆏 " } else { "" };
+            let label = "copied";
+            let style = marker_theme.clipboard_style_or_theme();
+
+            spans.push(Span::styled(format!("{}{count} {label}", icon), style));
+        }
+    }
+
+    if status_cfg.markers() {
+        let markers = app.nav().markers();
+        let marker_count = markers.len();
+
+        if marker_count > 0 {
+            let is_redundant = if let Some(clipboard_set) = app.actions().clipboard() {
+                if clipboard_set.len() != marker_count {
+                    false
+                } else {
+                    markers.iter().all(|path| clipboard_set.contains(path))
+                }
+            } else {
+                false
+            };
+
+            if !is_redundant {
+                if !spans.is_empty() {
+                    spans.push(separator.clone());
+                }
+
+                let style = marker_theme.style_or_theme();
+                spans.push(Span::styled(format!("{} marked", marker_count), style));
+            }
+        }
+    }
+
+    if status_cfg.tasks() {
+        let queued_ops = app.workers().fileop_tx().len();
+        let active_ops = app.workers().active().load(Ordering::Relaxed);
+        let total_ops = queued_ops + active_ops;
+
+        if total_ops > 0
+            && let Some(start) = app.worker_time()
+            && start.elapsed() >= Duration::from_millis(200)
+        {
+            if !spans.is_empty() {
+                spans.push(separator.clone());
+            }
+
+            let task_msg = if active_ops > 0 {
+                let symbols: &[&str] = if use_icons {
+                    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+                } else {
+                    &["-", "\\", "|", "/"]
+                };
+                let tick = start.elapsed().as_millis() / 100;
+                let spinner = symbols[tick as usize % symbols.len()];
+
+                format!("Tasks: {} FileOp({})", spinner, total_ops)
+            } else {
+                format!("Tasks: FileOp({})", total_ops)
+            };
+
+            spans.push(Span::styled(task_msg, footer_base_style));
+        }
+    }
+
+    if app.config().display().entry_count() == EntryCountPosition::Footer {
+        if !spans.is_empty() {
+            spans.push(separator.clone());
+        }
+        let total = app.nav().shown_entries_len();
+        let idx = app.visible_selected().map(|i| i + 1).unwrap_or(0);
+        spans.push(Span::styled(format!("{idx}/{total}"), footer_base_style));
+    }
+
+    if spans.is_empty() {
         return;
     }
 
-    let total = app.nav().shown_entries_len();
-
-    let msg = if total == 0 {
-        "0/0".to_string()
-    } else {
-        let idx = app.visible_selected().map(|i| i + 1).unwrap_or(0);
-        format!("{}/{}", idx, total)
-    };
-
-    let area = frame.area();
     let rect = Rect {
         x: area.x,
         y: area.y + area.height - 1,
@@ -314,14 +394,15 @@ pub(crate) fn draw_footer_line(frame: &mut Frame, app: &AppState) {
         height: 1,
     };
 
-    let style = app.config().theme().status_line_style();
-    let para = Paragraph::new(Line::from(Span::styled(msg, style)))
-        .alignment(Alignment::Right)
-        .block(
-            ratatui::widgets::Block::default().padding(ratatui::widgets::Padding::horizontal(1)),
-        );
-
-    frame.render_widget(para, rect);
+    frame.render_widget(
+        Paragraph::new(Line::from(spans))
+            .alignment(Alignment::Right)
+            .block(
+                ratatui::widgets::Block::default()
+                    .padding(ratatui::widgets::Padding::horizontal(1)),
+            ),
+        rect,
+    );
 }
 
 /// Helper function to calculate cursor offset for cursor moving

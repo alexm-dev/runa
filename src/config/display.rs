@@ -39,6 +39,7 @@ pub(crate) struct Display {
     preview_options: PreviewOptions,
     layout: LayoutConfig,
     info: ShowInfoOptions,
+    status: StatusElements,
 }
 
 /// Public methods for accessing display configuration options
@@ -148,6 +149,11 @@ impl Display {
         &self.info
     }
 
+    #[inline]
+    pub(crate) fn status(&self) -> &StatusElements {
+        &self.status
+    }
+
     /// Get padding string based on entry_padding
     pub(crate) fn padding_str(&self) -> &'static str {
         // ASCII whitespaces
@@ -184,6 +190,7 @@ impl Default for Display {
             entry_count: EntryCountPosition::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
+            status: StatusElements::default(),
         }
     }
 }
@@ -297,6 +304,41 @@ impl Default for ShowInfoOptions {
             perms: true,
             position: None,
         }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(default)]
+pub(crate) struct StatusElements {
+    markers: bool,
+    clipboard: bool,
+    tasks: bool,
+}
+
+impl Default for StatusElements {
+    fn default() -> Self {
+        Self {
+            markers: true,
+            clipboard: true,
+            tasks: true,
+        }
+    }
+}
+
+impl StatusElements {
+    #[inline]
+    pub(crate) fn markers(&self) -> bool {
+        self.markers
+    }
+
+    #[inline]
+    pub(crate) fn clipboard(&self) -> bool {
+        self.clipboard
+    }
+
+    #[inline]
+    pub(crate) fn tasks(&self) -> bool {
+        self.tasks
     }
 }
 

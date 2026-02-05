@@ -25,7 +25,7 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
 
 /// Manages worker threads channels for different task types.
@@ -37,6 +37,7 @@ pub(crate) struct Workers {
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
+    active: Arc<AtomicUsize>,
 }
 
 /// Manages worker thread channels for different task types.
@@ -60,12 +61,15 @@ impl Workers {
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
+        let active = Arc::new(AtomicUsize::new(0));
+        let fileop_active_for_worker = Arc::clone(&active);
+
         start_io_worker(nav_io_rx, res_tx.clone());
         start_io_worker(parent_io_rx, res_tx.clone());
         start_io_worker(preview_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
-        start_fileop_worker(fileop_rx, res_tx.clone());
+        start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
 
         Self {
             nav_io_tx,
@@ -75,6 +79,7 @@ impl Workers {
             find_tx,
             fileop_tx,
             response_rx,
+            active,
         }
     }
 
@@ -116,6 +121,26 @@ impl Workers {
     #[inline]
     pub(crate) fn response_rx(&self) -> &Receiver<WorkerResponse> {
         &self.response_rx
+    }
+
+    #[inline]
+    pub(crate) fn active(&self) -> &Arc<AtomicUsize> {
+        &self.active
+    }
+}
+
+struct ActiveOpGuard(Arc<AtomicUsize>);
+
+impl ActiveOpGuard {
+    fn new(counter: Arc<AtomicUsize>) -> Self {
+        counter.fetch_add(1, Ordering::SeqCst);
+        Self(counter)
+    }
+}
+
+impl Drop for ActiveOpGuard {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::SeqCst);
     }
 }
 
@@ -198,7 +223,7 @@ pub(crate) enum WorkerResponse {
         results: Vec<FindResult>,
         request_id: u64,
     },
-    Error(String, u64),
+    Error(String, Option<u64>),
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
@@ -241,7 +266,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                 Err(e) => {
                     let _ = res_tx.send(WorkerResponse::Error(
                         format!("I/O Error: {}", e),
-                        request_id,
+                        Some(request_id),
                     ));
                 }
             }
@@ -329,9 +354,15 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
 }
 
 /// Starts the file operation worker thread
-fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+fn start_fileop_worker(
+    task_rx: Receiver<WorkerTask>,
+    res_tx: Sender<WorkerResponse>,
+    active_count: Arc<AtomicUsize>,
+) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
+            let _guard = ActiveOpGuard::new(Arc::clone(&active_count));
+
             let WorkerTask::FileOp { op } = task else {
                 continue;
             };
@@ -458,8 +489,7 @@ fn start_fileop_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespo
                     });
                 }
                 Err(e) => {
-                    let req_id = 0;
-                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), req_id));
+                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), None));
                 }
             }
         }
@@ -610,7 +640,7 @@ mod tests {
                     assert!(!entry.name_str().is_empty());
                 }
             }
-            WorkerResponse::Error(e, 0) => panic!("Worker error: {}", e),
+            WorkerResponse::Error(e, None) => panic!("Worker error: {}", e),
             _ => panic!("Unexpected worker response"),
         }
         Ok(())
@@ -689,7 +719,7 @@ mod tests {
                         );
                     }
                 }
-                Ok(WorkerResponse::Error(e, 0)) => panic!("Worker error: {}", e),
+                Ok(WorkerResponse::Error(e, None)) => panic!("Worker error: {}", e),
                 Ok(_) => panic!("Unexpected WorkerResponse variant"),
                 Err(_) => panic!("Missing worker response (timeout)"),
             }
