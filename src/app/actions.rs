@@ -199,12 +199,13 @@ impl ActionContext {
 
     /// Copies or cuts the currently marked files or the selected file if no markers exist.
     /// Stores the paths in the clipboard along with the cut flag.
-    pub(crate) fn action_copy(&mut self, nav: &NavState, is_cut: bool) {
+    pub(crate) fn action_copy(&mut self, nav: &mut NavState, is_cut: bool) {
         let mut set = HashSet::new();
         if !nav.markers().is_empty() {
             for path in nav.markers() {
                 set.insert(path.clone());
             }
+            nav.clear_markers();
         } else if let Some(entry) = nav.selected_entry() {
             set.insert(nav.current_dir().join(entry.name()));
         }

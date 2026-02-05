@@ -211,7 +211,8 @@ impl<'a> AppState<'a> {
                 self.prompt_delete(is_trash);
             }
             FileAction::Copy => {
-                self.actions.action_copy(&self.nav, false);
+                let nav = &mut self.nav;
+                self.actions.action_copy(nav, false);
                 self.handle_timed_message(Duration::from_secs(15));
             }
             FileAction::Paste => {
