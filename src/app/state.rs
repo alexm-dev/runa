@@ -397,7 +397,7 @@ impl<'a> AppState<'a> {
                 let _ = self
                     .workers
                     .preview_io_tx()
-                    .send(WorkerTask::LoadDirectory {
+                    .try_send(WorkerTask::LoadDirectory {
                         path,
                         focus: None,
                         dirs_first: self.config.general().dirs_first(),
@@ -420,7 +420,7 @@ impl<'a> AppState<'a> {
                 let _ = self
                     .workers
                     .preview_file_tx()
-                    .send(WorkerTask::LoadPreview {
+                    .try_send(WorkerTask::LoadPreview {
                         path,
                         max_lines: self.metrics.preview_height,
                         pane_width: self.metrics.preview_width,
@@ -441,17 +441,20 @@ impl<'a> AppState<'a> {
 
             let req_id = self.parent.prepare_new_request(&parent_path_buf);
 
-            let _ = self.workers.nav_io_tx().send(WorkerTask::LoadDirectory {
-                path: parent_path_buf,
-                focus: None,
-                dirs_first: self.config.general().dirs_first(),
-                show_hidden: self.config.general().show_hidden(),
-                show_symlink: self.config.general().show_symlink(),
-                show_system: self.config.general().show_system(),
-                case_insensitive: self.config.general().case_insensitive(),
-                always_show: Arc::clone(self.config.general().always_show()),
-                request_id: req_id,
-            });
+            let _ = self
+                .workers
+                .parent_io_tx()
+                .try_send(WorkerTask::LoadDirectory {
+                    path: parent_path_buf,
+                    focus: None,
+                    dirs_first: self.config.general().dirs_first(),
+                    show_hidden: self.config.general().show_hidden(),
+                    show_symlink: self.config.general().show_symlink(),
+                    show_system: self.config.general().show_system(),
+                    case_insensitive: self.config.general().case_insensitive(),
+                    always_show: Arc::clone(self.config.general().always_show()),
+                    request_id: req_id,
+                });
         } else {
             // at root.
             self.parent.clear();

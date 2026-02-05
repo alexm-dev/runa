@@ -31,6 +31,7 @@ use std::thread;
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
+    parent_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
@@ -52,20 +53,23 @@ impl Workers {
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
         let (nav_io_tx, nav_io_rx) = unbounded::<WorkerTask>();
-        let (preview_io_tx, preview_io_rx) = unbounded::<WorkerTask>();
-        let (preview_file_tx, preview_file_rx) = unbounded::<WorkerTask>();
+        let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
+        let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
+        let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
         start_io_worker(nav_io_rx, res_tx.clone());
-        start_aux_io_worker(preview_io_rx, res_tx.clone());
+        start_io_worker(parent_io_rx, res_tx.clone());
+        start_io_worker(preview_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone());
 
         Self {
             nav_io_tx,
+            parent_io_tx,
             preview_io_tx,
             preview_file_tx,
             find_tx,
@@ -80,7 +84,11 @@ impl Workers {
         &self.nav_io_tx
     }
 
-    /// Accessor the I/O preview worker for preview in dirs.
+    #[inline]
+    pub(crate) fn parent_io_tx(&self) -> &Sender<WorkerTask> {
+        &self.parent_io_tx
+    }
+
     #[inline]
     pub(crate) fn preview_io_tx(&self) -> &Sender<WorkerTask> {
         &self.preview_io_tx
@@ -241,115 +249,21 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
     });
 }
 
-/// Starts the auxillary I/O worker thread (used by parent_io and preview_io threads)
-fn start_aux_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
-    thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadDirectory {
-                mut path,
-                mut focus,
-                mut dirs_first,
-                mut show_hidden,
-                mut show_symlink,
-                mut show_system,
-                mut case_insensitive,
-                mut always_show,
-                mut request_id,
-            } = task
-            else {
-                continue;
-            };
-
-            while let Ok(next) = task_rx.try_recv() {
-                if let WorkerTask::LoadDirectory {
-                    path: p,
-                    focus: f,
-                    dirs_first: df,
-                    show_hidden: sh,
-                    show_symlink: sl,
-                    show_system: sy,
-                    case_insensitive: ci,
-                    always_show: aw,
-                    request_id: id,
-                } = next
-                {
-                    path = p;
-                    focus = f;
-                    dirs_first = df;
-                    show_hidden = sh;
-                    show_symlink = sl;
-                    show_system = sy;
-                    case_insensitive = ci;
-                    always_show = aw;
-                    request_id = id;
-                }
-            }
-
-            match browse_dir(&path) {
-                Ok(mut entries) => {
-                    let formatter = Formatter::new(
-                        dirs_first,
-                        show_hidden,
-                        show_symlink,
-                        show_system,
-                        case_insensitive,
-                        always_show,
-                    );
-                    formatter.filter_entries(&mut entries);
-                    formatter.sort_entries(&mut entries);
-                    let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
-                        path,
-                        entries,
-                        focus,
-                        request_id,
-                    });
-                }
-                Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("I/O Error: {}", e),
-                        request_id,
-                    ));
-                }
-            }
-        }
-    });
-}
-
 /// Starts the preview worker thread
 fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::LoadPreview {
-                mut path,
-                mut max_lines,
-                mut pane_width,
-                mut preview_method,
-                mut args,
-                mut request_id,
+                path,
+                max_lines,
+                pane_width,
+                preview_method,
+                args,
+                request_id,
             } = task
             else {
                 continue;
             };
-
-            // Coalesce multiple LoadPreview tasks to only process the latest
-            while let Ok(next) = task_rx.try_recv() {
-                if let WorkerTask::LoadPreview {
-                    path: p,
-                    max_lines: m,
-                    pane_width: w,
-                    preview_method: pm,
-                    args: a,
-                    request_id: id,
-                } = next
-                {
-                    path = p;
-                    max_lines = m;
-                    pane_width = w;
-                    preview_method = pm;
-                    args = a;
-                    request_id = id;
-                }
-            }
 
             let lines = match preview_method {
                 PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width),
