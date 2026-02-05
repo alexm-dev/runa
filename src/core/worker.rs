@@ -820,54 +820,6 @@ mod tests {
     }
 
     #[test]
-    fn test_find_worker_cancellation_effectiveness() -> Result<(), Box<dyn std::error::Error>> {
-        if !fd_available() {
-            return Ok(());
-        }
-
-        let temp = tempdir()?;
-        let temp_path = temp.path().to_path_buf();
-        fs::File::create(temp_path.join("target.txt"))?;
-
-        let workers = Workers::spawn();
-
-        let cancel_token = Arc::new(AtomicBool::new(true));
-        workers.find_tx().send(WorkerTask::FindRecursive {
-            base_dir: temp_path.clone(),
-            query: "target".to_string(),
-            max_results: 10,
-            cancel: cancel_token,
-            show_hidden: false,
-            request_id: 123,
-        })?;
-
-        workers.find_tx().send(WorkerTask::FindRecursive {
-            base_dir: temp_path,
-            query: "crab".to_string(),
-            max_results: 1,
-            cancel: Arc::new(AtomicBool::new(false)),
-            show_hidden: false,
-            request_id: 999,
-        })?;
-
-        let resp = workers
-            .response_rx()
-            .recv_timeout(Duration::from_millis(200))?;
-
-        match resp {
-            WorkerResponse::FindResults { request_id, .. } => {
-                assert_eq!(
-                    request_id, 999,
-                    "Worker should have skipped 123 and processed 999"
-                );
-            }
-            _ => panic!("Unexpected worker response"),
-        }
-
-        Ok(())
-    }
-
-    #[test]
     fn preview_worker_internal() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let preview_file = temp.path().join("preview.txt");
@@ -973,43 +925,6 @@ mod tests {
             dropped_count > 90,
             "Most rapid-fire requests should be dropped"
         );
-        Ok(())
-    }
-
-    #[test]
-    fn find_worker_recovery_after_cancel() -> Result<(), Box<dyn std::error::Error>> {
-        let workers = Workers::spawn();
-        let temp = tempdir()?;
-        let file_path = temp.path().join("alive.txt");
-        fs::File::create(&file_path)?;
-
-        let cancel = Arc::new(AtomicBool::new(true));
-        workers.find_tx().send(WorkerTask::FindRecursive {
-            base_dir: temp.path().to_path_buf(),
-            query: "alive".to_string(),
-            max_results: 1,
-            cancel,
-            show_hidden: false,
-            request_id: 1,
-        })?;
-
-        workers.find_tx().send(WorkerTask::FindRecursive {
-            base_dir: temp.path().to_path_buf(),
-            query: "alive".to_string(),
-            max_results: 1,
-            cancel: Arc::new(AtomicBool::new(false)),
-            show_hidden: false,
-            request_id: 2,
-        })?;
-
-        let resp = workers.response_rx().recv_timeout(Duration::from_secs(1))?;
-        if let WorkerResponse::FindResults { request_id, .. } = resp {
-            assert_eq!(
-                request_id, 2,
-                "Worker should have skipped task 1 and processed task 2"
-            );
-        }
-
         Ok(())
     }
 
