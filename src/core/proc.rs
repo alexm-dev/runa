@@ -262,7 +262,9 @@ pub(crate) fn complete_dirs_with_fd(
     if show_hidden {
         cmd.arg("--hidden");
     }
-    cmd.arg(prefix).arg(base_dir);
+
+    let pattern = format!("^{}", prefix);
+    cmd.arg(&pattern).arg(base_dir);
     let output = cmd.output()?;
 
     if !output.status.success() {
@@ -272,10 +274,11 @@ pub(crate) fn complete_dirs_with_fd(
         )));
     }
 
-    let dirs = String::from_utf8_lossy(&output.stdout)
+    let mut dirs: Vec<String> = String::from_utf8_lossy(&output.stdout)
         .lines()
         .map(|s| s.trim_end_matches(MAIN_SEPARATOR).to_string())
         .collect();
+    dirs.sort_unstable_by_key(|a| a.to_lowercase());
 
     Ok(dirs)
 }
