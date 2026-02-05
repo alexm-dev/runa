@@ -5,8 +5,8 @@ All the changes made to runa are documented here.
 ## Unreleased - 2026-04-02
 
 ### Added:
-- **Worker threads**: `runa` runs on a 5 (+1 UI) worker thread engine now for better responsiveness. Added `preview_io` worker thread by splitting up the original `io_worker`.
-- **`aux_io_worker`**: Added coalescing worker function to start `preview_io`.
+- **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
+- **`aux_io_worker`**: Added coalescing worker function to start `preview_io` and `parent_io`.
 - **Key-bind help**: A new overlay widget to showcase all the mapped key-bindigs defined in `runa.toml`. Triggered by `?`.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
 - **WidgetTheme**: Added `[WidgetTheme].field` coloring for section values of widgets. (Example: FileInfo, Name: Foo<field color>)
@@ -18,6 +18,7 @@ All the changes made to runa are documented here.
 
 ### Changed:
 - Prefix key: Possible to close prefix menu with `esc` now.
+- Preview worker: Changed `preview_file` worker unbounded channel with `bounded(1)` for file previews.
 
 ### Internal:
 - Performance: Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
