@@ -291,35 +291,16 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::FindRecursive {
-                mut base_dir,
-                mut query,
-                mut max_results,
-                mut cancel,
-                mut show_hidden,
-                mut request_id,
+                base_dir,
+                query,
+                max_results,
+                cancel,
+                show_hidden,
+                request_id,
             } = task
             else {
                 continue;
             };
-
-            while let Ok(next) = task_rx.try_recv() {
-                if let WorkerTask::FindRecursive {
-                    base_dir: base,
-                    query: q,
-                    max_results: max,
-                    cancel: c,
-                    show_hidden: sh,
-                    request_id: id,
-                } = next
-                {
-                    base_dir = base;
-                    query = q;
-                    max_results = max;
-                    cancel = c;
-                    show_hidden = sh;
-                    request_id = id;
-                }
-            }
 
             let mut results = Vec::new();
             let _ = find(
@@ -492,7 +473,6 @@ mod tests {
 
     use rand::{Rng, rng};
     use std::collections::HashSet;
-    use std::env;
     use std::fs::{self, File};
     use std::sync::Arc;
     use std::sync::atomic::AtomicBool;
@@ -500,16 +480,117 @@ mod tests {
     use std::time::Duration;
     use tempfile::tempdir;
 
+    fn fd_available() -> bool {
+        which::which("fd").is_ok()
+    }
+
+    fn bat_available() -> bool {
+        which::which("bat").is_ok()
+    }
+
+    #[test]
+    fn test_worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = Workers::spawn();
+        let temp = tempdir()?;
+        let test_file = temp.path().join("pool_test.txt");
+        fs::write(&test_file, "Hello Pool")?;
+
+        let find_cancel = Arc::new(AtomicBool::new(false));
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp.path().to_path_buf(),
+            query: "pool".to_string(),
+            max_results: 1,
+            cancel: find_cancel,
+            show_hidden: false,
+            request_id: 10,
+        })?;
+
+        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+            path: test_file.clone(),
+            max_lines: 1,
+            pane_width: 10,
+            preview_method: PreviewMethod::Internal,
+            args: vec![],
+            request_id: 20,
+        })?;
+
+        workers.nav_io_tx().send(WorkerTask::LoadDirectory {
+            path: temp.path().to_path_buf(),
+            focus: None,
+            dirs_first: true,
+            show_hidden: false,
+            show_symlink: false,
+            show_system: false,
+            case_insensitive: true,
+            always_show: Arc::new(HashSet::new()),
+            request_id: 30,
+        })?;
+
+        workers.fileop_tx().send(WorkerTask::FileOp {
+            op: FileOperation::Create {
+                path: temp.path().join("new_file.txt"),
+                is_dir: false,
+            },
+        })?;
+
+        let mut responses_collected = 0;
+        let mut results_found = false;
+        let mut preview_found = false;
+        let mut dir_found = false;
+        let mut op_found = false;
+
+        let timeout = Duration::from_secs(5);
+        let start = std::time::Instant::now();
+
+        while responses_collected < 4 && start.elapsed() < timeout {
+            if let Ok(resp) = workers
+                .response_rx()
+                .recv_timeout(Duration::from_millis(500))
+            {
+                match resp {
+                    WorkerResponse::FindResults { request_id, .. } => {
+                        assert_eq!(request_id, 10);
+                        results_found = true;
+                    }
+                    WorkerResponse::PreviewLoaded { request_id, .. } => {
+                        assert_eq!(request_id, 20);
+                        preview_found = true;
+                    }
+                    WorkerResponse::DirectoryLoaded { request_id, .. } => {
+                        assert_eq!(request_id, 30);
+                        dir_found = true;
+                    }
+                    WorkerResponse::OperationComplete { .. } => {
+                        op_found = true;
+                    }
+                    _ => {}
+                }
+                responses_collected += 1;
+            }
+        }
+
+        assert!(results_found, "Find worker failed");
+        assert!(preview_found, "Preview worker failed");
+        assert!(dir_found, "Nav IO worker failed");
+        assert!(op_found, "FileOp worker failed");
+        assert_eq!(responses_collected, 4);
+
+        Ok(())
+    }
+
     #[test]
     fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
+        let temp = tempdir()?;
         let task_tx = workers.nav_io_tx();
         let res_rx = workers.response_rx();
 
-        let curr_dir = env::current_dir()?;
+        let temp_path = temp.path().join("test_dir");
+        fs::create_dir(&temp_path)?;
+        fs::File::create(temp_path.join("crab.txt"))?;
 
         task_tx.send(WorkerTask::LoadDirectory {
-            path: curr_dir,
+            path: temp_path,
             focus: None,
             dirs_first: true,
             show_hidden: false,
@@ -537,13 +618,15 @@ mod tests {
 
     #[test]
     fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Error>> {
-        let temp_dir = tempdir()?;
-        let safe_subdir = temp_dir.path().join("runa_test_safe_dir");
-        fs::create_dir_all(&safe_subdir)?;
+        let temp_root = tempdir()?;
 
-        let curr_dir = env::current_dir()?;
+        let dir_a = temp_root.path().join("dir_a");
+        let dir_b = temp_root.path().join("dir_b");
+        fs::create_dir(&dir_a)?;
+        fs::create_dir(&dir_b)?;
+        fs::write(dir_a.join("file.txt"), "content")?;
 
-        let dirs = vec![curr_dir, temp_dir.path().to_path_buf(), safe_subdir.clone()];
+        let dirs = vec![temp_root.path().to_path_buf(), dir_a, dir_b];
 
         let thread_count = 2;
         let requests_per_thread = 25;
@@ -617,10 +700,6 @@ mod tests {
             "Not all worker requests returned results!"
         );
         Ok(())
-    }
-
-    fn fd_available() -> bool {
-        which::which("fd").is_ok()
     }
 
     #[test]
@@ -741,6 +820,54 @@ mod tests {
     }
 
     #[test]
+    fn test_find_worker_cancellation_effectiveness() -> Result<(), Box<dyn std::error::Error>> {
+        if !fd_available() {
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let temp_path = temp.path().to_path_buf();
+        fs::File::create(temp_path.join("target.txt"))?;
+
+        let workers = Workers::spawn();
+
+        let cancel_token = Arc::new(AtomicBool::new(true));
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp_path.clone(),
+            query: "target".to_string(),
+            max_results: 10,
+            cancel: cancel_token,
+            show_hidden: false,
+            request_id: 123,
+        })?;
+
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp_path,
+            query: "crab".to_string(),
+            max_results: 1,
+            cancel: Arc::new(AtomicBool::new(false)),
+            show_hidden: false,
+            request_id: 999,
+        })?;
+
+        let resp = workers
+            .response_rx()
+            .recv_timeout(Duration::from_millis(200))?;
+
+        match resp {
+            WorkerResponse::FindResults { request_id, .. } => {
+                assert_eq!(
+                    request_id, 999,
+                    "Worker should have skipped 123 and processed 999"
+                );
+            }
+            _ => panic!("Unexpected worker response"),
+        }
+
+        Ok(())
+    }
+
+    #[test]
     fn preview_worker_internal() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempfile::tempdir()?;
         let preview_file = temp.path().join("preview.txt");
@@ -810,6 +937,150 @@ mod tests {
             }
             other => return Err(format!("Unexpected response: {:?}", other).into()),
         }
+        Ok(())
+    }
+
+    #[test]
+    fn preview_request_dropping() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = Workers::spawn();
+        let preview_tx = workers.preview_file_tx();
+
+        let mut sent_count = 0;
+        let mut dropped_count = 0;
+
+        for i in 0..100 {
+            let task = WorkerTask::LoadPreview {
+                path: PathBuf::from("fake_path.txt"),
+                max_lines: 10,
+                pane_width: 80,
+                preview_method: PreviewMethod::Internal,
+                args: vec![],
+                request_id: i,
+            };
+
+            if preview_tx.try_send(task).is_ok() {
+                sent_count += 1;
+            } else {
+                dropped_count += 1;
+            }
+        }
+
+        assert!(
+            sent_count <= 2,
+            "Should only have buffered 1 + 1 active task"
+        );
+        assert!(
+            dropped_count > 90,
+            "Most rapid-fire requests should be dropped"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn find_worker_recovery_after_cancel() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = Workers::spawn();
+        let temp = tempdir()?;
+        let file_path = temp.path().join("alive.txt");
+        fs::File::create(&file_path)?;
+
+        let cancel = Arc::new(AtomicBool::new(true));
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp.path().to_path_buf(),
+            query: "alive".to_string(),
+            max_results: 1,
+            cancel,
+            show_hidden: false,
+            request_id: 1,
+        })?;
+
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp.path().to_path_buf(),
+            query: "alive".to_string(),
+            max_results: 1,
+            cancel: Arc::new(AtomicBool::new(false)),
+            show_hidden: false,
+            request_id: 2,
+        })?;
+
+        let resp = workers.response_rx().recv_timeout(Duration::from_secs(1))?;
+        if let WorkerResponse::FindResults { request_id, .. } = resp {
+            assert_eq!(
+                request_id, 2,
+                "Worker should have skipped task 1 and processed task 2"
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn preview_fallback_on_failure() -> Result<(), Box<dyn std::error::Error>> {
+        if !bat_available() {
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let file_path = temp.path().join("fallback.txt");
+        fs::write(&file_path, "Standard Text Content")?;
+
+        let workers = Workers::spawn();
+
+        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+            path: file_path,
+            max_lines: 5,
+            pane_width: 40,
+            preview_method: PreviewMethod::Bat,
+            args: vec![],
+            request_id: 99,
+        })?;
+
+        let resp = workers.response_rx().recv_timeout(Duration::from_secs(2))?;
+        if let WorkerResponse::PreviewLoaded { lines, .. } = resp {
+            assert!(
+                !lines.is_empty(),
+                "Should have fallen back to internal reader"
+            );
+            assert_eq!(lines[0].trim(), "Standard Text Content");
+        } else {
+            panic!("Worker failed to provide fallback preview");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn find_worker_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
+        if !fd_available() {
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let temp_path = temp.path().to_path_buf();
+        fs::File::create(temp_path.join("search_1.txt"))?;
+        fs::File::create(temp_path.join("search_2.txt"))?;
+
+        let workers = Workers::spawn();
+
+        for i in 1..=2 {
+            workers.find_tx().send(WorkerTask::FindRecursive {
+                base_dir: temp_path.clone(),
+                query: format!("search_{i}"),
+                max_results: 1,
+                cancel: Arc::new(AtomicBool::new(false)),
+                show_hidden: false,
+                request_id: i as u64,
+            })?;
+        }
+
+        let resp1 = workers.response_rx().recv_timeout(Duration::from_secs(1))?;
+        if let WorkerResponse::FindResults { request_id, .. } = resp1 {
+            assert_eq!(request_id, 1);
+        }
+
+        let resp2 = workers.response_rx().recv_timeout(Duration::from_secs(1))?;
+        if let WorkerResponse::FindResults { request_id, .. } = resp2 {
+            assert_eq!(request_id, 2);
+        }
+
         Ok(())
     }
 }
