@@ -4,6 +4,8 @@ All the changes made to runa are documented here.
 
 ## Unreleased - 2026-05-02
 
+Major responsiveness and UX improvements, including a redesigned worker thread model, smarter preview/parent handling, expanded keybinding support, and new UI widgets.
+
 ### Added:
 - **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
 - **`aux_io_worker`**: Added coalescing worker function to start `preview_io` and `parent_io`.
@@ -11,17 +13,27 @@ All the changes made to runa are documented here.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
 - **WidgetTheme**: Added `[WidgetTheme].field` coloring for section values of widgets. (Example: FileInfo, Name: Foo<field color>)
 - Wider keybind support: Added a much wider support for different ways of defining keybinds. Example: `"<c-d>"`, `"Ctrl+d"`, `ctrl+d`, `<space>`, etc.
+- **Status line**: Added a better informative status line (Header and or Footer) to display task counts that are running, clipboard count, marker count, filter and entry_count. Each section can be set to `header` or `footer`.
+- **Clear clipboard**: Added a new keybind to clear all the current copied entries (by default `<c-u>`).
+- **Clear all**: Added a new keybind to clear all (the markers, the filter, the clipboard) (by default `<c-l>`).
+
 
 ### Fixed:
 - **Stale preview content**: Fixed edge-case that incorrectly updates preview content in bigger directories.
-- Stale parent pane: Fixed incorrectly update of parent pane content in very fast directory switching.
+- **Stale parent pane**: Fixed incorrectly update of parent pane content in very fast directory switching.
+- **Auto-Complete**: Now correctly auto-completes the correct written path instead of the first entry with the written entry.
+
 
 ### Changed:
-- Prefix key: Possible to close prefix menu with `esc` now.
-- Preview worker: Changed `preview_file` worker unbounded channel with `bounded(1)` for file previews.
+- **Worker**: Set `parent_io`, `preview_io` and `preview_file` to `bounded(1)` worker channel and removed coalescing in the `start_io_worker` and in `start_preview`.
+- **`AppState::tick()`**: Refactored `DirectoryLoaded` worker response handling to use independent condition checks instead of an else-if chain, allowing nav, preview and parent updates to be evaluated separately.
+- **Prefix key**: Possible to close prefix menu with `esc` now.
+- **Config macros**: Added getter macro to `config/input` and reworked `override_if_changed` (now `override_themes`)
+
 
 ### Internal:
-- Performance: Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
+- **Performance**: Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
+- **Cargo update**: Updated all runa dependencies to latest versions.
 
 
 ---
