@@ -99,11 +99,23 @@ impl Default for Theme {
 
 /// Macro to override a field in the target theme if it differs from the default theme.
 /// This is used to apply user-defined overrides on top of a preset theme.
-macro_rules! override_if_changed {
-    ($target:ident, $user:ident, $default:ident, $field:ident) => {
-        if $user.$field != $default.$field {
-            $target.$field = $user.$field.clone();
-        }
+macro_rules! override_themes {
+    ($target:ident, $user:ident, $default:ident, [$($field:ident),* $(,)?]) => {
+        $(
+            if $user.$field != $default.$field {
+                $target.$field = $user.$field.clone();
+            }
+        )*
+    };
+}
+
+macro_rules! define_styles {
+    ($($fn_name:ident => $field:ident),* $(,)?) => {
+        $(
+            pub(crate) fn $fn_name(&self) -> Style {
+                self.$field.style_or(&Theme::internal_defaults().$field)
+            }
+        )*
     };
 }
 
@@ -121,42 +133,15 @@ impl Theme {
 
     // Getters for various theme properties with fallbacks to internal defaults
     // _style methods for getting Style instances with fallbacks to internal defaults
-
-    pub(crate) fn accent_style(&self) -> Style {
-        self.accent.style_or(&Theme::internal_defaults().accent)
-    }
-
-    pub(crate) fn selection_style(&self) -> Style {
-        self.selection
-            .style_or(&Theme::internal_defaults().selection)
-    }
-
-    pub(crate) fn underline_style(&self) -> Style {
-        self.underline
-            .style_or(&Theme::internal_defaults().underline)
-    }
-
-    pub(crate) fn entry_style(&self) -> Style {
-        self.entry.style_or(&Theme::internal_defaults().entry)
-    }
-
-    pub(crate) fn directory_style(&self) -> Style {
-        self.directory
-            .style_or(&Theme::internal_defaults().directory)
-    }
-
-    pub(crate) fn separator_style(&self) -> Style {
-        self.separator
-            .style_or(&Theme::internal_defaults().separator)
-    }
-
-    pub(crate) fn path_style(&self) -> Style {
-        self.path.style_or(&Theme::internal_defaults().path)
-    }
-
-    pub(crate) fn status_line_style(&self) -> Style {
-        self.status_line
-            .style_or(&Theme::internal_defaults().status_line)
+    define_styles! {
+        accent_style => accent,
+        selection_style => selection,
+        underline_style => underline,
+        entry_style => entry,
+        directory_style => directory,
+        separator_style => separator,
+        path_style => path,
+        status_line_style => status_line,
     }
 
     /// Symlink theme getter to use SymlinkTheme fields directly
@@ -311,21 +296,24 @@ impl Theme {
     fn apply_user_overrides(&mut self, user: Theme) {
         let defaults = Theme::default();
 
-        override_if_changed!(self, user, defaults, accent);
-        override_if_changed!(self, user, defaults, selection);
-        override_if_changed!(self, user, defaults, underline);
-        override_if_changed!(self, user, defaults, entry);
-        override_if_changed!(self, user, defaults, directory);
-        override_if_changed!(self, user, defaults, separator);
-        override_if_changed!(self, user, defaults, parent);
-        override_if_changed!(self, user, defaults, preview);
-        override_if_changed!(self, user, defaults, path);
-        override_if_changed!(self, user, defaults, status_line);
-        override_if_changed!(self, user, defaults, symlink);
-        override_if_changed!(self, user, defaults, selection_icon);
-        override_if_changed!(self, user, defaults, marker);
-        override_if_changed!(self, user, defaults, widget);
-        override_if_changed!(self, user, defaults, info);
+        #[rustfmt::skip]
+        override_themes!(self, user, defaults, [
+            accent,
+            selection,
+            underline,
+            entry,
+            directory,
+            separator,
+            parent,
+            preview,
+            path,
+            status_line,
+            symlink,
+            selection_icon,
+            marker,
+            widget,
+            info,
+        ]);
 
         if user.name.is_some() {
             self.name = user.name.clone();
@@ -488,7 +476,8 @@ pub(crate) struct WidgetTheme {
     color: ColorPair,
     border: ColorPair,
     title: ColorPair,
-    field: ColorPair,
+    label: ColorPair,
+    value: ColorPair,
     position: Option<DialogPosition>,
     size: Option<DialogSize>,
     confirm_size: Option<DialogSize>,
@@ -598,9 +587,14 @@ impl WidgetTheme {
             .unwrap_or(DialogPosition::Bottom)
     }
 
-    pub(crate) fn field_style_or_theme(&self) -> Style {
-        self.field
-            .style_or(&Theme::internal_defaults().widget.field)
+    pub(crate) fn value_style_or_theme(&self) -> Style {
+        self.value
+            .style_or(&Theme::internal_defaults().widget.value)
+    }
+
+    pub(crate) fn label_style_or_theme(&self) -> Style {
+        self.label
+            .style_or(&Theme::internal_defaults().widget.label)
     }
 }
 
@@ -611,7 +605,11 @@ impl Default for WidgetTheme {
             color: ColorPair::default(),
             border: ColorPair::default(),
             title: ColorPair::default(),
-            field: ColorPair {
+            label: ColorPair {
+                fg: Color::Blue,
+                ..ColorPair::default()
+            },
+            value: ColorPair {
                 fg: Color::Cyan,
                 ..ColorPair::default()
             },
@@ -726,18 +724,18 @@ pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
     let primary = rgb(palette.primary);
     let secondary = rgb(palette.secondary);
     let muted = rgb(palette.overlay);
-    let struct_color = rgb(palette.surface);
+    let surface = rgb(palette.surface);
     let base_bg = rgb(palette.base);
     let dir_color = rgb(palette.directory);
 
     Theme {
         name: Some(name.to_string()),
         accent: ColorPair {
-            fg: struct_color,
+            fg: surface,
             ..ColorPair::default()
         },
         selection: ColorPair {
-            bg: struct_color,
+            bg: surface,
             ..ColorPair::default()
         },
         directory: ColorPair {
@@ -745,7 +743,7 @@ pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
             ..ColorPair::default()
         },
         separator: ColorPair {
-            fg: struct_color,
+            fg: surface,
             ..ColorPair::default()
         },
         path: ColorPair {
@@ -775,22 +773,39 @@ pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
 
         widget: WidgetTheme {
             title: ColorPair {
-                fg: muted,
+                fg: primary,
+                ..ColorPair::default()
+            },
+            label: ColorPair {
+                fg: secondary,
+                ..ColorPair::default()
+            },
+            value: ColorPair {
+                fg: Color::Reset,
                 ..ColorPair::default()
             },
             border: ColorPair {
-                fg: struct_color,
+                fg: surface,
                 ..ColorPair::default()
             },
             ..WidgetTheme::default()
         },
+
         info: WidgetTheme {
             title: ColorPair {
                 fg: secondary,
                 ..ColorPair::default()
             },
+            label: ColorPair {
+                fg: dir_color,
+                ..ColorPair::default()
+            },
+            value: ColorPair {
+                fg: muted,
+                ..ColorPair::default()
+            },
             border: ColorPair {
-                fg: struct_color,
+                fg: surface,
                 ..ColorPair::default()
             },
             ..WidgetTheme::default()
