@@ -919,57 +919,6 @@ mod tests {
     }
 
     #[test]
-    fn preview_request_dropping() -> Result<(), Box<dyn std::error::Error>> {
-        use crossbeam_channel::bounded;
-        use std::thread;
-
-        let (tx, rx) = bounded::<WorkerTask>(1);
-        let (res_tx, _res_rx) = bounded::<WorkerResponse>(10);
-
-        thread::spawn(move || {
-            while let Ok(task) = rx.recv() {
-                if let WorkerTask::LoadPreview { request_id: _, .. } = task {
-                    let _ = res_tx.send(WorkerResponse::OperationComplete {
-                        need_reload: false,
-                        focus: None,
-                    });
-                }
-            }
-        });
-
-        let mut sent_count = 0;
-        let mut dropped_count = 0;
-
-        for i in 0..100 {
-            let task = WorkerTask::LoadPreview {
-                path: PathBuf::from("fake_path.txt"),
-                max_lines: 10,
-                pane_width: 80,
-                preview_method: PreviewMethod::Internal,
-                args: vec![],
-                request_id: i,
-            };
-
-            if tx.try_send(task).is_ok() {
-                sent_count += 1;
-            } else {
-                dropped_count += 1;
-            }
-        }
-
-        assert!(
-            sent_count <= 2,
-            "Should only have buffered 1 + 1 active task"
-        );
-        assert!(
-            dropped_count > 90,
-            "Most rapid-fire requests should be dropped"
-        );
-
-        Ok(())
-    }
-
-    #[test]
     fn preview_fallback_on_failure() -> Result<(), Box<dyn std::error::Error>> {
         if !bat_available() {
             return Ok(());

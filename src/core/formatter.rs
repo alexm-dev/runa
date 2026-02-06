@@ -417,6 +417,46 @@ mod tests {
     }
 
     #[test]
+    fn formatter_filters_entries_by_flags() {
+        let normal = FileEntry::new(OsString::from("normal.txt"), 0, None);
+        let hidden = FileEntry::new(OsString::from(".hidden"), FileEntry::IS_HIDDEN, None);
+        let system = FileEntry::new(OsString::from("system.sys"), FileEntry::IS_SYSTEM, None);
+        let symlink = FileEntry::new(
+            OsString::from("symlink"),
+            FileEntry::IS_SYMLINK,
+            Some(Path::new("target").to_path_buf()),
+        );
+
+        let mut entries = vec![
+            normal.clone(),
+            hidden.clone(),
+            system.clone(),
+            symlink.clone(),
+        ];
+
+        let fmt = Formatter::new(true, false, false, false, false, Arc::new(HashSet::new()));
+        fmt.filter_entries(&mut entries);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name_str(), "normal.txt");
+
+        let mut entries = vec![
+            normal.clone(),
+            hidden.clone(),
+            system.clone(),
+            symlink.clone(),
+        ];
+
+        let fmt = Formatter::new(true, true, true, true, false, Arc::new(HashSet::new()));
+        fmt.filter_entries(&mut entries);
+        assert_eq!(entries.len(), 4);
+        assert!(entries.iter().any(|e| e.name_str() == ".hidden"));
+        assert!(entries.iter().any(|e| e.name_str() == "system.sys"));
+        assert!(entries.iter().any(|e| e.name_str() == "symlink"));
+        assert!(entries.iter().any(|e| e.name_str() == "normal.txt"));
+    }
+
+    #[test]
     fn core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempdir()?;
         let entries = core::browse_dir(temp_dir.path())?;
