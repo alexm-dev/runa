@@ -10,10 +10,7 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
 - **Keybind help**: A new overlay widget to showcase all the mapped keybindings defined in `runa.toml`. Triggered by `?`.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
-- **WidgetTheme**: Added `[WidgetTheme].label` and `.value` coloring for section values of widgets.  
-    - **Label**: Targets property names like `Name`, `Size`, `Perms`.
-    - **Value**: Targets the data like `runa.toml`, `10KB`, `rwx`.
-
+- **WidgetTheme**: Added `[WidgetTheme].label` and `.value` coloring for section values of widgets. (**Label**: `Name`, `Size`; **Value**: `runa.toml`, `10KB`)
 - Wider keybind support: Added a much wider support for different ways of defining keybinds. Example: `"<c-d>"`, `"Ctrl+d"`, `ctrl+d`, `<space>`, etc.
 - **Status line**: Added a better informative status line (Header and or Footer) to display task counts that are running, clipboard count, marker count, filter and entry_count. Each section can be set to `header` or `footer`.
 - **Clear clipboard**: Added a new keybind to clear all the current copied entries (by default `<c-u>`).
@@ -28,17 +25,17 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - Due to `[display.status]` now also storing the `entry_count` value, you will need to move the old `entry_count` into `[display.status]`:
 - Before:
 
-```toml
-[display]
-entry_count = "footer"
-```
+    ```toml
+    [display]
+    entry_count = "footer"
+    ```
 
 - Now:
 
-```toml
-[display.status]
-entry_count = "footer"
-```
+    ```toml
+    [display.status]
+    entry_count = "footer"
+    ```
 
 ### Changed:
 - **Worker**: Set `parent_io`, `preview_io` and `preview_file` to `bounded(1)` worker channel and removed coalescing in the `start_io_worker` and in `start_preview`.
