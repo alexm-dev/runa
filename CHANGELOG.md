@@ -4,7 +4,7 @@ All the changes made to runa are documented here.
 
 ## Unreleased - 2026-02-06
 
-Major responsiveness and UX improvements, including a redesigned worker thread model, smarter preview/parent handling, expanded keybinding support, and new UI widgets.
+#### Major responsiveness and UX improvements, including a redesigned worker thread model, smarter preview/parent handling, expanded keybinding support, and new UI widgets.
 
 ### Added:
 - **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
