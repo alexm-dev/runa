@@ -2,15 +2,19 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased - 2026-05-02
+## Unreleased - 2026-02-06
 
 Major responsiveness and UX improvements, including a redesigned worker thread model, smarter preview/parent handling, expanded keybinding support, and new UI widgets.
 
 ### Added:
 - **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
-- **Key-bind help**: A new overlay widget to showcase all the mapped key-bindigs defined in `runa.toml`. Triggered by `?`.
+- **Keybind help**: A new overlay widget to showcase all the mapped keybindings defined in `runa.toml`. Triggered by `?`.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
-- **WidgetTheme**: Added `[WidgetTheme].field` coloring for section values of widgets. (Example: FileInfo, Name: Foo<field color>)
+- **WidgetTheme**: Added `[WidgetTheme].label` and `.value` coloring for section values of widgets.  
+    - | Part | Component |
+      | --- | --- |
+      | Label | Name, Size, Perms, ... |
+      | Value | runa.toml, 10KB, rwx |
 - Wider keybind support: Added a much wider support for different ways of defining keybinds. Example: `"<c-d>"`, `"Ctrl+d"`, `ctrl+d`, `<space>`, etc.
 - **Status line**: Added a better informative status line (Header and or Footer) to display task counts that are running, clipboard count, marker count, filter and entry_count. Each section can be set to `header` or `footer`.
 - **Clear clipboard**: Added a new keybind to clear all the current copied entries (by default `<c-u>`).
@@ -21,6 +25,22 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Stale parent pane**: Fixed incorrectly update of parent pane content in very fast directory switching.
 - **Auto-Complete**: Now correctly auto-completes the correct written path instead of the first entry with the written entry.
 
+### Breaking Changes
+- Due to `[display.status]` now also storing the `entry_count` value, you will need to move the old `entry_count` into `[display.status]`:
+- Before:
+
+```toml
+[display]
+entry_count = "footer"
+```
+
+- Now:
+
+```toml
+[display.status]
+entry_count = "footer"
+```
+
 ### Changed:
 - **Worker**: Set `parent_io`, `preview_io` and `preview_file` to `bounded(1)` worker channel and removed coalescing in the `start_io_worker` and in `start_preview`.
 - **`AppState::tick()`**: Refactored `DirectoryLoaded` worker response handling to use independent condition checks instead of an else-if chain, allowing nav, preview and parent updates to be evaluated separately.
@@ -28,9 +48,10 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Config macros**: Added getter macro to `config/input` and reworked `override_if_changed` (now `override_themes`)
 
 ### Internal:
-- **Performance**: Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
-- **Performance**: Made `always_show` in `core/formatter` being optional to not use the hashset when `always_show` is empty.
-- Performance: Added a `should_request` check in `request_parent_content` to check if entries of a path is already cached in `ParentState` instead of sending a new worker request everytime.
+- **Performance**:  
+    - Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
+    - Made `always_show` in `core/formatter` being optional to not use the hashset when `always_show` is empty.
+    - Added a `should_request` check in `request_parent_content` to check if entries of a path is already cached in `ParentState` instead of sending a new worker request everytime.
 - **Cargo update**: Updated all runa dependencies to latest versions.
 
 
