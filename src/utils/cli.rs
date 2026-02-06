@@ -101,34 +101,40 @@ fn print_keybinds() {
  Key Bindings
 =========================
 [keys]
-  open_file                 ["Enter"]
-  go_up                     ["k", "Up"]
-  go_down                   ["j", "Down"]
-  go_parent                 ["h", "Left", "Backspace"]
-  go_into_dir               ["l", "Right"]
-  quit                      ["q", "Esc"]
+  open_file                 ["enter"]
+  go_up                     ["k", "up"]
+  go_down                   ["j", "down"]
+  go_parent                 ["h", "left", "Backspace"]
+  go_into_dir               ["l", "right"]
+  quit                      ["q", "esc"]
   delete                    ["d"]
   copy                      ["y"]
   paste                     ["p"]
   rename                    ["r"]
   create                    ["n"]
-  create_directory          ["Shift+n"]
+  create_directory          ["N"]
   move_file                 ["m"]
   filter                    ["f"]
-  toggle_marker             [" "]     (space bar)
+  toggle_marker             ["space"]
   info                      ["i"]
   find                      ["s"]
-  clear_markers             ["Ctrl+c"]
-  clear_filter              ["Ctrl+f"]
-  alternate_delete          ["Ctrl+d"]
+  clear_markers             ["<c-c>"]
+  clear_filter              ["<c-f>"]
+  alternate_delete          ["<c-d>"]
+  go_to_bottom              ["G"]
   go_to_top                 ["g"]     (press "g" then "g" again)
   go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
 
-    (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
+  Syntax Reference:
+    Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
+    Standard:  ctrl+x, alt+x, shift+x, meta+x
+    Special:   " ", "space", "back", "enter", "esc", "tab"
 
-    Note: The go_to bindings work after pressing the "g" prefix.
-          For example: "g" + "g" for top, "g" + "p" for path
+  Note:
+    - Shorthand (c-, m-, s-) only works inside brackets <>.
+    - The 'g' key is a prefix; it waits for the next key to trigger an action.
+
     "##
     )
 }
@@ -189,6 +195,11 @@ runa - Full Configuration Guide (runa.toml)
   modified
   perms
 
+[display.status]             Toggle the status footer line options
+  markers
+  clipboard
+  tasks
+
 =========================
  Theme Configuration
 =========================
@@ -224,6 +235,8 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   color.fg/bg                Text/background color
   border.fg/bg               Widget Border colors
   title.fg/bg                Widget Title colors
+  label.fg/bg                Label colors for widgets like File Info
+  value.fg/bg                Value colors for widgets like File Info
   go_to_help.size            Size of the go_to dialog when pressing the "g" prefix
   go_to_help.position        Position of the go_to dialog when pressing the "g" prefix
 
@@ -243,34 +256,39 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
  Key Bindings
 =========================
 [keys]
-  open_file                 e.g. ["Enter"]
-  go_up                     ["k", "Up"]
-  go_down                   ["j", "Down"]
-  go_parent                 ["h", "Left", "Backspace"]
-  go_into_dir               ["l", "Right"]
-  quit                      ["q", "Esc"]
+  open_file                 ["enter"]
+  go_up                     ["k", "up"]
+  go_down                   ["j", "down"]
+  go_parent                 ["h", "left", "Backspace"]
+  go_into_dir               ["l", "right"]
+  quit                      ["q", "esc"]
   delete                    ["d"]
   copy                      ["y"]
   paste                     ["p"]
   rename                    ["r"]
   create                    ["n"]
-  create_directory          ["Shift+n"]
+  create_directory          ["N"]
   move_file                 ["m"]
   filter                    ["f"]
-  toggle_marker             [" "]     (space bar)
+  toggle_marker             ["space"]
   info                      ["i"]
   find                      ["s"]
-  clear_markers             ["Ctrl+c"]
-  clear_filter              ["Ctrl+f"]
-  alternate_delete          ["Ctrl+d"]
+  clear_markers             ["<c-c>"]
+  clear_filter              ["<c-f>"]
+  alternate_delete          ["<c-d>"]
+  go_to_bottom              ["G"]
   go_to_top                 ["g"]     (press "g" then "g" again)
   go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
 
-    (Use "Shift+x", "Ctrl+x" as needed. " " means space bar. Omit a binding to use the default.)
+  Syntax Reference:
+    Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
+    Standard:  ctrl+x, alt+x, shift+x, meta+x
+    Special:   " ", "space", "back", "enter", "esc", "tab"
 
-    Note: The go_to bindings work after pressing the "g" prefix.
-          For example: "g" + "g" for top, "g" + "p" for path
+  Note:
+    - Shorthand (c-, m-, s-) only works inside brackets <>.
+    - The 'g' key is a prefix; it waits for the next key to trigger an action.
 "##;
 
     println!("{}", help_text);
