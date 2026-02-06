@@ -338,6 +338,7 @@ name = "default"
 # clear_filter = ["<c-f>"]
 # alternate_delete = ["<c-d>"]
 # go_to_bottom = ["G"]
+# keybind_help = ["?"]
 
 # Keys triggered by pressing "g" once
 # go_to_top = ["g"]

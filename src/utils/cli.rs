@@ -125,6 +125,7 @@ fn print_keybinds() {
   go_to_top                 ["g"]     (press "g" then "g" again)
   go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
+  keybind_help              ["?"]
 
   Syntax Reference:
     Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
@@ -281,6 +282,7 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   go_to_top                 ["g"]     (press "g" then "g" again)
   go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
+  keybind_help              ["?"]
 
   Syntax Reference:
     Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
