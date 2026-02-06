@@ -464,24 +464,24 @@ impl<'a> AppState<'a> {
     /// Requests loading of the parent directory content for the parent pane
     pub(crate) fn request_parent_content(&mut self) {
         if let Some(parent_path) = self.nav.current_dir().parent() {
-            let parent_path_buf = parent_path.to_path_buf();
-
-            let req_id = self.parent.prepare_new_request(&parent_path_buf);
-
-            let _ = self
-                .workers
-                .parent_io_tx()
-                .try_send(WorkerTask::LoadDirectory {
-                    path: parent_path_buf,
-                    focus: None,
-                    dirs_first: self.config.general().dirs_first(),
-                    show_hidden: self.config.general().show_hidden(),
-                    show_symlink: self.config.general().show_symlink(),
-                    show_system: self.config.general().show_system(),
-                    case_insensitive: self.config.general().case_insensitive(),
-                    always_show: Arc::clone(self.config.general().always_show()),
-                    request_id: req_id,
-                });
+            if self.parent.should_request(parent_path) {
+                let parent_path_buf = parent_path.to_path_buf();
+                let req_id = self.parent.prepare_new_request(&parent_path_buf);
+                let _ = self
+                    .workers
+                    .parent_io_tx()
+                    .try_send(WorkerTask::LoadDirectory {
+                        path: parent_path_buf,
+                        focus: None,
+                        dirs_first: self.config.general().dirs_first(),
+                        show_hidden: self.config.general().show_hidden(),
+                        show_symlink: self.config.general().show_symlink(),
+                        show_system: self.config.general().show_system(),
+                        case_insensitive: self.config.general().case_insensitive(),
+                        always_show: Arc::clone(self.config.general().always_show()),
+                        request_id: req_id,
+                    });
+            }
         } else {
             // at root.
             self.parent.clear();

@@ -40,6 +40,11 @@ impl ParentState {
         self.last_path.as_deref()
     }
 
+    #[inline]
+    pub(crate) fn should_request(&self, parent_path: &Path) -> bool {
+        !matches!(self.last_path(), Some(last) if last == parent_path && !self.entries().is_empty())
+    }
+
     pub(crate) fn prepare_new_request(&mut self, path: &Path) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.last_path = Some(path.to_path_buf());
