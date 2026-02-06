@@ -11,6 +11,7 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Keybind help**: A new overlay widget to showcase all the mapped keybindings defined in `runa.toml`. Triggered by `?`.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
 - **WidgetTheme**: Added `[WidgetTheme].label` and `.value` coloring for section values of widgets.  
+
     - | Part | Component |
       | --- | --- |
       | Label | Name, Size, Perms, ... |
