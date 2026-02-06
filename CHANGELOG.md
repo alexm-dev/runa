@@ -8,7 +8,6 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 
 ### Added:
 - **Worker threads**: `runa` runs on a 6 (+1 UI thread) worker thread engine now for better responsiveness. Added `preview_io` and `parent_io` worker thread by splitting up the original `io_worker`.
-- **`aux_io_worker`**: Added coalescing worker function to start `preview_io` and `parent_io`.
 - **Key-bind help**: A new overlay widget to showcase all the mapped key-bindigs defined in `runa.toml`. Triggered by `?`.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
 - **WidgetTheme**: Added `[WidgetTheme].field` coloring for section values of widgets. (Example: FileInfo, Name: Foo<field color>)
