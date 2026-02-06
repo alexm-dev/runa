@@ -191,7 +191,6 @@ impl<'a> AppState<'a> {
                 self.nav.clear_markers();
                 self.nav.clear_filters();
                 self.actions.action_clear_clipboard();
-                self.push_overlay_message("Cleared all".into(), Duration::from_secs(3));
                 self.request_preview();
             }
             NavAction::GoToBottom => {
