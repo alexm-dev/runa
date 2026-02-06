@@ -40,8 +40,8 @@ pub(crate) struct Formatter {
     show_symlink: bool,
     show_system: bool,
     case_insensitive: bool,
-    always_show: Arc<HashSet<OsString>>,
-    always_show_lowercase: Arc<HashSet<String>>,
+    always_show: Option<Arc<HashSet<OsString>>>,
+    always_show_lowercase: Option<Arc<HashSet<String>>>,
 }
 
 impl Formatter {
@@ -56,12 +56,20 @@ impl Formatter {
         case_insensitive: bool,
         always_show: Arc<HashSet<OsString>>,
     ) -> Self {
-        let always_show_lowercase = Arc::new(
-            always_show
-                .iter()
-                .map(|s| s.to_string_lossy().to_lowercase())
-                .collect::<HashSet<String>>(),
-        );
+        let (always_show, always_show_lowercase) = if always_show.is_empty() {
+            (None, None)
+        } else if case_insensitive {
+            let lower = Arc::new(
+                always_show
+                    .iter()
+                    .map(|s| s.to_string_lossy().to_lowercase())
+                    .collect::<HashSet<_>>(),
+            );
+            (Some(always_show), Some(lower))
+        } else {
+            (Some(always_show), None)
+        };
+
         Self {
             dirs_first,
             show_hidden,
@@ -116,12 +124,15 @@ impl Formatter {
 
             if (flags & hide) != 0 {
                 if self.case_insensitive {
-                    return with_lowered_stack(e.name_str().as_ref(), |lowered| {
-                        self.always_show_lowercase.contains(lowered)
-                    });
-                } else {
-                    return self.always_show.contains(e.name());
+                    if let Some(set) = &self.always_show_lowercase {
+                        return with_lowered_stack(e.name_str().as_ref(), |lowered| {
+                            set.contains(lowered)
+                        });
+                    }
+                } else if let Some(set) = &self.always_show {
+                    return set.contains(e.name());
                 }
+                return false;
             }
             true
         });
