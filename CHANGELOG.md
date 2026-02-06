@@ -16,11 +16,6 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Clear clipboard**: Added a new keybind to clear all the current copied entries (by default `<c-u>`).
 - **Clear all**: Added a new keybind to clear all (the markers, the filter, the clipboard) (by default `<c-l>`).
 
-### Fixed:
-- **Stale preview content**: Fixed edge-case that incorrectly updates preview content in bigger directories.
-- **Stale parent pane**: Fixed incorrectly update of parent pane content in very fast directory switching.
-- **Auto-Complete**: Now correctly auto-completes the correct written path instead of the first entry with the written entry.
-
 ### Breaking Changes
 - Due to `[display.status]` now also storing the `entry_count` value, you will need to move the old `entry_count` into `[display.status]`:
 - Before:
@@ -36,6 +31,11 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
     [display.status]
     entry_count = "footer"
     ```
+
+### Fixed:
+- **Stale preview content**: Fixed edge-case that incorrectly updates preview content in bigger directories.
+- **Stale parent pane**: Fixed incorrectly update of parent pane content in very fast directory switching.
+- **Auto-Complete**: Now correctly auto-completes the correct written path instead of the first entry with the written entry.
 
 ### Changed:
 - **Worker**: Set `parent_io`, `preview_io` and `preview_file` to `bounded(1)` worker channel and removed coalescing in the `start_io_worker` and in `start_preview`.
