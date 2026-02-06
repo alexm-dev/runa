@@ -320,7 +320,7 @@ name = "default"
 # open_file = ["enter"]
 # go_up = ["k", "up"]
 # go_down = ["j", "down"]
-# go_parent = ["h", "left", "backspace"]
+# go_parent = ["h", "left", "back"]
 # go_into_dir = ["l", "right"]
 # quit = ["q", "esc"]
 # delete = ["d"]
@@ -337,13 +337,13 @@ name = "default"
 # clear_markers = ["<c-c>"]
 # clear_filter = ["<c-f>"]
 # alternate_delete = ["<c-d>"]
+# go_to_bottom = ["G"]
 
 # Keys triggered by pressing "g" once
 # go_to_top = ["g"]
 # go_to_home = ["h"]
 # go_to_path = ["p"]
 
-# go_to_bottom = ["G"]
 "##;
 
         let minimal_toml = r##"# runa.toml - minimal configuration
