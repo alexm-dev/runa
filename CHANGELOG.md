@@ -12,7 +12,7 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
 - **WidgetTheme**: Added `[WidgetTheme].label` and `.value` coloring for section values of widgets. (**Label**: `Name`, `Size`; **Value**: `runa.toml`, `10KB`)
 - Wider keybind support: Added a much wider support for different ways of defining keybinds. Example: `"<c-d>"`, `"Ctrl+d"`, `ctrl+d`, `<space>`, etc.
-- **Status line**: Added a better informative status line (Header and or Footer) to display task counts that are running, clipboard count, marker count, filter and entry_count. Each section can be set to `header` or `footer`.
+- **Status line**: Added a better informative status line (Header and or Footer) to display `task` counts that are running, `clipboard` count, `marker` count, `filter` and `entry_count`. Each section can be set to `header` or `footer`.
 - **Clear clipboard**: Added a new keybind to clear all the current copied entries (by default `<c-u>`).
 - **Clear all**: Added a new keybind to clear all (the markers, the filter, the clipboard) (by default `<c-l>`).
 
