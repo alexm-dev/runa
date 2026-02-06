@@ -7,11 +7,10 @@
 
 use crate::app::AppState;
 use crate::app::actions::{ActionMode, InputMode};
-use crate::config::display::EntryCountPosition;
 use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
 use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
-    DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog,
+    DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
 use crate::utils::clean_display_path;
 
@@ -241,83 +240,69 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
     }
 }
 
-/// Draw the status line at the top right
-/// Used for indication of number of copied/yanked files and the current applied filter
-pub(crate) fn draw_status_line(frame: &mut Frame, app: &AppState) {
+pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: StatusPosition) {
+    if position == StatusPosition::None {
+        return;
+    }
+
     let area = frame.area();
+    let display_cfg = app.config().display();
+    let status_cfg = display_cfg.status();
+    let theme = app.config().theme();
+    let base_style = theme.status_line_style();
+    let marker_theme = theme.marker();
+    let use_icons = display_cfg.icons();
 
-    let count = match app.actions().clipboard() {
-        Some(set) => set.len(),
-        None => 0,
+    let mut spans = Vec::with_capacity(10);
+    let separator = Span::styled(" | ", base_style);
+
+    let add_sep = |s: &mut Vec<Span>| {
+        if !s.is_empty() {
+            s.push(separator.clone());
+        }
     };
-    let filter = app.nav().filter();
-    let now = Instant::now();
 
-    let mut parts = Vec::new();
-    if count > 0 && (app.notification_time().is_some_and(|until| until > now)) {
-        let yank_msg = { format!("Yanked files: {count}") };
-        parts.push(yank_msg);
-    }
-    if !filter.is_empty() {
-        parts.push(format!("Filter: \"{filter}\""));
-    }
+    if status_cfg.tasks() == position {
+        let queued_ops = app.workers().fileop_tx().len();
+        let active_ops = app.workers().active().load(Ordering::Relaxed);
+        let total_ops = queued_ops + active_ops;
 
-    if app.config().display().entry_count() == EntryCountPosition::Header {
-        let total = app.nav().shown_entries_len();
-        if total == 0 {
-            parts.push("0/0".to_string());
-        } else {
-            let idx_text = app
-                .visible_selected()
-                .map(|idx| (idx + 1).to_string())
-                .unwrap_or_else(|| "0".to_string());
-
-            parts.push(format!("{}/{}", idx_text, total));
+        if total_ops > 0
+            && let Some(start) = app.worker_time()
+            && start.elapsed() >= Duration::from_millis(200)
+        {
+            let task_msg = if active_ops > 0 {
+                let symbols: &[&str] = if use_icons {
+                    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+                } else {
+                    &["-", "\\", "|", "/"]
+                };
+                let tick = start.elapsed().as_millis() / 100;
+                let spinner = symbols[tick as usize % symbols.len()];
+                format!("Tasks: {} FileOp({})", spinner, total_ops)
+            } else {
+                format!("Tasks: FileOp({})", total_ops)
+            };
+            spans.push(Span::styled(task_msg, base_style));
         }
     }
 
-    let msg = parts.join(" | ");
-    if !msg.is_empty() {
-        let pad = 2;
-        let padded_width = area.width.saturating_sub(pad);
-        let rect = Rect {
-            x: area.x,
-            y: area.y,
-            width: padded_width,
-            height: 1,
-        };
-        let style = app.config().theme().status_line_style();
-        let line = Line::from(Span::styled(msg, style));
-        let paragraph = Paragraph::new(line).alignment(ratatui::layout::Alignment::Right);
-        frame.render_widget(paragraph, rect);
-    }
-}
-
-pub(crate) fn draw_footer_line(frame: &mut Frame, app: &AppState) {
-    let area = frame.area();
-    let display_cfg = app.config().display();
-    let use_icons = display_cfg.icons();
-    let status_cfg = display_cfg.status();
-    let footer_base_style = app.config().theme().status_line_style();
-    let marker_theme = app.config().theme().marker();
-
-    let mut spans = Vec::new();
-    let separator = Span::styled(" | ", footer_base_style);
-
-    if status_cfg.clipboard()
+    if status_cfg.clipboard() == position
         && let Some(clipboard_set) = app.actions().clipboard()
     {
         let count = clipboard_set.len();
-        if count > 0 {
+        let now = Instant::now();
+
+        if count > 0 && app.notification_time().is_some_and(|until| until > now) {
+            add_sep(&mut spans);
             let icon = if use_icons { "󰆏 " } else { "" };
             let label = "copied";
             let style = marker_theme.clipboard_style_or_theme();
-
-            spans.push(Span::styled(format!("{}{count} {label}", icon), style));
+            spans.push(Span::styled(format!("{}{} {}", icon, count, label), style));
         }
     }
 
-    if status_cfg.markers() {
+    if status_cfg.markers() == position {
         let markers = app.nav().markers();
         let marker_count = markers.len();
 
@@ -333,63 +318,49 @@ pub(crate) fn draw_footer_line(frame: &mut Frame, app: &AppState) {
             };
 
             if !is_redundant {
-                if !spans.is_empty() {
-                    spans.push(separator.clone());
-                }
-
+                add_sep(&mut spans);
                 let style = marker_theme.style_or_theme();
                 spans.push(Span::styled(format!("{} marked", marker_count), style));
             }
         }
     }
 
-    if status_cfg.tasks() {
-        let queued_ops = app.workers().fileop_tx().len();
-        let active_ops = app.workers().active().load(Ordering::Relaxed);
-        let total_ops = queued_ops + active_ops;
-
-        if total_ops > 0
-            && let Some(start) = app.worker_time()
-            && start.elapsed() >= Duration::from_millis(200)
-        {
-            if !spans.is_empty() {
-                spans.push(separator.clone());
-            }
-
-            let task_msg = if active_ops > 0 {
-                let symbols: &[&str] = if use_icons {
-                    &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-                } else {
-                    &["-", "\\", "|", "/"]
-                };
-                let tick = start.elapsed().as_millis() / 100;
-                let spinner = symbols[tick as usize % symbols.len()];
-
-                format!("Tasks: {} FileOp({})", spinner, total_ops)
-            } else {
-                format!("Tasks: FileOp({})", total_ops)
-            };
-
-            spans.push(Span::styled(task_msg, footer_base_style));
+    if status_cfg.filter() == position {
+        let filter = app.nav().filter();
+        if !filter.is_empty() {
+            add_sep(&mut spans);
+            spans.push(Span::styled(format!("Filter: \"{}\"", filter), base_style));
         }
     }
 
-    if app.config().display().entry_count() == EntryCountPosition::Footer {
-        if !spans.is_empty() {
-            spans.push(separator.clone());
-        }
+    if status_cfg.entry_count() == position {
         let total = app.nav().shown_entries_len();
-        let idx = app.visible_selected().map(|i| i + 1).unwrap_or(0);
-        spans.push(Span::styled(format!("{idx}/{total}"), footer_base_style));
+        if total == 0 {
+            add_sep(&mut spans);
+            spans.push(Span::styled("0/0", base_style));
+        } else {
+            add_sep(&mut spans);
+            let idx_text = app
+                .visible_selected()
+                .map(|idx| (idx + 1).to_string())
+                .unwrap_or_else(|| "0".to_string());
+            spans.push(Span::styled(format!("{}/{}", idx_text, total), base_style));
+        }
     }
 
     if spans.is_empty() {
         return;
     }
 
+    let y = match position {
+        StatusPosition::Header => area.y,
+        StatusPosition::Footer => area.y + area.height - 1,
+        StatusPosition::None => return,
+    };
+
     let rect = Rect {
         x: area.x,
-        y: area.y + area.height - 1,
+        y,
         width: area.width,
         height: 1,
     };

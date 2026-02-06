@@ -6,8 +6,6 @@
 //! This module should stay mostly “pure rendering”: it reads state + config and
 //! produces widgets, without owning runa core logic.
 
-use crate::ui::panes;
-use crate::ui::widgets;
 use crate::{
     app::{
         AppState, LayoutMetrics, PreviewData,
@@ -15,7 +13,8 @@ use crate::{
     },
     ui::{
         overlays::Overlay,
-        panes::{PaneContext, PaneStyles, PreviewOptions},
+        panes::{self, PaneContext, PaneStyles, PreviewOptions},
+        widgets,
     },
 };
 use ratatui::{
@@ -217,8 +216,8 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
 
-    widgets::draw_status_line(frame, app);
-    widgets::draw_footer_line(frame, app);
+    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Header);
+    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Footer);
     render_overlays(frame, app, accent_style);
 }
 

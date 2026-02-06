@@ -11,6 +11,7 @@
 pub(crate) mod dialog;
 pub(crate) mod draw;
 
+pub(crate) use crate::config::display::StatusPosition;
 pub(crate) use dialog::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, dialog_area, draw_dialog, get_pane_block,
 };

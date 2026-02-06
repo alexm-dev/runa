@@ -35,7 +35,6 @@ pub(crate) struct Display {
     scroll_padding: usize,
     toggle_marker_jump: bool,
     instant_preview: bool,
-    entry_count: EntryCountPosition,
     preview_options: PreviewOptions,
     layout: LayoutConfig,
     info: ShowInfoOptions,
@@ -135,11 +134,6 @@ impl Display {
     }
 
     #[inline]
-    pub(crate) fn entry_count(&self) -> EntryCountPosition {
-        self.entry_count
-    }
-
-    #[inline]
     pub(crate) fn preview_options(&self) -> &PreviewOptions {
         &self.preview_options
     }
@@ -187,7 +181,6 @@ impl Default for Display {
             toggle_marker_jump: false,
             instant_preview: true,
             layout: LayoutConfig::default(),
-            entry_count: EntryCountPosition::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
             status: StatusElements::default(),
@@ -231,17 +224,6 @@ impl Default for LayoutConfig {
             preview: 40,
         }
     }
-}
-
-/// Entry count position options
-/// This enum defines the possible positions for displaying the entry count
-#[derive(Deserialize, Debug, Default, Clone, Copy, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub(crate) enum EntryCountPosition {
-    #[default]
-    Footer,
-    Header,
-    None,
 }
 
 /// Options for showing file information in the info dialog
@@ -307,37 +289,61 @@ impl Default for ShowInfoOptions {
     }
 }
 
+/// Entry count position options
+/// This enum defines the possible positions for displaying the entry count
+#[derive(Deserialize, Debug, Default, Clone, Copy, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum StatusPosition {
+    #[default]
+    Footer,
+    Header,
+    None,
+}
+
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(default)]
 pub(crate) struct StatusElements {
-    markers: bool,
-    clipboard: bool,
-    tasks: bool,
+    filter: StatusPosition,
+    entry_count: StatusPosition,
+    markers: StatusPosition,
+    clipboard: StatusPosition,
+    tasks: StatusPosition,
 }
 
 impl Default for StatusElements {
     fn default() -> Self {
         Self {
-            markers: true,
-            clipboard: true,
-            tasks: true,
+            filter: StatusPosition::Header,
+            entry_count: StatusPosition::Footer,
+            markers: StatusPosition::Footer,
+            clipboard: StatusPosition::Footer,
+            tasks: StatusPosition::Footer,
         }
     }
 }
 
 impl StatusElements {
     #[inline]
-    pub(crate) fn markers(&self) -> bool {
+    pub(crate) fn filter(&self) -> StatusPosition {
+        self.filter
+    }
+
+    pub(crate) fn entry_count(&self) -> StatusPosition {
+        self.entry_count
+    }
+
+    #[inline]
+    pub(crate) fn markers(&self) -> StatusPosition {
         self.markers
     }
 
     #[inline]
-    pub(crate) fn clipboard(&self) -> bool {
+    pub(crate) fn clipboard(&self) -> StatusPosition {
         self.clipboard
     }
 
     #[inline]
-    pub(crate) fn tasks(&self) -> bool {
+    pub(crate) fn tasks(&self) -> StatusPosition {
         self.tasks
     }
 }
