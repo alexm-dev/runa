@@ -197,7 +197,6 @@ preview = true
 # scroll_padding = 5
 # toggle_marker_jump = false
 # instant_preview = true
-# entry_count = "footer"
 
 # [display.preview_options]
 # method = "internal"
@@ -220,9 +219,11 @@ preview = true
 # position = "default"
 
 # [display.status]
-# markers = true
-# clipboard = true
-# tasks = true
+# entry_count = "footer"
+# filter = "header"
+# markers = "footer"
+# clipboard = "footer"
+# tasks = "footer"
 
 [theme]
 name = "default"

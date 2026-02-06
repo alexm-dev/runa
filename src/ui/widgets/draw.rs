@@ -240,6 +240,9 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
     }
 }
 
+/// Draw the status bar at the top or bottom of the screen, depending on the configuration.
+/// Displays information such as active tasks, clipboard count, markers, filter, and entry count.
+/// The content and position of the status bar are determined by runa.toml and the current state of the application.
 pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: StatusPosition) {
     if position == StatusPosition::None {
         return;

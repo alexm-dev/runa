@@ -175,7 +175,6 @@ runa - Full Configuration Guide (runa.toml)
   scroll_padding             Reserved rows when scrolling
   toggle_marker_jump         Toggle marker jumping to first entry
   instant_preview            Toggle instant previews on every selection change
-  entry_count                "footer", "header" or "none" to disable the entry count
 
 [display.preview_option]
   method                     Set the preview method ("bat" or "internal")
@@ -195,7 +194,9 @@ runa - Full Configuration Guide (runa.toml)
   modified
   perms
 
-[display.status]             Toggle the status footer line options
+[display.status]             Toggle the status line options ("footer", "header, or "none" to disable)
+  entry_count
+  filter
   markers
   clipboard
   tasks

@@ -303,8 +303,8 @@ pub(crate) enum StatusPosition {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(default)]
 pub(crate) struct StatusElements {
-    filter: StatusPosition,
     entry_count: StatusPosition,
+    filter: StatusPosition,
     markers: StatusPosition,
     clipboard: StatusPosition,
     tasks: StatusPosition,
@@ -313,8 +313,8 @@ pub(crate) struct StatusElements {
 impl Default for StatusElements {
     fn default() -> Self {
         Self {
-            filter: StatusPosition::Header,
             entry_count: StatusPosition::Footer,
+            filter: StatusPosition::Header,
             markers: StatusPosition::Footer,
             clipboard: StatusPosition::Footer,
             tasks: StatusPosition::Footer,
@@ -324,12 +324,13 @@ impl Default for StatusElements {
 
 impl StatusElements {
     #[inline]
-    pub(crate) fn filter(&self) -> StatusPosition {
-        self.filter
-    }
-
     pub(crate) fn entry_count(&self) -> StatusPosition {
         self.entry_count
+    }
+
+    #[inline]
+    pub(crate) fn filter(&self) -> StatusPosition {
+        self.filter
     }
 
     #[inline]
