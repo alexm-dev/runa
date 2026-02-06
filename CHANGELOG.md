@@ -11,11 +11,8 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Keybind help**: A new overlay widget to showcase all the mapped keybindings defined in `runa.toml`. Triggered by `?`.
 - **`go_to_bottom`**: Added a new quick keybind to go to the last entry of a directory. Mapped to `shift+g` (`G`) by default.
 - **WidgetTheme**: Added `[WidgetTheme].label` and `.value` coloring for section values of widgets.  
-
-    - | Part | Component |
-      | --- | --- |
-      | Label | Name, Size, Perms, ... |
-      | Value | runa.toml, 10KB, rwx |
+    - **Label**: Targets property names like `Name`, `Size`, `Perms`.
+    - **Value**: Targets the data like `runa.toml`, `10KB`, `rwx`.
 
 - Wider keybind support: Added a much wider support for different ways of defining keybinds. Example: `"<c-d>"`, `"Ctrl+d"`, `ctrl+d`, `<space>`, etc.
 - **Status line**: Added a better informative status line (Header and or Footer) to display task counts that are running, clipboard count, marker count, filter and entry_count. Each section can be set to `header` or `footer`.
