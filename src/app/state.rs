@@ -517,8 +517,11 @@ impl<'a> AppState<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::FileEntry;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use std::ffi::OsString;
     use std::time::{Duration, Instant};
+    use tempfile::tempdir;
 
     fn dummy_config() -> Config {
         Config::default()
@@ -527,16 +530,17 @@ mod tests {
     #[test]
     fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let cwd = std::env::current_dir()?;
-        let app = AppState::from_dir(&config, &cwd)?;
-        assert_eq!(app.nav().current_dir(), cwd);
+        let temp = tempdir()?;
+        let app = AppState::from_dir(&config, temp.path())?;
+        assert_eq!(app.nav().current_dir(), temp.path());
         Ok(())
     }
 
     #[test]
     fn tick_clears_expired_notification_message() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let temp = tempdir()?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         app.notification_time = Some(Instant::now() - Duration::from_secs(2));
         app.overlays_mut().push(Overlay::Message {
             text: "Timed MSG".to_string(),
@@ -555,7 +559,8 @@ mod tests {
     #[test]
     fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let temp = tempdir()?;
+        let app = AppState::from_dir(&config, temp.path())?;
         let app_nav = app.nav();
         if app_nav.entries().is_empty() {
             assert_eq!(app.visible_selected(), None);
@@ -570,7 +575,8 @@ mod tests {
     #[test]
     fn handle_keypress_continue_if_no_action() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let temp = tempdir()?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
         let result = app.handle_keypress(key);
         assert!(matches!(result, KeypressResult::Continue));
@@ -580,7 +586,8 @@ mod tests {
     #[test]
     fn request_dir_load_sets_is_loading() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let temp = tempdir()?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         app.is_loading = false;
         app.request_dir_load(None);
         assert!(app.is_loading);
@@ -590,7 +597,8 @@ mod tests {
     #[test]
     fn request_parent_content_handles_root() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let mut app = AppState::from_dir(&config, &std::env::current_dir()?)?;
+        let temp = tempdir()?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         #[cfg(unix)]
         {
             use std::path::PathBuf;
@@ -605,6 +613,44 @@ mod tests {
             app.request_parent_content();
             assert!(app.parent.entries().is_empty());
         }
+        Ok(())
+    }
+
+    #[test]
+    fn request_parent_content_uses_cache() -> Result<(), Box<dyn std::error::Error>> {
+        let config = Config::default();
+        let temp = tempdir()?;
+        let subdir = temp.path().join("subdir");
+        std::fs::create_dir(&subdir)?;
+        let mut app = AppState::from_dir(&config, &subdir)?;
+
+        let parent_path = app
+            .nav()
+            .current_dir()
+            .parent()
+            .expect("Should have parent")
+            .to_path_buf();
+
+        let prev_request_id = app.parent.request_id();
+
+        let file_entry = FileEntry::new(OsString::from("test_file"), 0, None);
+        let dir_entry = FileEntry::new(OsString::from("test_dir"), 1, None);
+
+        app.parent.update_from_entries(
+            vec![file_entry, dir_entry],
+            "irrelevant",
+            prev_request_id,
+            &parent_path,
+        );
+
+        app.request_parent_content();
+
+        assert_eq!(
+            app.parent.request_id(),
+            prev_request_id,
+            "request_id changed even though parent was cached. Did not use cache!"
+        );
+
         Ok(())
     }
 }
