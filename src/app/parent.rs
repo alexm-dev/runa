@@ -41,11 +41,11 @@ impl ParentState {
     }
 
     #[inline]
-    pub(crate) fn should_request(&self, parent_path: &Path) -> bool {
-        !matches!(self.last_path(), Some(last) if last == parent_path && !self.entries().is_empty())
+    pub(super) fn is_cached(&self, parent_path: &Path) -> bool {
+        matches!(self.last_path(), Some(last) if last == parent_path && !self.entries().is_empty())
     }
 
-    pub(crate) fn prepare_new_request(&mut self, path: &Path) -> u64 {
+    pub(super) fn prepare_new_request(&mut self, path: &Path) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.last_path = Some(path.to_path_buf());
         self.request_id
@@ -54,7 +54,7 @@ impl ParentState {
     /// Updates the state with new entries
     ///
     /// Only applies the update if request ID is the latest
-    pub(crate) fn update_from_entries(
+    pub(super) fn update_from_entries(
         &mut self,
         entries: Vec<FileEntry>,
         current_name: &str,
@@ -73,7 +73,7 @@ impl ParentState {
 
     /// Clears all entries, resets the selected entry index,
     /// resets the last path and increases the request_id
-    pub(crate) fn clear(&mut self) {
+    pub(super) fn clear(&mut self) {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;
