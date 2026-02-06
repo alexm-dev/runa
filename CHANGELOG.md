@@ -48,6 +48,7 @@ All the changes made to runa are documented here.
     - Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
     - Made `always_show` in `core/formatter` being optional to not use the hashset when `always_show` is empty.
     - Added a `should_request` check in `request_parent_content` to check if entries of a path is already cached in `ParentState` instead of sending a new worker request everytime.
+- **Tests**: Added new `core/worker` and `core/formatter` tests.
 - **Cargo update**: Updated all runa dependencies to latest versions.
 
 
