@@ -156,10 +156,6 @@ toggle_marker_jump = false
 # False results in pending preview when holding down a navigation key.
 instant_preview = true
 
-# Set the position or disable the entry count for the current directory
-# Available options: "footer", "header" or "none" to disable
-entry_count = "footer"
-
 # Options for the preview method used by the preview pane.
 # Options: "internal" and "bat". For "bat" you will need to have `bat` installed otherwise it will fallback to internal.
 [display.previews_options]
@@ -193,6 +189,15 @@ size = true
 modified = true
 perms = true
 position = "default"
+
+# Display the status line options on the stauts line (Header or Footer)
+[display.status]
+# Available options: "footer", "header" or "none" to disable
+entry_count = "footer"
+filter = "header"
+markers = "footer"
+clipboard = "footer"
+tasks = "footer"
 ```
 
 
@@ -389,6 +394,7 @@ find_visible_results = 5
 find_width = 40
 
 # Coloring for the widgets
+# Styles the overall widget text.
 color.fg = "default"
 color.bg = "default"
 
@@ -397,6 +403,18 @@ border.bg = "default"
 
 title.fg = "default"
 title.bg = "default"
+
+# Option to change the label color of a widget.
+# Styles the "key" test (e.g. Name:, Size:, Perms:, etc.)
+# Applies to widgets: File Info, Keybind Help.
+label.fg = "blue"
+label.bg = "default"
+
+# Option to change the value color of a widget
+# Styles the content of the widget data (e.g. main.rs, 4 KB, etc.)
+# Applies to widgets: File Info, Keybind Help.
+value.fg = "cyan"
+value.bg = "default"
 
 # Set the size and position of the go to help widet when pressing "g"
 goto_help.size = [58, 3]
@@ -437,30 +455,43 @@ cmd = "nvim"
 
 ## Key Bindings
 
-All values are lists (multiple shortcuts per action). Use "Shift+x", "Ctrl+x" as needed. `" "` means space bar.
+All values are lists (multiple shortcuts per action).  
+
+#### Modifier Syntax
+
+For keys involving Ctrl, Alt/Meta or Shift, use the following syntax:
+| Modifier | Bracketed | Standard | Result |
+| ---      | ---       | ---      | ---    |
+| Control  | `<c-key>`   | `ctrl+key` | Ctrl + Key |
+| Alt/Meta | `<a-key>` or `<m-key>`   | `alt+key` or `meta+key`  | Alt + Key |
+| Shift    | `<s-key>` | `shift+key`  | Shift + Key |
+
 
 ```toml
 [keys]
-open_file           = ["Enter"]
-go_up               = ["k", "Up"]
-go_down             = ["j", "Down"]
-go_parent           = ["h", "Left", "Backspace"]
-go_into_dir         = ["l", "Right"]
-quit                = ["q", "Esc"]
+open_file           = ["enter"]
+go_up               = ["k", "up"]
+go_down             = ["j", "down"]
+go_parent           = ["h", "left", "back"]
+go_into_dir         = ["l", "right"]
+quit                = ["q", "esc"]
 delete              = ["d"]
 copy                = ["y"]
 paste               = ["p"]
 rename              = ["r"]
 create              = ["n"]
-create_directory    = ["Shift+n"]
+create_directory    = ["N"]
 move_file           = ["m"]
 filter              = ["f"]
-toggle_marker       = [" "]         # space bar
+toggle_marker       = ["space"]
 info                = ["i"]
 find                = ["s"]
-clear_markers       = ["Ctrl+c"]
-clear_filter        = ["Ctrl+f"]
-alternate_delete    = ["Ctrl+d"]    # Alternates between move_to_trash and permanently delete
+clear_markers       = ["<c-c>"]
+clear_filter        = ["<c-f>"]
+clear_clipboard     = ["<c-u>"]
+alternate_delete    = ["<c-d>"]    # Alternates between move_to_trash and permanently delete
+go_to_bottom        = ["G"]
+keybind_help        = ["?"]
 
 # Keys that are triggered by the "g" prefix
 go_to_top           = ["g"]
@@ -471,6 +502,7 @@ go_to_path          = ["p"]
 **Note:**
 - `go_to_top`, `go_to_path` and `go_to_home` are triggered using the `"g"` prefix.  
   For example, press `"g"` then `"p"` to activate "go to path".
+- You can use `" "` for space as well.
 
 You may remove any binding to let it fall back to the default.
 

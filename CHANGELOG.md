@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased - 2026-02-06
+## [0.7.0] - 2026-02-06
 
 #### Major responsiveness and UX improvements, including a redesigned worker thread model, smarter preview/parent handling, expanded keybinding support, and new UI widgets.
 
