@@ -187,6 +187,13 @@ impl<'a> AppState<'a> {
                 self.nav.clear_filters();
                 self.request_preview();
             }
+            NavAction::ClearAll => {
+                self.nav.clear_markers();
+                self.nav.clear_filters();
+                self.actions.action_clear_clipboard();
+                self.push_overlay_message("Cleared all".into(), Duration::from_secs(3));
+                self.request_preview();
+            }
             NavAction::GoToBottom => {
                 self.nav.last_selected();
                 self.refresh_show_info_if_open();
@@ -226,6 +233,10 @@ impl<'a> AppState<'a> {
             FileAction::ShowInfo => self.toggle_file_info(),
             FileAction::Find => self.prompt_find(),
             FileAction::MoveFile => self.prompt_move(),
+            FileAction::ClearClipboard => {
+                self.actions.action_clear_clipboard();
+                self.request_preview();
+            }
         }
         KeypressResult::Continue
     }
@@ -322,6 +333,9 @@ impl<'a> AppState<'a> {
         prompt: String,
         initial: Option<String>,
     ) {
+        self.overlays_mut()
+            .retain(|o| !matches!(o, Overlay::KeybindHelp));
+
         let buffer = initial.unwrap_or_default();
         self.actions
             .enter_mode(ActionMode::Input { mode, prompt }, buffer);

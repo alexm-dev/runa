@@ -314,6 +314,13 @@ impl ActionContext {
         nav.clear_markers();
     }
 
+    pub(crate) fn action_clear_clipboard(&mut self) {
+        if self.clipboard.is_some() {
+            self.clipboard = None;
+            self.is_cut = false;
+        }
+    }
+
     // Cursor actions
 
     /// Moves the input cursor one position to the left, if possible.

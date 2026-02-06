@@ -219,6 +219,11 @@ preview = true
 # perms = false
 # position = "default"
 
+# [display.status]
+# markers = true
+# clipboard = true
+# tasks = true
+
 [theme]
 name = "default"
 # selection_icon = ""
@@ -311,26 +316,26 @@ name = "default"
 # cmd = "nvim"
 
 # [keys]
-# open_file = ["Enter"]
-# go_up = ["k", "Up"]
-# go_down = ["j", "Down"]
-# go_parent = ["h", "Left", "Backspace"]
-# go_into_dir = ["l", "Right"]
-# quit = ["q", "Esc"]
+# open_file = ["enter"]
+# go_up = ["k", "up"]
+# go_down = ["j", "down"]
+# go_parent = ["h", "left", "backspace"]
+# go_into_dir = ["l", "right"]
+# quit = ["q", "esc"]
 # delete = ["d"]
 # copy = ["y"]
 # paste = ["p"]
 # rename = ["r"]
 # create = ["n"]
-# create_directory = ["Shift+n"]
+# create_directory = ["N"]
 # move_file = ["m"]
 # filter = ["f"]
-# toggle_marker = [" "]     # " " - indicates space bar
+# toggle_marker = ["space"]
 # info = ["i"]
 # find = ["s"]
-# clear_markers = ["Ctrl+c"]
-# clear_filter = ["Ctrl+f"]
-# alternate_delete = ["Ctrl+d"]
+# clear_markers = ["<c-c>"]
+# clear_filter = ["<c-f>"]
+# alternate_delete = ["<c-d>"]
 
 # Keys triggered by pressing "g" once
 # go_to_top = ["g"]

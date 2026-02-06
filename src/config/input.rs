@@ -27,7 +27,9 @@ pub(crate) struct Keys {
     show_info: Vec<String>,
     find: Vec<String>,
     clear_markers: Vec<String>,
+    clear_clipboard: Vec<String>,
     clear_filter: Vec<String>,
+    clear_all: Vec<String>,
     alternate_delete: Vec<String>,
     go_to_top: Vec<String>,
     go_to_home: Vec<String>,
@@ -75,7 +77,9 @@ accessor!(
     show_info,
     find,
     clear_markers,
+    clear_clipboard,
     clear_filter,
+    clear_all,
     alternate_delete,
     go_to_top,
     go_to_home,
@@ -109,14 +113,15 @@ impl Default for Keys {
             find: vec!["s".into()],
 
             clear_markers: vec!["<c-c>".into()],
+            clear_clipboard: vec!["<c-u>".into()],
             clear_filter: vec!["<c-f>".into()],
+            clear_all: vec!["<c-l>".into()],
 
             alternate_delete: vec!["<c-d>".into()],
 
             go_to_top: vec!["g".into()],
             go_to_home: vec!["h".into()],
             go_to_path: vec!["p".into()],
-
             go_to_bottom: vec!["G".into()],
 
             keybind_help: vec!["?".into()],

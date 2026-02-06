@@ -29,6 +29,7 @@ pub(crate) enum NavAction {
     ToggleMarker,
     ClearMarker,
     ClearFilter,
+    ClearAll,
 }
 
 /// File actions (delete, copy, open, paste, etc.)
@@ -46,6 +47,7 @@ pub(crate) enum FileAction {
     Find,
     MoveFile,
     AlternateDelete,
+    ClearClipboard,
 }
 
 /// System actions (quit)
@@ -75,6 +77,7 @@ pub(crate) struct Keymap {
 
 impl Keymap {
     /// Builds the keymap from the config
+    #[rustfmt::skip]
     pub(crate) fn from_config(config: &crate::config::Config) -> Self {
         let mut map = HashMap::new();
         let mut gmap = HashMap::new();
@@ -92,53 +95,44 @@ impl Keymap {
             };
         }
 
-        bind!(keys.go_parent(), Action::Nav(NavAction::GoParent));
-        bind!(keys.go_into_dir(), Action::Nav(NavAction::GoIntoDir));
-        bind!(keys.go_up(), Action::Nav(NavAction::GoUp));
-        bind!(keys.go_down(), Action::Nav(NavAction::GoDown));
-        bind!(keys.toggle_marker(), Action::Nav(NavAction::ToggleMarker));
-        bind!(keys.open_file(), Action::File(FileAction::Open));
-        bind!(keys.delete(), Action::File(FileAction::Delete));
-        bind!(keys.copy(), Action::File(FileAction::Copy));
-        bind!(keys.paste(), Action::File(FileAction::Paste));
-        bind!(keys.move_file(), Action::File(FileAction::MoveFile));
-        bind!(keys.rename(), Action::File(FileAction::Rename));
-        bind!(keys.create(), Action::File(FileAction::Create));
-        bind!(
-            keys.create_directory(),
-            Action::File(FileAction::CreateDirectory)
-        );
-        bind!(keys.filter(), Action::File(FileAction::Filter));
-        bind!(keys.quit(), Action::System(SystemAction::Quit));
-        bind!(keys.show_info(), Action::File(FileAction::ShowInfo));
-        bind!(keys.find(), Action::File(FileAction::Find));
-        bind!(keys.clear_markers(), Action::Nav(NavAction::ClearMarker));
-        bind!(keys.clear_filter(), Action::Nav(NavAction::ClearFilter));
-        bind!(
-            keys.alternate_delete(),
-            Action::File(FileAction::AlternateDelete)
-        );
-        bind!(
-            keys.keybind_help(),
-            Action::System(SystemAction::KeyBindHelp)
-        );
-        bind!(keys.go_to_bottom(), Action::Nav(NavAction::GoToBottom));
+        use NavAction as N;
+        use FileAction as F;
+        use SystemAction as S;
 
-        bind_prefix!(
-            keys.go_to_top(),
-            Action::Nav(NavAction::GoToTop),
-            PrefixCommand::Nav(NavAction::GoToTop)
-        );
-        bind_prefix!(
-            keys.go_to_home(),
-            Action::Nav(NavAction::GoToHome),
-            PrefixCommand::Nav(NavAction::GoToHome)
-        );
-        bind_prefix!(
-            keys.go_to_path(),
-            Action::Nav(NavAction::GoToPath),
-            PrefixCommand::Nav(NavAction::GoToPath)
-        );
+        // NavActions
+        bind!(keys.go_parent(),         Action::Nav(N::GoParent));
+        bind!(keys.go_into_dir(),       Action::Nav(N::GoIntoDir));
+        bind!(keys.go_up(),             Action::Nav(N::GoUp));
+        bind!(keys.go_down(),           Action::Nav(N::GoDown));
+        bind!(keys.toggle_marker(),     Action::Nav(N::ToggleMarker));
+        bind!(keys.clear_filter(),      Action::Nav(N::ClearFilter));
+        bind!(keys.clear_markers(),     Action::Nav(N::ClearMarker));
+        bind!(keys.clear_all(),         Action::Nav(N::ClearAll));
+        bind!(keys.go_to_bottom(),      Action::Nav(N::GoToBottom));
+
+        // FileActions
+        bind!(keys.open_file(),         Action::File(F::Open));
+        bind!(keys.delete(),            Action::File(F::Delete));
+        bind!(keys.copy(),              Action::File(F::Copy));
+        bind!(keys.paste(),             Action::File(F::Paste));
+        bind!(keys.move_file(),         Action::File(F::MoveFile));
+        bind!(keys.rename(),            Action::File(F::Rename));
+        bind!(keys.create(),            Action::File(F::Create));
+        bind!(keys.create_directory(),  Action::File(F::CreateDirectory));
+        bind!(keys.filter(),            Action::File(F::Filter));
+        bind!(keys.show_info(),         Action::File(F::ShowInfo));
+        bind!(keys.find(),              Action::File(F::Find));
+        bind!(keys.clear_clipboard(),   Action::File(F::ClearClipboard));
+        bind!(keys.alternate_delete(),  Action::File(F::AlternateDelete));
+
+        // SystemActions
+        bind!(keys.keybind_help(),      Action::System(S::KeyBindHelp));
+        bind!(keys.quit(),              Action::System(S::Quit));
+
+        // Prefix actions
+        bind_prefix!(keys.go_to_top(),  Action::Nav(N::GoToTop),  PrefixCommand::Nav(N::GoToTop));
+        bind_prefix!(keys.go_to_home(), Action::Nav(N::GoToHome), PrefixCommand::Nav(N::GoToHome));
+        bind_prefix!(keys.go_to_path(), Action::Nav(N::GoToPath), PrefixCommand::Nav(N::GoToPath));
 
         Keymap { map, gmap }
     }
