@@ -216,7 +216,7 @@ preview = true
 # size = true
 # modified = true
 # perms = false
-# position = "default"
+# position = "bottom_left"
 
 # [display.status]
 # entry_count = "footer"
