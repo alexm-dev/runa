@@ -16,12 +16,10 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Clear clipboard**: Added a new keybind to clear all the current copied entries (by default `<c-u>`).
 - **Clear all**: Added a new keybind to clear all (the markers, the filter, the clipboard) (by default `<c-l>`).
 
-
 ### Fixed:
 - **Stale preview content**: Fixed edge-case that incorrectly updates preview content in bigger directories.
 - **Stale parent pane**: Fixed incorrectly update of parent pane content in very fast directory switching.
 - **Auto-Complete**: Now correctly auto-completes the correct written path instead of the first entry with the written entry.
-
 
 ### Changed:
 - **Worker**: Set `parent_io`, `preview_io` and `preview_file` to `bounded(1)` worker channel and removed coalescing in the `start_io_worker` and in `start_preview`.
@@ -29,9 +27,10 @@ Major responsiveness and UX improvements, including a redesigned worker thread m
 - **Prefix key**: Possible to close prefix menu with `esc` now.
 - **Config macros**: Added getter macro to `config/input` and reworked `override_if_changed` (now `override_themes`)
 
-
 ### Internal:
 - **Performance**: Caching of preview lines in `app/preview.rs` instead of redrawing preview lines on every single preview change.
+- **Performance**: Made `always_show` in `core/formatter` being optional to not use the hashset when `always_show` is empty.
+- Performance: Added a `should_request` check in `request_parent_content` to check if entries of a path is already cached in `ParentState` instead of sending a new worker request everytime.
 - **Cargo update**: Updated all runa dependencies to latest versions.
 
 
