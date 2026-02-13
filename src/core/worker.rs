@@ -501,7 +501,7 @@ fn start_fileop_worker(
 mod tests {
     use super::*;
 
-    use rand::{Rng, rng};
+    use rand::{RngExt, rng};
     use std::collections::HashSet;
     use std::fs::{self, File};
     use std::sync::Arc;
