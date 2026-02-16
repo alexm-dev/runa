@@ -63,7 +63,6 @@ pub(crate) struct ActionContext {
     prefix_recognizer: KeyPrefix,
     is_cut: bool,
     find: FindState,
-    sort: SortField,
 }
 
 impl ActionContext {
@@ -322,10 +321,6 @@ impl ActionContext {
         }
     }
 
-    pub(crate) fn action_sort_by(&mut self, nav: &mut NavState, field: SortField) {
-        self.sort = field;
-        nav.sort_entries_by(field);
-    }
     // Cursor actions
 
     /// Moves the input cursor one position to the left, if possible.
@@ -384,7 +379,6 @@ impl Default for ActionContext {
             prefix_recognizer: KeyPrefix::new(Duration::from_secs(4)),
             is_cut: false,
             find: FindState::default(),
-            sort: SortField::Name,
         }
     }
 }
@@ -544,13 +538,4 @@ impl AutoCompleteState {
     pub(crate) fn current(&self) -> Option<&String> {
         self.suggestions.get(self.index)
     }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub(crate) enum SortField {
-    Default,
-    Name,
-    Size,
-    Modified,
-    Created,
 }
