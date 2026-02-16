@@ -35,6 +35,11 @@ pub(crate) struct Keys {
     go_to_home: Vec<String>,
     go_to_path: Vec<String>,
     go_to_bottom: Vec<String>,
+    sort_by_name: Vec<String>,
+    sort_by_size: Vec<String>,
+    sort_by_date: Vec<String>,
+    sort_by_modified: Vec<String>,
+    sort_reset: Vec<String>,
     keybind_help: Vec<String>,
 }
 
@@ -85,6 +90,11 @@ accessor!(
     go_to_home,
     go_to_path,
     go_to_bottom,
+    sort_by_name,
+    sort_by_size,
+    sort_by_date,
+    sort_by_modified,
+    sort_reset,
     keybind_help,
 );
 
@@ -123,6 +133,12 @@ impl Default for Keys {
             go_to_home: vec!["h".into()],
             go_to_path: vec!["p".into()],
             go_to_bottom: vec!["G".into()],
+
+            sort_by_name: vec!["n".into()],
+            sort_by_size: vec!["s".into()],
+            sort_by_date: vec!["d".into()],
+            sort_by_modified: vec!["m".into()],
+            sort_reset: vec!["r".into()],
 
             keybind_help: vec!["?".into()],
         }

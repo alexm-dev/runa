@@ -48,6 +48,11 @@ pub(crate) enum FileAction {
     MoveFile,
     AlternateDelete,
     ClearClipboard,
+    SortByName,
+    SortBySize,
+    SortByDate,
+    SortByModifed,
+    SortReset,
 }
 
 /// System actions (quit)
@@ -60,6 +65,7 @@ pub(crate) enum SystemAction {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum PrefixCommand {
     Nav(NavAction),
+    File(FileAction),
 }
 
 /// Key + modifiers as used in keybind/keymap
@@ -134,6 +140,12 @@ impl Keymap {
         bind_prefix!(keys.go_to_home(), Action::Nav(N::GoToHome), PrefixCommand::Nav(N::GoToHome));
         bind_prefix!(keys.go_to_path(), Action::Nav(N::GoToPath), PrefixCommand::Nav(N::GoToPath));
 
+        bind_prefix!(keys.sort_by_name(), Action::File(F::SortByName), PrefixCommand::File(F::SortByName));
+        bind_prefix!(keys.sort_by_size(), Action::File(F::SortBySize), PrefixCommand::File(F::SortBySize));
+        bind_prefix!(keys.sort_by_date(), Action::File(F::SortByDate), PrefixCommand::File(F::SortByDate));
+        bind_prefix!(keys.sort_by_modified(), Action::File(F::SortByModifed), PrefixCommand::File(F::SortByModifed));
+        bind_prefix!(keys.sort_reset(), Action::File(F::SortReset), PrefixCommand::File(F::SortReset));
+
         Keymap { map, gmap }
     }
 
@@ -175,6 +187,7 @@ pub(crate) struct KeyPrefix {
 enum PrefixState {
     None,
     G,
+    S,
 }
 
 impl KeyPrefix {
@@ -203,11 +216,31 @@ impl KeyPrefix {
                     self.last_time = Some(now);
                     self.started = true;
                     None
+                } else if key.code == KeyCode::Char('s')
+                    && key.modifiers.contains(KeyModifiers::CONTROL)
+                {
+                    self.state = PrefixState::S;
+                    self.last_time = Some(now);
+                    self.started = true;
+                    None
                 } else {
                     None
                 }
             }
             PrefixState::G => {
+                let elapsed = self
+                    .last_time
+                    .map_or(Duration::MAX, |t| now.duration_since(t));
+                self.state = PrefixState::None;
+                self.last_time = None;
+                self.exited = true;
+                if elapsed <= self.timeout {
+                    gmap.get(&key.code).copied()
+                } else {
+                    None
+                }
+            }
+            PrefixState::S => {
                 let elapsed = self
                     .last_time
                     .map_or(Duration::MAX, |t| now.duration_since(t));

@@ -4,7 +4,7 @@
 //! and input modes (rename, filter, etc).
 
 use crate::app::NavState;
-use crate::app::actions::{ActionMode, InputMode};
+use crate::app::actions::{ActionMode, InputMode, SortField};
 use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::FileInfo;
@@ -236,6 +236,7 @@ impl<'a> AppState<'a> {
                 self.actions.action_clear_clipboard();
                 self.request_preview();
             }
+            _ => {}
         }
         KeypressResult::Continue
     }
@@ -301,6 +302,29 @@ impl<'a> AppState<'a> {
             PrefixCommand::Nav(NavAction::GoToPath) => {
                 self.prompt_go_to_path();
                 self.refresh_show_info_if_open();
+            }
+            PrefixCommand::File(FileAction::SortReset) => {
+                self.actions
+                    .action_sort_by(&mut self.nav, SortField::Default);
+                self.request_preview();
+            }
+            PrefixCommand::File(FileAction::SortByName) => {
+                self.actions.action_sort_by(&mut self.nav, SortField::Name);
+                self.request_preview();
+            }
+            PrefixCommand::File(FileAction::SortBySize) => {
+                self.actions.action_sort_by(&mut self.nav, SortField::Size);
+                self.request_preview();
+            }
+            PrefixCommand::File(FileAction::SortByDate) => {
+                self.actions
+                    .action_sort_by(&mut self.nav, SortField::Created);
+                self.request_preview();
+            }
+            PrefixCommand::File(FileAction::SortByModifed) => {
+                self.actions
+                    .action_sort_by(&mut self.nav, SortField::Modified);
+                self.request_preview();
             }
             _ => return false,
         }

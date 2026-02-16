@@ -3,12 +3,15 @@
 //! Manages the current directory, file entries, selection, markers and filters.
 //! Provides helpers for pane navigation, selection, filtering, and bulk actions.
 
+use crate::app::actions::SortField;
 use crate::core::FileEntry;
 use crate::core::formatter::format_display_path;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
+use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
@@ -325,6 +328,85 @@ impl NavState {
             .get(&self.current_dir)
             .cloned()
             .unwrap_or_default();
+    }
+
+    pub(crate) fn sort_entries_by(&mut self, field: SortField) {
+        match field {
+            SortField::Default => {
+                self.entries.sort_by(|a, b| match (a.is_dir(), b.is_dir()) {
+                    (true, false) => std::cmp::Ordering::Less,
+                    (false, true) => std::cmp::Ordering::Greater,
+                    _ => a
+                        .name()
+                        .to_ascii_lowercase()
+                        .cmp(&b.name().to_ascii_lowercase()),
+                });
+            }
+            SortField::Name => {
+                self.entries.sort_by_key(|e| e.name().to_ascii_lowercase());
+            }
+            SortField::Size => {
+                let dir = &self.current_dir;
+                let mut with_size: Vec<(usize, u64)> = self
+                    .entries
+                    .iter()
+                    .enumerate()
+                    .map(|(i, entry)| {
+                        let size = fs::metadata(dir.join(entry.name()))
+                            .map(|m| m.len())
+                            .unwrap_or(0);
+                        (i, size)
+                    })
+                    .collect();
+                with_size.sort_by_key(|&(_, sz)| sz);
+                let mut sorted = Vec::with_capacity(self.entries.len());
+                for (i, _) in with_size {
+                    sorted.push(self.entries[i].clone());
+                }
+                self.entries = sorted;
+            }
+            SortField::Modified => {
+                let dir = &self.current_dir;
+                let mut with_time: Vec<(usize, SystemTime)> = self
+                    .entries
+                    .iter()
+                    .enumerate()
+                    .map(|(i, entry)| {
+                        let t = fs::metadata(dir.join(entry.name()))
+                            .and_then(|m| m.modified())
+                            .unwrap_or(SystemTime::UNIX_EPOCH);
+                        (i, t)
+                    })
+                    .collect();
+                with_time.sort_by_key(|&(_, t)| t);
+                let mut sorted = Vec::with_capacity(self.entries.len());
+                for (i, _) in with_time {
+                    sorted.push(self.entries[i].clone());
+                }
+                self.entries = sorted;
+            }
+            SortField::Created => {
+                let dir = &self.current_dir;
+                let mut with_time: Vec<(usize, SystemTime)> = self
+                    .entries
+                    .iter()
+                    .enumerate()
+                    .map(|(i, entry)| {
+                        let t = fs::metadata(dir.join(entry.name()))
+                            .and_then(|m| m.created())
+                            .unwrap_or(SystemTime::UNIX_EPOCH);
+                        (i, t)
+                    })
+                    .collect();
+                with_time.sort_by_key(|&(_, t)| t);
+                let mut sorted = Vec::with_capacity(self.entries.len());
+                for (i, _) in with_time {
+                    sorted.push(self.entries[i].clone());
+                }
+                self.entries = sorted;
+            }
+        }
+        self.selected = self.selected.min(self.entries.len().saturating_sub(1));
     }
 }
 
