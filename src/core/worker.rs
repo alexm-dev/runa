@@ -53,7 +53,7 @@ impl Workers {
     ///
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
-        let (nav_io_tx, nav_io_rx) = unbounded::<WorkerTask>();
+        let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
         let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);

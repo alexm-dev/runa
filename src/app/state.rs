@@ -401,17 +401,20 @@ impl<'a> AppState<'a> {
     pub(crate) fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
-        let _ = self.workers.nav_io_tx().send(WorkerTask::LoadDirectory {
-            path: self.nav.current_dir().to_path_buf(),
-            focus,
-            dirs_first: self.config.general().dirs_first(),
-            show_hidden: self.config.general().show_hidden(),
-            show_symlink: self.config.general().show_symlink(),
-            show_system: self.config.general().show_system(),
-            case_insensitive: self.config.general().case_insensitive(),
-            always_show: Arc::clone(self.config.general().always_show()),
-            request_id,
-        });
+        let _ = self
+            .workers
+            .nav_io_tx()
+            .try_send(WorkerTask::LoadDirectory {
+                path: self.nav.current_dir().to_path_buf(),
+                focus,
+                dirs_first: self.config.general().dirs_first(),
+                show_hidden: self.config.general().show_hidden(),
+                show_symlink: self.config.general().show_symlink(),
+                show_system: self.config.general().show_system(),
+                case_insensitive: self.config.general().case_insensitive(),
+                always_show: Arc::clone(self.config.general().always_show()),
+                request_id,
+            });
     }
 
     /// Requests a preview load for the currently selected entry in the navigation pane
