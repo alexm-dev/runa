@@ -5,8 +5,10 @@
 
 use crate::app::NavState;
 use crate::app::actions::{ActionMode, InputMode};
-use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction};
+use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction, TabAction};
 use crate::app::state::{AppState, KeypressResult};
+use crate::app::tab::RunaRoot;
+use crate::app::tab::TabManager;
 use crate::core::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::Overlay;
@@ -903,5 +905,74 @@ impl<'a> AppState<'a> {
         }
 
         self.overlays_mut().push(Overlay::Message { text });
+    }
+}
+
+pub(crate) fn handle_tab_action<'a>(root: &mut RunaRoot<'a>, action: TabAction) -> KeypressResult {
+    match action {
+        TabAction::New => {
+            let config = match root {
+                RunaRoot::Single(app_state) => app_state.config,
+                RunaRoot::Tabs(tab) => tab.current_tab().config,
+            };
+
+            match root {
+                RunaRoot::Single(app_state) => {
+                    let current = std::mem::replace(
+                        app_state,
+                        Box::new(AppState::new(config).expect("Failed to create new blank tab")),
+                    );
+                    let new_tab = AppState::new(config).expect("Failed to create new blank tab");
+                    *root = RunaRoot::Tabs(TabManager::new(*current, new_tab));
+                }
+                RunaRoot::Tabs(tab) => {
+                    let new_tab = AppState::new(config).expect("Failed to create new blank tab");
+                    tab.add_tab(new_tab);
+                }
+            }
+            KeypressResult::Consumed
+        }
+        TabAction::Close => {
+            match root {
+                RunaRoot::Single(_) => return KeypressResult::Quit,
+                RunaRoot::Tabs(tab) => {
+                    tab.close_tab(tab.current);
+                    if tab.len() == 1 {
+                        let last = tab.tabs.remove(0);
+                        *root = RunaRoot::Single(Box::new(last));
+                    } else if tab.is_empty() {
+                        return KeypressResult::Quit;
+                    }
+                }
+            }
+            KeypressResult::Consumed
+        }
+        TabAction::Next => {
+            if let RunaRoot::Tabs(tab) = root {
+                tab.switch(1);
+            }
+            KeypressResult::Consumed
+        }
+        TabAction::Prev => {
+            if let RunaRoot::Tabs(tab) = root {
+                tab.switch(-1);
+            }
+            KeypressResult::Consumed
+        }
+        TabAction::Cycle => {
+            if let RunaRoot::Tabs(tab) = root {
+                tab.switch(1);
+            }
+            KeypressResult::Consumed
+        }
+        TabAction::Switch(n) => {
+            if let RunaRoot::Tabs(tab) = root {
+                let idx = n as usize - 1;
+                if idx < tab.len() {
+                    tab.set_active(idx);
+                }
+            }
+            KeypressResult::Consumed
+        }
     }
 }

@@ -13,6 +13,7 @@ pub(crate) enum Action {
     Nav(NavAction),
     File(FileAction),
     System(SystemAction),
+    Tab(TabAction),
 }
 
 /// Navigation actions (move, into_parent, markers, etc.)
@@ -48,6 +49,16 @@ pub(crate) enum FileAction {
     MoveFile,
     AlternateDelete,
     ClearClipboard,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(crate) enum TabAction {
+    New,
+    Close,
+    Cycle,
+    Next,
+    Prev,
+    Switch(u8),
 }
 
 /// System actions (quit)
@@ -98,6 +109,7 @@ impl Keymap {
         use NavAction as N;
         use FileAction as F;
         use SystemAction as S;
+        use TabAction as T;
 
         // NavActions
         bind!(keys.go_parent(),         Action::Nav(N::GoParent));
@@ -124,6 +136,13 @@ impl Keymap {
         bind!(keys.find(),              Action::File(F::Find));
         bind!(keys.clear_clipboard(),   Action::File(F::ClearClipboard));
         bind!(keys.alternate_delete(),  Action::File(F::AlternateDelete));
+
+        // TabActions
+        bind!(keys.tab_new(),           Action::Tab(T::New));
+        bind!(keys.tab_close(),         Action::Tab(T::Close));
+        bind!(keys.tab_cycle(),         Action::Tab(T::Cycle));
+        bind!(keys.tab_next(),          Action::Tab(T::Next));
+        bind!(keys.tab_prev(),          Action::Tab(T::Prev));
 
         // SystemActions
         bind!(keys.keybind_help(),      Action::System(S::KeyBindHelp));
@@ -155,6 +174,14 @@ impl Keymap {
             };
             return self.map.get(&k2).copied();
         }
+
+        if key.modifiers.is_empty()
+            && let KeyCode::Char(c) = key.code
+            && let Some(digit) = c.to_digit(10)
+        {
+            return Some(Action::Tab(TabAction::Switch(digit as u8)));
+        }
+
         None
     }
 

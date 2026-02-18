@@ -15,7 +15,7 @@
 //! This is the primary context/state object passed to most UI/Terminal event logic.
 
 use crate::app::actions::{ActionContext, ActionMode, InputMode};
-use crate::app::keymap::{Action, Keymap};
+use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::{NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
@@ -38,6 +38,7 @@ pub(crate) enum KeypressResult {
     Quit,
     OpenedEditor,
     Recovered,
+    Tab(TabAction),
 }
 
 /// Enumeration which holds the metrics of the layout of the TUI
@@ -91,6 +92,7 @@ pub(crate) struct AppState<'a> {
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
+    pub(super) tab_line: String,
 }
 
 impl<'a> AppState<'a> {
@@ -120,6 +122,7 @@ impl<'a> AppState<'a> {
             notification_time: None,
             worker_time: None,
             overlays: OverlayStack::new(),
+            tab_line: String::new(),
         };
 
         app.request_dir_load(None);
@@ -182,6 +185,10 @@ impl<'a> AppState<'a> {
     #[inline]
     pub(crate) fn overlays_mut(&mut self) -> &mut OverlayStack {
         &mut self.overlays
+    }
+
+    pub(crate) fn tab_line(&self) -> &String {
+        &self.tab_line
     }
 
     // Entry functions
@@ -389,6 +396,7 @@ impl<'a> AppState<'a> {
                 Action::System(sys_act) => return self.handle_sys_action(sys_act),
                 Action::Nav(nav_act) => return self.handle_nav_action(nav_act),
                 Action::File(file_act) => return self.handle_file_action(file_act),
+                Action::Tab(tab_act) => return KeypressResult::Tab(tab_act),
             }
         }
 

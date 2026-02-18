@@ -7,6 +7,7 @@ pub(crate) mod core;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
+use crate::app::tab::RunaRoot;
 use crate::config::Config;
 use crate::core::terminal;
 use crate::utils::cli::{CliAction, handle_args};
@@ -53,10 +54,10 @@ fn main() -> std::io::Result<()> {
         _ => unreachable!(),
     };
 
-    let mut app = match initial_path {
+    let app = match initial_path {
         Some(path) => app::AppState::from_dir(&config, &path)?,
         None => app::AppState::new(&config)?,
     };
-
-    terminal::run_terminal(&mut app)
+    let mut root = RunaRoot::Single(Box::new(app));
+    terminal::run_terminal(&mut root)
 }

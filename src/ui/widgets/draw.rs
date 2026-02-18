@@ -265,6 +265,11 @@ pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: Statu
         }
     };
 
+    if !app.tab_line().is_empty() {
+        spans.push(Span::styled(app.tab_line().as_str(), base_style));
+        // add_sep(&mut spans); // Optional separator if you want it between tabs and tasks
+    }
+
     if status_cfg.tasks() == position {
         let queued_ops = app.workers().fileop_tx().len();
         let active_ops = app.workers().active().load(Ordering::Relaxed);
