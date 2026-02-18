@@ -92,7 +92,7 @@ pub(crate) struct AppState<'a> {
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
-    pub(super) tab_line: String,
+    pub(super) tab_line: Arc<String>,
 }
 
 impl<'a> AppState<'a> {
@@ -122,7 +122,7 @@ impl<'a> AppState<'a> {
             notification_time: None,
             worker_time: None,
             overlays: OverlayStack::new(),
-            tab_line: String::new(),
+            tab_line: Arc::new(String::new()),
         };
 
         app.request_dir_load(None);
@@ -187,7 +187,7 @@ impl<'a> AppState<'a> {
         &mut self.overlays
     }
 
-    pub(crate) fn tab_line(&self) -> &String {
+    pub(crate) fn tab_line(&self) -> &str {
         &self.tab_line
     }
 

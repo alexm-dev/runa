@@ -3,7 +3,7 @@
 //! Handles setup/teardown of raw mode, alternate screen, redraws,
 //! and events (keypress, resize) to app logic.
 
-use crate::app::{KeypressResult, handle_tab_action, tab::RunaRoot};
+use crate::app::{AppContainer, KeypressResult, handle_tab_action};
 use crate::ui;
 use crossterm::{
     cursor::{Hide, Show},
@@ -21,7 +21,7 @@ use std::{io, time::Duration};
 /// Returns a error if terminal setup or teardown fails
 ///
 /// Returns an std::io::Error if terminal setup or teardown fails.
-pub(crate) fn run_terminal(app: &mut RunaRoot) -> io::Result<()> {
+pub(crate) fn run_terminal(app: &mut AppContainer) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, Hide)?;
@@ -38,7 +38,7 @@ pub(crate) fn run_terminal(app: &mut RunaRoot) -> io::Result<()> {
 /// Returns on quit
 fn event_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
-    root: &mut RunaRoot,
+    root: &mut AppContainer,
 ) -> io::Result<()>
 where
     io::Error: From<<B as Backend>::Error>,
@@ -47,14 +47,14 @@ where
         // App Tick
         // If tick returns true, something changed internally that needs a redraw.
         let changed = match root {
-            RunaRoot::Single(app) => app.tick(),
-            RunaRoot::Tabs(tabs) => tabs.current_tab_mut().tick(),
+            AppContainer::Single(app) => app.tick(),
+            AppContainer::Tabs(tabs) => tabs.current_tab_mut().tick(),
         };
 
         if changed {
             terminal.draw(|f| match root {
-                RunaRoot::Single(app) => ui::render(f, app),
-                RunaRoot::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
+                AppContainer::Single(app) => ui::render(f, app),
+                AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
             })?;
         }
 
@@ -64,8 +64,8 @@ where
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     let result = match root {
-                        RunaRoot::Single(app) => app.handle_keypress(key),
-                        RunaRoot::Tabs(tabs) => tabs.current_tab_mut().handle_keypress(key),
+                        AppContainer::Single(app) => app.handle_keypress(key),
+                        AppContainer::Tabs(tabs) => tabs.current_tab_mut().handle_keypress(key),
                     };
 
                     match result {
@@ -83,16 +83,16 @@ where
                     }
                     // Redraw after state change
                     terminal.draw(|f| match root {
-                        RunaRoot::Single(app) => ui::render(f, app),
-                        RunaRoot::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
+                        AppContainer::Single(app) => ui::render(f, app),
+                        AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
                     })?;
                 }
 
                 // handle resize
                 Event::Resize(_, _) => {
                     terminal.draw(|f| match root {
-                        RunaRoot::Single(app) => ui::render(f, app),
-                        RunaRoot::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
+                        AppContainer::Single(app) => ui::render(f, app),
+                        AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
                     })?;
                 }
 

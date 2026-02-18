@@ -13,8 +13,15 @@ pub(crate) mod preview;
 mod state;
 pub(crate) mod tab;
 
-pub(crate) use handlers::handle_tab_action;
 pub(crate) use nav::NavState;
 pub(crate) use parent::ParentState;
 pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
+pub(crate) use tab::handle_tab_action;
+
+use crate::app::tab::TabManager;
+
+pub(crate) enum AppContainer<'a> {
+    Single(Box<AppState<'a>>),
+    Tabs(TabManager<'a>),
+}

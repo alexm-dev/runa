@@ -7,7 +7,7 @@ pub(crate) mod core;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
-use crate::app::tab::RunaRoot;
+use crate::app::AppContainer;
 use crate::config::Config;
 use crate::core::terminal;
 use crate::utils::cli::{CliAction, handle_args};
@@ -58,6 +58,6 @@ fn main() -> std::io::Result<()> {
         Some(path) => app::AppState::from_dir(&config, &path)?,
         None => app::AppState::new(&config)?,
     };
-    let mut root = RunaRoot::Single(Box::new(app));
+    let mut root = AppContainer::Single(Box::new(app));
     terminal::run_terminal(&mut root)
 }
