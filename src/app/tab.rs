@@ -16,7 +16,7 @@ impl<'a> TabManager<'a> {
     pub(crate) fn new(existing: AppState<'a>, new_tab: AppState<'a>) -> Self {
         let mut manager = Self {
             tabs: vec![existing, new_tab],
-            current: 0,
+            current: 1,
         };
         manager.sync_tab_line();
         manager
