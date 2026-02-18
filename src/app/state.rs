@@ -22,6 +22,7 @@ use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{Overlay, OverlayStack};
 
 use crossterm::event::KeyEvent;
+use ratatui::text::Span;
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -92,7 +93,7 @@ pub(crate) struct AppState<'a> {
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
-    pub(super) tab_line: Arc<String>,
+    pub(super) tab_line: Arc<Vec<Span<'a>>>,
 }
 
 impl<'a> AppState<'a> {
@@ -122,7 +123,7 @@ impl<'a> AppState<'a> {
             notification_time: None,
             worker_time: None,
             overlays: OverlayStack::new(),
-            tab_line: Arc::new(String::new()),
+            tab_line: Arc::new(Vec::new()),
         };
 
         app.request_dir_load(None);
@@ -187,7 +188,7 @@ impl<'a> AppState<'a> {
         &mut self.overlays
     }
 
-    pub(crate) fn tab_line(&self) -> &str {
+    pub(crate) fn tab_line(&self) -> &Arc<Vec<Span<'_>>> {
         &self.tab_line
     }
 

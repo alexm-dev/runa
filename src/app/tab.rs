@@ -2,7 +2,7 @@ use crate::app::KeypressResult;
 use crate::app::keymap::TabAction;
 use crate::app::{AppContainer, AppState};
 
-use std::fmt::Write;
+use ratatui::text::Span;
 use std::sync::Arc;
 
 pub(crate) struct TabManager<'a> {
@@ -86,19 +86,31 @@ impl<'a> TabManager<'a> {
     }
 
     pub(crate) fn sync_tab_line(&mut self) {
-        let line = if self.tabs.len() <= 1 {
-            String::new()
+        let tab_spans = if self.tabs.len() <= 1 {
+            Vec::new()
         } else {
-            let mut line = String::with_capacity(64);
+            let theme = self.tabs[self.current].config.theme();
+            let tab_theme = &theme.tab();
+
+            let mut spans = Vec::with_capacity(self.tabs.len() * 2 - 1);
             for (i, _) in self.tabs.iter().enumerate() {
-                let marker = if i == self.current { "*" } else { "" };
-                let _ = write!(line, "{}:{} ", i + 1, marker);
+                let is_current = i == self.current;
+                let style = if is_current {
+                    tab_theme.active_style_or_theme()
+                } else {
+                    tab_theme.inactive_style_or_theme()
+                };
+                let marker = if is_current { tab_theme.marker() } else { "" };
+                spans.push(Span::styled(format!("[{}{}]", i + 1, marker), style));
+                if i != self.tabs.len() - 1 {
+                    spans.push(Span::raw(tab_theme.separator()));
+                }
             }
-            line
+            spans
         };
 
         if let Some(active_tab) = self.tabs.get_mut(self.current) {
-            active_tab.tab_line = Arc::new(line);
+            active_tab.tab_line = Arc::new(tab_spans);
         }
     }
 }

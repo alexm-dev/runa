@@ -265,8 +265,8 @@ pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: Statu
         }
     };
 
-    if !app.tab_line().is_empty() {
-        spans.push(Span::styled(app.tab_line(), base_style));
+    if status_cfg.tabs() == position && !app.tab_line().is_empty() {
+        spans.extend(app.tab_line().iter().cloned());
     }
 
     if status_cfg.tasks() == position {

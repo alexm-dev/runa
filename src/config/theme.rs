@@ -50,6 +50,7 @@ pub(crate) struct Theme {
     /// info does not honor the .size field from widget.
     /// info gets auto-sized based on attributes enabled.
     info: WidgetTheme,
+    tab: TabTheme,
 }
 
 impl Default for Theme {
@@ -93,6 +94,7 @@ impl Default for Theme {
                 },
                 ..WidgetTheme::default()
             },
+            tab: TabTheme::default(),
         }
     }
 }
@@ -206,6 +208,11 @@ impl Theme {
     #[inline]
     pub(crate) fn info(&self) -> &WidgetTheme {
         &self.info
+    }
+
+    #[inline]
+    pub(crate) fn tab(&self) -> &TabTheme {
+        &self.tab
     }
 
     /// Apply user overrides on top of a preset theme if a known preset name is provided.
@@ -656,6 +663,52 @@ impl SymlinkTheme {
 
     pub(crate) fn target(&self) -> Color {
         self.target
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[serde(default)]
+pub(crate) struct TabTheme {
+    marker: String,
+    separator: String,
+    active: ColorPair,
+    inactive: ColorPair,
+}
+
+impl Default for TabTheme {
+    fn default() -> Self {
+        TabTheme {
+            marker: "*".to_string(),
+            separator: ":".to_string(),
+            active: ColorPair {
+                fg: Color::Yellow,
+                ..Default::default()
+            },
+            inactive: ColorPair {
+                fg: Color::Gray,
+                ..Default::default()
+            },
+        }
+    }
+}
+
+impl TabTheme {
+    pub(crate) fn marker(&self) -> &str {
+        &self.marker
+    }
+
+    pub(crate) fn separator(&self) -> &str {
+        &self.separator
+    }
+
+    pub fn active_style_or_theme(&self) -> Style {
+        self.active.style_or(&Theme::internal_defaults().tab.active)
+    }
+
+    /// Returns a Style for the inactive tab, using theme fallback if unset.
+    pub fn inactive_style_or_theme(&self) -> Style {
+        self.inactive
+            .style_or(&Theme::internal_defaults().tab.inactive)
     }
 }
 

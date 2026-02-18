@@ -308,6 +308,7 @@ pub(crate) struct StatusElements {
     markers: StatusPosition,
     clipboard: StatusPosition,
     tasks: StatusPosition,
+    tabs: StatusPosition,
 }
 
 impl Default for StatusElements {
@@ -318,6 +319,7 @@ impl Default for StatusElements {
             markers: StatusPosition::Footer,
             clipboard: StatusPosition::Footer,
             tasks: StatusPosition::Footer,
+            tabs: StatusPosition::Header,
         }
     }
 }
@@ -346,6 +348,11 @@ impl StatusElements {
     #[inline]
     pub(crate) fn tasks(&self) -> StatusPosition {
         self.tasks
+    }
+
+    #[inline]
+    pub(crate) fn tabs(&self) -> StatusPosition {
+        self.tabs
     }
 }
 
