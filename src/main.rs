@@ -7,9 +7,9 @@ pub(crate) mod core;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
-use crate::app::{AppContainer, Clipboard};
 use crate::config::Config;
 use crate::core::terminal;
+use crate::core::worker::Workers;
 use crate::utils::cli::{CliAction, handle_args};
 use crate::utils::{is_hardened_directory, resolve_initial_dir};
 
@@ -40,11 +40,6 @@ fn main() -> std::io::Result<()> {
 
     let config = Config::load();
 
-    let mut clipboard = Clipboard {
-        entries: None,
-        is_cut: false,
-    };
-
     let initial_path = match action {
         CliAction::RunApp => None,
         CliAction::RunAppAtPath(path_arg) => {
@@ -59,10 +54,18 @@ fn main() -> std::io::Result<()> {
         _ => unreachable!(),
     };
 
+    let workers = Workers::spawn();
+
     let app = match initial_path {
-        Some(path) => app::AppState::from_dir(&config, &path)?,
-        None => app::AppState::new(&config)?,
+        Some(path) => app::AppState::from_dir(&config, &path, &workers)?,
+        None => app::AppState::new(&config, &workers)?,
     };
-    let mut root = AppContainer::Single(Box::new(app));
-    terminal::run_terminal(&mut root, &mut clipboard)
+
+    let mut runa = app::RunaRoot {
+        container: app::AppContainer::Single(Box::new(app)),
+        clipboard: app::Clipboard::default(),
+        workers,
+    };
+
+    terminal::run_terminal(&mut runa)
 }

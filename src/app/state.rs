@@ -87,7 +87,6 @@ pub(crate) struct AppState<'a> {
     pub(super) preview: PreviewState,
     pub(super) parent: ParentState,
 
-    pub(super) workers: Workers,
     pub(super) is_loading: bool,
 
     pub(super) notification_time: Option<Instant>,
@@ -97,13 +96,16 @@ pub(crate) struct AppState<'a> {
 }
 
 impl<'a> AppState<'a> {
-    pub(crate) fn new(config: &'a Config) -> std::io::Result<Self> {
+    pub(crate) fn new(config: &'a Config, workers: &Workers) -> std::io::Result<Self> {
         let current_dir = std::env::current_dir()?;
-        Self::from_dir(config, &current_dir)
+        Self::from_dir(config, &current_dir, workers)
     }
 
-    pub(crate) fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
-        let workers = Workers::spawn();
+    pub(crate) fn from_dir(
+        config: &'a Config,
+        initial_path: &Path,
+        workers: &Workers,
+    ) -> std::io::Result<Self> {
         let current_dir = if initial_path.exists() && initial_path.is_dir() {
             initial_path.to_path_buf()
         } else {
@@ -118,7 +120,6 @@ impl<'a> AppState<'a> {
             actions: ActionContext::default(),
             preview: PreviewState::default(),
             parent: ParentState::default(),
-            workers,
             is_loading: false,
             notification_time: None,
             worker_time: None,
@@ -126,8 +127,8 @@ impl<'a> AppState<'a> {
             tab_line: Arc::new(Vec::new()),
         };
 
-        app.request_dir_load(None);
-        app.request_parent_content();
+        app.request_dir_load(workers, None);
+        app.request_parent_content(workers);
         Ok(app)
     }
 
@@ -156,11 +157,6 @@ impl<'a> AppState<'a> {
     #[inline]
     pub(crate) fn parent(&self) -> &ParentState {
         &self.parent
-    }
-
-    #[inline]
-    pub(crate) fn workers(&self) -> &Workers {
-        &self.workers
     }
 
     #[inline]
@@ -206,7 +202,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Metrics updater for LayoutMetrics to request_preview new preview after old metrics
-    pub(crate) fn update_layout_metrics(&mut self, metrics: LayoutMetrics) {
+    pub(crate) fn update_layout_metrics(&mut self, workers: &Workers, metrics: LayoutMetrics) {
         let old_width = self.metrics.preview_width;
         let old_height = self.metrics.preview_height;
 
@@ -214,7 +210,7 @@ impl<'a> AppState<'a> {
 
         if old_width != self.metrics.preview_width || old_height != self.metrics.preview_height {
             if self.preview.data().is_empty() {
-                self.request_preview();
+                self.request_preview(workers);
             } else {
                 self.preview.mark_pending();
             }
@@ -226,7 +222,7 @@ impl<'a> AppState<'a> {
     /// Is used by the main event loop to update the application state.
     /// Returns a bool to determine if the AppState needs reloading
     /// and sets it to true if a WorkerResponse was made or if a preview should be triggered.
-    pub(crate) fn tick(&mut self) -> bool {
+    pub(crate) fn tick(&mut self, workers: &Workers) -> bool {
         let mut changed = false;
 
         if let Some(expiry) = self.notification_time
@@ -240,8 +236,7 @@ impl<'a> AppState<'a> {
             changed = true;
         }
 
-        let active = self.workers.active().load(Ordering::Relaxed);
-        if active > 0 {
+        if workers.active().load(Ordering::Relaxed) > 0 {
             let start = *self.worker_time.get_or_insert_with(Instant::now);
 
             if start.elapsed() >= Duration::from_millis(200) {
@@ -261,7 +256,7 @@ impl<'a> AppState<'a> {
 
         // Handle preview debounc
         if self.preview.should_trigger() {
-            self.request_preview();
+            self.request_preview(workers);
             changed = true;
         }
 
@@ -275,105 +270,99 @@ impl<'a> AppState<'a> {
             if query.is_empty() {
                 self.actions.clear_find_results();
             } else {
-                self.request_find(query);
+                self.request_find(workers, query);
             }
             changed = true;
         }
 
-        // Process worker response
-        while let Ok(response) = self.workers.response_rx().try_recv() {
-            changed = true;
-
-            match response {
-                WorkerResponse::DirectoryLoaded {
-                    path,
-                    entries,
-                    focus,
-                    request_id,
-                } => {
-                    // only update nav if BOTH the ID and path match.
-                    if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                        self.nav.update_from_worker(path, entries, focus);
-                        self.is_loading = false;
-                        self.request_parent_content();
-                        self.request_preview();
-                        self.refresh_show_info_if_open();
-                        continue;
-                    }
-                    // PREVIEW CHECK: Must match the current preview request
-                    if request_id == self.preview.request_id()
-                        && let Some(entry) = self.nav.selected_entry()
-                        && path.parent() == Some(self.nav.current_dir())
-                        && path.file_name() == Some(entry.name())
-                    {
-                        self.preview.update_from_entries(entries, request_id);
-
-                        let sel_path = self.nav.current_dir().join(entry.name());
-                        let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
-
-                        self.preview.set_selected_idx(pos);
-                        continue;
-                    }
-                    // PARENT CHECK: Must match the current parent request
-                    if request_id == self.parent.request_id() {
-                        let expected_parent = self.nav.current_dir().parent();
-                        if expected_parent == Some(path.as_path()) {
-                            let current_name = self
-                                .nav
-                                .current_dir()
-                                .file_name()
-                                .map(|n| n.to_string_lossy().to_string())
-                                .unwrap_or_default();
-
-                            self.parent.update_from_entries(
-                                entries,
-                                &current_name,
-                                request_id,
-                                &path,
-                            );
-                            continue;
-                        }
-                    }
-                }
-                WorkerResponse::PreviewLoaded { lines, request_id } => {
-                    if request_id == self.preview.request_id() {
-                        self.preview.update_content(lines, request_id);
-                    }
-                }
-
-                WorkerResponse::OperationComplete { need_reload, focus } => {
-                    if need_reload {
-                        self.request_dir_load(focus);
-                        self.request_parent_content();
-                    }
-                }
-
-                WorkerResponse::FindResults {
-                    base_dir,
-                    results,
-                    request_id,
-                } => {
-                    if base_dir == self.nav.current_dir()
-                        && request_id == self.actions.find_request_id()
-                    {
-                        self.actions.set_find_results(results);
-                    }
-                }
-
-                WorkerResponse::Error(e, request_id) => {
-                    self.is_loading = false;
-                    match request_id {
-                        Some(id) if id == self.preview.request_id() => {
-                            self.preview.set_error(e);
-                        }
-                        _ => {
-                            self.push_overlay_message(e.to_string(), Duration::from_secs(7));
-                        }
-                    }
-                }
-            }
-        }
         changed
+    }
+
+    pub(crate) fn handle_worker_response(&mut self, response: WorkerResponse, workers: &Workers) {
+        match response {
+            WorkerResponse::DirectoryLoaded {
+                path,
+                entries,
+                focus,
+                request_id,
+            } => {
+                // only update nav if BOTH the ID and path match.
+                if request_id == self.nav.request_id() && path == self.nav.current_dir() {
+                    self.nav.update_from_worker(path, entries, focus);
+                    self.is_loading = false;
+                    self.request_parent_content(workers);
+                    self.request_preview(workers);
+                    self.refresh_show_info_if_open();
+                    return;
+                }
+                // PREVIEW CHECK: Must match the current preview request
+                if request_id == self.preview.request_id()
+                    && let Some(entry) = self.nav.selected_entry()
+                    && path.parent() == Some(self.nav.current_dir())
+                    && path.file_name() == Some(entry.name())
+                {
+                    self.preview.update_from_entries(entries, request_id);
+
+                    let sel_path = self.nav.current_dir().join(entry.name());
+                    let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
+
+                    self.preview.set_selected_idx(pos);
+                    return;
+                }
+                // PARENT CHECK: Must match the current parent request
+                if request_id == self.parent.request_id() {
+                    let expected_parent = self.nav.current_dir().parent();
+                    if expected_parent == Some(path.as_path()) {
+                        let current_name = self
+                            .nav
+                            .current_dir()
+                            .file_name()
+                            .map(|n| n.to_string_lossy().to_string())
+                            .unwrap_or_default();
+
+                        self.parent
+                            .update_from_entries(entries, &current_name, request_id, &path);
+                        return;
+                    }
+                }
+            }
+            WorkerResponse::PreviewLoaded { lines, request_id } => {
+                if request_id == self.preview.request_id() {
+                    self.preview.update_content(lines, request_id);
+                }
+            }
+
+            WorkerResponse::OperationComplete { need_reload, focus } => {
+                if need_reload {
+                    self.request_dir_load(workers, focus);
+                    self.request_parent_content(workers);
+                }
+            }
+
+            WorkerResponse::FindResults {
+                base_dir,
+                results,
+                request_id,
+            } => {
+                if base_dir == self.nav.current_dir()
+                    && request_id == self.actions.find_request_id()
+                {
+                    self.actions.set_find_results(results);
+                }
+            }
+
+            WorkerResponse::Error(e, request_id) => {
+                self.is_loading = false;
+                match request_id {
+                    Some(id) if id == self.preview.request_id() => {
+                        self.preview.set_error(e);
+                    }
+                    _ => {
+                        self.push_overlay_message(e.to_string(), Duration::from_secs(7));
+                    }
+                }
+            }
+        }
     }
 
     /// Central key handlers
@@ -382,25 +371,28 @@ impl<'a> AppState<'a> {
     pub(crate) fn handle_keypress(
         &mut self,
         key: KeyEvent,
+        workers: &Workers,
         clipboard: &mut Clipboard,
     ) -> KeypressResult {
         if self.actions.is_input_mode() {
-            return self.handle_input_mode(key);
+            return self.handle_input_mode(workers, key);
         }
 
         if let Some(res) = self.handle_esc_close_overlays(&key) {
             return res;
         }
 
-        if let Some(res) = self.handle_prefix_dispatch(&key) {
+        if let Some(res) = self.handle_prefix_dispatch(workers, &key) {
             return res;
         }
 
         if let Some(action) = self.keymap.lookup(key) {
             match action {
                 Action::System(sys_act) => return self.handle_sys_action(sys_act),
-                Action::Nav(nav_act) => return self.handle_nav_action(nav_act, clipboard),
-                Action::File(file_act) => return self.handle_file_action(file_act, clipboard),
+                Action::Nav(nav_act) => return self.handle_nav_action(workers, nav_act, clipboard),
+                Action::File(file_act) => {
+                    return self.handle_file_action(workers, file_act, clipboard);
+                }
                 Action::Tab(tab_act) => return KeypressResult::Tab(tab_act),
             }
         }
@@ -411,46 +403,44 @@ impl<'a> AppState<'a> {
     // Worker requests functions for directory loading, preview and parent pane content
 
     /// Requests a directory load for the current navigation directory
-    pub(crate) fn request_dir_load(&mut self, focus: Option<std::ffi::OsString>) {
+    pub(crate) fn request_dir_load(
+        &mut self,
+        workers: &Workers,
+        focus: Option<std::ffi::OsString>,
+    ) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
-        let _ = self
-            .workers
-            .nav_io_tx()
-            .try_send(WorkerTask::LoadDirectory {
-                path: self.nav.current_dir().to_path_buf(),
-                focus,
-                dirs_first: self.config.general().dirs_first(),
-                show_hidden: self.config.general().show_hidden(),
-                show_symlink: self.config.general().show_symlink(),
-                show_system: self.config.general().show_system(),
-                case_insensitive: self.config.general().case_insensitive(),
-                always_show: Arc::clone(self.config.general().always_show()),
-                request_id,
-            });
+        let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
+            path: self.nav.current_dir().to_path_buf(),
+            focus,
+            dirs_first: self.config.general().dirs_first(),
+            show_hidden: self.config.general().show_hidden(),
+            show_symlink: self.config.general().show_symlink(),
+            show_system: self.config.general().show_system(),
+            case_insensitive: self.config.general().case_insensitive(),
+            always_show: Arc::clone(self.config.general().always_show()),
+            request_id,
+        });
     }
 
     /// Requests a preview load for the currently selected entry in the navigation pane
-    pub(crate) fn request_preview(&mut self) {
+    pub(crate) fn request_preview(&mut self, workers: &Workers) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
 
             if entry.is_dir() || entry.is_symlink() {
-                let _ = self
-                    .workers
-                    .preview_io_tx()
-                    .try_send(WorkerTask::LoadDirectory {
-                        path,
-                        focus: None,
-                        dirs_first: self.config.general().dirs_first(),
-                        show_hidden: self.config.general().show_hidden(),
-                        show_symlink: self.config.general().show_symlink(),
-                        show_system: self.config.general().show_system(),
-                        case_insensitive: self.config.general().case_insensitive(),
-                        always_show: Arc::clone(self.config.general().always_show()),
-                        request_id: req_id,
-                    });
+                let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
+                    path,
+                    focus: None,
+                    dirs_first: self.config.general().dirs_first(),
+                    show_hidden: self.config.general().show_hidden(),
+                    show_symlink: self.config.general().show_symlink(),
+                    show_system: self.config.general().show_system(),
+                    case_insensitive: self.config.general().case_insensitive(),
+                    always_show: Arc::clone(self.config.general().always_show()),
+                    request_id: req_id,
+                });
             } else {
                 let preview_options = self.config.display().preview_options();
                 let preview_method = preview_options.method().clone();
@@ -460,17 +450,14 @@ impl<'a> AppState<'a> {
                     .into_iter()
                     .map(OsString::from)
                     .collect();
-                let _ = self
-                    .workers
-                    .preview_file_tx()
-                    .try_send(WorkerTask::LoadPreview {
-                        path,
-                        max_lines: self.metrics.preview_height,
-                        pane_width: self.metrics.preview_width,
-                        preview_method,
-                        args: bat_args,
-                        request_id: req_id,
-                    });
+                let _ = workers.preview_file_tx().try_send(WorkerTask::LoadPreview {
+                    path,
+                    max_lines: self.metrics.preview_height,
+                    pane_width: self.metrics.preview_width,
+                    preview_method,
+                    args: bat_args,
+                    request_id: req_id,
+                });
             }
         } else {
             self.preview.clear();
@@ -478,7 +465,7 @@ impl<'a> AppState<'a> {
     }
 
     /// Requests loading of the parent directory content for the parent pane
-    pub(crate) fn request_parent_content(&mut self) {
+    pub(crate) fn request_parent_content(&mut self, workers: &Workers) {
         let Some(parent_path) = self.nav.current_dir().parent() else {
             self.parent.clear();
             return;
@@ -490,24 +477,21 @@ impl<'a> AppState<'a> {
 
         let parent_path_buf = parent_path.to_path_buf();
         let req_id = self.parent.prepare_new_request(&parent_path_buf);
-        let _ = self
-            .workers
-            .parent_io_tx()
-            .try_send(WorkerTask::LoadDirectory {
-                path: parent_path_buf,
-                focus: None,
-                dirs_first: self.config.general().dirs_first(),
-                show_hidden: self.config.general().show_hidden(),
-                show_symlink: self.config.general().show_symlink(),
-                show_system: self.config.general().show_system(),
-                case_insensitive: self.config.general().case_insensitive(),
-                always_show: Arc::clone(self.config.general().always_show()),
-                request_id: req_id,
-            });
+        let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
+            path: parent_path_buf,
+            focus: None,
+            dirs_first: self.config.general().dirs_first(),
+            show_hidden: self.config.general().show_hidden(),
+            show_symlink: self.config.general().show_symlink(),
+            show_system: self.config.general().show_system(),
+            case_insensitive: self.config.general().case_insensitive(),
+            always_show: Arc::clone(self.config.general().always_show()),
+            request_id: req_id,
+        });
     }
 
     /// Requests a recursive find operation for the current navigation directory
-    pub(crate) fn request_find(&mut self, query: String) {
+    pub(crate) fn request_find(&mut self, workers: &Workers, query: String) {
         self.actions.cancel_find();
 
         let request_id = self.actions.prepare_new_find_request();
@@ -518,7 +502,7 @@ impl<'a> AppState<'a> {
         self.actions
             .set_cancel_find_token(Arc::clone(&cancel_token));
 
-        let _ = self.workers.find_tx().try_send(WorkerTask::FindRecursive {
+        let _ = workers.find_tx().try_send(WorkerTask::FindRecursive {
             base_dir: self.nav.current_dir().to_path_buf(),
             query,
             max_results: self.config().general().max_find_results(),

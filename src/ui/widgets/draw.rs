@@ -8,6 +8,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
 use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
+use crate::core::worker::Workers;
 use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
@@ -247,6 +248,7 @@ pub(crate) fn draw_status_bar(
     frame: &mut Frame,
     app: &AppState,
     position: StatusPosition,
+    workers: &Workers,
     clipboard: &Clipboard,
 ) {
     if position == StatusPosition::None {
@@ -275,8 +277,8 @@ pub(crate) fn draw_status_bar(
     }
 
     if status_cfg.tasks() == position {
-        let queued_ops = app.workers().fileop_tx().len();
-        let active_ops = app.workers().active().load(Ordering::Relaxed);
+        let queued_ops = workers.fileop_tx().len();
+        let active_ops = workers.active().load(Ordering::Relaxed);
         let total_ops = queued_ops + active_ops;
 
         if total_ops > 0

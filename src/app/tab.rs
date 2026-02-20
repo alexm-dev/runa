@@ -1,6 +1,7 @@
 use crate::app::KeypressResult;
 use crate::app::keymap::TabAction;
 use crate::app::{AppContainer, AppState};
+use crate::core::worker::Workers;
 
 use ratatui::text::Span;
 use std::sync::Arc;
@@ -116,40 +117,45 @@ impl<'a> TabManager<'a> {
 }
 
 pub(crate) fn handle_tab_action<'a>(
-    root: &mut AppContainer<'a>,
+    workers: &Workers,
+    container: &mut AppContainer<'a>,
     action: TabAction,
 ) -> KeypressResult {
     match action {
         TabAction::New => {
-            let config = match root {
+            let config = match container {
                 AppContainer::Single(app_state) => app_state.config,
                 AppContainer::Tabs(tab) => tab.current_tab().config,
             };
 
-            match root {
+            match container {
                 AppContainer::Single(app_state) => {
                     let current = std::mem::replace(
                         app_state,
-                        Box::new(AppState::new(config).expect("Failed to create new blank tab")),
+                        Box::new(
+                            AppState::new(config, workers).expect("Failed to create new blank tab"),
+                        ),
                     );
-                    let new_tab = AppState::new(config).expect("Failed to create new blank tab");
-                    *root = AppContainer::Tabs(TabManager::new(*current, new_tab));
+                    let new_tab =
+                        AppState::new(config, workers).expect("Failed to create new blank tab");
+                    *container = AppContainer::Tabs(TabManager::new(*current, new_tab));
                 }
                 AppContainer::Tabs(tab) => {
-                    let new_tab = AppState::new(config).expect("Failed to create new blank tab");
+                    let new_tab =
+                        AppState::new(config, workers).expect("Failed to create new blank tab");
                     tab.add_tab(new_tab);
                 }
             }
             KeypressResult::Consumed
         }
         TabAction::Close => {
-            match root {
+            match container {
                 AppContainer::Single(_) => return KeypressResult::Quit,
                 AppContainer::Tabs(tab) => {
                     tab.close_tab(tab.current);
                     if tab.len() == 1 {
                         let last = tab.tabs.remove(0);
-                        *root = AppContainer::Single(Box::new(last));
+                        *container = AppContainer::Single(Box::new(last));
                     } else if tab.is_empty() {
                         return KeypressResult::Quit;
                     }
@@ -158,25 +164,25 @@ pub(crate) fn handle_tab_action<'a>(
             KeypressResult::Consumed
         }
         TabAction::Next => {
-            if let AppContainer::Tabs(tab) = root {
+            if let AppContainer::Tabs(tab) = container {
                 tab.switch(1);
             }
             KeypressResult::Consumed
         }
         TabAction::Prev => {
-            if let AppContainer::Tabs(tab) = root {
+            if let AppContainer::Tabs(tab) = container {
                 tab.switch(-1);
             }
             KeypressResult::Consumed
         }
         TabAction::Cycle => {
-            if let AppContainer::Tabs(tab) = root {
+            if let AppContainer::Tabs(tab) = container {
                 tab.switch(1);
             }
             KeypressResult::Consumed
         }
         TabAction::Switch(n) => {
-            if let AppContainer::Tabs(tab) = root {
+            if let AppContainer::Tabs(tab) = container {
                 let idx = n as usize - 1;
                 if idx < tab.len() {
                     tab.set_active(idx);

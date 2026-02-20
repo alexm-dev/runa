@@ -11,12 +11,14 @@ use crate::{
         AppState, Clipboard, LayoutMetrics, PreviewData,
         actions::{ActionMode, InputMode},
     },
+    core::worker::Workers,
     ui::{
         overlays::Overlay,
         panes::{self, PaneContext, PaneStyles, PreviewOptions},
         widgets,
     },
 };
+
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -27,10 +29,15 @@ use ratatui::{
 
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
-pub(crate) fn render(frame: &mut Frame, app: &mut AppState, clipboard: &mut Clipboard) {
+pub(crate) fn render(
+    frame: &mut Frame,
+    app: &mut AppState,
+    workers: &Workers,
+    clipboard: &mut Clipboard,
+) {
     let mut root_area = frame.area();
     let metrics = calculate_layout_metrics(frame.area(), app);
-    app.update_layout_metrics(metrics);
+    app.update_layout_metrics(workers, metrics);
 
     let cfg = app.config();
     let display_cfg = cfg.display();
@@ -216,8 +223,20 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState, clipboard: &mut Clip
         );
     }
 
-    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Header, clipboard);
-    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Footer, clipboard);
+    widgets::draw_status_bar(
+        frame,
+        app,
+        widgets::StatusPosition::Header,
+        workers,
+        clipboard,
+    );
+    widgets::draw_status_bar(
+        frame,
+        app,
+        widgets::StatusPosition::Footer,
+        workers,
+        clipboard,
+    );
     render_overlays(frame, app, accent_style);
 }
 

@@ -19,7 +19,7 @@ pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::handle_tab_action;
 
-use crate::app::tab::TabManager;
+use crate::{app::tab::TabManager, core::worker::Workers};
 use std::{collections::HashSet, path::PathBuf};
 
 pub(crate) enum AppContainer<'a> {
@@ -31,4 +31,30 @@ pub(crate) enum AppContainer<'a> {
 pub(crate) struct Clipboard {
     pub(crate) entries: Option<HashSet<PathBuf>>,
     pub(crate) is_cut: bool,
+}
+
+pub(crate) struct RunaRoot<'a> {
+    pub(crate) container: AppContainer<'a>,
+    pub(crate) clipboard: Clipboard,
+    pub(crate) workers: Workers,
+}
+
+impl RunaRoot<'_> {
+    pub(crate) fn update(&mut self) -> bool {
+        let mut changed = false;
+
+        while let Ok(response) = self.workers.response_rx().try_recv() {
+            changed = true;
+            match &mut self.container {
+                AppContainer::Single(app) => {
+                    app.handle_worker_response(response, &self.workers);
+                }
+                AppContainer::Tabs(tab) => {
+                    tab.current_tab_mut()
+                        .handle_worker_response(response, &self.workers);
+                }
+            }
+        }
+        changed
+    }
 }

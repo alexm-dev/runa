@@ -6,7 +6,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
-use crate::app::{Clipboard, NavState};
+use crate::app::{Clipboard, NavState, Workers};
 use crate::core::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::Overlay;
@@ -28,7 +28,7 @@ impl<'a> AppState<'a> {
     ///
     /// If not in an input mode, returns [KeypressResult::Continue].
     /// Consumes keys related to input editing and mode confirmation/cancellation.
-    pub(super) fn handle_input_mode(&mut self, key: KeyEvent) -> KeypressResult {
+    pub(super) fn handle_input_mode(&mut self, workers: &Workers, key: KeyEvent) -> KeypressResult {
         let mode = if let ActionMode::Input { mode, .. } = &self.actions().mode() {
             *mode
         } else {
@@ -38,14 +38,14 @@ impl<'a> AppState<'a> {
         match key.code {
             Enter => {
                 match mode {
-                    InputMode::NewFile => self.create_file(),
-                    InputMode::NewFolder => self.create_folder(),
-                    InputMode::Rename => self.rename_entry(),
-                    InputMode::Filter => self.apply_filter(),
-                    InputMode::ConfirmDelete { .. } => self.confirm_delete(),
-                    InputMode::Find => self.handle_find(),
-                    InputMode::MoveFile => self.handle_move(),
-                    InputMode::GoToPath => self.handle_go_to_path(),
+                    InputMode::NewFile => self.create_file(workers),
+                    InputMode::NewFolder => self.create_folder(workers),
+                    InputMode::Rename => self.rename_entry(workers),
+                    InputMode::Filter => self.apply_filter(workers),
+                    InputMode::ConfirmDelete { .. } => self.confirm_delete(workers),
+                    InputMode::Find => self.handle_find(workers),
+                    InputMode::MoveFile => self.handle_move(workers),
+                    InputMode::GoToPath => self.handle_go_to_path(workers),
                 }
                 self.exit_input_mode();
                 KeypressResult::Consumed
@@ -97,7 +97,7 @@ impl<'a> AppState<'a> {
             Backspace => {
                 self.actions.action_backspace_at_cursor();
                 if matches!(mode, InputMode::Filter) {
-                    self.apply_filter();
+                    self.apply_filter(workers);
                 }
                 if matches!(mode, InputMode::Find) {
                     self.actions.find_debounce(Duration::from_millis(90));
@@ -120,12 +120,12 @@ impl<'a> AppState<'a> {
 
             Char(c) => match mode {
                 InputMode::ConfirmDelete { .. } => {
-                    self.process_confirm_delete_char(c);
+                    self.process_confirm_delete_char(workers, c);
                     KeypressResult::Consumed
                 }
                 InputMode::Filter => {
                     self.actions.action_insert_at_cursor(c);
-                    self.apply_filter();
+                    self.apply_filter(workers);
                     KeypressResult::Consumed
                 }
                 InputMode::Rename | InputMode::NewFile | InputMode::NewFolder => {
@@ -155,25 +155,26 @@ impl<'a> AppState<'a> {
     /// Returns a [KeypressResult] indicating how the action was handled.
     pub(super) fn handle_nav_action(
         &mut self,
+        workers: &Workers,
         action: NavAction,
         clipboard: &mut Clipboard,
     ) -> KeypressResult {
         match action {
             NavAction::GoUp => {
-                self.move_nav_if_possible(|nav| nav.move_up());
+                self.move_nav_if_possible(workers, |nav| nav.move_up());
                 self.refresh_show_info_if_open();
             }
             NavAction::GoDown => {
-                self.move_nav_if_possible(|nav| nav.move_down());
+                self.move_nav_if_possible(workers, |nav| nav.move_down());
                 self.refresh_show_info_if_open();
             }
             NavAction::GoParent => {
-                let res = self.handle_go_parent();
+                let res = self.handle_go_parent(workers);
                 self.refresh_show_info_if_open();
                 return res;
             }
             NavAction::GoIntoDir => {
-                let res = self.handle_go_into_dir();
+                let res = self.handle_go_into_dir(workers);
                 self.refresh_show_info_if_open();
                 return res;
             }
@@ -181,26 +182,26 @@ impl<'a> AppState<'a> {
                 let marker_jump = self.config.display().toggle_marker_jump();
                 self.nav
                     .toggle_marker_advance(&mut clipboard.entries, marker_jump);
-                self.request_preview();
+                self.request_preview(workers);
             }
             NavAction::ClearMarker => {
                 self.nav.clear_markers();
-                self.request_preview();
+                self.request_preview(workers);
             }
             NavAction::ClearFilter => {
                 self.nav.clear_filters();
-                self.request_preview();
+                self.request_preview(workers);
             }
             NavAction::ClearAll => {
                 self.nav.clear_markers();
                 self.nav.clear_filters();
                 self.actions.action_clear_clipboard(clipboard);
-                self.request_preview();
+                self.request_preview(workers);
             }
             NavAction::GoToBottom => {
                 self.nav.last_selected();
                 self.refresh_show_info_if_open();
-                self.request_preview();
+                self.request_preview(workers);
             }
             _ => {}
         }
@@ -211,11 +212,12 @@ impl<'a> AppState<'a> {
     /// Returns a [KeypressResult] indicating how the action was handled.
     pub(super) fn handle_file_action(
         &mut self,
+        workers: &Workers,
         action: FileAction,
         clipboard: &mut Clipboard,
     ) -> KeypressResult {
         match action {
-            FileAction::Open => return self.handle_open_file(),
+            FileAction::Open => return self.handle_open_file(workers),
             FileAction::Delete => {
                 let is_trash = self.config.general().move_to_trash();
                 self.prompt_delete(is_trash);
@@ -230,7 +232,7 @@ impl<'a> AppState<'a> {
                 self.handle_timed_message(Duration::from_secs(15));
             }
             FileAction::Paste => {
-                let fileop_tx = self.workers.fileop_tx();
+                let fileop_tx = workers.fileop_tx();
                 self.actions
                     .action_paste(&mut self.nav, clipboard, fileop_tx);
             }
@@ -243,7 +245,7 @@ impl<'a> AppState<'a> {
             FileAction::MoveFile => self.prompt_move(),
             FileAction::ClearClipboard => {
                 self.actions.action_clear_clipboard(clipboard);
-                self.request_preview();
+                self.request_preview(workers);
             }
         }
         KeypressResult::Continue
@@ -259,7 +261,11 @@ impl<'a> AppState<'a> {
         }
     }
 
-    pub(super) fn handle_prefix_dispatch(&mut self, key: &KeyEvent) -> Option<KeypressResult> {
+    pub(super) fn handle_prefix_dispatch(
+        &mut self,
+        workers: &Workers,
+        key: &KeyEvent,
+    ) -> Option<KeypressResult> {
         let gmap = self.keymap.gmap();
 
         let (started, exited, result, consumed) = {
@@ -290,21 +296,21 @@ impl<'a> AppState<'a> {
         }
 
         if let Some(cmd) = result {
-            let _ = self.handle_prefix_action(cmd);
+            let _ = self.handle_prefix_action(workers, cmd);
             return Some(KeypressResult::Consumed);
         }
 
         None
     }
 
-    fn handle_prefix_action(&mut self, prefix: PrefixCommand) -> bool {
+    fn handle_prefix_action(&mut self, workers: &Workers, prefix: PrefixCommand) -> bool {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => {
-                self.handle_go_to_top();
+                self.handle_go_to_top(workers);
                 self.refresh_show_info_if_open();
             }
             PrefixCommand::Nav(NavAction::GoToHome) => {
-                self.handle_go_to_home();
+                self.handle_go_to_home(workers);
                 self.refresh_show_info_if_open();
             }
             PrefixCommand::Nav(NavAction::GoToPath) => {
@@ -355,13 +361,13 @@ impl<'a> AppState<'a> {
     ///
     /// If the movement was successful (f returns true), marks the preview as pending refresh.
     /// Used to encapsulate common logic for nav actions that change selection or directory.
-    fn move_nav_if_possible<F>(&mut self, f: F)
+    fn move_nav_if_possible<F>(&mut self, workers: &Workers, f: F)
     where
         F: FnOnce(&mut NavState) -> bool,
     {
         if f(&mut self.nav) {
             if self.config.display().instant_preview() {
-                self.request_preview();
+                self.request_preview(workers);
             } else {
                 self.preview.mark_pending();
             }
@@ -372,7 +378,7 @@ impl<'a> AppState<'a> {
     ///
     /// If the current directory has a parent, navigates to it, saves the current position,
     /// and requests loading of the new directory and its parent content.
-    fn handle_go_parent(&mut self) -> KeypressResult {
+    fn handle_go_parent(&mut self, workers: &Workers) -> KeypressResult {
         let current = self.nav.current_dir();
 
         let Some(parent) = current.parent() else {
@@ -393,8 +399,8 @@ impl<'a> AppState<'a> {
         self.nav.save_position();
         self.nav.set_path(parent_path);
 
-        self.request_dir_load(exited_name);
-        self.request_parent_content();
+        self.request_dir_load(workers, exited_name);
+        self.request_parent_content(workers);
 
         KeypressResult::Continue
     }
@@ -403,7 +409,7 @@ impl<'a> AppState<'a> {
     ///
     /// If the selected entry is a directory, navigates into it, saves the current position,
     /// and requests loading of the new directory and its parent content.
-    fn handle_go_into_dir(&mut self) -> KeypressResult {
+    fn handle_go_into_dir(&mut self, workers: &Workers) -> KeypressResult {
         let Some(entry) = self.nav.selected_shown_entry() else {
             return KeypressResult::Continue;
         };
@@ -422,8 +428,8 @@ impl<'a> AppState<'a> {
             Ok(_) => {
                 self.nav.save_position();
                 self.nav.set_path(entry_path);
-                self.request_dir_load(None);
-                self.request_parent_content();
+                self.request_dir_load(workers, None);
+                self.request_parent_content(workers);
                 KeypressResult::Continue
             }
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
@@ -439,7 +445,7 @@ impl<'a> AppState<'a> {
     ///
     /// If a file is selected, attempts to open it in the configured editor.
     /// If an error occurs, prints it to stderr.
-    fn handle_open_file(&mut self) -> KeypressResult {
+    fn handle_open_file(&mut self, workers: &Workers) -> KeypressResult {
         let editor = self.config.editor();
         if !editor.exists() {
             let msg = format!("Editor '{}' not found", editor.cmd());
@@ -450,7 +456,7 @@ impl<'a> AppState<'a> {
             let path = self.nav.current_dir().join(entry.name());
             match open_in_editor(self.config.editor(), &path) {
                 Ok(_) => {
-                    self.request_preview();
+                    self.request_preview(workers);
                     KeypressResult::OpenedEditor
                 }
                 Err(e) => {
@@ -469,7 +475,7 @@ impl<'a> AppState<'a> {
     /// If a result is selected in the find results, navigates to its path.
     /// If the path is a directory, navigates into it.
     /// If the path is a file, navigates to its parent directory and focuses on the file.
-    fn handle_find(&mut self) {
+    fn handle_find(&mut self, workers: &Workers) {
         let Some(r) = self
             .actions
             .find_results()
@@ -498,8 +504,8 @@ impl<'a> AppState<'a> {
 
         self.nav.save_position();
         self.nav.set_path(target_dir);
-        self.request_dir_load(focus);
-        self.request_parent_content();
+        self.request_dir_load(workers, focus);
+        self.request_parent_content(workers);
 
         self.exit_input_mode();
     }
@@ -508,7 +514,7 @@ impl<'a> AppState<'a> {
     ///
     /// Checks if the directory for files to be moved to exists
     /// Also normalizes relative paths for easier moving of files.
-    fn handle_move(&mut self) {
+    fn handle_move(&mut self, workers: &Workers) {
         let dest_dir = self.actions.input_buffer();
         if dest_dir.trim().is_empty() {
             self.push_overlay_message(
@@ -583,7 +589,7 @@ impl<'a> AppState<'a> {
             }
         }
 
-        let fileop_tx = self.workers.fileop_tx();
+        let fileop_tx = workers.fileop_tx();
         let move_msg = format!(
             "Files moved to: {}",
             clean_display_path(&absolute_dest.to_string_lossy())
@@ -596,16 +602,16 @@ impl<'a> AppState<'a> {
         self.push_overlay_message(move_msg, Duration::from_secs(3));
     }
 
-    fn handle_go_to_home(&mut self) {
+    fn handle_go_to_home(&mut self, workers: &Workers) {
         if let Some(home_path) = get_home() {
             self.nav.save_position();
             self.nav.set_path(home_path.clone());
-            self.request_dir_load(None);
-            self.request_parent_content();
+            self.request_dir_load(workers, None);
+            self.request_parent_content(workers);
         }
     }
 
-    fn handle_go_to_path(&mut self) {
+    fn handle_go_to_path(&mut self, workers: &Workers) {
         let path = self.actions.input_buffer();
         if path.trim().is_empty() {
             self.push_overlay_message("Error: No path entered".to_string(), Duration::from_secs(3));
@@ -623,8 +629,8 @@ impl<'a> AppState<'a> {
             if meta.is_dir() {
                 self.nav.save_position();
                 self.nav.set_path(abs_path.clone());
-                self.request_dir_load(None);
-                self.request_parent_content();
+                self.request_dir_load(workers, None);
+                self.request_parent_content(workers);
             } else {
                 self.push_overlay_message(
                     "Error: Not a directory".to_string(),
@@ -636,9 +642,9 @@ impl<'a> AppState<'a> {
         }
     }
 
-    fn handle_go_to_top(&mut self) {
+    fn handle_go_to_top(&mut self, workers: &Workers) {
         self.nav.first_selected();
-        self.request_preview();
+        self.request_preview(workers);
     }
 
     /// Handles displaying a timed message overlay.
@@ -649,9 +655,9 @@ impl<'a> AppState<'a> {
     // Input processes
 
     /// Processes a character input for the confirm delete input mode.
-    fn process_confirm_delete_char(&mut self, c: char) {
+    fn process_confirm_delete_char(&mut self, workers: &Workers, c: char) {
         if matches!(c, 'y' | 'Y') {
-            self.confirm_delete();
+            self.confirm_delete(workers);
         }
         self.exit_input_mode();
     }
@@ -664,39 +670,39 @@ impl<'a> AppState<'a> {
 
     /// Creates a new file with the name in the input buffer.
     /// Calls actions::action_create with `is_folder` set to false.
-    fn create_file(&mut self) {
+    fn create_file(&mut self, workers: &Workers) {
         if !self.actions.input_buffer().is_empty() {
-            let fileop_tx = self.workers.fileop_tx();
+            let fileop_tx = workers.fileop_tx();
             self.actions.action_create(&mut self.nav, false, fileop_tx);
         }
     }
 
     /// Creates a new folder with the name in the input buffer.
     /// Calls actions::action_create with `is_folder` set to true.
-    fn create_folder(&mut self) {
+    fn create_folder(&mut self, workers: &Workers) {
         if !self.actions.input_buffer().is_empty() {
-            let fileop_tx = self.workers.fileop_tx();
+            let fileop_tx = workers.fileop_tx();
             self.actions.action_create(&mut self.nav, true, fileop_tx);
         }
     }
 
     /// Renames the selected entry to the name in the input buffer.
     /// Calls actions::action_rename.
-    fn rename_entry(&mut self) {
-        let fileop_tx = self.workers.fileop_tx();
+    fn rename_entry(&mut self, workers: &Workers) {
+        let fileop_tx = workers.fileop_tx();
         self.actions.action_rename(&mut self.nav, fileop_tx);
     }
 
     /// Applies the filter in the input buffer to the navigation state.
     /// Calls actions::action_filter and requests a preview refresh.
-    fn apply_filter(&mut self) {
+    fn apply_filter(&mut self, workers: &Workers) {
         self.actions.action_filter(&mut self.nav);
-        self.request_preview();
+        self.request_preview(workers);
     }
 
     /// Confirms deletion of the selected items.
     /// Calls actions::action_delete.
-    fn confirm_delete(&mut self) {
+    fn confirm_delete(&mut self, workers: &Workers) {
         let move_to_trash = if let ActionMode::Input {
             mode: InputMode::ConfirmDelete { is_trash },
             ..
@@ -707,7 +713,7 @@ impl<'a> AppState<'a> {
             self.config.general().move_to_trash()
         };
 
-        let fileop_tx = self.workers.fileop_tx();
+        let fileop_tx = workers.fileop_tx();
 
         self.actions
             .action_delete(&mut self.nav, fileop_tx, move_to_trash);
