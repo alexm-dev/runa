@@ -26,11 +26,11 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux-x86_64-gnu
-            use_cross: true
+            use_cross: false
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux-aarch64-gnu
-            use_cross: true
+            use_cross: false
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             platform: linux-x86_64-musl
