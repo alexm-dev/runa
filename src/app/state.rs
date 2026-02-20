@@ -92,6 +92,8 @@ pub(crate) struct AppState<'a> {
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
+
+    pub(super) tab_id: Option<usize>,
     pub(super) tab_line: Arc<Vec<Span<'a>>>,
 }
 
@@ -129,6 +131,7 @@ impl<'a> AppState<'a> {
             worker_time: None,
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
+            tab_id: None,
         };
 
         app.request_dir_load(workers, None);
@@ -188,8 +191,14 @@ impl<'a> AppState<'a> {
         &mut self.overlays
     }
 
+    #[inline]
     pub(crate) fn tab_line(&self) -> &Arc<Vec<Span<'_>>> {
         &self.tab_line
+    }
+
+    #[inline]
+    fn tab_id(&self) -> Option<usize> {
+        self.tab_id
     }
 
     // Entry functions
@@ -289,6 +298,7 @@ impl<'a> AppState<'a> {
                 entries,
                 focus,
                 request_id,
+                tab_id: _tab_id,
             } => {
                 // only update nav if BOTH the ID and path match.
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
@@ -329,7 +339,11 @@ impl<'a> AppState<'a> {
                     }
                 }
             }
-            WorkerResponse::PreviewLoaded { lines, request_id } => {
+            WorkerResponse::PreviewLoaded {
+                lines,
+                request_id,
+                tab_id: _tab_id,
+            } => {
                 if request_id == self.preview.request_id() {
                     self.preview.update_content(lines, request_id);
                 }
@@ -346,6 +360,7 @@ impl<'a> AppState<'a> {
                 base_dir,
                 results,
                 request_id,
+                tab_id: _tab_id,
             } => {
                 if base_dir == self.nav.current_dir()
                     && request_id == self.actions.find_request_id()
@@ -423,6 +438,7 @@ impl<'a> AppState<'a> {
             case_insensitive: self.config.general().case_insensitive(),
             always_show: Arc::clone(self.config.general().always_show()),
             request_id,
+            tab_id: self.tab_id(),
         });
     }
 
@@ -443,6 +459,7 @@ impl<'a> AppState<'a> {
                     case_insensitive: self.config.general().case_insensitive(),
                     always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
+                    tab_id: self.tab_id(),
                 });
             } else {
                 let preview_options = self.config.display().preview_options();
@@ -460,6 +477,7 @@ impl<'a> AppState<'a> {
                     preview_method,
                     args: bat_args,
                     request_id: req_id,
+                    tab_id: self.tab_id(),
                 });
             }
         } else {
@@ -490,6 +508,7 @@ impl<'a> AppState<'a> {
             case_insensitive: self.config.general().case_insensitive(),
             always_show: Arc::clone(self.config.general().always_show()),
             request_id: req_id,
+            tab_id: self.tab_id(),
         });
     }
 
@@ -512,6 +531,7 @@ impl<'a> AppState<'a> {
             request_id,
             show_hidden,
             cancel: cancel_token,
+            tab_id: self.tab_id(),
         });
     }
 }

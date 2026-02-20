@@ -158,6 +158,7 @@ pub(crate) enum WorkerTask {
         case_insensitive: bool,
         always_show: Arc<HashSet<OsString>>,
         request_id: u64,
+        tab_id: Option<usize>,
     },
     LoadPreview {
         path: PathBuf,
@@ -166,6 +167,7 @@ pub(crate) enum WorkerTask {
         preview_method: PreviewMethod,
         args: Vec<OsString>,
         request_id: u64,
+        tab_id: Option<usize>,
     },
     FileOp {
         op: FileOperation,
@@ -177,6 +179,7 @@ pub(crate) enum WorkerTask {
         cancel: Arc<AtomicBool>,
         show_hidden: bool,
         request_id: u64,
+        tab_id: Option<usize>,
     },
 }
 
@@ -202,17 +205,19 @@ pub(crate) enum FileOperation {
 /// Responses sent form the worker thread back to the main thread via the channel
 ///
 /// Each variant delivers the result or error from a request taks.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum WorkerResponse {
     DirectoryLoaded {
         path: PathBuf,
         entries: Vec<FileEntry>,
         focus: Option<OsString>,
         request_id: u64,
+        tab_id: Option<usize>,
     },
     PreviewLoaded {
         lines: Vec<String>,
         request_id: u64,
+        tab_id: Option<usize>,
     },
     OperationComplete {
         need_reload: bool,
@@ -222,8 +227,20 @@ pub(crate) enum WorkerResponse {
         base_dir: PathBuf,
         results: Vec<FindResult>,
         request_id: u64,
+        tab_id: Option<usize>,
     },
     Error(String, Option<u64>),
+}
+
+impl WorkerResponse {
+    pub(crate) fn tab_id(&self) -> Option<usize> {
+        match self {
+            WorkerResponse::DirectoryLoaded { tab_id, .. } => *tab_id,
+            WorkerResponse::PreviewLoaded { tab_id, .. } => *tab_id,
+            WorkerResponse::FindResults { tab_id, .. } => *tab_id,
+            _ => None,
+        }
+    }
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
@@ -240,6 +257,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                 case_insensitive,
                 always_show,
                 request_id,
+                tab_id,
             } = task
             else {
                 continue;
@@ -261,6 +279,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                         entries,
                         focus,
                         request_id,
+                        tab_id,
                     });
                 }
                 Err(e) => {
@@ -285,6 +304,7 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                 preview_method,
                 args,
                 request_id,
+                tab_id,
             } = task
             else {
                 continue;
@@ -306,7 +326,11 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                     }
                 }
             };
-            let _ = res_tx.send(WorkerResponse::PreviewLoaded { lines, request_id });
+            let _ = res_tx.send(WorkerResponse::PreviewLoaded {
+                lines,
+                request_id,
+                tab_id,
+            });
         }
     });
 }
@@ -322,6 +346,7 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                 cancel,
                 show_hidden,
                 request_id,
+                tab_id,
             } = task
             else {
                 continue;
@@ -348,6 +373,7 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                 base_dir,
                 results,
                 request_id,
+                tab_id,
             });
         }
     });
@@ -512,6 +538,8 @@ mod tests {
 
     const TEST_TIMEOUT: Duration = Duration::from_secs(15);
 
+    const TEST_TAB_ID: Option<usize> = None;
+
     fn fd_available() -> bool {
         which::which("fd").is_ok()
     }
@@ -535,6 +563,7 @@ mod tests {
             cancel: find_cancel,
             show_hidden: false,
             request_id: 10,
+            tab_id: TEST_TAB_ID,
         })?;
 
         workers.preview_file_tx().send(WorkerTask::LoadPreview {
@@ -544,6 +573,7 @@ mod tests {
             preview_method: PreviewMethod::Internal,
             args: vec![],
             request_id: 20,
+            tab_id: TEST_TAB_ID,
         })?;
 
         workers.nav_io_tx().send(WorkerTask::LoadDirectory {
@@ -556,6 +586,7 @@ mod tests {
             case_insensitive: true,
             always_show: Arc::new(HashSet::new()),
             request_id: 30,
+            tab_id: TEST_TAB_ID,
         })?;
 
         workers.fileop_tx().send(WorkerTask::FileOp {
@@ -630,6 +661,7 @@ mod tests {
             case_insensitive: true,
             always_show: Arc::new(HashSet::new()),
             request_id: 1,
+            tab_id: TEST_TAB_ID,
         })?;
 
         match res_rx.recv()? {
@@ -686,6 +718,7 @@ mod tests {
                             case_insensitive: rng.random_bool(0.5),
                             always_show: Arc::new(HashSet::new()),
                             request_id: (t * requests_per_thread + i) as u64,
+                            tab_id: TEST_TAB_ID,
                         })
                         .expect("Couldn't send task to worker");
                     if i % 50 == 0 {
@@ -759,6 +792,7 @@ mod tests {
             cancel: Arc::new(AtomicBool::new(false)),
             show_hidden: false,
             request_id: req_id,
+            tab_id: TEST_TAB_ID,
         })?;
 
         let mut got = false;
@@ -832,6 +866,7 @@ mod tests {
             cancel: Arc::new(AtomicBool::new(false)),
             show_hidden: false,
             request_id: 2,
+            tab_id: TEST_TAB_ID,
         })?;
 
         let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
@@ -863,6 +898,7 @@ mod tests {
             preview_method: PreviewMethod::Internal,
             args: vec![],
             request_id: 3,
+            tab_id: TEST_TAB_ID,
         })?;
 
         match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
@@ -937,6 +973,7 @@ mod tests {
             preview_method: PreviewMethod::Bat,
             args: vec![],
             request_id: 99,
+            tab_id: TEST_TAB_ID,
         })?;
 
         let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
@@ -973,6 +1010,7 @@ mod tests {
                 cancel: Arc::new(AtomicBool::new(false)),
                 show_hidden: false,
                 request_id: i as u64,
+                tab_id: TEST_TAB_ID,
             })?;
         }
 

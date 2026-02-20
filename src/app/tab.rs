@@ -9,15 +9,19 @@ use std::sync::Arc;
 pub(crate) struct TabManager<'a> {
     pub(crate) tabs: Vec<AppState<'a>>,
     pub(crate) current: usize,
+    next_tab_id: usize,
 }
 
 impl<'a> TabManager<'a> {
     const MAX_TABS: usize = 9;
 
-    pub(crate) fn new(existing: AppState<'a>, new_tab: AppState<'a>) -> Self {
+    pub(crate) fn new(mut existing: AppState<'a>, mut new_tab: AppState<'a>) -> Self {
+        existing.tab_id = Some(0);
+        new_tab.tab_id = Some(1);
         let mut manager = Self {
             tabs: vec![existing, new_tab],
             current: 1,
+            next_tab_id: 2,
         };
         manager.sync_tab_line();
         manager
@@ -41,11 +45,13 @@ impl<'a> TabManager<'a> {
         &mut self.tabs[self.current]
     }
 
-    pub(crate) fn add_tab(&mut self, tab: AppState<'a>) -> usize {
+    pub(crate) fn add_tab(&mut self, mut tab: AppState<'a>) -> usize {
         if self.tabs.len() >= Self::MAX_TABS {
             return self.current;
         }
 
+        tab.tab_id = Some(self.next_tab_id);
+        self.next_tab_id = self.next_tab_id.saturating_add(1);
         self.tabs.push(tab);
         self.current = self.tabs.len() - 1;
         self.sync_tab_line();
