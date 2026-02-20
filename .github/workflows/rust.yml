@@ -16,18 +16,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
-            rust: stable
-            target: default
-          - os: windows-latest
-            rust: stable
-            target: default
-          - os: macos-latest
-            rust: stable
-            target: default
-          - os: ubuntu-latest
-            rust: stable
-            target: x86_64-unknown-linux-musl
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux-x86_64-gnu
+            native_test: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+            platform: linux-aarch64-gnu
+            native_test: false
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux-x86_64-musl
+            native_test: false
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux-aarch64-musl
+            native_test: false
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            platform: windows-x86_64
+            native_test: true
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            platform: windows-aarch64
+            native_test: false
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            platform: macos-x86_64
+            native_test: true
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            platform: macos-aarch64
+            native_test: false
 
     steps:
       - name: Checkout
@@ -36,51 +56,45 @@ jobs:
       - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: ${{ matrix.rust }}
+          toolchain: stable
           target: ${{ matrix.target }}
 
-      - name: Install musl-tools (only for musl)
-        if: matrix.target == 'x86_64-unknown-linux-musl'
+      - name: Install musl-tools (musl targets)
+        if: contains(matrix.target, 'musl')
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
+      - name: Install gcc-aarch64-linux-gnu (aarch64 Linux)
+        if: (matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-musl')
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+
       - name: Install fd (Linux)
-        if: runner.os == 'Linux' && matrix.target != 'x86_64-unknown-linux-musl'
+        if: runner.os == 'Linux' && !contains(matrix.target, 'musl') && matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y fd-find
           sudo ln -sf $(which fdfind) /usr/local/bin/fd
 
       - name: Install fd (macOS)
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && matrix.target == 'x86_64-apple-darwin'
         run: brew install fd
 
       - name: Install fd (Windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc'
         run: choco install fd -y
 
       - name: Verify fd
-        if: matrix.target != 'x86_64-unknown-linux-musl'
+        if: |
+          (runner.os == 'Linux' && matrix.target == 'x86_64-unknown-linux-gnu') ||
+          (runner.os == 'macOS' && matrix.target == 'x86_64-apple-darwin') ||
+          (runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc')
         run: fd --version
 
       - name: Build
-        run: |
-          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-musl" ]; then
-            cargo build --release --target x86_64-unknown-linux-musl
-          else
-            cargo build --release --locked
-          fi
+        run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Test
-        if: matrix.target != 'x86_64-unknown-linux-musl'
-        shell: bash
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            cargo test --all --release --locked --verbose
-          elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
-            cargo test --all --locked --verbose
-          else
-            echo "Skipping test on ${{ matrix.os }} for non-main branch."
-          fi
+      - name: Test (only native targets)
+        if: matrix.native_test == true
+        run: cargo test --all --release --locked --verbose --target ${{ matrix.target }}
 
   clippy:
     name: Clippy (Lint)
