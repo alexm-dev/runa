@@ -22,17 +22,22 @@ pub(crate) use tab::handle_tab_action;
 use crate::{app::tab::TabManager, core::worker::Workers};
 use std::{collections::HashSet, path::PathBuf};
 
+/// The main container enum to hold either the TabManager or a single boxed AppState to then match
+/// either a single state or a tabs which then hold multiple AppStates.
 pub(crate) enum AppContainer<'a> {
     Single(Box<AppState<'a>>),
     Tabs(TabManager<'a>),
 }
 
+/// The shared clipboard used by all tabs and all states.
 #[derive(Default)]
 pub(crate) struct Clipboard {
     pub(crate) entries: Option<HashSet<PathBuf>>,
     pub(crate) is_cut: bool,
 }
 
+/// The main struct of runa
+/// Contains the AppContainer, the shared clipboard and the worker pool
 pub(crate) struct RunaRoot<'a> {
     pub(crate) container: AppContainer<'a>,
     pub(crate) clipboard: Clipboard,

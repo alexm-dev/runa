@@ -4,6 +4,7 @@
 //! area and style.
 
 use crate::app::AppState;
+use crate::app::actions::ScrollState;
 use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
@@ -261,10 +262,23 @@ pub(crate) fn draw_dialog<'a, T>(
     style: &DialogStyle,
     content: T,
     alignment: Option<Alignment>,
+    scroll_state: Option<&ScrollState>,
 ) where
     T: Into<Text<'a>>,
 {
     let dialog = dialog_area(layout.area, layout.size, layout.position);
+    let text = content.into();
+
+    let current_offset = if let Some(state) = scroll_state {
+        let total_lines = text.lines.len() as u16;
+        let inner_height = dialog.height.saturating_sub(2);
+        let max = total_lines.saturating_sub(inner_height);
+
+        state.set_max_offset(max);
+        state.offset()
+    } else {
+        0
+    };
 
     frame.render_widget(Clear, dialog);
 
@@ -276,17 +290,16 @@ pub(crate) fn draw_dialog<'a, T>(
 
     if let Some(title) = &style.title {
         block = block.title(title.clone());
-
         if let Some(align) = style.title_alignment {
             block = block.title_alignment(align);
         }
     }
 
-    // Now uses T: Into<Text>, which is way faster for Vec<Line>
-    let para = Paragraph::new(content.into())
+    let para = Paragraph::new(text)
         .block(block)
         .alignment(alignment.unwrap_or(Alignment::Left))
-        .style(style.fg);
+        .style(style.fg)
+        .scroll((current_offset, 0));
 
     frame.render_widget(para, dialog);
 }

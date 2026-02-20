@@ -203,6 +203,12 @@ impl<'a> AppState<'a> {
                 self.refresh_show_info_if_open();
                 self.request_preview(workers);
             }
+            NavAction::ScrollUp => {
+                self.actions.scroll_mut().scroll_up();
+            }
+            NavAction::ScrollDown => {
+                self.actions.scroll_mut().scroll_down();
+            }
             _ => {}
         }
         KeypressResult::Continue

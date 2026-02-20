@@ -1,3 +1,10 @@
+//! Tab management for runa.
+//!
+//! This module deines the `TabManager` struct, which manages multiple tabs in the application,
+//! allowing to switch between them, add new tabs, and close existing ones.
+//!
+//! It also includes the [handle_tab_action] function, which processes tab actions related to tab management.
+
 use crate::app::KeypressResult;
 use crate::app::keymap::TabAction;
 use crate::app::{AppContainer, AppState};

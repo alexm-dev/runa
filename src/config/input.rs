@@ -41,6 +41,8 @@ pub(crate) struct Keys {
     tab_next: Vec<String>,
     tab_prev: Vec<String>,
     keybind_help: Vec<String>,
+    scroll_up: Vec<String>,
+    scroll_down: Vec<String>,
 }
 
 /// Editor configuration options
@@ -96,6 +98,8 @@ accessor!(
     tab_next,
     tab_prev,
     keybind_help,
+    scroll_up,
+    scroll_down,
 );
 
 /// Default input configuration options
@@ -141,6 +145,9 @@ impl Default for Keys {
             tab_prev: vec!["<c-p>".into()],
 
             keybind_help: vec!["?".into()],
+
+            scroll_up: vec!["<c-y>".into()],
+            scroll_down: vec!["<c-e>".into()],
         }
     }
 }

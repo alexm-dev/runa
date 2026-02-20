@@ -31,6 +31,8 @@ pub(crate) enum NavAction {
     ClearMarker,
     ClearFilter,
     ClearAll,
+    ScrollUp,
+    ScrollDown,
 }
 
 /// File actions (delete, copy, open, paste, etc.)
@@ -121,6 +123,8 @@ impl Keymap {
         bind!(keys.clear_markers(),     Action::Nav(N::ClearMarker));
         bind!(keys.clear_all(),         Action::Nav(N::ClearAll));
         bind!(keys.go_to_bottom(),      Action::Nav(N::GoToBottom));
+        bind!(keys.scroll_up(),         Action::Nav(N::ScrollUp));
+        bind!(keys.scroll_down(),       Action::Nav(N::ScrollDown));
 
         // FileActions
         bind!(keys.open_file(),         Action::File(F::Open));

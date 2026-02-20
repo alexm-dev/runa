@@ -120,6 +120,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 &dialog_style,
                 dialog_text,
                 Some(Alignment::Left),
+                Some(app.actions().scroll()),
             );
         } else if *mode == InputMode::MoveFile {
             let targets_set = app.nav().get_action_targets();
@@ -195,6 +196,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 &dialog_style,
                 dialog_text,
                 Some(Alignment::Left),
+                Some(app.actions().scroll()),
             );
 
             frame
@@ -233,6 +235,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 &dialog_style,
                 display_input,
                 Some(Alignment::Left),
+                None,
             );
 
             frame
@@ -512,6 +515,7 @@ pub(crate) fn draw_show_info_dialog(
         &dialog_style,
         Text::from(lines),
         Some(Alignment::Left),
+        None,
     );
 }
 
@@ -659,6 +663,7 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
         &dialog_style,
         display_lines,
         Some(Alignment::Left),
+        None,
     );
     frame.set_cursor_position((dialog_rect.x + 1 + cursor_x as u16, dialog_rect.y + 1));
 }
@@ -721,6 +726,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
         &dialog_style,
         line,
         Some(Alignment::Center),
+        None,
     );
 }
 
@@ -782,6 +788,7 @@ pub(crate) fn draw_message_overlay(
         &dialog_style,
         text,
         Some(Alignment::Left),
+        None,
     );
 }
 
@@ -840,6 +847,16 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
                 (fmt_keys(keys.clear_filter()), "Clear filter"),
                 (fmt_keys(keys.clear_all()), "Clear all markers and filters"),
                 (fmt_keys(keys.go_to_bottom()), "Go to bottom"),
+            ],
+        ),
+        (
+            "Tabs",
+            vec![
+                (fmt_keys(keys.tab_new()), "Create a new tab"),
+                (fmt_keys(keys.tab_close()), "Close the selected tab"),
+                (fmt_keys(keys.tab_cycle()), "Cycle between tabs"),
+                (fmt_keys(keys.tab_next()), "Switch to the next tab"),
+                (fmt_keys(keys.tab_prev()), "Switch to the previous tab"),
             ],
         ),
         (
@@ -948,6 +965,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         &dialog_style,
         Text::from(lines),
         Some(Alignment::Left),
+        Some(app.actions().scroll()),
     );
 }
 

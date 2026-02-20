@@ -10,12 +10,12 @@ use crate::core::proc::FindResult;
 use crate::core::worker::{FileOperation, WorkerTask};
 
 use crossbeam_channel::Sender;
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// Describes the current mode for action handling/input.
 ///
@@ -62,6 +62,7 @@ pub(crate) struct ActionContext {
     autocomplete: AutoCompleteState,
     prefix_recognizer: KeyPrefix,
     find: FindState,
+    scroll: ScrollState,
 }
 
 impl ActionContext {
@@ -88,6 +89,14 @@ impl ActionContext {
 
     pub(crate) fn autocomplete_mut(&mut self) -> &mut AutoCompleteState {
         &mut self.autocomplete
+    }
+
+    pub(crate) fn scroll(&self) -> &ScrollState {
+        &self.scroll
+    }
+
+    pub(crate) fn scroll_mut(&mut self) -> &mut ScrollState {
+        &mut self.scroll
     }
 
     // Find functions
@@ -375,6 +384,7 @@ impl Default for ActionContext {
             autocomplete: AutoCompleteState::default(),
             prefix_recognizer: KeyPrefix::new(Duration::from_secs(4)),
             find: FindState::default(),
+            scroll: ScrollState::default(),
         }
     }
 }
@@ -533,5 +543,31 @@ impl AutoCompleteState {
 
     pub(crate) fn current(&self) -> Option<&String> {
         self.suggestions.get(self.index)
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct ScrollState {
+    offset: u16,
+    max_offset: Cell<u16>,
+}
+
+impl ScrollState {
+    pub(crate) fn offset(&self) -> u16 {
+        self.offset
+    }
+
+    pub(crate) fn set_max_offset(&self, max: u16) {
+        self.max_offset.set(max);
+    }
+
+    pub(crate) fn scroll_up(&mut self) {
+        self.offset = self.offset.saturating_sub(1);
+    }
+
+    pub(super) fn scroll_down(&mut self) {
+        if self.offset < self.max_offset.get() {
+            self.offset = self.offset.saturating_add(1);
+        }
     }
 }
