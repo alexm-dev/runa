@@ -23,7 +23,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use std::sync::atomic::Ordering;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Draws the seperator line when enabled inside runa.toml
@@ -308,9 +308,8 @@ pub(crate) fn draw_status_bar(
         && let Some(clipboard_set) = &clipboard.entries
     {
         let count = clipboard_set.len();
-        let now = Instant::now();
 
-        if count > 0 && app.notification_time().is_some_and(|until| until > now) {
+        if count > 0 {
             add_sep(&mut spans);
             let icon = if use_icons { "󰆏 " } else { "" };
             let label = "copied";
@@ -847,6 +846,8 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
                 (fmt_keys(keys.clear_filter()), "Clear filter"),
                 (fmt_keys(keys.clear_all()), "Clear all markers and filters"),
                 (fmt_keys(keys.go_to_bottom()), "Go to bottom"),
+                (fmt_keys(keys.scroll_up()), "Scroll widget up"),
+                (fmt_keys(keys.scroll_down()), "Scroll widget down"),
             ],
         ),
         (
@@ -857,6 +858,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
                 (fmt_keys(keys.tab_cycle()), "Cycle between tabs"),
                 (fmt_keys(keys.tab_next()), "Switch to the next tab"),
                 (fmt_keys(keys.tab_prev()), "Switch to the previous tab"),
+                ("[0-9]".into(), "Switch to tab by index"),
             ],
         ),
         (

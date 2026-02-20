@@ -172,11 +172,6 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn notification_time(&self) -> &Option<Instant> {
-        &self.notification_time
-    }
-
-    #[inline]
     pub(crate) fn worker_time(&self) -> &Option<Instant> {
         &self.worker_time
     }
