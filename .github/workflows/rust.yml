@@ -10,35 +10,41 @@ on:
 
 jobs:
   build:
+    if: github.repository_owner == github.actor || github.event.sender.type == 'User'
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        rust: [stable]
-
-    if: github.repository_owner == github.actor || github.event.sender.type == 'User'
+        include:
+          - os: ubuntu-latest
+            rust: stable
+            target: default
+          - os: windows-latest
+            rust: stable
+            target: default
+          - os: macos-latest
+            rust: stable
+            target: default
+          - os: ubuntu-latest
+            rust: stable
+            target: x86_64-unknown-linux-musl
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust
+      - name: Set up Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
 
-      - name: Cache Cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+      - name: Install musl-tools (only for musl)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Install fd (Linux)
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.target != 'x86_64-unknown-linux-musl'
         run: |
           sudo apt-get update
           sudo apt-get install -y fd-find
@@ -46,21 +52,26 @@ jobs:
 
       - name: Install fd (macOS)
         if: runner.os == 'macOS'
-        run: |
-          brew install fd
+        run: brew install fd
 
       - name: Install fd (Windows)
         if: runner.os == 'Windows'
-        run: |
-          choco install fd -y
+        run: choco install fd -y
 
       - name: Verify fd
+        if: matrix.target != 'x86_64-unknown-linux-musl'
         run: fd --version
 
       - name: Build
-        run: cargo build --release --locked
+        run: |
+          if [ "${{ matrix.target }}" = "x86_64-unknown-linux-musl" ]; then
+            cargo build --release --target x86_64-unknown-linux-musl
+          else
+            cargo build --release --locked
+          fi
 
       - name: Test
+        if: matrix.target != 'x86_64-unknown-linux-musl'
         shell: bash
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
@@ -70,3 +81,51 @@ jobs:
           else
             echo "Skipping test on ${{ matrix.os }} for non-main branch."
           fi
+
+  clippy:
+    name: Clippy (Lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  fmt:
+    name: Formatting (Fmt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Check Formatting
+        run: cargo fmt --all -- --check
+
+  outdated:
+    name: Check Outdated Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Install cargo-outdated
+        run: cargo install cargo-outdated
+      - name: Run Outdated
+        run: cargo outdated --exit-code 1
+
+  audit:
+    name: Audit (Vulnerabilities)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Run Audit
+        run: cargo audit --deny warnings
