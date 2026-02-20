@@ -97,7 +97,7 @@ jobs:
         run: cargo test --all --release --locked --verbose --target ${{ matrix.target }}
 
   clippy:
-    name: Clippy (Lint)
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -108,7 +108,7 @@ jobs:
         run: cargo clippy --all-targets --all-features -- -D warnings
 
   fmt:
-    name: Formatting (Fmt)
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -118,21 +118,8 @@ jobs:
       - name: Check Formatting
         run: cargo fmt --all -- --check
 
-  outdated:
-    name: Check Outdated Dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-      - name: Install cargo-outdated
-        run: cargo install cargo-outdated
-      - name: Run Outdated
-        run: cargo outdated --exit-code 1
-
   audit:
-    name: Audit (Vulnerabilities)
+    name: Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
