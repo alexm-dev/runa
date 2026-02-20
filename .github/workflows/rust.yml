@@ -18,54 +18,33 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            platform: linux-x86_64-gnu
-            native_test: true
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            platform: linux-aarch64-gnu
-            native_test: false
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            platform: linux-x86_64-musl
-            native_test: false
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
-            platform: linux-aarch64-musl
-            native_test: false
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            platform: windows-x86_64
-            native_test: true
           - target: aarch64-pc-windows-msvc
             os: windows-latest
-            platform: windows-aarch64
-            native_test: false
           - target: x86_64-apple-darwin
             os: macos-latest
-            platform: macos-x86_64
-            native_test: true
           - target: aarch64-apple-darwin
             os: macos-latest
-            platform: macos-aarch64
-            native_test: false
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
 
-      - name: Install musl-tools (musl targets)
-        if: contains(matrix.target, 'musl')
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
-      - name: Install gcc-aarch64-linux-gnu (aarch64 Linux)
-        if: (matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'aarch64-unknown-linux-musl')
-        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install ARM Linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
 
       - name: Install fd (Linux)
         if: runner.os == 'Linux' && !contains(matrix.target, 'musl') && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -90,11 +69,19 @@ jobs:
         run: fd --version
 
       - name: Build
-        run: cargo build --release --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          fi
+          cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: Test (only native targets)
-        if: matrix.native_test == true
-        run: cargo test --all --release --locked --verbose --target ${{ matrix.target }}
+      - name: Test (native targets only)
+        if: |
+          (runner.os == 'Linux' && matrix.target == 'x86_64-unknown-linux-gnu') ||
+          (runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc') ||
+          (runner.os == 'macOS' && matrix.target == 'x86_64-apple-darwin')
+        run: cargo test --release --locked --target ${{ matrix.target }}
 
   clippy:
     name: Clippy
