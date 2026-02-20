@@ -4,6 +4,7 @@ use crate::app::{AppContainer, AppState};
 use crate::core::worker::Workers;
 
 use ratatui::text::Span;
+use std::ffi::OsString;
 use std::sync::Arc;
 
 pub(crate) struct TabManager<'a> {
@@ -19,11 +20,12 @@ impl<'a> TabManager<'a> {
         mut existing: AppState<'a>,
         mut new_tab: AppState<'a>,
         workers: &Workers,
+        focus: Option<OsString>,
     ) -> Self {
         existing.tab_id = Some(0);
         new_tab.tab_id = Some(1);
 
-        new_tab.initialize(workers);
+        new_tab.initialize(workers, focus);
 
         let mut manager = Self {
             tabs: vec![existing, new_tab],
@@ -52,14 +54,19 @@ impl<'a> TabManager<'a> {
         &mut self.tabs[self.current]
     }
 
-    pub(crate) fn add_tab(&mut self, mut tab: AppState<'a>, workers: &Workers) -> usize {
+    pub(crate) fn add_tab(
+        &mut self,
+        mut tab: AppState<'a>,
+        workers: &Workers,
+        focus: Option<OsString>,
+    ) -> usize {
         if self.tabs.len() >= Self::MAX_TABS {
             return self.current;
         }
 
         tab.tab_id = Some(self.next_tab_id);
         self.next_tab_id = self.next_tab_id.saturating_add(1);
-        tab.initialize(workers);
+        tab.initialize(workers, focus);
         self.tabs.push(tab);
         self.current = self.tabs.len() - 1;
         self.sync_tab_line();
@@ -139,6 +146,10 @@ pub(crate) fn handle_tab_action<'a>(
         TabAction::New => {
             match container {
                 AppContainer::Single(app_state) => {
+                    let focus = app_state
+                        .nav()
+                        .selected_entry()
+                        .map(|entry| entry.name().to_os_string());
                     let original = std::mem::replace(
                         app_state,
                         Box::new(
@@ -150,17 +161,23 @@ pub(crate) fn handle_tab_action<'a>(
                     let new_tab = original
                         .new_current_dir()
                         .expect("Failed to create new blank tab");
-                    *container = AppContainer::Tabs(TabManager::new(*original, new_tab, workers));
+                    *container =
+                        AppContainer::Tabs(TabManager::new(*original, new_tab, workers, focus));
                     if let AppContainer::Tabs(tab_manager) = container {
                         tab_manager.current_tab_mut().tick(workers);
                     }
                 }
                 AppContainer::Tabs(tab) => {
+                    let focus = tab
+                        .current_tab()
+                        .nav()
+                        .selected_entry()
+                        .map(|entry| entry.name().to_os_string());
                     let new_tab = tab
                         .current_tab()
                         .new_current_dir()
                         .expect("Failed to create new blank tab");
-                    tab.add_tab(new_tab, workers);
+                    tab.add_tab(new_tab, workers, focus);
                 }
             }
             KeypressResult::Consumed

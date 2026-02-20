@@ -134,8 +134,8 @@ impl<'a> AppState<'a> {
     }
 
     /// Initializes the AppState by requesting the initial directory load and parent content.
-    pub(crate) fn initialize(&mut self, workers: &Workers) {
-        self.request_dir_load(workers, None);
+    pub(crate) fn initialize(&mut self, workers: &Workers, focus: Option<OsString>) {
+        self.request_dir_load(workers, focus);
         self.request_parent_content(workers);
     }
 
@@ -421,11 +421,7 @@ impl<'a> AppState<'a> {
     // Worker requests functions for directory loading, preview and parent pane content
 
     /// Requests a directory load for the current navigation directory
-    pub(crate) fn request_dir_load(
-        &mut self,
-        workers: &Workers,
-        focus: Option<std::ffi::OsString>,
-    ) {
+    pub(crate) fn request_dir_load(&mut self, workers: &Workers, focus: Option<OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
         let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {

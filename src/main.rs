@@ -61,7 +61,7 @@ fn main() -> std::io::Result<()> {
         None => app::AppState::new(&config)?,
     };
 
-    app.initialize(&workers);
+    app.initialize(&workers, None);
 
     let mut runa = app::RunaRoot {
         container: app::AppContainer::Single(Box::new(app)),
