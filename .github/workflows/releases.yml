@@ -10,6 +10,9 @@ on:
 permissions:
   contents: write
 
+env:
+  CICD_INTERMEDIATES_DIR: "_cicd-intermediates"
+
 jobs:
   build:
     if: github.actor == 'alexm-dev'
@@ -19,60 +22,75 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux targets (use Cross)
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux-x86_64-gnu
+            use_cross: true
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux-aarch64-gnu
+            use_cross: true
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             platform: linux-x86_64-musl
+            use_cross: true
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux-aarch64-musl
+            use_cross: true
+          # Windows
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             platform: windows-x86_64
+            use_cross: false
           - target: aarch64-pc-windows-msvc
             os: windows-latest
             platform: windows-aarch64
+            use_cross: false
+          # macOS
           - target: x86_64-apple-darwin
             os: macos-latest
             platform: macos-x86_64
+            use_cross: false
           - target: aarch64-apple-darwin
             os: macos-latest
             platform: macos-aarch64
+            use_cross: false
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v6
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install ARM Linker
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
+      - name: Install Cross (Linux only)
+        if: matrix.use_cross
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          cargo install cross --locked
 
       - name: Build
         shell: bash
         run: |
-          if [ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]; then
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+          if [[ "${{ matrix.use_cross }}" == "true" ]]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --locked --target ${{ matrix.target }}
           fi
-          cargo build --release --locked --target ${{ matrix.target }}
 
-      - name: Prepare Binary
+      - name: Prepare binary
         shell: bash
         run: |
           mkdir -p dist
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            cp target/${{ matrix.target }}/release/rn.exe dist/rn.exe
-          else
-            cp target/${{ matrix.target }}/release/rn dist/rn
-            chmod +x dist/rn
-          fi
+          BIN_SRC="target/${{ matrix.target }}/release/rn"
+          [[ "${{ runner.os }}" == "Windows" ]] && BIN_SRC+=".exe"
+          BIN_DEST="dist/$(basename $BIN_SRC)"
+          cp "$BIN_SRC" "$BIN_DEST"
+          [[ "${{ runner.os }}" != "Windows" ]] && chmod +x "$BIN_DEST"
 
-      - name: Upload Artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.platform }}
@@ -83,7 +101,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -91,6 +109,7 @@ jobs:
           path: artifacts
 
       - name: Organize release assets for archiving
+        shell: bash
         run: |
           for dir in artifacts/bin-*; do
             platform=${dir#artifacts/bin-}
@@ -107,60 +126,61 @@ jobs:
             cp CHANGELOG.md "$outdir/docs/"
           done
 
-      - name: Create archives
-        run: |
-          mkdir -p dist
-          for dir in artifacts/bin-*; do
-            platform=${dir#artifacts/bin-}
-            outdir="runa-$platform"
-
-            if [[ "$platform" == *"windows"* ]]; then
-              (cd "$dir" && zip -r "../../dist/${outdir}.zip" "$outdir")
-            else
-              tar -czvf "dist/${outdir}.tar.gz" -C "$dir" "$outdir"
-            fi
-          done
-
+      # - name: Create archives
+      #   shell: bash
+      #   run: |
+      #     mkdir -p dist
+      #     for dir in artifacts/bin-*; do
+      #       platform=${dir#artifacts/bin-}
+      #       outdir="runa-$platform"
+      #
+      #       if [[ "$platform" == *"windows"* ]]; then
+      #         (cd "$dir" && zip -r "../../dist/${outdir}.zip" "$outdir")
+      #       else
+      #         tar -czvf "dist/${outdir}.tar.gz" -C "$dir" "$outdir"
+      #       fi
+      #     done
 
       - name: Calculate SHA256SUMS
+        shell: bash
         run: |
           cd dist
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: Extract Changelog Section
-        id: extract_changelog
-        shell: bash
-        run: |
-          VERSION=$(echo "${{ github.event.inputs.tag }}" | sed 's/^v//')
-          sed 's/\r//' CHANGELOG.md > clean_changelog.md
-          awk -v ver="$VERSION" '
-            BEGIN { ver_pattern = "\\[v?" ver "\\]" }
-            $0 ~ "^#+ " ver_pattern { p=1; next }
-            p && ($0 ~ "^---" || $0 ~ "^## \\[") { p=0; exit }
-            p { print }
-          ' clean_changelog.md > release_notes.md
-          sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
-          if [ ! -s release_notes.md ]; then
-            echo "Error: Extraction failed for version $VERSION"
-            exit 1
-          fi
+      # - name: Extract changelog section
+      #   id: extract_changelog
+      #   shell: bash
+      #   run: |
+      #     VERSION=$(echo "${{ github.event.inputs.tag }}" | sed 's/^v//')
+      #     sed 's/\r//' CHANGELOG.md > clean_changelog.md
+      #     awk -v ver="$VERSION" '
+      #       BEGIN { ver_pattern = "\\[v?" ver "\\]" }
+      #       $0 ~ "^#+ " ver_pattern { p=1; next }
+      #       p && ($0 ~ "^---" || $0 ~ "^## \\[") { p=0; exit }
+      #       p { print }
+      #     ' clean_changelog.md > release_notes.md
+      #     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
+      #     if [ ! -s release_notes.md ]; then
+      #       echo "Error: Extraction failed for version $VERSION"
+      #       exit 1
+      #     fi
 
-      - name: Fail if Release Exists
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag }}
-        run: |
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "Release $TAG already exists. Aborting."
-            exit 1
-          fi
+      # - name: Fail if release exists
+      #   shell: bash
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     TAG: ${{ github.event.inputs.tag }}
+      #   run: |
+      #     if gh release view "$TAG" >/dev/null 2>&1; then
+      #       echo "Release $TAG already exists. Aborting."
+      #       exit 1
+      #     fi
 
-      - name: Create Release and Upload Assets
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag }}
-        run: |
-          gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
+      # - name: Create release and upload assets
+      #   shell: bash
+      #   env:
+      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     TAG: ${{ github.event.inputs.tag }}
+      #   run: |
+      #     gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
