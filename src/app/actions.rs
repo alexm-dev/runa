@@ -3,6 +3,7 @@
 //! Contains the [ActionContext] struct, tracking user input state, clipboard, and action modes.
 //! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
 
+use crate::app::Clipboard;
 use crate::app::keymap::KeyPrefix;
 use crate::app::nav::NavState;
 use crate::core::proc::FindResult;
@@ -58,10 +59,8 @@ pub(crate) struct ActionContext {
     mode: ActionMode,
     input_buffer: String,
     input_cursor_pos: usize,
-    clipboard: Option<HashSet<PathBuf>>,
     autocomplete: AutoCompleteState,
     prefix_recognizer: KeyPrefix,
-    is_cut: bool,
     find: FindState,
 }
 
@@ -85,15 +84,6 @@ impl ActionContext {
 
     pub(crate) fn prefix_recognizer_mut(&mut self) -> &mut KeyPrefix {
         &mut self.prefix_recognizer
-    }
-
-    #[inline]
-    pub(crate) fn clipboard(&self) -> &Option<HashSet<PathBuf>> {
-        &self.clipboard
-    }
-
-    pub(crate) fn clipboard_mut(&mut self) -> &mut Option<HashSet<PathBuf>> {
-        &mut self.clipboard
     }
 
     pub(crate) fn autocomplete_mut(&mut self) -> &mut AutoCompleteState {
@@ -199,7 +189,12 @@ impl ActionContext {
 
     /// Copies or cuts the currently marked files or the selected file if no markers exist.
     /// Stores the paths in the clipboard along with the cut flag.
-    pub(crate) fn action_copy(&mut self, nav: &mut NavState, is_cut: bool) {
+    pub(crate) fn action_copy(
+        &mut self,
+        nav: &mut NavState,
+        clipboard: &mut Clipboard,
+        is_cut: bool,
+    ) {
         let mut set = HashSet::new();
         if !nav.markers().is_empty() {
             for path in nav.markers() {
@@ -210,16 +205,21 @@ impl ActionContext {
             set.insert(nav.current_dir().join(entry.name()));
         }
         if !set.is_empty() {
-            self.clipboard = Some(set);
-            self.is_cut = is_cut;
+            clipboard.entries = Some(set);
+            clipboard.is_cut = is_cut;
         }
     }
 
     /// Pastes the files from the clipboard into the current directory.
     ///
     /// Sends a copy task to the worker thread via the provided channel.
-    pub(crate) fn action_paste(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
-        if let Some(source) = &self.clipboard {
+    pub(crate) fn action_paste(
+        &mut self,
+        nav: &mut NavState,
+        clipboard: &mut Clipboard,
+        worker_tx: &Sender<WorkerTask>,
+    ) {
+        if let Some(source) = &clipboard.entries {
             let first_file_name = source
                 .iter()
                 .min()
@@ -230,12 +230,12 @@ impl ActionContext {
                 op: FileOperation::Copy {
                     src: source.iter().cloned().collect(),
                     dest: nav.current_dir().to_path_buf(),
-                    cut: self.is_cut,
+                    cut: clipboard.is_cut,
                     focus: first_file_name,
                 },
             });
-            if self.is_cut {
-                self.clipboard = None;
+            if clipboard.is_cut {
+                clipboard.entries = None;
             }
             nav.clear_markers();
         }
@@ -314,11 +314,9 @@ impl ActionContext {
         nav.clear_markers();
     }
 
-    pub(crate) fn action_clear_clipboard(&mut self) {
-        if self.clipboard.is_some() {
-            self.clipboard = None;
-            self.is_cut = false;
-        }
+    pub(crate) fn action_clear_clipboard(&mut self, clipboard: &mut Clipboard) {
+        clipboard.entries = None;
+        clipboard.is_cut = false;
     }
 
     // Cursor actions
@@ -374,10 +372,8 @@ impl Default for ActionContext {
             mode: ActionMode::Normal,
             input_buffer: String::new(),
             input_cursor_pos: 0,
-            clipboard: None,
             autocomplete: AutoCompleteState::default(),
             prefix_recognizer: KeyPrefix::new(Duration::from_secs(4)),
-            is_cut: false,
             find: FindState::default(),
         }
     }

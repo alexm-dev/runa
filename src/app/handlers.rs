@@ -3,10 +3,10 @@
 //! This module implements [AppState] methods that process key events, file/nav actions,
 //! and input modes (rename, filter, etc).
 
-use crate::app::NavState;
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
+use crate::app::{Clipboard, NavState};
 use crate::core::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::Overlay;
@@ -153,7 +153,11 @@ impl<'a> AppState<'a> {
 
     /// Handles navigation actions (up, down, into dir, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    pub(super) fn handle_nav_action(&mut self, action: NavAction) -> KeypressResult {
+    pub(super) fn handle_nav_action(
+        &mut self,
+        action: NavAction,
+        clipboard: &mut Clipboard,
+    ) -> KeypressResult {
         match action {
             NavAction::GoUp => {
                 self.move_nav_if_possible(|nav| nav.move_up());
@@ -175,8 +179,8 @@ impl<'a> AppState<'a> {
             }
             NavAction::ToggleMarker => {
                 let marker_jump = self.config.display().toggle_marker_jump();
-                let clipboard = self.actions.clipboard_mut();
-                self.nav.toggle_marker_advance(clipboard, marker_jump);
+                self.nav
+                    .toggle_marker_advance(&mut clipboard.entries, marker_jump);
                 self.request_preview();
             }
             NavAction::ClearMarker => {
@@ -190,7 +194,7 @@ impl<'a> AppState<'a> {
             NavAction::ClearAll => {
                 self.nav.clear_markers();
                 self.nav.clear_filters();
-                self.actions.action_clear_clipboard();
+                self.actions.action_clear_clipboard(clipboard);
                 self.request_preview();
             }
             NavAction::GoToBottom => {
@@ -205,7 +209,11 @@ impl<'a> AppState<'a> {
 
     /// Handles file actions (open, delete, copy, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
-    pub(super) fn handle_file_action(&mut self, action: FileAction) -> KeypressResult {
+    pub(super) fn handle_file_action(
+        &mut self,
+        action: FileAction,
+        clipboard: &mut Clipboard,
+    ) -> KeypressResult {
         match action {
             FileAction::Open => return self.handle_open_file(),
             FileAction::Delete => {
@@ -218,12 +226,13 @@ impl<'a> AppState<'a> {
             }
             FileAction::Copy => {
                 let nav = &mut self.nav;
-                self.actions.action_copy(nav, false);
+                self.actions.action_copy(nav, clipboard, false);
                 self.handle_timed_message(Duration::from_secs(15));
             }
             FileAction::Paste => {
                 let fileop_tx = self.workers.fileop_tx();
-                self.actions.action_paste(&mut self.nav, fileop_tx);
+                self.actions
+                    .action_paste(&mut self.nav, clipboard, fileop_tx);
             }
             FileAction::Rename => self.prompt_rename(),
             FileAction::Create => self.prompt_create_file(),
@@ -233,7 +242,7 @@ impl<'a> AppState<'a> {
             FileAction::Find => self.prompt_find(),
             FileAction::MoveFile => self.prompt_move(),
             FileAction::ClearClipboard => {
-                self.actions.action_clear_clipboard();
+                self.actions.action_clear_clipboard(clipboard);
                 self.request_preview();
             }
         }

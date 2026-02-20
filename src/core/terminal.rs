@@ -3,7 +3,7 @@
 //! Handles setup/teardown of raw mode, alternate screen, redraws,
 //! and events (keypress, resize) to app logic.
 
-use crate::app::{AppContainer, KeypressResult, handle_tab_action};
+use crate::app::{AppContainer, Clipboard, KeypressResult, handle_tab_action};
 use crate::ui;
 use crossterm::{
     cursor::{Hide, Show},
@@ -21,13 +21,13 @@ use std::{io, time::Duration};
 /// Returns a error if terminal setup or teardown fails
 ///
 /// Returns an std::io::Error if terminal setup or teardown fails.
-pub(crate) fn run_terminal(app: &mut AppContainer) -> io::Result<()> {
+pub(crate) fn run_terminal(app: &mut AppContainer, clipboard: &mut Clipboard) -> io::Result<()> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, Hide)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
-    let result = event_loop(&mut terminal, app);
+    let result = event_loop(&mut terminal, app, clipboard);
 
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen, Show)?;
@@ -39,6 +39,7 @@ pub(crate) fn run_terminal(app: &mut AppContainer) -> io::Result<()> {
 fn event_loop<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     root: &mut AppContainer,
+    clipboard: &mut Clipboard,
 ) -> io::Result<()>
 where
     io::Error: From<<B as Backend>::Error>,
@@ -53,8 +54,8 @@ where
 
         if changed {
             terminal.draw(|f| match root {
-                AppContainer::Single(app) => ui::render(f, app),
-                AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
+                AppContainer::Single(app) => ui::render(f, app, clipboard),
+                AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut(), clipboard),
             })?;
         }
 
@@ -64,8 +65,10 @@ where
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
                     let result = match root {
-                        AppContainer::Single(app) => app.handle_keypress(key),
-                        AppContainer::Tabs(tabs) => tabs.current_tab_mut().handle_keypress(key),
+                        AppContainer::Single(app) => app.handle_keypress(key, clipboard),
+                        AppContainer::Tabs(tabs) => {
+                            tabs.current_tab_mut().handle_keypress(key, clipboard)
+                        }
                     };
 
                     match result {
@@ -83,16 +86,20 @@ where
                     }
                     // Redraw after state change
                     terminal.draw(|f| match root {
-                        AppContainer::Single(app) => ui::render(f, app),
-                        AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
+                        AppContainer::Single(app) => ui::render(f, app, clipboard),
+                        AppContainer::Tabs(tabs) => {
+                            ui::render(f, tabs.current_tab_mut(), clipboard)
+                        }
                     })?;
                 }
 
                 // handle resize
                 Event::Resize(_, _) => {
                     terminal.draw(|f| match root {
-                        AppContainer::Single(app) => ui::render(f, app),
-                        AppContainer::Tabs(tabs) => ui::render(f, tabs.current_tab_mut()),
+                        AppContainer::Single(app) => ui::render(f, app, clipboard),
+                        AppContainer::Tabs(tabs) => {
+                            ui::render(f, tabs.current_tab_mut(), clipboard)
+                        }
                     })?;
                 }
 

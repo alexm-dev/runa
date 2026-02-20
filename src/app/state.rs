@@ -16,7 +16,7 @@
 
 use crate::app::actions::{ActionContext, ActionMode, InputMode};
 use crate::app::keymap::{Action, Keymap, TabAction};
-use crate::app::{NavState, ParentState, PreviewState};
+use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{Overlay, OverlayStack};
@@ -379,7 +379,11 @@ impl<'a> AppState<'a> {
     /// Central key handlers
     ///
     /// Coordinates the action and handler module functions.
-    pub(crate) fn handle_keypress(&mut self, key: KeyEvent) -> KeypressResult {
+    pub(crate) fn handle_keypress(
+        &mut self,
+        key: KeyEvent,
+        clipboard: &mut Clipboard,
+    ) -> KeypressResult {
         if self.actions.is_input_mode() {
             return self.handle_input_mode(key);
         }
@@ -395,8 +399,8 @@ impl<'a> AppState<'a> {
         if let Some(action) = self.keymap.lookup(key) {
             match action {
                 Action::System(sys_act) => return self.handle_sys_action(sys_act),
-                Action::Nav(nav_act) => return self.handle_nav_action(nav_act),
-                Action::File(file_act) => return self.handle_file_action(file_act),
+                Action::Nav(nav_act) => return self.handle_nav_action(nav_act, clipboard),
+                Action::File(file_act) => return self.handle_file_action(file_act, clipboard),
                 Action::Tab(tab_act) => return KeypressResult::Tab(tab_act),
             }
         }
@@ -588,9 +592,10 @@ mod tests {
     fn handle_keypress_continue_if_no_action() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
         let temp = tempdir()?;
+
         let mut app = AppState::from_dir(&config, temp.path())?;
         let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
-        let result = app.handle_keypress(key);
+        let result = app.handle_keypress(key, &mut clipboard);
         assert!(matches!(result, KeypressResult::Continue));
         Ok(())
     }

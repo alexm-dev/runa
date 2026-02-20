@@ -8,7 +8,7 @@
 
 use crate::{
     app::{
-        AppState, LayoutMetrics, PreviewData,
+        AppState, Clipboard, LayoutMetrics, PreviewData,
         actions::{ActionMode, InputMode},
     },
     ui::{
@@ -27,7 +27,7 @@ use ratatui::{
 
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
-pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
+pub(crate) fn render(frame: &mut Frame, app: &mut AppState, clipboard: &mut Clipboard) {
     let mut root_area = frame.area();
     let metrics = calculate_layout_metrics(frame.area(), app);
     app.update_layout_metrics(metrics);
@@ -49,7 +49,6 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
     let marker_icon = marker_theme.icon();
     let marker_style = marker_theme.style_or_theme();
 
-    let clipboard = app.actions().clipboard().as_ref();
     let clipboard_style = marker_theme.clipboard_style_or_theme();
 
     root_area = render_root_and_header(frame, app, root_area);
@@ -67,7 +66,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
             .or_else(|| app.nav().current_dir().parent());
         let parent_markers = panes::make_pane_markers(
             markers,
-            clipboard,
+            clipboard.entries.as_ref(),
             parent_dir,
             marker_icon,
             marker_style,
@@ -145,6 +144,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
                 show_icons: display_cfg.icons(),
                 show_marker: display_cfg.dir_marker(),
             },
+            clipboard,
         );
         pane_idx += 1;
         if show_separators && display_cfg.preview() && pane_idx < chunks.len() {
@@ -167,7 +167,7 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
         let preview_dir = app.preview().current_path();
         let preview_markers = panes::make_pane_markers(
             markers,
-            clipboard,
+            clipboard.entries.as_ref(),
             preview_dir,
             marker_icon,
             marker_style,
@@ -216,8 +216,8 @@ pub(crate) fn render(frame: &mut Frame, app: &mut AppState) {
         );
     }
 
-    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Header);
-    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Footer);
+    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Header, clipboard);
+    widgets::draw_status_bar(frame, app, widgets::StatusPosition::Footer, clipboard);
     render_overlays(frame, app, accent_style);
 }
 

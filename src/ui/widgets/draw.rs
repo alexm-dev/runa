@@ -5,8 +5,8 @@
 //! All draw functions are then used by ui::rende] to then draw widgets such a input dialog,
 //! which is used by file action functions like rename and more..
 
-use crate::app::AppState;
 use crate::app::actions::{ActionMode, InputMode};
+use crate::app::{AppState, Clipboard};
 use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
 use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
@@ -243,7 +243,12 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
 /// Draw the status bar at the top or bottom of the screen, depending on the configuration.
 /// Displays information such as active tasks, clipboard count, markers, filter, and entry count.
 /// The content and position of the status bar are determined by runa.toml and the current state of the application.
-pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: StatusPosition) {
+pub(crate) fn draw_status_bar(
+    frame: &mut Frame,
+    app: &AppState,
+    position: StatusPosition,
+    clipboard: &Clipboard,
+) {
     if position == StatusPosition::None {
         return;
     }
@@ -295,7 +300,7 @@ pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: Statu
     }
 
     if status_cfg.clipboard() == position
-        && let Some(clipboard_set) = app.actions().clipboard()
+        && let Some(clipboard_set) = &clipboard.entries
     {
         let count = clipboard_set.len();
         let now = Instant::now();
@@ -314,7 +319,7 @@ pub(crate) fn draw_status_bar(frame: &mut Frame, app: &AppState, position: Statu
         let marker_count = markers.len();
 
         if marker_count > 0 {
-            let is_redundant = if let Some(clipboard_set) = app.actions().clipboard() {
+            let is_redundant = if let Some(clipboard_set) = &clipboard.entries {
                 if clipboard_set.len() != marker_count {
                     false
                 } else {

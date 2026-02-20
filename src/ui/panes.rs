@@ -5,7 +5,7 @@
 //!
 //! Used internally by ui::render
 
-use crate::app::{AppState, PreviewData};
+use crate::app::{AppState, Clipboard, PreviewData};
 use crate::core::FileEntry;
 use crate::ui::icons::nerd_font_icon;
 use ratatui::widgets::BorderType;
@@ -89,7 +89,12 @@ pub(crate) struct PaneMarkers<'a> {
 /// Draws the main file list pane in the UI
 ///
 /// Highlights selection, markers and directories and handles styling for items.
-pub(crate) fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext) {
+pub(crate) fn draw_main(
+    frame: &mut Frame,
+    app: &AppState,
+    context: PaneContext,
+    clipboard: &Clipboard,
+) {
     let selected_idx = app.visible_selected();
     let current_dir = app.nav().current_dir();
 
@@ -117,7 +122,7 @@ pub(crate) fn draw_main(frame: &mut Frame, app: &AppState, context: PaneContext)
         return;
     }
 
-    let markers = make_main_pane_markers(app, current_dir);
+    let markers = make_main_pane_markers(app, current_dir, clipboard);
 
     let shown_len = app.nav().shown_entries_len();
     let mut items = Vec::with_capacity(shown_len);
@@ -325,7 +330,11 @@ pub(crate) fn make_pane_markers<'a>(
 /// Helper: Create a PaneMarkers struct for the main pane.
 /// Builds marker and clipboard sets for the current directory.
 /// Used in main pane drawing function.
-fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneMarkers<'a> {
+fn make_main_pane_markers<'a>(
+    app: &'a AppState,
+    current_dir: &'a Path,
+    clipboard: &'a Clipboard,
+) -> PaneMarkers<'a> {
     let marker_theme = app.config().theme().marker();
     let marker_icon = marker_theme.icon();
 
@@ -343,7 +352,7 @@ fn make_main_pane_markers<'a>(app: &'a AppState, current_dir: &'a Path) -> PaneM
         if set.is_empty() { None } else { Some(set) }
     };
 
-    let clipboard = app.actions().clipboard().as_ref().map(|set| {
+    let clipboard = clipboard.entries.as_ref().map(|set| {
         set.iter()
             .filter(|p| p.parent() == Some(current_dir))
             .filter_map(|p| p.file_name().map(|n| n.to_os_string()))

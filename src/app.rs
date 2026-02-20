@@ -20,8 +20,14 @@ pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::handle_tab_action;
 
 use crate::app::tab::TabManager;
+use std::{collections::HashSet, path::PathBuf};
 
 pub(crate) enum AppContainer<'a> {
     Single(Box<AppState<'a>>),
     Tabs(TabManager<'a>),
+}
+
+pub(crate) struct Clipboard {
+    pub(crate) entries: Option<HashSet<PathBuf>>,
+    pub(crate) is_cut: bool,
 }

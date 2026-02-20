@@ -7,7 +7,7 @@ pub(crate) mod core;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
-use crate::app::AppContainer;
+use crate::app::{AppContainer, Clipboard};
 use crate::config::Config;
 use crate::core::terminal;
 use crate::utils::cli::{CliAction, handle_args};
@@ -40,6 +40,11 @@ fn main() -> std::io::Result<()> {
 
     let config = Config::load();
 
+    let mut clipboard = Clipboard {
+        entries: None,
+        is_cut: false,
+    };
+
     let initial_path = match action {
         CliAction::RunApp => None,
         CliAction::RunAppAtPath(path_arg) => {
@@ -59,5 +64,5 @@ fn main() -> std::io::Result<()> {
         None => app::AppState::new(&config)?,
     };
     let mut root = AppContainer::Single(Box::new(app));
-    terminal::run_terminal(&mut root)
+    terminal::run_terminal(&mut root, &mut clipboard)
 }
