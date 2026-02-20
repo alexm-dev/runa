@@ -2,35 +2,25 @@ name: Rust CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   build:
     if: github.repository_owner == github.actor || github.event.sender.type == 'User'
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-          - target: aarch64-pc-windows-msvc
-            os: windows-latest
-          - target: x86_64-apple-darwin
-            os: macos-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-
+        target:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - x86_64-pc-windows-msvc
+          - aarch64-pc-windows-msvc
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v4
 
@@ -38,48 +28,40 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install ARM Linker
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Install cross
+        run: cargo install cross
 
       - name: Install fd (Linux)
-        if: runner.os == 'Linux' && !contains(matrix.target, 'musl') && matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y fd-find
           sudo ln -sf $(which fdfind) /usr/local/bin/fd
 
       - name: Install fd (macOS)
-        if: runner.os == 'macOS' && matrix.target == 'x86_64-apple-darwin'
+        if: matrix.target == 'x86_64-apple-darwin'
         run: brew install fd
 
       - name: Install fd (Windows)
-        if: runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc'
+        if: matrix.target == 'x86_64-pc-windows-msvc'
         run: choco install fd -y
 
       - name: Verify fd
         if: |
-          (runner.os == 'Linux' && matrix.target == 'x86_64-unknown-linux-gnu') ||
-          (runner.os == 'macOS' && matrix.target == 'x86_64-apple-darwin') ||
-          (runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc')
+          matrix.target == 'x86_64-unknown-linux-gnu' ||
+          matrix.target == 'x86_64-apple-darwin' ||
+          matrix.target == 'x86_64-pc-windows-msvc'
         run: fd --version
 
-      - name: Build
-        shell: bash
-        run: |
-          if [ "${{ matrix.target }}" = "aarch64-unknown-linux-gnu" ]; then
-            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-          fi
-          cargo build --release --locked --target ${{ matrix.target }}
+      - name: Build (cross)
+        run: cross build --release --locked --target ${{ matrix.target }}
 
       - name: Test (native targets only)
         if: |
-          (runner.os == 'Linux' && matrix.target == 'x86_64-unknown-linux-gnu') ||
-          (runner.os == 'Windows' && matrix.target == 'x86_64-pc-windows-msvc') ||
-          (runner.os == 'macOS' && matrix.target == 'x86_64-apple-darwin')
-        run: cargo test --release --locked --target ${{ matrix.target }}
+          matrix.target == 'x86_64-unknown-linux-gnu' ||
+          matrix.target == 'x86_64-apple-darwin' ||
+          matrix.target == 'x86_64-pc-windows-msvc'
+        run: cross test --release --locked --target ${{ matrix.target }}
 
   clippy:
     name: Clippy
@@ -89,6 +71,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          components: rustfmt,clippy
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
@@ -100,6 +83,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          components: rustfmt
       - name: Check Formatting
         run: cargo fmt --all -- --check
 
@@ -111,7 +95,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
+      - name: Cache cargo-audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-bin-v1
+      - name: Install cargo-audit (if missing)
+        run: |
+          if ! command -v cargo-audit &> /dev/null; then
+            cargo install cargo-audit
+          fi
       - name: Run Audit
         run: cargo audit --deny warnings
