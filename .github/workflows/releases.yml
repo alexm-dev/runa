@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux targets
+          # Linux
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             platform: linux-x86_64-gnu
@@ -84,7 +84,6 @@ jobs:
 
           tar -xzf "$INSTALL_DIR/cross-x86_64-unknown-linux-gnu.tar.gz" -C "$INSTALL_DIR"
           echo "$INSTALL_DIR" >> $GITHUB_PATH
-          echo "Installed cross $CROSS_VERSION" >> $GITHUB_STEP_SUMMARY
 
       - name: Build
         shell: bash
@@ -180,39 +179,39 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # - name: Extract changelog section
-      #   id: extract_changelog
-      #   shell: bash
-      #   run: |
-      #     VERSION=$(echo "${{ github.event.inputs.tag }}" | sed 's/^v//')
-      #     sed 's/\r//' CHANGELOG.md > clean_changelog.md
-      #     awk -v ver="$VERSION" '
-      #       BEGIN { ver_pattern = "\\[v?" ver "\\]" }
-      #       $0 ~ "^#+ " ver_pattern { p=1; next }
-      #       p && ($0 ~ "^---" || $0 ~ "^## \\[") { p=0; exit }
-      #       p { print }
-      #     ' clean_changelog.md > release_notes.md
-      #     sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
-      #     if [ ! -s release_notes.md ]; then
-      #       echo "Error: Extraction failed for version $VERSION"
-      #       exit 1
-      #     fi
+      - name: Extract changelog section
+        id: extract_changelog
+        shell: bash
+        run: |
+          VERSION=$(echo "${{ github.event.inputs.tag }}" | sed 's/^v//')
+          sed 's/\r//' CHANGELOG.md > clean_changelog.md
+          awk -v ver="$VERSION" '
+            BEGIN { ver_pattern = "\\[v?" ver "\\]" }
+            $0 ~ "^#+ " ver_pattern { p=1; next }
+            p && ($0 ~ "^---" || $0 ~ "^## \\[") { p=0; exit }
+            p { print }
+          ' clean_changelog.md > release_notes.md
+          sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Error: Extraction failed for version $VERSION"
+            exit 1
+          fi
 
-      # - name: Fail if release exists
-      #   shell: bash
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     TAG: ${{ github.event.inputs.tag }}
-      #   run: |
-      #     if gh release view "$TAG" >/dev/null 2>&1; then
-      #       echo "Release $TAG already exists. Aborting."
-      #       exit 1
-      #     fi
+      - name: Fail if release exists
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Aborting."
+            exit 1
+          fi
 
-      # - name: Create release and upload assets
-      #   shell: bash
-      #   env:
-      #     GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     TAG: ${{ github.event.inputs.tag }}
-      #   run: |
-      #     gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
+      - name: Create release and upload assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
