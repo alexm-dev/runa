@@ -101,6 +101,10 @@ impl<'a> AppState<'a> {
         Self::from_dir(config, &current_dir, workers)
     }
 
+    pub(crate) fn new_current_dir(&self, workers: &Workers) -> std::io::Result<Self> {
+        Self::from_dir(self.config, self.nav.current_dir(), workers)
+    }
+
     pub(crate) fn from_dir(
         config: &'a Config,
         initial_path: &Path,

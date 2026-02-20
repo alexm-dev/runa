@@ -123,26 +123,28 @@ pub(crate) fn handle_tab_action<'a>(
 ) -> KeypressResult {
     match action {
         TabAction::New => {
-            let config = match container {
-                AppContainer::Single(app_state) => app_state.config,
-                AppContainer::Tabs(tab) => tab.current_tab().config,
-            };
-
             match container {
                 AppContainer::Single(app_state) => {
-                    let current = std::mem::replace(
+                    let original = std::mem::replace(
                         app_state,
                         Box::new(
-                            AppState::new(config, workers).expect("Failed to create new blank tab"),
+                            app_state
+                                .new_current_dir(workers)
+                                .expect("Failed to create temp tab"),
                         ),
                     );
-                    let new_tab =
-                        AppState::new(config, workers).expect("Failed to create new blank tab");
-                    *container = AppContainer::Tabs(TabManager::new(*current, new_tab));
+                    let mut new_tab = original
+                        .new_current_dir(workers)
+                        .expect("Failed to create new blank tab");
+                    new_tab.request_preview(workers);
+                    *container = AppContainer::Tabs(TabManager::new(*original, new_tab));
                 }
                 AppContainer::Tabs(tab) => {
-                    let new_tab =
-                        AppState::new(config, workers).expect("Failed to create new blank tab");
+                    let mut new_tab = tab
+                        .current_tab()
+                        .new_current_dir(workers)
+                        .expect("Failed to create new blank tab");
+                    new_tab.request_preview(workers);
                     tab.add_tab(new_tab);
                 }
             }
