@@ -593,6 +593,8 @@ mod tests {
         let config = dummy_config();
         let temp = tempdir()?;
 
+        let mut clipboard = Clipboard::default();
+
         let mut app = AppState::from_dir(&config, temp.path())?;
         let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
         let result = app.handle_keypress(key, &mut clipboard);

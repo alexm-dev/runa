@@ -27,6 +27,7 @@ pub(crate) enum AppContainer<'a> {
     Tabs(TabManager<'a>),
 }
 
+#[derive(Default)]
 pub(crate) struct Clipboard {
     pub(crate) entries: Option<HashSet<PathBuf>>,
     pub(crate) is_cut: bool,
