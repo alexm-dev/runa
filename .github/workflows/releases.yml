@@ -21,10 +21,13 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            platform: linux-x86_64
+            platform: linux-x86_64-gnu
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
-            platform: linux-aarch64
+            platform: linux-aarch64-gnu
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            platform: linux-x86_64-musl
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             platform: windows-x86_64
