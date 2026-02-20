@@ -122,15 +122,26 @@ impl<'a> TabManager<'a> {
             let tab_theme = &theme.tab();
 
             let mut spans = Vec::with_capacity(self.tabs.len() * 2 - 1);
-            for (i, _) in self.tabs.iter().enumerate() {
+            for (i, tab) in self.tabs.iter().enumerate() {
                 let is_current = i == self.current;
                 let style = if is_current {
                     tab_theme.active_style_or_theme()
                 } else {
                     tab_theme.inactive_style_or_theme()
                 };
-                let marker = if is_current { tab_theme.marker() } else { "" };
-                spans.push(Span::styled(format!("[{}{}]", i + 1, marker), style));
+
+                let name = if tab_theme.uses_name() {
+                    let cwd = tab.nav.current_dir();
+                    cwd.file_name()
+                        .map(|os_str| os_str.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| cwd.to_string_lossy().into_owned())
+                } else {
+                    String::new()
+                };
+
+                let formatted = tab_theme.format_tab(i, is_current, Some(&name));
+
+                spans.push(Span::styled(formatted, style));
                 if i != self.tabs.len() - 1 {
                     spans.push(Span::raw(tab_theme.separator()));
                 }

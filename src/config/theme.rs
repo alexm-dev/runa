@@ -673,6 +673,7 @@ pub(crate) struct TabTheme {
     separator: String,
     active: ColorPair,
     inactive: ColorPair,
+    tab_line_format: Option<String>,
 }
 
 impl Default for TabTheme {
@@ -688,6 +689,7 @@ impl Default for TabTheme {
                 fg: Color::Gray,
                 ..Default::default()
             },
+            tab_line_format: None,
         }
     }
 }
@@ -709,6 +711,26 @@ impl TabTheme {
     pub fn inactive_style_or_theme(&self) -> Style {
         self.inactive
             .style_or(&Theme::internal_defaults().tab.inactive)
+    }
+
+    pub(crate) fn format_tab(&self, idx: usize, is_current: bool, name: Option<&str>) -> String {
+        let marker = if is_current { self.marker() } else { "" };
+        let separator = self.separator();
+        let format = self.tab_line_format.as_deref().unwrap_or("[{idx}{marker}]");
+
+        format
+            .replace("{idx}", &(idx + 1).to_string())
+            .replace("{marker}", marker)
+            .replace("{separator}", separator)
+            .replace("{name}", name.unwrap_or(""))
+    }
+
+    pub(crate) fn uses_name(&self) -> bool {
+        if let Some(fmt) = &self.tab_line_format {
+            fmt.contains("{name}")
+        } else {
+            false
+        }
     }
 }
 

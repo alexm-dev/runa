@@ -52,6 +52,10 @@ where
         };
 
         if changed {
+            if let AppContainer::Tabs(tabs) = &mut root.container {
+                tabs.sync_tab_line();
+            }
+
             terminal.draw(|f| match &mut root.container {
                 AppContainer::Single(app) => ui::render(f, app, &root.workers, &mut root.clipboard),
                 AppContainer::Tabs(tabs) => ui::render(
