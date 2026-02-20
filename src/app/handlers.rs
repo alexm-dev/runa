@@ -4,7 +4,7 @@
 //! and input modes (rename, filter, etc).
 
 use crate::app::actions::{ActionMode, InputMode};
-use crate::app::keymap::{FileAction, NavAction, PrefixCommand, SystemAction};
+use crate::app::keymap::{Action, FileAction, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::app::{Clipboard, NavState, Workers};
 use crate::core::FileInfo;
@@ -34,6 +34,20 @@ impl<'a> AppState<'a> {
         } else {
             return KeypressResult::Continue;
         };
+
+        if let Some(action) = self.keymap.lookup(key) {
+            match action {
+                Action::Nav(NavAction::ScrollUp) => {
+                    self.actions.scroll().scroll_up();
+                    return KeypressResult::Consumed;
+                }
+                Action::Nav(NavAction::ScrollDown) => {
+                    self.actions.scroll().scroll_down();
+                    return KeypressResult::Consumed;
+                }
+                _ => {}
+            }
+        }
 
         match key.code {
             Enter => {
@@ -204,10 +218,10 @@ impl<'a> AppState<'a> {
                 self.request_preview(workers);
             }
             NavAction::ScrollUp => {
-                self.actions.scroll_mut().scroll_up();
+                self.actions.scroll().scroll_up();
             }
             NavAction::ScrollDown => {
-                self.actions.scroll_mut().scroll_down();
+                self.actions.scroll().scroll_down();
             }
             _ => {}
         }
@@ -333,6 +347,8 @@ impl<'a> AppState<'a> {
             return None;
         }
 
+        self.actions.scroll().reset();
+
         if self
             .overlays()
             .iter()
@@ -342,7 +358,6 @@ impl<'a> AppState<'a> {
                 .retain(|o| !matches!(o, Overlay::KeybindHelp));
             return Some(KeypressResult::Consumed);
         }
-
         None
     }
 
@@ -359,6 +374,13 @@ impl<'a> AppState<'a> {
         let buffer = initial.unwrap_or_default();
         self.actions
             .enter_mode(ActionMode::Input { mode, prompt }, buffer);
+        self.actions.scroll().reset();
+    }
+
+    /// Exits the current input mode.
+    /// Simple wrapper around actions::exit_mode.
+    fn exit_input_mode(&mut self) {
+        self.actions.exit_mode();
     }
 
     // Handlers
@@ -666,12 +688,6 @@ impl<'a> AppState<'a> {
             self.confirm_delete(workers);
         }
         self.exit_input_mode();
-    }
-
-    /// Exits the current input mode.
-    /// Simple wrapper around actions::exit_mode.
-    fn exit_input_mode(&mut self) {
-        self.actions.exit_mode();
     }
 
     /// Creates a new file with the name in the input buffer.

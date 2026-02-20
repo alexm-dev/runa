@@ -127,11 +127,11 @@ impl Default for Keys {
             find: vec!["s".into()],
 
             clear_markers: vec!["<c-c>".into()],
-            clear_clipboard: vec!["<c-u>".into()],
+            clear_clipboard: vec!["<f2>".into()],
             clear_filter: vec!["<c-f>".into()],
             clear_all: vec!["<c-l>".into()],
 
-            alternate_delete: vec!["<c-d>".into()],
+            alternate_delete: vec!["<m-d>".into()],
 
             go_to_top: vec!["g".into()],
             go_to_home: vec!["h".into()],
@@ -146,8 +146,8 @@ impl Default for Keys {
 
             keybind_help: vec!["?".into()],
 
-            scroll_up: vec!["<c-y>".into()],
-            scroll_down: vec!["<c-e>".into()],
+            scroll_up: vec!["<c-d>".into()],
+            scroll_down: vec!["<c-u>".into()],
         }
     }
 }

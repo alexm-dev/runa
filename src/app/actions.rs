@@ -95,10 +95,6 @@ impl ActionContext {
         &self.scroll
     }
 
-    pub(crate) fn scroll_mut(&mut self) -> &mut ScrollState {
-        &mut self.scroll
-    }
-
     // Find functions
 
     pub(crate) fn find_state_mut(&mut self) -> &mut FindState {
@@ -548,26 +544,30 @@ impl AutoCompleteState {
 
 #[derive(Default)]
 pub(crate) struct ScrollState {
-    offset: u16,
+    offset: Cell<u16>,
     max_offset: Cell<u16>,
 }
 
 impl ScrollState {
     pub(crate) fn offset(&self) -> u16 {
-        self.offset
+        self.offset.get()
     }
 
     pub(crate) fn set_max_offset(&self, max: u16) {
         self.max_offset.set(max);
     }
 
-    pub(crate) fn scroll_up(&mut self) {
-        self.offset = self.offset.saturating_sub(1);
+    pub(crate) fn scroll_up(&self) {
+        self.offset.set(self.offset.get().saturating_sub(1));
     }
 
-    pub(super) fn scroll_down(&mut self) {
-        if self.offset < self.max_offset.get() {
-            self.offset = self.offset.saturating_add(1);
+    pub(crate) fn scroll_down(&self) {
+        if self.offset.get() < self.max_offset.get() {
+            self.offset.set(self.offset.get().saturating_add(1));
         }
+    }
+
+    pub(crate) fn reset(&self) {
+        self.offset.set(0);
     }
 }
