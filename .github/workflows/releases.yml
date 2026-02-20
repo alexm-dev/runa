@@ -143,20 +143,20 @@ jobs:
             cp CHANGELOG.md "$outdir/docs/"
           done
 
-      # - name: Create archives
-      #   shell: bash
-      #   run: |
-      #     mkdir -p dist
-      #     for dir in artifacts/bin-*; do
-      #       platform=${dir#artifacts/bin-}
-      #       outdir="runa-$platform"
-      #
-      #       if [[ "$platform" == *"windows"* ]]; then
-      #         (cd "$dir" && zip -r "../../dist/${outdir}.zip" "$outdir")
-      #       else
-      #         tar -czvf "dist/${outdir}.tar.gz" -C "$dir" "$outdir"
-      #       fi
-      #     done
+      - name: Create archives
+        shell: bash
+        run: |
+          mkdir -p dist
+          for dir in artifacts/bin-*; do
+            platform=${dir#artifacts/bin-}
+            outdir="runa-$platform"
+
+            if [[ "$platform" == *"windows"* ]]; then
+              (cd "$dir" && zip -r "../../dist/${outdir}.zip" "$outdir")
+            else
+              tar -czvf "dist/${outdir}.tar.gz" -C "$dir" "$outdir"
+            fi
+          done
 
       - name: Calculate SHA256SUMS
         shell: bash
