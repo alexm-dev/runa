@@ -322,7 +322,6 @@ impl<'a> AppState<'a> {
 
                         self.parent
                             .update_from_entries(entries, &current_name, request_id, &path);
-                        return;
                     }
                 }
             }
@@ -527,11 +526,16 @@ mod tests {
         Config::default()
     }
 
+    fn dummy_workers() -> Workers {
+        Workers::spawn()
+    }
+
     #[test]
     fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
+        let workers = dummy_workers();
         let temp = tempdir()?;
-        let app = AppState::from_dir(&config, temp.path())?;
+        let app = AppState::from_dir(&config, temp.path(), &workers)?;
         assert_eq!(app.nav().current_dir(), temp.path());
         Ok(())
     }
@@ -539,13 +543,14 @@ mod tests {
     #[test]
     fn tick_clears_expired_notification_message() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
+        let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
         app.notification_time = Some(Instant::now() - Duration::from_secs(2));
         app.overlays_mut().push(Overlay::Message {
             text: "Timed MSG".to_string(),
         });
-        let changed = app.tick();
+        let changed = app.tick(&workers);
         assert!(changed);
         assert!(app.notification_time.is_none());
         assert!(
@@ -559,8 +564,9 @@ mod tests {
     #[test]
     fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
+        let workers = dummy_workers();
         let temp = tempdir()?;
-        let app = AppState::from_dir(&config, temp.path())?;
+        let app = AppState::from_dir(&config, temp.path(), &workers)?;
         let app_nav = app.nav();
         if app_nav.entries().is_empty() {
             assert_eq!(app.visible_selected(), None);
@@ -575,13 +581,14 @@ mod tests {
     #[test]
     fn handle_keypress_continue_if_no_action() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
+        let workers = dummy_workers();
         let temp = tempdir()?;
 
         let mut clipboard = Clipboard::default();
 
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
         let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
-        let result = app.handle_keypress(key, &mut clipboard);
+        let result = app.handle_keypress(key, &workers, &mut clipboard);
         assert!(matches!(result, KeypressResult::Continue));
         Ok(())
     }
@@ -589,10 +596,11 @@ mod tests {
     #[test]
     fn request_dir_load_sets_is_loading() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
+        let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
         app.is_loading = false;
-        app.request_dir_load(None);
+        app.request_dir_load(&workers, None);
         assert!(app.is_loading);
         Ok(())
     }
@@ -600,20 +608,21 @@ mod tests {
     #[test]
     fn request_parent_content_handles_root() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
+        let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
         #[cfg(unix)]
         {
             use std::path::PathBuf;
             app.nav.set_path(PathBuf::from("/"));
-            app.request_parent_content();
+            app.request_parent_content(&workers);
             assert!(app.parent.entries().is_empty());
         }
         #[cfg(windows)]
         {
             use std::path::PathBuf;
             app.nav.set_path(PathBuf::from("C:\\"));
-            app.request_parent_content();
+            app.request_parent_content(&workers);
             assert!(app.parent.entries().is_empty());
         }
         Ok(())
@@ -622,10 +631,11 @@ mod tests {
     #[test]
     fn request_parent_content_uses_cache() -> Result<(), Box<dyn std::error::Error>> {
         let config = Config::default();
+        let workers = dummy_workers();
         let temp = tempdir()?;
         let subdir = temp.path().join("subdir");
         std::fs::create_dir(&subdir)?;
-        let mut app = AppState::from_dir(&config, &subdir)?;
+        let mut app = AppState::from_dir(&config, &subdir, &workers)?;
 
         let parent_path = app
             .nav()
@@ -646,7 +656,7 @@ mod tests {
             &parent_path,
         );
 
-        app.request_parent_content();
+        app.request_parent_content(&workers);
 
         assert_eq!(
             app.parent.request_id(),
