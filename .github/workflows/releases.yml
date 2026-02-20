@@ -66,10 +66,36 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Cross (Linux only)
-        if: matrix.use_cross
+      - name: Install cross (Linux only)
+        if: ${{ matrix.use_cross }}
+        env:
+          CROSS_VERSION: "v0.2.5"
+          PACKAGE_NAME: "cross-x86_64-unknown-linux-gnu.tar.gz"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
         run: |
-          cargo install cross --locked
+          INSTALL_DIR="$HOME/.local/bin"
+          mkdir -p "$INSTALL_DIR"
+
+          echo "Downloading cross $CROSS_VERSION using gh CLI..."
+          gh release download cross-rs/cross \
+            --pattern "${PACKAGE_NAME}" \
+            --repo cross-rs/cross \
+            --version "${CROSS_VERSION}" -O - \
+            | tar -C "$INSTALL_DIR" -xz
+
+          echo "$INSTALL_DIR" >> $GITHUB_PATH
+          echo "Installed cross $CROSS_VERSION" >> $GITHUB_STEP_SUMMARY
+
+      - name: Show version information (Rust, cargo, GCC, cross)
+        shell: bash
+        run: |
+          gcc --version || true
+          rustup -V
+          rustup toolchain list
+          rustup default
+          cargo -V
+          rustc -V
+          cross --version
 
       - name: Build
         shell: bash
