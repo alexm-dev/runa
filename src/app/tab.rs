@@ -15,9 +15,16 @@ pub(crate) struct TabManager<'a> {
 impl<'a> TabManager<'a> {
     const MAX_TABS: usize = 9;
 
-    pub(crate) fn new(mut existing: AppState<'a>, mut new_tab: AppState<'a>) -> Self {
+    pub(crate) fn new(
+        mut existing: AppState<'a>,
+        mut new_tab: AppState<'a>,
+        workers: &Workers,
+    ) -> Self {
         existing.tab_id = Some(0);
         new_tab.tab_id = Some(1);
+
+        new_tab.initialize(workers);
+
         let mut manager = Self {
             tabs: vec![existing, new_tab],
             current: 1,
@@ -45,13 +52,14 @@ impl<'a> TabManager<'a> {
         &mut self.tabs[self.current]
     }
 
-    pub(crate) fn add_tab(&mut self, mut tab: AppState<'a>) -> usize {
+    pub(crate) fn add_tab(&mut self, mut tab: AppState<'a>, workers: &Workers) -> usize {
         if self.tabs.len() >= Self::MAX_TABS {
             return self.current;
         }
 
         tab.tab_id = Some(self.next_tab_id);
         self.next_tab_id = self.next_tab_id.saturating_add(1);
+        tab.initialize(workers);
         self.tabs.push(tab);
         self.current = self.tabs.len() - 1;
         self.sync_tab_line();
@@ -135,23 +143,24 @@ pub(crate) fn handle_tab_action<'a>(
                         app_state,
                         Box::new(
                             app_state
-                                .new_current_dir(workers)
+                                .new_current_dir()
                                 .expect("Failed to create temp tab"),
                         ),
                     );
-                    let mut new_tab = original
-                        .new_current_dir(workers)
+                    let new_tab = original
+                        .new_current_dir()
                         .expect("Failed to create new blank tab");
-                    new_tab.request_preview(workers);
-                    *container = AppContainer::Tabs(TabManager::new(*original, new_tab));
+                    *container = AppContainer::Tabs(TabManager::new(*original, new_tab, workers));
+                    if let AppContainer::Tabs(tab_manager) = container {
+                        tab_manager.current_tab_mut().tick(workers);
+                    }
                 }
                 AppContainer::Tabs(tab) => {
-                    let mut new_tab = tab
+                    let new_tab = tab
                         .current_tab()
-                        .new_current_dir(workers)
+                        .new_current_dir()
                         .expect("Failed to create new blank tab");
-                    new_tab.request_preview(workers);
-                    tab.add_tab(new_tab);
+                    tab.add_tab(new_tab, workers);
                 }
             }
             KeypressResult::Consumed

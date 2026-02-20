@@ -56,10 +56,12 @@ fn main() -> std::io::Result<()> {
 
     let workers = Workers::spawn();
 
-    let app = match initial_path {
-        Some(path) => app::AppState::from_dir(&config, &path, &workers)?,
-        None => app::AppState::new(&config, &workers)?,
+    let mut app = match initial_path {
+        Some(path) => app::AppState::from_dir(&config, &path)?,
+        None => app::AppState::new(&config)?,
     };
+
+    app.initialize(&workers);
 
     let mut runa = app::RunaRoot {
         container: app::AppContainer::Single(Box::new(app)),

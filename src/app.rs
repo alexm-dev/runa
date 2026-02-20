@@ -50,10 +50,13 @@ impl RunaRoot<'_> {
                     app.handle_worker_response(response, &self.workers);
                 }
                 AppContainer::Tabs(tab_manager) => {
-                    if let Some(id) = response.tab_id()
-                        && let Some(app) =
-                            tab_manager.tabs.iter_mut().find(|t| t.tab_id == Some(id))
-                    {
+                    let target_app = if let Some(id) = response.tab_id() {
+                        tab_manager.tabs.iter_mut().find(|t| t.tab_id == Some(id))
+                    } else {
+                        Some(&mut tab_manager.tabs[tab_manager.current])
+                    };
+
+                    if let Some(app) = target_app {
                         app.handle_worker_response(response, &self.workers);
                     }
                 }

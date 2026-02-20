@@ -442,10 +442,6 @@ mod tests {
     use crate::config::load::RawConfig;
     use std::error;
 
-    fn dummy_workers() -> Workers {
-        Workers::spawn()
-    }
-
     #[test]
     fn layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
         let size = Rect::new(0, 0, 100, 10);
@@ -463,10 +459,9 @@ mod tests {
         "#;
 
         let raw: RawConfig = toml::from_str(toml_content)?;
-        let workers = dummy_workers();
         let config = Config::from(raw);
 
-        let app = AppState::new(&config, &workers).expect("Failed to create AppState");
+        let app = AppState::new(&config).expect("Failed to create AppState");
 
         let chunks = layout_chunks(size, &app);
 

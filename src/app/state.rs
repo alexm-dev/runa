@@ -70,9 +70,9 @@ impl Default for LayoutMetrics {
 /// - References to configuration settings and the keymaps.
 /// - Models for navigation, actions, file previews, and parent directory pane
 /// - Live layout information
-/// - crossbeam channels for communication with background worker threads
 /// - Notification timing and loading indicators
 /// - UI overlay for a seamless widet rendering
+/// - Tab management (IDs and titles)
 ///
 /// Functions are provided for the core event loop, input handling, file navigationm
 /// worker requests and Notification management.
@@ -98,27 +98,23 @@ pub(crate) struct AppState<'a> {
 }
 
 impl<'a> AppState<'a> {
-    pub(crate) fn new(config: &'a Config, workers: &Workers) -> std::io::Result<Self> {
+    pub(crate) fn new(config: &'a Config) -> std::io::Result<Self> {
         let current_dir = std::env::current_dir()?;
-        Self::from_dir(config, &current_dir, workers)
+        Self::from_dir(config, &current_dir)
     }
 
-    pub(crate) fn new_current_dir(&self, workers: &Workers) -> std::io::Result<Self> {
-        Self::from_dir(self.config, self.nav.current_dir(), workers)
+    pub(crate) fn new_current_dir(&self) -> std::io::Result<Self> {
+        Self::from_dir(self.config, self.nav.current_dir())
     }
 
-    pub(crate) fn from_dir(
-        config: &'a Config,
-        initial_path: &Path,
-        workers: &Workers,
-    ) -> std::io::Result<Self> {
+    pub(crate) fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
         let current_dir = if initial_path.exists() && initial_path.is_dir() {
             initial_path.to_path_buf()
         } else {
             std::env::current_dir()?
         };
 
-        let mut app = Self {
+        let app = Self {
             config,
             keymap: Keymap::from_config(config),
             metrics: LayoutMetrics::default(),
@@ -134,9 +130,13 @@ impl<'a> AppState<'a> {
             tab_id: None,
         };
 
-        app.request_dir_load(workers, None);
-        app.request_parent_content(workers);
         Ok(app)
+    }
+
+    /// Initializes the AppState by requesting the initial directory load and parent content.
+    pub(crate) fn initialize(&mut self, workers: &Workers) {
+        self.request_dir_load(workers, None);
+        self.request_parent_content(workers);
     }
 
     // Getters/ accessors
@@ -557,9 +557,8 @@ mod tests {
     #[test]
     fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let workers = dummy_workers();
         let temp = tempdir()?;
-        let app = AppState::from_dir(&config, temp.path(), &workers)?;
+        let app = AppState::from_dir(&config, temp.path())?;
         assert_eq!(app.nav().current_dir(), temp.path());
         Ok(())
     }
@@ -569,7 +568,7 @@ mod tests {
         let config = dummy_config();
         let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         app.notification_time = Some(Instant::now() - Duration::from_secs(2));
         app.overlays_mut().push(Overlay::Message {
             text: "Timed MSG".to_string(),
@@ -588,9 +587,8 @@ mod tests {
     #[test]
     fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
-        let workers = dummy_workers();
         let temp = tempdir()?;
-        let app = AppState::from_dir(&config, temp.path(), &workers)?;
+        let app = AppState::from_dir(&config, temp.path())?;
         let app_nav = app.nav();
         if app_nav.entries().is_empty() {
             assert_eq!(app.visible_selected(), None);
@@ -610,7 +608,7 @@ mod tests {
 
         let mut clipboard = Clipboard::default();
 
-        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
         let result = app.handle_keypress(key, &workers, &mut clipboard);
         assert!(matches!(result, KeypressResult::Continue));
@@ -622,7 +620,7 @@ mod tests {
         let config = dummy_config();
         let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         app.is_loading = false;
         app.request_dir_load(&workers, None);
         assert!(app.is_loading);
@@ -634,7 +632,7 @@ mod tests {
         let config = dummy_config();
         let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path(), &workers)?;
+        let mut app = AppState::from_dir(&config, temp.path())?;
         #[cfg(unix)]
         {
             use std::path::PathBuf;
@@ -659,7 +657,7 @@ mod tests {
         let temp = tempdir()?;
         let subdir = temp.path().join("subdir");
         std::fs::create_dir(&subdir)?;
-        let mut app = AppState::from_dir(&config, &subdir, &workers)?;
+        let mut app = AppState::from_dir(&config, &subdir)?;
 
         let parent_path = app
             .nav()
