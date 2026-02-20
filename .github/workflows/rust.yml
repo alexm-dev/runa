@@ -53,9 +53,24 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install Cross
-        if: matrix.use-cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
+      - name: Install cross (Linux only)
+        if: ${{ matrix.use_cross }}
+        env:
+          CROSS_VERSION: "v0.2.5"
+          PACKAGE_NAME: "cross-x86_64-unknown-linux-gnu.tar.gz"
+          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+        run: |
+          INSTALL_DIR="$HOME/.local/bin"
+          mkdir -p "$INSTALL_DIR"
+
+          echo "Downloading cross $CROSS_VERSION using gh CLI..."
+          gh release download "v0.2.5" \
+            --repo cross-rs/cross \
+            --pattern "cross-x86_64-unknown-linux-gnu.tar.gz" \
+            -D "$INSTALL_DIR"
+
+          tar -xzf "$INSTALL_DIR/cross-x86_64-unknown-linux-gnu.tar.gz" -C "$INSTALL_DIR"
+          echo "$INSTALL_DIR" >> $GITHUB_PATH
 
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
