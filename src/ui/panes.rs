@@ -173,7 +173,15 @@ pub(crate) fn draw_preview(
 ) {
     match preview {
         PreviewData::Empty => {
-            frame.render_widget(Paragraph::new("").block(context.block), context.area);
+            frame.render_widget(
+                Paragraph::new("").block(
+                    context
+                        .block
+                        .border_style(context.accent_style)
+                        .border_type(context.border_type),
+                ),
+                context.area,
+            );
         }
 
         PreviewData::File(text) => {
@@ -245,7 +253,15 @@ pub(crate) fn draw_parent(
     markers: &PaneMarkers,
 ) {
     if entries.is_empty() {
-        frame.render_widget(Paragraph::new("").block(context.block), context.area);
+        frame.render_widget(
+            Paragraph::new("").block(
+                context
+                    .block
+                    .border_style(context.accent_style)
+                    .border_type(context.border_type),
+            ),
+            context.area,
+        );
         return;
     }
 
