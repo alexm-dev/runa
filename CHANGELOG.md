@@ -2,6 +2,41 @@
 
 All the changes made to runa are documented here.
 
+## Unreleased [v0.8.0-beta.2] - 2026-02-21
+
+#### Tabs added to runa. Better workflow and easier directory overview with up to 9 tabs.
+
+### Added:
+- **Tabs**: Added the ability to spawn tabs and manage a multi tab workflow.
+- **Tab Status Bar**: Customizable tab status bar via `tab_line_format`.
+- **Widget Scrolling**: Added widget scrolling to **delete**, **move action**, and **keybind help** widgets.
+
+- **Linux musl binaries**: Added binaries for musl.
+- **Windows aarch64/ARM64 binary**: Added Windows aarch64/ARM64 binary to release assets.
+
+### Breaking Changes:
+- Due to the new scroll feature for widgets, there has been a change in the default keybinds for runa.
+- `alternate_delete` is now by default mapped to `<m-d>` or `alt+d`.
+- `clear_clipboard` is now by default mapped to `<f2>`.
+
+### Changed:
+- **Nav IO worker**: Changed worker thread from unbounded to bounded(1).
+- **`Clipboard`**: To make cross-tab clipboards work, moved clipboard out of `ActionContext` and into the new central `RunaRoot` struct.
+- **`Workers`**: Refactored worker ownership from `AppState` to a central `RunaRoot` struct.
+
+### Fixed
+- **Nav IO worker**: Fixed issues caused by unbounded channel by switching to bounded(1).
+
+### Internal:
+- **AppContainer**: Added a internal container struct to manager and hold the new `TabManager` for tabs mode and a boxed `AppState` for Single (no tab) mode.
+- **CI**: Improved CI workflow to check more build variants and other checks like `clippy`, `fmt` and `audit`.
+- **CI**: Added `cross` to CI and release workflow for Linux targets.
+
+
+---
+
+
+
 ## [0.7.0] - 2026-02-06
 
 #### Major responsiveness and UX improvements, including a redesigned worker thread model, smarter preview/parent handling, expanded keybinding support, and new UI widgets.
