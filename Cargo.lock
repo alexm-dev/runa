@@ -1320,7 +1320,7 @@ checksum = "a96887878f22d7bad8a3b6dc5b7440e0ada9a245242924394987b21cf2210a4c"
 
 [[package]]
 name = "runa-tui"
-version = "0.8.0-beta.1"
+version = "0.8.0-beta.2"
 dependencies = [
  "ansi-to-tui",
  "chrono",
