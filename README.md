@@ -223,9 +223,7 @@ runa is in active development, with future releases focusing on expanding functi
 
 ---
 
-
-<img src="https://github.com/user-attachments/assets/778b80cc-3e6f-45ab-a770-e4d88059995a" alt="runa_default_3" style="max-width: 100%; height: auto;">
-
+<img src="https://github.com/user-attachments/assets/e66fdb98-43c4-4227-8bea-b4084fefcf19" alt="runa_alt" style="max-width: 100%; height: auto;" />
 
 ---
 
