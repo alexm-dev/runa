@@ -99,7 +99,7 @@ jobs:
           fi
         shell: bash
 
-  Test:
+  test:
     name: Test
     if: (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'x86_64-apple-darwin' || matrix.target == 'x86_64-pc-windows-msvc')
     run: |
