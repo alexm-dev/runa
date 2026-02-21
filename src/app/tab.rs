@@ -202,7 +202,7 @@ pub(crate) fn handle_tab_action<'a>(
         }
         TabAction::Close => {
             match container {
-                AppContainer::Single(_) => return KeypressResult::Quit,
+                AppContainer::Single(_) => {}
                 AppContainer::Tabs(tab) => {
                     tab.close_tab(tab.current);
                     if tab.len() == 1 {
