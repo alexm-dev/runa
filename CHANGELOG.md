@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## Unreleased [v0.8.0-beta.2] - 2026-02-21
+## [0.8.0] - 2026-02-22
 
 #### Tabs added to `runa`. Better workflow and easier directory overview with up to 9 tabs.
 
