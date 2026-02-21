@@ -23,7 +23,7 @@ All the changes made to runa are documented here.
 
 ### Fixed
 - **Nav IO worker**: Fixed issues caused by unbounded channel by switching to bounded(1).
-- **Border Shapes**: Fixed an issue where the border shape would reset to `"squared"` border shape on root and on previews.
+- **Border Shapes**: Fixed an issue where the border shape would reset to `"squared"` on root and on previews.
 
 ### Internal:
 - **RunaRoot**: Added a central struct which holds `Clipboard`, `AppContainer` and `Workers`. Due to tabs being added, these data structures needed to be managed out of AppState.
