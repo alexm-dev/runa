@@ -7,7 +7,7 @@ rust-version = "1.90"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/alexm-dev/runa"
 readme = "README.md"
-authors = ["alexm-dev"]
+authors = ["Alexandros McCray <alexandros.mc@proton.me>"]
 categories = ["filesystem", "command-line-utilities", "command-line-interface"]
 keywords = ["file-browser", "file-manager", "tui", "cli", "search"]
 
