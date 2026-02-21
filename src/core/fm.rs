@@ -9,12 +9,10 @@ use crate::core::formatter::format_attributes;
 use crate::utils::with_lowered_stack;
 
 use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::{self, symlink_metadata};
 use std::io;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 /// Represents a single entry in a directory listing
@@ -207,6 +205,12 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
             flags |= FileEntry::IS_SYMLINK;
         }
 
+        let path_buf = if (flags & FileEntry::IS_SYMLINK) != 0 {
+            Some(entry.path())
+        } else {
+            None
+        };
+
         #[cfg(unix)]
         {
             use std::os::unix::ffi::OsStrExt;
@@ -226,7 +230,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                 if md.permissions().mode() & FileEntry::EXEC_FLAG != 0 {
                     flags |= FileEntry::IS_EXECUTABLE;
                 }
-            } else if (flags & FileEntry::IS_SYMLINK) != 0 {
+            } else if path_buf.is_some() {
                 flags |= FileEntry::IS_BROKEN_SYM;
             }
 
@@ -248,8 +252,8 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                     flags |= FileEntry::IS_SYSTEM;
                 }
 
-                if (flags & FileEntry::IS_SYMLINK) != 0 {
-                    match fs::metadata(entry.path()) {
+                if let Some(ref p) = path_buf {
+                    match fs::metadata(p) {
                         Ok(target_md) => {
                             if target_md.is_dir() {
                                 flags |= FileEntry::IS_DIR;
