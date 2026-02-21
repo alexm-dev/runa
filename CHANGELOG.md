@@ -8,11 +8,9 @@ All the changes made to runa are documented here.
 
 ### Added:
 - **Tabs**: Added the ability to spawn tabs and manage a multi tab workflow.
-- **Tab Status Bar**: Customizable tab status bar via `tab_line_format`.
+- **Tab Status Bar**: Customizable tab status bar via `tab.line_format`.
 - **Widget Scrolling**: Added widget scrolling to **delete**, **move action**, and **keybind help** widgets.
-
-- **Linux musl binaries**: Added binaries for musl.
-- **Windows aarch64/ARM64 binary**: Added Windows aarch64/ARM64 binary to release assets.
+- **Linux musl binaries**: Added Linux binaries for musl.
 
 ### Breaking Changes:
 - Due to the new scroll feature for widgets, there has been a change in the default keybinds for runa.
@@ -20,7 +18,6 @@ All the changes made to runa are documented here.
 - `clear_clipboard` is now by default mapped to `<f2>`.
 
 ### Changed:
-- **Nav IO worker**: Changed worker thread from unbounded to bounded(1).
 - **`Clipboard`**: To make cross-tab clipboards work, moved clipboard out of `ActionContext` and into the new central `RunaRoot` struct.
 - **`Workers`**: Refactored worker ownership from `AppState` to a central `RunaRoot` struct.
 
@@ -35,7 +32,6 @@ All the changes made to runa are documented here.
 
 
 ---
-
 
 
 ## [0.7.0] - 2026-02-06
