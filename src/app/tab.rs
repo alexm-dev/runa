@@ -215,30 +215,24 @@ pub(crate) fn handle_tab_action<'a>(
             }
             KeypressResult::Consumed
         }
-        TabAction::Next => {
-            if let AppContainer::Tabs(tab) = container {
-                tab.switch(1);
-            }
-            KeypressResult::Consumed
-        }
-        TabAction::Prev => {
-            if let AppContainer::Tabs(tab) = container {
-                tab.switch(-1);
-            }
-            KeypressResult::Consumed
-        }
-        TabAction::Cycle => {
-            if let AppContainer::Tabs(tab) = container {
-                tab.switch(1);
-            }
-            KeypressResult::Consumed
-        }
-        TabAction::Switch(n) => {
-            if let AppContainer::Tabs(tab) = container {
-                let idx = n as usize - 1;
-                if idx < tab.len() {
-                    tab.set_active(idx);
+        TabAction::Next | TabAction::Prev | TabAction::Cycle | TabAction::Switch(_) => {
+            if let AppContainer::Tabs(tab_manager) = container {
+                match action {
+                    TabAction::Next | TabAction::Cycle => tab_manager.switch(1),
+                    TabAction::Prev => tab_manager.switch(-1),
+                    TabAction::Switch(n) => tab_manager.set_active(n as usize - 1),
+                    _ => unreachable!(),
                 }
+
+                let active = tab_manager.current_tab_mut();
+
+                let current_focus = active
+                    .nav()
+                    .selected_entry()
+                    .map(|entry| entry.name().to_os_string());
+
+                active.request_dir_load(workers, current_focus);
+                active.request_parent_content(workers);
             }
             KeypressResult::Consumed
         }
