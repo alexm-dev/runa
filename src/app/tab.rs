@@ -181,21 +181,21 @@ pub(crate) fn handle_tab_action<'a>(
                         .expect("Failed to create new blank tab");
                     *container =
                         AppContainer::Tabs(TabManager::new(*original, new_tab, workers, focus));
-                    if let AppContainer::Tabs(tab_manager) = container {
-                        tab_manager.current_tab_mut().tick(workers);
+                    if let AppContainer::Tabs(tabs) = container {
+                        tabs.current_tab_mut().tick(workers);
                     }
                 }
-                AppContainer::Tabs(tab) => {
-                    let focus = tab
+                AppContainer::Tabs(tabs) => {
+                    let focus = tabs
                         .current_tab()
                         .nav()
                         .selected_entry()
                         .map(|entry| entry.name().to_os_string());
-                    let new_tab = tab
+                    let new_tab = tabs
                         .current_tab()
                         .new_current_dir()
                         .expect("Failed to create new blank tab");
-                    tab.add_tab(new_tab, workers, focus);
+                    tabs.add_tab(new_tab, workers, focus);
                 }
             }
             KeypressResult::Consumed
@@ -216,15 +216,15 @@ pub(crate) fn handle_tab_action<'a>(
             KeypressResult::Consumed
         }
         TabAction::Next | TabAction::Prev | TabAction::Cycle | TabAction::Switch(_) => {
-            if let AppContainer::Tabs(tab_manager) = container {
+            if let AppContainer::Tabs(tabs) = container {
                 match action {
-                    TabAction::Next | TabAction::Cycle => tab_manager.switch(1),
-                    TabAction::Prev => tab_manager.switch(-1),
-                    TabAction::Switch(n) => tab_manager.set_active(n as usize - 1),
+                    TabAction::Next | TabAction::Cycle => tabs.switch(1),
+                    TabAction::Prev => tabs.switch(-1),
+                    TabAction::Switch(n) => tabs.set_active(n as usize - 1),
                     _ => unreachable!(),
                 }
 
-                let active = tab_manager.current_tab_mut();
+                let active = tabs.current_tab_mut();
 
                 let current_focus = active
                     .nav()
