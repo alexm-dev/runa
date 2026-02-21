@@ -266,7 +266,7 @@ pub(crate) fn draw_status_bar(
     let marker_theme = theme.marker();
     let use_icons = display_cfg.icons();
 
-    let mut spans = Vec::with_capacity(10);
+    let mut spans = Vec::with_capacity(21);
     let separator = Span::styled(" | ", base_style);
 
     let add_sep = |s: &mut Vec<Span>| {
@@ -274,10 +274,6 @@ pub(crate) fn draw_status_bar(
             s.push(separator.clone());
         }
     };
-
-    if status_cfg.tabs() == position && !app.tab_line().is_empty() {
-        spans.extend(app.tab_line().iter().cloned());
-    }
 
     if status_cfg.tasks() == position {
         let queued_ops = workers.fileop_tx().len();
@@ -347,6 +343,11 @@ pub(crate) fn draw_status_bar(
             add_sep(&mut spans);
             spans.push(Span::styled(format!("Filter: \"{}\"", filter), base_style));
         }
+    }
+
+    if status_cfg.tabs() == position && !app.tab_line().is_empty() {
+        add_sep(&mut spans);
+        spans.extend(app.tab_line().iter().cloned());
     }
 
     if status_cfg.entry_count() == position {
