@@ -18,7 +18,7 @@ All the changes made to runa are documented here.
 - `clear_clipboard` is now by default mapped to `<f2>`.
 
 ### Changed:
-- **`Clipboard`**: To enable cross-tab clipboards support, moved clipboard from `ActionContext` into the new central `RunaRoot` struct.
+- **`Clipboard`**: To enable cross-tab clipboard support, moved clipboard from `ActionContext` into the new central `RunaRoot` struct.
 - **`Workers`**: Refactored worker ownership from `AppState` into the central `RunaRoot` struct.
 
 ### Fixed
