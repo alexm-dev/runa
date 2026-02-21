@@ -28,6 +28,7 @@ All the changes made to runa are documented here.
 - **Nav IO worker**: Fixed issues caused by unbounded channel by switching to bounded(1).
 
 ### Internal:
+- **RunaRoot**: Added a central struct which holds `Clipboard`, `AppContainer` and `Workers`. Due to tabs being added, These data structs needed to be managed out of AppState.
 - **AppContainer**: Added a internal container struct to manager and hold the new `TabManager` for tabs mode and a boxed `AppState` for Single (no tab) mode.
 - **CI**: Improved CI workflow to check more build variants and other checks like `clippy`, `fmt` and `audit`.
 - **CI**: Added `cross` to CI and release workflow for Linux targets.
