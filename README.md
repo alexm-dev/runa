@@ -26,7 +26,7 @@
 
 </div>
 
-- **Rich File Actions:** Move, filter, copy, rename, and more, all with the keyboard.
+- **Rich File Actions:** Move, filter, copy, rename, tabs, and more, all with the keyboard.
 - **Extremely Customizable:** Tweak keybindings, colors, and layout via TOML.
 - **Blazing Fast:** Instant navigation, even in huge directory trees.
 - **Minimal Dependencies:** Only the essential crates; advanced features are opt-in.
@@ -206,11 +206,11 @@ runa is in active development, with future releases focusing on expanding functi
 
 ### Planned Features
 
-- [ ] Tabs: Spawn and manage multiple tabs of runa
 - [ ] Image Previews: Support for Sixel/Kitty graphics protocols
 
 ### Completed Features
 
+- [x] Tabs: Spawn and manage multiple tabs of runa
 - [x] Syntax Highlighting: `bat` integration for the preview pane  
 - [x] Search & Discovery: Integrated fuzzy finding (`fd` support)  
 - [x] File Operations: Copy, move, delete, and rename from within the UI  

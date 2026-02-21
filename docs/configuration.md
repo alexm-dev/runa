@@ -198,6 +198,7 @@ filter = "header"
 markers = "footer"
 clipboard = "footer"
 tasks = "footer"
+tabs = "header"
 ```
 
 
@@ -425,6 +426,21 @@ goto_help.position = "bottom"
 fg = "default"
 bg = "default"
 
+# Tab line customization
+[theme.tab]
+marker = ""
+separator = ":"
+active.fg = "yellow"
+active.bg = "default"
+inactive.fg = "gray"
+inactive.bg = "default"
+
+# Customization of the tab line.
+# Possible ways: {idx}, {name}, {marker}, {separator}
+# {name} shows the current directory of the tab
+# Example: line_format = "[{idx}{name}{marker}]"
+line_format = "[{idx}]"
+
 # Configuration for the File info widget
 [theme.info]
 color.fg = "default"
@@ -488,8 +504,9 @@ info                = ["i"]
 find                = ["s"]
 clear_markers       = ["<c-c>"]
 clear_filter        = ["<c-f>"]
-clear_clipboard     = ["<c-u>"]
-alternate_delete    = ["<c-d>"]    # Alternates between move_to_trash and permanently delete
+clear_clipboard     = ["<f2>"]
+clear_all           = ["<c-l>"]
+alternate_delete    = ["<m-d>"]    # Alternates between move_to_trash and permanently delete
 go_to_bottom        = ["G"]
 keybind_help        = ["?"]
 
@@ -497,6 +514,18 @@ keybind_help        = ["?"]
 go_to_top           = ["g"]
 go_to_home          = ["h"]
 go_to_path          = ["p"]
+
+# Tab actions
+tab_new             = ["<c-t>"]
+tab_close           = ["<c-w>"]
+tab_cycle           = ["<c-n>"]
+tab_next            = ["<c-n>"]
+tab_prev            = ["<c-p>"]
+
+# Widget scroll
+scroll_up           = ["<c-d>"]
+scroll_down         = ["<c-u>"]
+
 ```
 
 **Note:**
