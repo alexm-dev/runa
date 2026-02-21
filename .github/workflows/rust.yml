@@ -99,16 +99,39 @@ jobs:
           fi
         shell: bash
 
-  test:
-    name: Test
-    if: (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'x86_64-apple-darwin' || matrix.target == 'x86_64-pc-windows-msvc')
-    run: |
-      if [ "${{ matrix.use_cross }}" = "true" ]; then
-        cross test --release --locked --target ${{ matrix.target }}
-      else
-        cargo test --release --locked --target ${{ matrix.target }}
-      fi
-    shell: bash
+      - name: Test
+        if: (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'x86_64-apple-darwin' || matrix.target == 'x86_64-pc-windows-msvc')
+        run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross test --release --locked --target ${{ matrix.target }}
+          else
+            cargo test --release --locked --target ${{ matrix.target }}
+          fi
+        shell: bash
+
+      - name: Generate Detailed Report
+        if: always()
+        run: |
+          echo "### Report for ${{ matrix.target }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.build_step.outcome }}" == "success" ]; then
+            echo "- **Build:** Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Build:** Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Report Test Status (only if tests were supposed to run)
+          if [[ "${{ matrix.target }}" == "x86_64"* ]]; then
+            if [ "${{ steps.test_step.outcome }}" == "success" ]; then
+              echo "- **Tests:** Passed" >> $GITHUB_STEP_SUMMARY
+            elif [ "${{ steps.test_step.outcome }}" == "skipped" ]; then
+              echo "- **Tests:** Skipped" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- **Tests:** Failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- **Tests:** Not applicable for this target" >> $GITHUB_STEP_SUMMARY
+          fi
+        shell: bash
 
   clippy:
     name: Clippy
