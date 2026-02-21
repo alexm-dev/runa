@@ -34,7 +34,7 @@
 - **Keyboard-Driven:** Every action accessible by keybindings. No mouse needed.
 - **Integrated Find (`fd` required):** Blazingly fast file search.
 
-<img src="https://github.com/user-attachments/assets/5590719c-016d-41a6-ba83-1acbe32dab1b" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
+<img src="https://github.com/user-attachments/assets/d1420cfc-195f-4344-aa5b-7dccaea44c81" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 <br></br>
 
 <details>
