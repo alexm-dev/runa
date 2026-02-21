@@ -29,6 +29,7 @@ All the changes made to runa are documented here.
 - **AppContainer**: Added a internal container struct to manage and hold the new `TabManager` for tabs mode and a boxed `AppState` for single (no-tab) mode.
 - **CI**: Improved CI workflow to check more build variants and include additional checks like `clippy`, `fmt` and `audit`.
 - **CI**: Added `cross` to the CI and release workflows for Linux targets.
+- **Performance**: Cached `entry.path` in `core::fm::browse_dir` to not remove reduntant calls whener a directory has symlinks.
 
 
 ---
