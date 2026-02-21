@@ -203,7 +203,7 @@ preview = true
 # bat related options if method = "bat"
 # theme = "default"
 # style = "plain"
-# wrap = true
+# wrap = false
 
 # [display.layout]
 # parent = 20
@@ -224,6 +224,7 @@ preview = true
 # markers = "footer"
 # clipboard = "footer"
 # tasks = "footer"
+# tabs = "header"
 
 [theme]
 name = "default"
@@ -287,8 +288,10 @@ name = "default"
 # [theme.widget]
 # color.fg = "default"
 # color.bg = "default"
-# field.fg = "cyan"
-# field.bg = "default"
+# label.fg = "blue"
+# label.bg = "default"
+# value.fg = "cyan"
+# value.bg = "default"
 # border.fg = "default"
 # border.bg = "default"
 # size = "medium"           # "small", "medium", "large" or [w ,h] or { w = 30, y = 30 }.
@@ -303,6 +306,15 @@ name = "default"
 # [theme.status_line]
 # fg = "default"
 # bg = "default"
+
+# [theme.tab]
+# marker = ""
+# separator = ":"
+# active.fg = "yellow"
+# active.bg = "default"
+# inactive.fg = "gray"
+# inactive.bg = "default"
+# line_format = "[{idx}]"
 
 # [theme.info]
 # color.fg = "default"
@@ -336,7 +348,9 @@ name = "default"
 # find = ["s"]
 # clear_markers = ["<c-c>"]
 # clear_filter = ["<c-f>"]
-# alternate_delete = ["<c-d>"]
+# clear_clipboard = ["<f2>"]
+# clear_all = ["<c-l>"]
+# alternate_delete = ["<m-d>"]
 # go_to_bottom = ["G"]
 # keybind_help = ["?"]
 
@@ -344,6 +358,17 @@ name = "default"
 # go_to_top = ["g"]
 # go_to_home = ["h"]
 # go_to_path = ["p"]
+
+# Tab actions
+tab_new = ["<c-t>"]
+tab_close = ["<c-w>"]
+tab_cycle = ["<c-n>"]
+tab_next = ["<c-n>"]
+tab_prev = ["<c-p>"]
+
+# Widget scroll
+scroll_up = ["<c-d>"]
+scroll_down = ["<c-u>"]
 
 "##;
 

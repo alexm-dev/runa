@@ -94,9 +94,7 @@ ENVIRONMENT:
     );
 }
 
-fn print_keybinds() {
-    println!(
-        r##"
+const KEYBINDS_TEXT: &str = r##"
 =========================
  Key Bindings
 =========================
@@ -120,12 +118,24 @@ fn print_keybinds() {
   find                      ["s"]
   clear_markers             ["<c-c>"]
   clear_filter              ["<c-f>"]
-  alternate_delete          ["<c-d>"]
+  clear_clipboard           ["<f2>"]
+  clear_all                 ["<c-l>"]
+  alternate_delete          ["<m-d>"]
   go_to_bottom              ["G"]
+  keybind_help              ["?"]
+
   go_to_top                 ["g"]     (press "g" then "g" again)
   go_to_home                ["h"]     (press "g" then "h")
   go_to_path                ["p"]     (press "g" then "p")
-  keybind_help              ["?"]
+
+  tab_new                   ["<c-t>"]
+  tab_close                 ["<c-w>"]
+  tab_cycle                 ["<c-n>"]
+  tab_next                  ["<c-n>"]
+  tab_prev                  ["<c-p>"]
+
+  scroll_up                 ["<c-d>"]   (Widget scrolling)
+  scroll_down               ["<c-u>"]
 
   Syntax Reference:
     Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
@@ -135,9 +145,10 @@ fn print_keybinds() {
   Note:
     - Shorthand (c-, m-, s-) only works inside brackets <>.
     - The 'g' key is a prefix; it waits for the next key to trigger an action.
+"##;
 
-    "##
-    )
+fn print_keybinds() {
+    println!("{}", KEYBINDS_TEXT);
 }
 
 fn print_config_help() {
@@ -201,6 +212,7 @@ runa - Full Configuration Guide (runa.toml)
   markers
   clipboard
   tasks
+  tabs
 
 =========================
  Theme Configuration
@@ -242,6 +254,13 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   go_to_help.size            Size of the go_to dialog when pressing the "g" prefix
   go_to_help.position        Position of the go_to dialog when pressing the "g" prefix
 
+[theme.tab]                  Customization of the tab line
+  marker                     String to set the marker. marker = ""
+  separator                  String to set the separators between tabs. separator = ""
+  active.fg/bg               Coloring for the active tab
+  inactive.fg/bg             Coloring for the inactive tab
+  line_format                Customization of the whole tab line. line_format = ["{idx}{marker}"]
+
 [theme.info]                 File Info overlay widget
   color.fg/bg,
   border.fg/bg,
@@ -253,46 +272,7 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
 =========================
 [editor]
   cmd                       Command to open files (e.g., "nvim", "code")
-
-=========================
- Key Bindings
-=========================
-[keys]
-  open_file                 ["enter"]
-  go_up                     ["k", "up"]
-  go_down                   ["j", "down"]
-  go_parent                 ["h", "left", "Backspace"]
-  go_into_dir               ["l", "right"]
-  quit                      ["q", "esc"]
-  delete                    ["d"]
-  copy                      ["y"]
-  paste                     ["p"]
-  rename                    ["r"]
-  create                    ["n"]
-  create_directory          ["N"]
-  move_file                 ["m"]
-  filter                    ["f"]
-  toggle_marker             ["space"]
-  info                      ["i"]
-  find                      ["s"]
-  clear_markers             ["<c-c>"]
-  clear_filter              ["<c-f>"]
-  alternate_delete          ["<c-d>"]
-  go_to_bottom              ["G"]
-  go_to_top                 ["g"]     (press "g" then "g" again)
-  go_to_home                ["h"]     (press "g" then "h")
-  go_to_path                ["p"]     (press "g" then "p")
-  keybind_help              ["?"]
-
-  Syntax Reference:
-    Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
-    Standard:  ctrl+x, alt+x, shift+x, meta+x
-    Special:   " ", "space", "back", "enter", "esc", "tab"
-
-  Note:
-    - Shorthand (c-, m-, s-) only works inside brackets <>.
-    - The 'g' key is a prefix; it waits for the next key to trigger an action.
 "##;
 
-    println!("{}", help_text);
+    println!("{}{}", help_text, KEYBINDS_TEXT);
 }
