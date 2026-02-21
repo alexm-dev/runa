@@ -8,4 +8,4 @@ Only the most recent release of runa is supported.
 
 Please report security vulnerabilities via:
 
-* Mail: `runa-dev [at] proton [dot] me`
+* Mail: `alexandros [dot] mc [at] proton [dot] me`
