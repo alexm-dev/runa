@@ -320,6 +320,7 @@ impl Theme {
             marker,
             widget,
             info,
+            tab,
         ]);
 
         if user.name.is_some() {
@@ -680,7 +681,7 @@ impl Default for TabTheme {
     fn default() -> Self {
         TabTheme {
             marker: "".to_string(),
-            separator: ":".to_string(),
+            separator: "".to_string(),
             active: ColorPair {
                 fg: Color::Yellow,
                 ..Default::default()
@@ -884,6 +885,17 @@ pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
                 ..ColorPair::default()
             },
             ..WidgetTheme::default()
+        },
+        tab: TabTheme {
+            active: ColorPair {
+                fg: primary,
+                ..ColorPair::default()
+            },
+            inactive: ColorPair {
+                fg: muted,
+                ..ColorPair::default()
+            },
+            ..TabTheme::default()
         },
         ..Theme::default()
     }
