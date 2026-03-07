@@ -293,30 +293,22 @@ pub(crate) fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
 pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
-    // Metadata check
-    let Ok(meta) = std::fs::metadata(path) else {
-        return vec![sanitize_to_exact_width(
-            "[Error: Access Denied]",
-            pane_width,
-        )];
-    };
-
-    // Size Check
-    if meta.len() > MAX_PREVIEW_SIZE {
-        return vec![sanitize_to_exact_width(
-            "[File too large for preview]",
-            pane_width,
-        )];
-    }
-
-    // Regular File Check
-    if !meta.is_file() {
-        return vec![sanitize_to_exact_width("[Not a regular file]", pane_width)];
-    }
-
     // File Read and binary Check
     match File::open(path) {
         Ok(mut file) => {
+            if let Ok(metadata) = file.metadata() {
+                if !metadata.is_file() {
+                    return vec![sanitize_to_exact_width("[Not a regular file]", pane_width)];
+                }
+
+                if metadata.len() > MAX_PREVIEW_SIZE {
+                    return vec![sanitize_to_exact_width(
+                        "[File too large for preview]",
+                        pane_width,
+                    )];
+                }
+            }
+
             // Peek for null bytes to detect binary files
             let mut buffer = [0u8; BINARY_PEEK_BYTES];
             let n = file.read(&mut buffer).unwrap_or(0);
