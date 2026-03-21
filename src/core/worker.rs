@@ -415,14 +415,17 @@ fn start_fileop_worker(
                 FileOperation::Rename { old, new } => {
                     let target = new;
 
-                    if target.exists() {
+                    let is_case_rename = old.to_string_lossy().to_lowercase()
+                        == target.to_string_lossy().to_lowercase();
+
+                    if target.exists() && !is_case_rename {
                         Err(format!(
                             "Rename failed: '{}' already exists",
                             target.file_name().unwrap_or_default().to_string_lossy()
                         ))
                     } else {
                         focus_target = target.file_name().map(|n| n.to_os_string());
-                        std::fs::rename(old, &target).map_err(|e| e.to_string())
+                        std::fs::rename(&old, &target).map_err(|e| e.to_string())
                     }
                 }
                 FileOperation::Create { path, is_dir } => {
