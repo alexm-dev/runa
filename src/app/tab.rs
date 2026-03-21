@@ -215,10 +215,10 @@ pub(crate) fn handle_tab_action<'a>(
             }
             KeypressResult::Consumed
         }
-        TabAction::Next | TabAction::Prev | TabAction::Cycle | TabAction::Switch(_) => {
+        TabAction::Next | TabAction::Prev | TabAction::Switch(_) => {
             if let AppContainer::Tabs(tabs) = container {
                 match action {
-                    TabAction::Next | TabAction::Cycle => tabs.switch(1),
+                    TabAction::Next => tabs.switch(1),
                     TabAction::Prev => tabs.switch(-1),
                     TabAction::Switch(n) => tabs.set_active(n as usize - 1),
                     _ => unreachable!(),

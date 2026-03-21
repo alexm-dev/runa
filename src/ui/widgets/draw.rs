@@ -856,7 +856,6 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
             vec![
                 (fmt_keys(keys.tab_new()), "Create a new tab"),
                 (fmt_keys(keys.tab_close()), "Close the selected tab"),
-                (fmt_keys(keys.tab_cycle()), "Cycle between tabs"),
                 (fmt_keys(keys.tab_next()), "Switch to the next tab"),
                 (fmt_keys(keys.tab_prev()), "Switch to the previous tab"),
                 ("[0-9]".into(), "Switch to tab by index"),

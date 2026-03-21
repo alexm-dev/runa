@@ -37,7 +37,6 @@ pub(crate) struct Keys {
     go_to_bottom: Vec<String>,
     tab_new: Vec<String>,
     tab_close: Vec<String>,
-    tab_cycle: Vec<String>,
     tab_next: Vec<String>,
     tab_prev: Vec<String>,
     keybind_help: Vec<String>,
@@ -94,7 +93,6 @@ accessor!(
     go_to_bottom,
     tab_new,
     tab_close,
-    tab_cycle,
     tab_next,
     tab_prev,
     keybind_help,
@@ -140,7 +138,6 @@ impl Default for Keys {
 
             tab_new: vec!["<c-t>".into()],
             tab_close: vec!["<c-w>".into()],
-            tab_cycle: vec!["<c-n>".into()],
             tab_next: vec!["<c-n>".into()],
             tab_prev: vec!["<c-p>".into()],
 

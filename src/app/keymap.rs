@@ -57,7 +57,6 @@ pub(crate) enum FileAction {
 pub(crate) enum TabAction {
     New,
     Close,
-    Cycle,
     Next,
     Prev,
     Switch(u8),
@@ -144,7 +143,6 @@ impl Keymap {
         // TabActions
         bind!(keys.tab_new(),           Action::Tab(T::New));
         bind!(keys.tab_close(),         Action::Tab(T::Close));
-        bind!(keys.tab_cycle(),         Action::Tab(T::Cycle));
         bind!(keys.tab_next(),          Action::Tab(T::Next));
         bind!(keys.tab_prev(),          Action::Tab(T::Prev));
 
