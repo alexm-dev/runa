@@ -13,6 +13,7 @@ use serde::Deserialize;
 
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 #[derive(Deserialize, Debug)]
@@ -27,6 +28,7 @@ pub(crate) struct General {
     #[serde(default = "default_find_results")]
     max_find_results: usize,
     move_to_trash: bool,
+    startup: StartupConfig,
 }
 
 impl Default for General {
@@ -40,6 +42,7 @@ impl Default for General {
             always_show: Vec::new(),
             max_find_results: DEFAULT_FIND_RESULTS,
             move_to_trash: true,
+            startup: StartupConfig::default(),
         }
     }
 }
@@ -54,6 +57,7 @@ pub(crate) struct InternalGeneral {
     always_show: Arc<HashSet<OsString>>,
     max_find_results: usize,
     move_to_trash: bool,
+    startup: InternalStartup,
 }
 
 impl From<General> for InternalGeneral {
@@ -63,6 +67,11 @@ impl From<General> for InternalGeneral {
             .into_iter()
             .map(OsString::from)
             .collect::<HashSet<_>>();
+
+        let internal_startup = InternalStartup {
+            tabs: g.startup.tabs.into_iter().map(PathBuf::from).collect(),
+        };
+
         Self {
             dirs_first: g.dirs_first,
             show_hidden: g.show_hidden,
@@ -72,6 +81,7 @@ impl From<General> for InternalGeneral {
             always_show: Arc::new(set),
             max_find_results: clamp_find_results(g.max_find_results),
             move_to_trash: g.move_to_trash,
+            startup: internal_startup,
         }
     }
 }
@@ -116,9 +126,25 @@ impl InternalGeneral {
     pub(crate) fn move_to_trash(&self) -> bool {
         self.move_to_trash
     }
+
+    #[inline]
+    pub(crate) fn startup_tabs(&self) -> &[PathBuf] {
+        &self.startup.tabs
+    }
 }
 
 /// Helper function for default max_find_results
 fn default_find_results() -> usize {
     DEFAULT_FIND_RESULTS
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(default)]
+pub(super) struct StartupConfig {
+    pub(super) tabs: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct InternalStartup {
+    pub(crate) tabs: Vec<PathBuf>,
 }

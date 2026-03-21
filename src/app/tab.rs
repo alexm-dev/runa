@@ -43,6 +43,21 @@ impl<'a> TabManager<'a> {
         manager
     }
 
+    pub(crate) fn from_vec(mut tabs: Vec<AppState<'a>>) -> Self {
+        for (i, tab) in tabs.iter_mut().enumerate() {
+            tab.tab_id = Some(i);
+        }
+
+        let next_id = tabs.len();
+        let mut manager = Self {
+            tabs,
+            current: 0,
+            next_tab_id: next_id,
+        };
+        manager.sync_tab_line();
+        manager
+    }
+
     #[inline]
     pub(crate) fn len(&self) -> usize {
         self.tabs.len()

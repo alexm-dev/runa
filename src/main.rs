@@ -13,6 +13,38 @@ use crate::core::worker::Workers;
 use crate::utils::cli::{CliAction, handle_args};
 use crate::utils::{is_hardened_directory, resolve_initial_dir};
 
+fn startup_container<'a>(
+    config: &'a Config,
+    workers: &Workers,
+) -> std::io::Result<app::AppContainer<'a>> {
+    let startup_tabs = config.general().startup_tabs();
+
+    if !startup_tabs.is_empty() {
+        let mut tabs = Vec::with_capacity(startup_tabs.len());
+
+        for path in startup_tabs {
+            if is_hardened_directory(path)
+                && let Ok(mut state) = app::AppState::from_dir(config, path)
+            {
+                state.initialize(workers, None);
+                tabs.push(state);
+            }
+        }
+
+        if tabs.len() > 1 {
+            return Ok(app::AppContainer::Tabs(app::tab::TabManager::from_vec(
+                tabs,
+            )));
+        } else if let Some(single) = tabs.pop() {
+            return Ok(app::AppContainer::Single(Box::new(single)));
+        }
+    }
+
+    let mut app = app::AppState::new(config)?;
+    app.initialize(workers, None);
+    Ok(app::AppContainer::Single(Box::new(app)))
+}
+
 fn main() -> std::io::Result<()> {
     std::panic::set_hook(Box::new(|info| {
         let _ = crossterm::terminal::disable_raw_mode();
@@ -56,15 +88,17 @@ fn main() -> std::io::Result<()> {
 
     let workers = Workers::spawn();
 
-    let mut app = match initial_path {
-        Some(path) => app::AppState::from_dir(&config, &path)?,
-        None => app::AppState::new(&config)?,
+    let container = match initial_path {
+        Some(path) => {
+            let mut app = app::AppState::from_dir(&config, &path)?;
+            app.initialize(&workers, None);
+            app::AppContainer::Single(Box::new(app))
+        }
+        None => startup_container(&config, &workers)?,
     };
 
-    app.initialize(&workers, None);
-
     let mut runa = app::RunaRoot {
-        container: app::AppContainer::Single(Box::new(app)),
+        container,
         clipboard: app::Clipboard::default(),
         workers,
     };
