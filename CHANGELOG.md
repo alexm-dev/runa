@@ -2,6 +2,25 @@
 
 All the changes made to runa are documented here.
 
+## [0.9.0-alpha.2] - UNRELEASED
+
+### Added
+- **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`
+- **CLI tab start**: Added multi-tab startup via cli args. Example: `rn /path1/ /path2/ /path3/`.
+
+### Fixed
+- **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
+
+### Changed
+- **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
+
+### Internal
+- **Dependency Update**: Updated dependencies via `cargo update`
+
+
+---
+
+
 ## [0.8.0] - 2026-02-22
 
 #### Tabs added to `runa`. Better workflow and easier directory overview with up to 9 tabs.
