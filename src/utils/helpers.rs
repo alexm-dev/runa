@@ -282,22 +282,30 @@ pub(crate) fn expand_home_path_buf<P: AsRef<Path>>(input: P) -> PathBuf {
 
 /// Hardened directory check to make sure passed path is actually a directory and not
 /// innaccessible.
-pub(crate) fn is_hardened_directory(path: &Path) -> bool {
-    if !path.exists() || !path.is_dir() {
-        return false;
+pub(crate) fn validate_path(path: &Path) -> io::Result<()> {
+    if !path.exists() {
+        return Err(io::Error::new(io::ErrorKind::NotFound, "path not found"));
     }
 
-    if std::fs::read_dir(path).is_err() {
-        return false;
+    if !path.is_dir() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "is not a directory",
+        ));
+    }
+
+    if let Err(e) = std::fs::read_dir(path) {
+        return Err(e);
     }
 
     if path.components().count() > 255 {
-        return false;
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "path depth exceeds limit",
+        ));
     }
-
-    true
+    Ok(())
 }
-
 /// Helper to resolve the initial loaded for path string.
 /// Checks if the path arg is a file and then loads the parent directory of that file.
 /// Used by cli path args.

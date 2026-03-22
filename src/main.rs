@@ -14,13 +14,14 @@ use crate::config::Config;
 use crate::core::terminal;
 use crate::core::worker::Workers;
 use crate::utils::cli::{CliAction, handle_args};
-use crate::utils::{is_hardened_directory, resolve_initial_dir};
+use crate::utils::{resolve_initial_dir, validate_path};
 
 fn startup_container<'a>(
     config: &'a Config,
     workers: &Workers,
     cli_paths: Option<Vec<PathBuf>>,
 ) -> io::Result<app::AppContainer<'a>> {
+    let is_cli_request = cli_paths.is_some();
     let paths: Vec<PathBuf> = match cli_paths {
         Some(paths) => paths,
         None => config.general().startup_tabs().to_vec(),
@@ -45,17 +46,25 @@ fn startup_container<'a>(
             }
         } else {
             let target = resolve_initial_dir(&path);
-            if is_hardened_directory(&target)
-                && let Ok(mut state) = app::AppState::from_dir(config, &target)
-            {
-                state.initialize(workers, None);
-                tabs.push(state);
+
+            if let Err(e) = validate_path(&target) {
+                return Err(io::Error::new(
+                    e.kind(),
+                    format!("{}: '{}'", e, path.to_string_lossy()),
+                ));
             }
+
+            let mut state = app::AppState::from_dir(config, &target)?;
+            state.initialize(workers, None);
+            tabs.push(state);
         }
     }
 
     match tabs.len() {
         0 => {
+            if is_cli_request {
+                return Err(io::Error::other("The provided paths could not be opened"));
+            }
             let mut app = app::AppState::new(config)?;
             app.initialize(workers, None);
             Ok(app::AppContainer::Single(Box::new(app)))
@@ -105,7 +114,13 @@ fn main() -> io::Result<()> {
 
     let workers = Workers::spawn();
 
-    let container = startup_container(&config, &workers, cli_paths)?;
+    let container = match startup_container(&config, &workers, cli_paths) {
+        Ok(cont) => cont,
+        Err(e) => {
+            eprintln!("[runa] Error: {}", e);
+            std::process::exit(1);
+        }
+    };
 
     let mut runa = app::RunaRoot {
         container,
