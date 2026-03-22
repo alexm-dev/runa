@@ -8,62 +8,82 @@ use crate::config::Config;
 
 pub(crate) enum CliAction {
     RunApp,
-    RunAppAtPath(String),
+    RunAppAtPath(Vec<String>),
     Exit,
 }
 
 pub(crate) fn handle_args() -> CliAction {
-    let args: Vec<String> = std::env::args().collect();
+    let mut args: Vec<String> = std::env::args().collect();
     let config_path = Config::default_path();
 
     if args.len() < 2 {
         return CliAction::RunApp;
     }
 
-    if args.len() > 2 {
-        eprintln!("Error: runa accepts only one argument at a time.");
-        eprintln!("Usage: rn [PATH] or rn [OPTION]");
+    let first_arg = &args[1];
+    if first_arg.starts_with("-") {
+        if args.len() > 2 {
+            eprintln!("[runa] Error: Options (flags) cannot be combined with other arguments.");
+            eprintln!("Usage: rn [OPTION] OR rn [PATH]...");
+            return CliAction::Exit;
+        }
+
+        return match first_arg.as_str() {
+            "--version" | "-v" => {
+                print_version();
+                CliAction::Exit
+            }
+            "-h" | "--help" => {
+                print_help();
+                CliAction::Exit
+            }
+            "--config-help" => {
+                print_config_help();
+                CliAction::Exit
+            }
+            "--keybinds" | "--keybind" | "--key" => {
+                print_keybinds();
+                CliAction::Exit
+            }
+            "--init" => {
+                if let Err(e) = Config::generate_default(&config_path, true) {
+                    eprintln!("Error: {}", e);
+                }
+                CliAction::Exit
+            }
+            "--init-full" => {
+                if let Err(e) = Config::generate_default(&config_path, false) {
+                    eprintln!("Error: {}", e);
+                }
+                CliAction::Exit
+            }
+            _ => {
+                eprintln!("Unknown argument: {}", first_arg);
+                eprintln!("Try --help for available options");
+                CliAction::Exit
+            }
+        };
+    }
+
+    let mut paths: Vec<String> = args.drain(1..).filter(|a| !a.trim().is_empty()).collect();
+
+    if paths.is_empty() {
+        return CliAction::RunApp;
+    }
+
+    if paths.iter().any(|p| p.starts_with('-')) {
+        eprintln!(
+            "[runa] Error: Options must be placed at the start and cannot be combined with paths."
+        );
         return CliAction::Exit;
     }
 
-    match args[1].as_str() {
-        "--version" | "-v" => {
-            print_version();
-            CliAction::Exit
-        }
-        "-h" | "--help" => {
-            print_help();
-            CliAction::Exit
-        }
-        "--config-help" => {
-            print_config_help();
-            CliAction::Exit
-        }
-        "--keybinds" | "--keybind" | "--key" => {
-            print_keybinds();
-            CliAction::Exit
-        }
-        "--init" => {
-            if let Err(e) = Config::generate_default(&config_path, true) {
-                eprintln!("Error: {}", e);
-            }
-            CliAction::Exit
-        }
-        "--init-full" => {
-            if let Err(e) = Config::generate_default(&config_path, false) {
-                eprintln!("Error: {}", e);
-            }
-            CliAction::Exit
-        }
-        arg if !arg.starts_with('-') && !arg.trim().is_empty() => {
-            CliAction::RunAppAtPath(arg.to_string())
-        }
-        arg => {
-            eprintln!("Unknown argument: {}", arg);
-            eprintln!("Try --help for available options");
-            CliAction::Exit
-        }
+    if paths.len() > 9 {
+        eprintln!("[runa] Note: runa supports a maximum of 9 tabs. Extra paths will be ignored.");
+        paths.truncate(9);
     }
+
+    CliAction::RunAppAtPath(paths)
 }
 
 fn print_version() {

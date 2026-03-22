@@ -16,32 +16,43 @@ use crate::utils::{is_hardened_directory, resolve_initial_dir};
 fn startup_container<'a>(
     config: &'a Config,
     workers: &Workers,
+    cli_paths: Option<Vec<String>>,
 ) -> std::io::Result<app::AppContainer<'a>> {
-    let startup_tabs = config.general().startup_tabs();
+    let raw_paths: Vec<String> = match cli_paths {
+        Some(paths) => paths,
+        None => config
+            .general()
+            .startup_tabs()
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect(),
+    };
 
-    if startup_tabs.is_empty() {
+    if raw_paths.is_empty() {
         let mut app = app::AppState::new(config)?;
         app.initialize(workers, None);
         return Ok(app::AppContainer::Single(Box::new(app)));
     }
 
-    let mut tabs = Vec::with_capacity(startup_tabs.len());
+    let mut tabs = Vec::with_capacity(raw_paths.len());
+    for path_str in raw_paths {
+        if tabs.len() >= 9 {
+            break;
+        }
 
-    for path in startup_tabs {
-        let path_str = path.to_string_lossy();
         if path_str == "." || path_str == "cwd" {
             if let Ok(mut state) = app::AppState::new(config) {
                 state.initialize(workers, None);
                 tabs.push(state);
             }
-            continue;
-        }
-
-        if is_hardened_directory(path)
-            && let Ok(mut state) = app::AppState::from_dir(config, path)
-        {
-            state.initialize(workers, None);
-            tabs.push(state);
+        } else {
+            let target = resolve_initial_dir(&path_str);
+            if is_hardened_directory(&target)
+                && let Ok(mut state) = app::AppState::from_dir(config, &target)
+            {
+                state.initialize(workers, None);
+                tabs.push(state);
+            }
         }
     }
 
@@ -85,30 +96,15 @@ fn main() -> std::io::Result<()> {
 
     let config = Config::load();
 
-    let initial_path = match action {
+    let cli_paths = match action {
         CliAction::RunApp => None,
-        CliAction::RunAppAtPath(path_arg) => {
-            let target = resolve_initial_dir(&path_arg);
-
-            if !is_hardened_directory(&target) {
-                eprintln!("\n[runa] Error: Path '{}' cannot be opened.", path_arg);
-                std::process::exit(1);
-            }
-            Some(target)
-        }
+        CliAction::RunAppAtPath(paths) => Some(paths),
         _ => unreachable!(),
     };
 
     let workers = Workers::spawn();
 
-    let container = match initial_path {
-        Some(path) => {
-            let mut app = app::AppState::from_dir(&config, &path)?;
-            app.initialize(&workers, None);
-            app::AppContainer::Single(Box::new(app))
-        }
-        None => startup_container(&config, &workers)?,
-    };
+    let container = startup_container(&config, &workers, cli_paths)?;
 
     let mut runa = app::RunaRoot {
         container,
