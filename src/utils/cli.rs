@@ -4,11 +4,13 @@
 //!
 //! When invoked with no args/flags (rn), runa simply launches the TUI
 
+use std::path::PathBuf;
+
 use crate::config::Config;
 
 pub(crate) enum CliAction {
     RunApp,
-    RunAppAtPath(Vec<String>),
+    RunAppAtPath(Vec<PathBuf>),
     Exit,
 }
 
@@ -65,13 +67,17 @@ pub(crate) fn handle_args() -> CliAction {
         };
     }
 
-    let mut paths: Vec<String> = args.drain(1..).filter(|a| !a.trim().is_empty()).collect();
+    let mut paths: Vec<PathBuf> = args
+        .drain(1..)
+        .filter(|a| !a.trim().is_empty())
+        .map(PathBuf::from)
+        .collect();
 
     if paths.is_empty() {
         return CliAction::RunApp;
     }
 
-    if paths.iter().any(|p| p.starts_with('-')) {
+    if paths.iter().any(|p| p.to_string_lossy().starts_with('-')) {
         eprintln!(
             "[runa] Error: Options must be placed at the start and cannot be combined with paths."
         );

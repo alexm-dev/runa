@@ -7,6 +7,9 @@ pub(crate) mod core;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
+use std::io;
+use std::path::PathBuf;
+
 use crate::config::Config;
 use crate::core::terminal;
 use crate::core::worker::Workers;
@@ -16,37 +19,32 @@ use crate::utils::{is_hardened_directory, resolve_initial_dir};
 fn startup_container<'a>(
     config: &'a Config,
     workers: &Workers,
-    cli_paths: Option<Vec<String>>,
-) -> std::io::Result<app::AppContainer<'a>> {
-    let raw_paths: Vec<String> = match cli_paths {
+    cli_paths: Option<Vec<PathBuf>>,
+) -> io::Result<app::AppContainer<'a>> {
+    let paths: Vec<PathBuf> = match cli_paths {
         Some(paths) => paths,
-        None => config
-            .general()
-            .startup_tabs()
-            .iter()
-            .map(|p| p.to_string_lossy().to_string())
-            .collect(),
+        None => config.general().startup_tabs().to_vec(),
     };
 
-    if raw_paths.is_empty() {
+    if paths.is_empty() {
         let mut app = app::AppState::new(config)?;
         app.initialize(workers, None);
         return Ok(app::AppContainer::Single(Box::new(app)));
     }
 
-    let mut tabs = Vec::with_capacity(raw_paths.len());
-    for path_str in raw_paths {
+    let mut tabs = Vec::with_capacity(paths.len());
+    for path in paths {
         if tabs.len() >= 9 {
             break;
         }
 
-        if path_str == "." || path_str == "cwd" {
+        if path.to_string_lossy() == "." || path.to_string_lossy() == "cwd" {
             if let Ok(mut state) = app::AppState::new(config) {
                 state.initialize(workers, None);
                 tabs.push(state);
             }
         } else {
-            let target = resolve_initial_dir(&path_str);
+            let target = resolve_initial_dir(&path);
             if is_hardened_directory(&target)
                 && let Ok(mut state) = app::AppState::from_dir(config, &target)
             {
@@ -62,17 +60,20 @@ fn startup_container<'a>(
             app.initialize(workers, None);
             Ok(app::AppContainer::Single(Box::new(app)))
         }
-        1 => Ok(app::AppContainer::Single(Box::new(tabs.pop().unwrap()))),
-        _ => Ok(app::AppContainer::Tabs(app::tab::TabManager::from_vec(
-            tabs,
-        ))),
+        1 => {
+            let state = tabs.into_iter().next().ok_or_else(|| {
+                io::Error::new(io::ErrorKind::NotFound, "Failed to initialize the path")
+            })?;
+            Ok(app::AppContainer::Single(Box::new(state)))
+        }
+        _ => Ok(app::AppContainer::create_tabs(tabs)),
     }
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     std::panic::set_hook(Box::new(|info| {
         let _ = crossterm::terminal::disable_raw_mode();
-        let mut stdout = std::io::stdout();
+        let mut stdout = io::stdout();
         let _ = crossterm::execute!(
             stdout,
             crossterm::terminal::LeaveAlternateScreen,

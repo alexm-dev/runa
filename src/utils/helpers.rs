@@ -247,35 +247,37 @@ pub(crate) fn expand_home_path(input: &str) -> String {
 }
 
 /// Expands the home path and returns the PathBuf of the home path.
-pub(crate) fn expand_home_path_buf(input: &str) -> PathBuf {
+pub(crate) fn expand_home_path_buf<P: AsRef<Path>>(input: P) -> PathBuf {
     let home = get_home();
+    let input_ref = input.as_ref();
+    let input_str = input_ref.to_string_lossy();
 
     if let Some(home) = home {
-        if input == "~" {
+        if input_str == "~" {
             return home.clone();
         }
 
-        if let Some(rest) = input.strip_prefix("~/") {
+        if let Some(rest) = input_str.strip_prefix("~/") {
             return home.join(rest);
         }
 
         #[cfg(windows)]
-        if let Some(rest) = input.strip_prefix(r"~\") {
+        if let Some(rest) = input_str.strip_prefix(r"~\") {
             return home.join(rest);
         }
     }
 
     #[cfg(windows)]
     {
-        if input.len() == 2 && input.ends_with(':') {
-            let first_char = input.chars().next().unwrap();
-            if first_char.is_ascii_alphabetic() {
-                return PathBuf::from(format!(r"{}\", input));
-            }
+        if input_str.len() == 2
+            && input_str.ends_with(':')
+            && let Some(first_char) = input_str.chars().next()
+            && first_char.is_ascii_alphabetic()
+        {
+            return PathBuf::from(format!(r"{}\", input_str));
         }
     }
-
-    PathBuf::from(input)
+    input_ref.to_path_buf()
 }
 
 /// Hardened directory check to make sure passed path is actually a directory and not
@@ -302,7 +304,7 @@ pub(crate) fn is_hardened_directory(path: &Path) -> bool {
 /// # Example
 /// `rn ~/test.txt`
 /// -> runa started at `~`
-pub(crate) fn resolve_initial_dir(path_arg: &str) -> PathBuf {
+pub(crate) fn resolve_initial_dir(path_arg: &Path) -> PathBuf {
     let expaned = expand_home_path_buf(path_arg);
     if expaned.is_file() {
         expaned.parent().map(|p| p.to_path_buf()).unwrap_or(expaned)
@@ -588,8 +590,7 @@ mod tests {
         let sandbox = tempdir()?;
         let absolute_input = sandbox.path().join("my_app").join("config.toml");
 
-        let input_str = absolute_input.to_string_lossy();
-        let result = expand_home_path_buf(&input_str);
+        let result = expand_home_path_buf(&absolute_input);
 
         assert_eq!(result, absolute_input);
         assert!(result.is_absolute());

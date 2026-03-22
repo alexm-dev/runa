@@ -29,6 +29,12 @@ pub(crate) enum AppContainer<'a> {
     Tabs(TabManager<'a>),
 }
 
+impl<'a> AppContainer<'a> {
+    pub(crate) fn create_tabs(tabs: Vec<AppState<'a>>) -> Self {
+        Self::Tabs(tab::TabManager::from_vec(tabs))
+    }
+}
+
 /// The shared clipboard used by all tabs and all states.
 #[derive(Default)]
 pub(crate) struct Clipboard {
