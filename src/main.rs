@@ -19,30 +19,43 @@ fn startup_container<'a>(
 ) -> std::io::Result<app::AppContainer<'a>> {
     let startup_tabs = config.general().startup_tabs();
 
-    if !startup_tabs.is_empty() {
-        let mut tabs = Vec::with_capacity(startup_tabs.len());
+    if startup_tabs.is_empty() {
+        let mut app = app::AppState::new(config)?;
+        app.initialize(workers, None);
+        return Ok(app::AppContainer::Single(Box::new(app)));
+    }
 
-        for path in startup_tabs {
-            if is_hardened_directory(path)
-                && let Ok(mut state) = app::AppState::from_dir(config, path)
-            {
+    let mut tabs = Vec::with_capacity(startup_tabs.len());
+
+    for path in startup_tabs {
+        let path_str = path.to_string_lossy();
+        if path_str == "." || path_str == "cwd" {
+            if let Ok(mut state) = app::AppState::new(config) {
                 state.initialize(workers, None);
                 tabs.push(state);
             }
+            continue;
         }
 
-        if tabs.len() > 1 {
-            return Ok(app::AppContainer::Tabs(app::tab::TabManager::from_vec(
-                tabs,
-            )));
-        } else if let Some(single) = tabs.pop() {
-            return Ok(app::AppContainer::Single(Box::new(single)));
+        if is_hardened_directory(path)
+            && let Ok(mut state) = app::AppState::from_dir(config, path)
+        {
+            state.initialize(workers, None);
+            tabs.push(state);
         }
     }
 
-    let mut app = app::AppState::new(config)?;
-    app.initialize(workers, None);
-    Ok(app::AppContainer::Single(Box::new(app)))
+    match tabs.len() {
+        0 => {
+            let mut app = app::AppState::new(config)?;
+            app.initialize(workers, None);
+            Ok(app::AppContainer::Single(Box::new(app)))
+        }
+        1 => Ok(app::AppContainer::Single(Box::new(tabs.pop().unwrap()))),
+        _ => Ok(app::AppContainer::Tabs(app::tab::TabManager::from_vec(
+            tabs,
+        ))),
+    }
 }
 
 fn main() -> std::io::Result<()> {
