@@ -47,10 +47,8 @@ pub(crate) struct Theme {
     symlink: SymlinkTheme,
     marker: MarkerTheme,
     widget: WidgetTheme,
-    /// info does not honor the .size field from widget.
-    /// info gets auto-sized based on attributes enabled.
-    info: WidgetTheme,
     tab: TabTheme,
+    info: InfoStatusTheme,
 }
 
 impl Default for Theme {
@@ -87,14 +85,8 @@ impl Default for Theme {
             symlink: SymlinkTheme::default(),
             marker: MarkerTheme::default(),
             widget: WidgetTheme::default(),
-            info: WidgetTheme {
-                title: ColorPair {
-                    fg: Color::Magenta,
-                    ..ColorPair::default()
-                },
-                ..WidgetTheme::default()
-            },
             tab: TabTheme::default(),
+            info: InfoStatusTheme::default(),
         }
     }
 }
@@ -206,7 +198,7 @@ impl Theme {
     }
 
     #[inline]
-    pub(crate) fn info(&self) -> &WidgetTheme {
+    pub(crate) fn info(&self) -> &InfoStatusTheme {
         &self.info
     }
 
@@ -319,8 +311,8 @@ impl Theme {
             selection_icon,
             marker,
             widget,
-            info,
             tab,
+            info,
         ]);
 
         if user.name.is_some() {
@@ -558,17 +550,18 @@ impl WidgetTheme {
 
     /// Returns the foreground style, falling back to the internal default theme if Reset.
     pub(crate) fn fg_or_theme(&self) -> Style {
-        self.fg_or(Style::default().fg(Theme::internal_defaults().info.color.fg))
+        self.fg_or(Style::default().fg(Theme::internal_defaults().widget.color.fg))
     }
 
     /// Returns the background style, falling back to the internal default theme if Reset.
     pub(crate) fn bg_or_theme(&self) -> Style {
-        self.bg_or(Style::default().bg(Theme::internal_defaults().info.color.bg))
+        self.bg_or(Style::default().bg(Theme::internal_defaults().widget.color.bg))
     }
 
     /// Returns the title style, falling back to the internal default theme if Reset.
     pub(crate) fn title_style_or_theme(&self) -> Style {
-        self.title.style_or(&Theme::internal_defaults().info.title)
+        self.title
+            .style_or(&Theme::internal_defaults().widget.title)
     }
 
     /// Returns the number of visible results in the find dialog, falling back to the provided fallback.
@@ -612,7 +605,10 @@ impl Default for WidgetTheme {
         WidgetTheme {
             color: ColorPair::default(),
             border: ColorPair::default(),
-            title: ColorPair::default(),
+            title: ColorPair {
+                fg: Color::Magenta,
+                ..ColorPair::default()
+            },
             label: ColorPair {
                 fg: Color::Blue,
                 ..ColorPair::default()
@@ -732,6 +728,41 @@ impl TabTheme {
         } else {
             false
         }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+#[serde(default)]
+pub(crate) struct InfoStatusTheme {
+    perms: ColorPair,
+    size: ColorPair,
+    date: ColorPair,
+}
+
+impl Default for InfoStatusTheme {
+    fn default() -> Self {
+        Self {
+            perms: ColorPair {
+                fg: Color::LightGreen,
+                ..ColorPair::default()
+            },
+            size: ColorPair::default(),
+            date: ColorPair::default(),
+        }
+    }
+}
+
+impl InfoStatusTheme {
+    pub(crate) fn perms_style(&self) -> Style {
+        self.perms.style_or(&Theme::internal_defaults().info.perms)
+    }
+
+    pub(crate) fn size_style(&self) -> Style {
+        self.size.style_or(&Theme::internal_defaults().info.size)
+    }
+
+    pub(crate) fn date_style(&self) -> Style {
+        self.date.style_or(&Theme::internal_defaults().info.date)
     }
 }
 
@@ -867,25 +898,6 @@ pub(crate) fn make_theme(name: &str, palette: Palette, icon: &str) -> Theme {
             ..WidgetTheme::default()
         },
 
-        info: WidgetTheme {
-            title: ColorPair {
-                fg: secondary,
-                ..ColorPair::default()
-            },
-            label: ColorPair {
-                fg: dir_color,
-                ..ColorPair::default()
-            },
-            value: ColorPair {
-                fg: muted,
-                ..ColorPair::default()
-            },
-            border: ColorPair {
-                fg: surface,
-                ..ColorPair::default()
-            },
-            ..WidgetTheme::default()
-        },
         tab: TabTheme {
             active: ColorPair {
                 fg: primary,

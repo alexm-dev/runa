@@ -7,7 +7,7 @@
 
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
-use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
+use crate::core::formatter::{PERMS_WIDTH, format_file_size, format_file_time, format_file_type};
 use crate::core::worker::Workers;
 use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
@@ -266,9 +266,48 @@ pub(crate) fn draw_status_bar(
     let marker_theme = theme.marker();
     let use_icons = display_cfg.icons();
 
+    let mut left_spans = Vec::with_capacity(6);
+
+    if position == StatusPosition::Footer
+        && let Some(entry) = app.nav().selected_entry()
+    {
+        let full_path = app.nav().current_dir().join(entry.name());
+        if let Ok(info) = FileInfo::get_file_info(&full_path) {
+            let info_opts = display_cfg.info();
+            let info_theme = theme.info();
+            let is_dir = *info.file_type() == FileType::Directory;
+
+            if info_opts.perms() {
+                let perms = format!("{:width$}", info.attributes(), width = PERMS_WIDTH);
+                left_spans.push(Span::styled(perms, info_theme.perms_style()));
+                left_spans.push(Span::raw(" "));
+            }
+
+            if info_opts.size() {
+                let size = format_file_size(*info.size(), is_dir);
+                left_spans.push(Span::styled(
+                    format!("{:>8}", size),
+                    info_theme.size_style(),
+                ));
+                left_spans.push(Span::raw(" "));
+            }
+
+            if info_opts.modified() {
+                let date = format_file_time(*info.modified());
+                left_spans.push(Span::styled(date, info_theme.date_style()));
+                left_spans.push(Span::raw(" "));
+            }
+
+            // 4. File Type
+            if info_opts.file_type() {
+                let f_type = format_file_type(info.file_type());
+                left_spans.push(Span::styled(f_type, base_style));
+            }
+        }
+    }
+
     let mut spans = Vec::with_capacity(21);
     let separator = Span::styled(" | ", base_style);
-
     let add_sep = |s: &mut Vec<Span>| {
         if !s.is_empty() {
             s.push(separator.clone());
@@ -304,20 +343,17 @@ pub(crate) fn draw_status_bar(
         && let Some(clipboard_set) = &clipboard.entries
     {
         let count = clipboard_set.len();
-
         if count > 0 {
             add_sep(&mut spans);
             let icon = if use_icons { "󰆏 " } else { "" };
-            let label = "copied";
             let style = marker_theme.clipboard_style_or_theme();
-            spans.push(Span::styled(format!("{}{} {}", icon, count, label), style));
+            spans.push(Span::styled(format!("{}{} copied", icon, count), style));
         }
     }
 
     if status_cfg.markers() == position {
         let markers = app.nav().markers();
         let marker_count = markers.len();
-
         if marker_count > 0 {
             let is_redundant = if let Some(clipboard_set) = &clipboard.entries {
                 if clipboard_set.len() != marker_count {
@@ -352,45 +388,50 @@ pub(crate) fn draw_status_bar(
 
     if status_cfg.entry_count() == position {
         let total = app.nav().shown_entries_len();
-        if total == 0 {
-            add_sep(&mut spans);
-            spans.push(Span::styled("0/0", base_style));
+        add_sep(&mut spans);
+        let count_str = if total == 0 {
+            "0/0".to_string()
         } else {
-            add_sep(&mut spans);
             let idx_text = app
                 .visible_selected()
                 .map(|idx| (idx + 1).to_string())
                 .unwrap_or_else(|| "0".to_string());
-            spans.push(Span::styled(format!("{}/{}", idx_text, total), base_style));
-        }
+            format!("{}/{}", idx_text, total)
+        };
+        spans.push(Span::styled(count_str, base_style));
     }
 
-    if spans.is_empty() {
+    if left_spans.is_empty() && spans.is_empty() {
         return;
     }
 
     let y = match position {
         StatusPosition::Header => area.y,
         StatusPosition::Footer => area.y + area.height - 1,
-        StatusPosition::None => return,
+        _ => return,
     };
 
-    let rect = Rect {
-        x: area.x,
-        y,
-        width: area.width,
-        height: 1,
-    };
+    let rect = Rect::new(area.x, y, area.width, 1);
+    let block =
+        ratatui::widgets::Block::default().padding(ratatui::widgets::Padding::horizontal(1));
 
-    frame.render_widget(
-        Paragraph::new(Line::from(spans))
-            .alignment(Alignment::Right)
-            .block(
-                ratatui::widgets::Block::default()
-                    .padding(ratatui::widgets::Padding::horizontal(1)),
-            ),
-        rect,
-    );
+    if position == StatusPosition::Footer && !left_spans.is_empty() {
+        let left_w: u16 = left_spans.iter().map(|s| s.width() as u16).sum();
+        let right_w: u16 = spans.iter().map(|s| s.width() as u16).sum();
+        let space_count = area.width.saturating_sub(left_w + right_w + 2) as usize;
+
+        let mut final_line = left_spans;
+        final_line.push(Span::raw(" ".repeat(space_count)));
+        final_line.extend(spans);
+        frame.render_widget(Paragraph::new(Line::from(final_line)).block(block), rect);
+    } else {
+        frame.render_widget(
+            Paragraph::new(Line::from(spans))
+                .alignment(Alignment::Right)
+                .block(block),
+            rect,
+        );
+    }
 }
 
 /// Helper function to calculate cursor offset for cursor moving
@@ -438,7 +479,7 @@ pub(crate) fn draw_show_info_dialog(
     info: &FileInfo,
 ) {
     let theme = app.config().theme();
-    let widget_info = theme.info();
+    let widget_info = theme.widget();
     let info_cfg = &app.config().display().info();
 
     let label_style = theme.widget().label_style_or_theme();

@@ -32,6 +32,11 @@ const HEADER_PEEK_BYTES: usize = 8;
 // Bytes to peek for null bytes in binary detections
 const BINARY_PEEK_BYTES: usize = 1024;
 
+#[cfg(windows)]
+pub(crate) const PERMS_WIDTH: usize = 5;
+#[cfg(unix)]
+pub(crate) const PERMS_WIDTH: usize = 10;
+
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.
 pub(crate) struct Formatter {
@@ -223,8 +228,6 @@ pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
 }
 
 /// Formats the file modification time into a human-readable string.
-/// # Returns
-/// A string representing the formatted modification time or "-" if unknown.
 pub(crate) fn format_file_time(modified: Option<SystemTime>) -> String {
     modified
         .map(|mtime| {
