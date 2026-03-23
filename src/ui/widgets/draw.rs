@@ -298,6 +298,7 @@ pub(crate) fn draw_status_bar(
                 && let Some(owner) = info.owner()
             {
                 left_spans.push(Span::styled(owner.to_owned(), info_theme.owner_style()));
+                left_spans.push(Span::raw(" "));
             }
 
             #[cfg(unix)]
@@ -305,6 +306,7 @@ pub(crate) fn draw_status_bar(
                 && let Some(group) = info.group()
             {
                 left_spans.push(Span::styled(group.to_owned(), info_theme.group_style()));
+                left_spans.push(Span::raw(" "));
             }
 
             if info_opts.modified() {
