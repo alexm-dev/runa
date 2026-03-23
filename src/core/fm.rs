@@ -120,6 +120,8 @@ pub(crate) struct FileInfo {
     modified: Option<SystemTime>,
     attributes: String,
     file_type: FileType,
+    owner: Option<String>,
+    group: Option<String>,
 }
 
 impl FileInfo {
@@ -150,6 +152,16 @@ impl FileInfo {
         &self.file_type
     }
 
+    #[inline]
+    pub(crate) fn owner(&self) -> Option<&str> {
+        self.owner.as_deref()
+    }
+
+    #[inline]
+    pub(crate) fn group(&self) -> Option<&str> {
+        self.group.as_deref()
+    }
+
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileInfo struct populated with the file's information.
@@ -175,7 +187,20 @@ impl FileInfo {
             modified: metadata.modified().ok(),
             attributes: format_attributes(&metadata),
             file_type,
+            owner: None,
+            group: None,
         })
+    }
+
+    pub(crate) fn load_extended_info(&mut self, _path: &Path) {
+        #[cfg(unix)]
+        {
+            if let Ok(meta) = symlink_metadata(_path) {
+                use std::os::unix::fs::MetadataExt;
+                self.owner = Some(meta.uid().to_string());
+                self.group = Some(meta.gid().to_string());
+            }
+        }
     }
 }
 

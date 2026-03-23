@@ -823,9 +823,10 @@ impl<'a> AppState<'a> {
             && let Some(entry) = self.nav.selected_shown_entry()
         {
             let path = self.nav.current_dir().join(entry.name());
-            if let Ok(file_info) = FileInfo::get_file_info(&path)
+            if let Ok(mut file_info) = FileInfo::get_file_info(&path)
                 && let Some(Overlay::ShowInfo { info }) = self.overlays_mut().get_mut(i)
             {
+                file_info.load_extended_info(&path);
                 *info = file_info;
             }
         }
@@ -835,7 +836,8 @@ impl<'a> AppState<'a> {
     fn show_file_info(&mut self) {
         if let Some(entry) = self.nav.selected_shown_entry() {
             let path = self.nav.current_dir().join(entry.name());
-            if let Ok(file_info) = FileInfo::get_file_info(&path) {
+            if let Ok(mut file_info) = FileInfo::get_file_info(&path) {
+                file_info.load_extended_info(&path);
                 self.overlays_mut()
                     .push(Overlay::ShowInfo { info: file_info });
             }

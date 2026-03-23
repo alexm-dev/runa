@@ -273,6 +273,10 @@ impl ShowInfoOptions {
     pub(crate) fn position(&self) -> &Option<DialogPosition> {
         &self.position
     }
+
+    pub(crate) fn any_info_enabled(&self) -> bool {
+        self.perms || self.size || self.modified
+    }
 }
 
 /// Default show info configuration options

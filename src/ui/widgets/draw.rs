@@ -270,6 +270,7 @@ pub(crate) fn draw_status_bar(
 
     if position == StatusPosition::Footer
         && let Some(entry) = app.nav().selected_entry()
+        && display_cfg.info().any_info_enabled()
     {
         let full_path = app.nav().current_dir().join(entry.name());
         if let Ok(info) = FileInfo::get_file_info(&full_path) {
@@ -298,7 +299,6 @@ pub(crate) fn draw_status_bar(
                 left_spans.push(Span::raw(" "));
             }
 
-            // 4. File Type
             if info_opts.file_type() {
                 let f_type = format_file_type(info.file_type());
                 left_spans.push(Span::styled(f_type, base_style));
@@ -514,6 +514,13 @@ pub(crate) fn draw_show_info_dialog(
     }
     if info_cfg.perms() {
         add_line("Perms:", info.attributes().to_string());
+    }
+
+    if let Some(owner) = info.owner() {
+        add_line("Owner:", owner.to_owned());
+    }
+    if let Some(group) = info.group() {
+        add_line("Group:", group.to_owned());
     }
 
     if lines.is_empty() {
