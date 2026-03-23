@@ -8,29 +8,12 @@ use crate::core::formatter::format_attributes;
 #[cfg(windows)]
 use crate::utils::with_lowered_stack;
 
-#[cfg(unix)]
-use std::collections::HashMap;
-
-#[cfg(unix)]
-use std::sync::{Mutex, OnceLock};
-
-#[cfg(unix)]
-use std::cell::RefCell;
-
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, symlink_metadata};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-
-#[cfg(unix)]
-static USER_CACHE: OnceLock<Mutex<UserCache>> = OnceLock::new();
-
-#[cfg(unix)]
-fn user_cache() -> &'static Mutex<UserCache> {
-    USER_CACHE.get_or_init(|| Mutex::new(UserCache::default()))
-}
 
 /// Represents a single entry in a directory listing
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
@@ -225,46 +208,21 @@ impl FileInfo {
 }
 
 #[cfg(unix)]
-#[derive(Default)]
-struct UserCache {
-    users: HashMap<u32, String>,
-    groups: HashMap<u32, String>,
-}
-
-#[cfg(unix)]
 fn resolve_user(uid: u32) -> String {
     use uzers::get_user_by_uid;
 
-    let mut cache = user_cache().lock().unwrap_or_else(|e| e.into_inner());
-
-    if let Some(name) = cache.users.get(&uid) {
-        return name.clone();
-    }
-
-    let name = get_user_by_uid(uid)
+    get_user_by_uid(uid)
         .map(|u| u.name().to_string_lossy().into_owned())
-        .unwrap_or_else(|| uid.to_string());
-
-    cache.users.insert(uid, name.clone());
-    name
+        .unwrap_or_else(|| uid.to_string())
 }
 
 #[cfg(unix)]
 fn resolve_group(gid: u32) -> String {
     use uzers::get_group_by_gid;
 
-    let mut cache = user_cache().lock().unwrap_or_else(|e| e.into_inner());
-
-    if let Some(name) = cache.groups.get(&gid) {
-        return name.clone();
-    }
-
-    let name = get_group_by_gid(gid)
+    get_group_by_gid(gid)
         .map(|g| g.name().to_string_lossy().into_owned())
-        .unwrap_or_else(|| gid.to_string());
-
-    cache.groups.insert(gid, name.clone());
-    name
+        .unwrap_or_else(|| gid.to_string())
 }
 
 /// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
