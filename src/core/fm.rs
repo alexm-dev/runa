@@ -196,9 +196,9 @@ impl FileInfo {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
-            use users::{get_group_by_gid, get_user_by_uid};
+            use uzers::{get_group_by_gid, get_user_by_uid};
 
-            if let Ok(meta) = symlink_metadata(_path) {
+            if let Ok(meta) = symlink_metadata(path) {
                 let uid = meta.uid();
                 let gid = meta.gid();
 
