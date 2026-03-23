@@ -239,6 +239,8 @@ pub(crate) struct ShowInfoOptions {
     size: bool,
     modified: bool,
     perms: bool,
+    owner: bool,
+    group: bool,
     position: Option<DialogPosition>,
 }
 
@@ -269,6 +271,18 @@ impl ShowInfoOptions {
         self.perms
     }
 
+    #[cfg(unix)]
+    #[inline]
+    pub(crate) fn owner(&self) -> bool {
+        self.owner
+    }
+
+    #[cfg(unix)]
+    #[inline]
+    pub(crate) fn group(&self) -> bool {
+        self.group
+    }
+
     #[inline]
     pub(crate) fn position(&self) -> &Option<DialogPosition> {
         &self.position
@@ -288,6 +302,8 @@ impl Default for ShowInfoOptions {
             size: true,
             modified: true,
             perms: true,
+            owner: true,
+            group: true,
             position: None,
         }
     }

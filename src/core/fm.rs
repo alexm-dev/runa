@@ -152,11 +152,13 @@ impl FileInfo {
         &self.file_type
     }
 
+    #[cfg(unix)]
     #[inline]
     pub(crate) fn owner(&self) -> Option<&str> {
         self.owner.as_deref()
     }
 
+    #[cfg(unix)]
     #[inline]
     pub(crate) fn group(&self) -> Option<&str> {
         self.group.as_deref()

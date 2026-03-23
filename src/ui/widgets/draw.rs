@@ -293,15 +293,24 @@ pub(crate) fn draw_status_bar(
                 left_spans.push(Span::raw(" "));
             }
 
+            #[cfg(unix)]
+            if info_opts.owner()
+                && let Some(owner) = info.owner()
+            {
+                left_spans.push(Span::styled(owner.to_owned(), info_theme.owner_style()));
+            }
+
+            #[cfg(unix)]
+            if info_opts.group()
+                && let Some(group) = info.group()
+            {
+                left_spans.push(Span::styled(group.to_owned(), info_theme.group_style()));
+            }
+
             if info_opts.modified() {
                 let date = format_file_time(*info.modified());
                 left_spans.push(Span::styled(date, info_theme.date_style()));
                 left_spans.push(Span::raw(" "));
-            }
-
-            if info_opts.file_type() {
-                let f_type = format_file_type(info.file_type());
-                left_spans.push(Span::styled(f_type, base_style));
             }
         }
     }
@@ -516,10 +525,17 @@ pub(crate) fn draw_show_info_dialog(
         add_line("Perms:", info.attributes().to_string());
     }
 
-    if let Some(owner) = info.owner() {
+    #[cfg(unix)]
+    if info_cfg.owner()
+        && let Some(owner) = info.owner()
+    {
         add_line("Owner:", owner.to_owned());
     }
-    if let Some(group) = info.group() {
+
+    #[cfg(unix)]
+    if info_cfg.group()
+        && let Some(group) = info.group()
+    {
         add_line("Group:", group.to_owned());
     }
 

@@ -737,6 +737,8 @@ pub(crate) struct InfoStatusTheme {
     perms: ColorPair,
     size: ColorPair,
     date: ColorPair,
+    owner: ColorPair,
+    group: ColorPair,
 }
 
 impl Default for InfoStatusTheme {
@@ -748,6 +750,8 @@ impl Default for InfoStatusTheme {
             },
             size: ColorPair::default(),
             date: ColorPair::default(),
+            owner: ColorPair::default(),
+            group: ColorPair::default(),
         }
     }
 }
@@ -763,6 +767,16 @@ impl InfoStatusTheme {
 
     pub(crate) fn date_style(&self) -> Style {
         self.date.style_or(&Theme::internal_defaults().info.date)
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn owner_style(&self) -> Style {
+        self.owner.style_or(&Theme::internal_defaults().info.owner)
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn group_style(&self) -> Style {
+        self.group.style_or(&Theme::internal_defaults().info.group)
     }
 }
 
