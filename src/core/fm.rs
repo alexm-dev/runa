@@ -8,12 +8,29 @@ use crate::core::formatter::format_attributes;
 #[cfg(windows)]
 use crate::utils::with_lowered_stack;
 
+#[cfg(unix)]
+use std::collections::HashMap;
+
+#[cfg(unix)]
+use std::sync::{Mutex, OnceLock};
+
+#[cfg(unix)]
+use std::cell::RefCell;
+
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 use std::fs::{self, symlink_metadata};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
+
+#[cfg(unix)]
+static USER_CACHE: OnceLock<Mutex<UserCache>> = OnceLock::new();
+
+#[cfg(unix)]
+fn user_cache() -> &'static Mutex<UserCache> {
+    USER_CACHE.get_or_init(|| Mutex::new(UserCache::default()))
+}
 
 /// Represents a single entry in a directory listing
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
@@ -167,6 +184,7 @@ impl FileInfo {
     /// A FileInfo struct populated with the file's information.
     pub(crate) fn get_file_info(path: &Path) -> io::Result<FileInfo> {
         let metadata = symlink_metadata(path)?;
+
         let file_type = if metadata.is_file() {
             FileType::File
         } else if metadata.is_dir() {
@@ -176,6 +194,19 @@ impl FileInfo {
         } else {
             FileType::Other
         };
+
+        #[cfg(unix)]
+        let (owner, group) = {
+            use std::os::unix::fs::MetadataExt;
+
+            let uid = metadata.uid();
+            let gid = metadata.gid();
+
+            (Some(resolve_user(uid)), Some(resolve_group(gid)))
+        };
+
+        #[cfg(not(unix))]
+        let (owner, group) = (None, None);
 
         Ok(FileInfo {
             name: path.file_name().unwrap_or_default().to_os_string(),
@@ -187,38 +218,53 @@ impl FileInfo {
             modified: metadata.modified().ok(),
             attributes: format_attributes(&metadata),
             file_type,
-            owner: None,
-            group: None,
+            owner,
+            group,
         })
     }
+}
 
-    pub(crate) fn load_extended_info(&mut self, path: &Path) {
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::MetadataExt;
-            use uzers::{get_group_by_gid, get_user_by_uid};
+#[cfg(unix)]
+#[derive(Default)]
+struct UserCache {
+    users: HashMap<u32, String>,
+    groups: HashMap<u32, String>,
+}
 
-            if let Ok(meta) = symlink_metadata(path) {
-                let uid = meta.uid();
-                let gid = meta.gid();
+#[cfg(unix)]
+fn resolve_user(uid: u32) -> String {
+    use uzers::get_user_by_uid;
 
-                self.owner = get_user_by_uid(uid)
-                    .map(|u| u.name().to_string_lossy().into_owned())
-                    .or_else(|| Some(uid.to_string()));
+    let mut cache = user_cache().lock().unwrap_or_else(|e| e.into_inner());
 
-                self.group = get_group_by_gid(gid)
-                    .map(|g| g.name().to_string_lossy().into_owned())
-                    .or_else(|| Some(gid.to_string()));
-            }
-        }
-
-        #[cfg(not(unix))]
-        {
-            let _ = path;
-            self.owner = None;
-            self.group = None;
-        }
+    if let Some(name) = cache.users.get(&uid) {
+        return name.clone();
     }
+
+    let name = get_user_by_uid(uid)
+        .map(|u| u.name().to_string_lossy().into_owned())
+        .unwrap_or_else(|| uid.to_string());
+
+    cache.users.insert(uid, name.clone());
+    name
+}
+
+#[cfg(unix)]
+fn resolve_group(gid: u32) -> String {
+    use uzers::get_group_by_gid;
+
+    let mut cache = user_cache().lock().unwrap_or_else(|e| e.into_inner());
+
+    if let Some(name) = cache.groups.get(&gid) {
+        return name.clone();
+    }
+
+    let name = get_group_by_gid(gid)
+        .map(|g| g.name().to_string_lossy().into_owned())
+        .unwrap_or_else(|| gid.to_string());
+
+    cache.groups.insert(gid, name.clone());
+    name
 }
 
 /// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
