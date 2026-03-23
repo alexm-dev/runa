@@ -181,11 +181,10 @@ impl FileInfo {
         #[cfg(unix)]
         let (owner, group) = {
             use std::os::unix::fs::MetadataExt;
-
-            let uid = metadata.uid();
-            let gid = metadata.gid();
-
-            (Some(resolve_user(uid)), Some(resolve_group(gid)))
+            (
+                Some(unix_info::resolve_user(metadata.uid())),
+                Some(unix_info::resolve_group(metadata.gid())),
+            )
         };
 
         #[cfg(not(unix))]
@@ -205,24 +204,6 @@ impl FileInfo {
             group,
         })
     }
-}
-
-#[cfg(unix)]
-fn resolve_user(uid: u32) -> String {
-    use uzers::get_user_by_uid;
-
-    get_user_by_uid(uid)
-        .map(|u| u.name().to_string_lossy().into_owned())
-        .unwrap_or_else(|| uid.to_string())
-}
-
-#[cfg(unix)]
-fn resolve_group(gid: u32) -> String {
-    use uzers::get_group_by_gid;
-
-    get_group_by_gid(gid)
-        .map(|g| g.name().to_string_lossy().into_owned())
-        .unwrap_or_else(|| gid.to_string())
 }
 
 /// Reads the cotents of the proviced directory and returns them in a vector of FileEntry
@@ -330,6 +311,45 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
         entries.push(FileEntry::new(name, flags, symlink));
     }
     Ok(entries)
+}
+
+#[cfg(unix)]
+mod unix_info {
+    use super::*;
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use uzers::{get_group_by_gid, get_user_by_uid};
+
+    thread_local! {
+        static USER_CACHE: RefCell<HashMap<u32, String>> = RefCell::new(HashMap::new());
+        static GROUP_CACHE: RefCell<HashMap<u32, String>> = RefCell::new(HashMap::new());
+    }
+
+    pub fn resolve_user(uid: u32) -> String {
+        USER_CACHE.with(|cache| {
+            let mut map = cache.borrow_mut();
+            map.entry(uid)
+                .or_insert_with(|| {
+                    get_user_by_uid(uid)
+                        .map(|u| u.name().to_string_lossy().into_owned())
+                        .unwrap_or_else(|| uid.to_string())
+                })
+                .clone()
+        })
+    }
+
+    pub fn resolve_group(gid: u32) -> String {
+        GROUP_CACHE.with(|cache| {
+            let mut map = cache.borrow_mut();
+            map.entry(gid)
+                .or_insert_with(|| {
+                    get_group_by_gid(gid)
+                        .map(|g| g.name().to_string_lossy().into_owned())
+                        .unwrap_or_else(|| gid.to_string())
+                })
+                .clone()
+        })
+    }
 }
 
 #[cfg(test)]
