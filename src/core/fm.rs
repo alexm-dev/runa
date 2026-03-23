@@ -315,7 +315,6 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
 
 #[cfg(unix)]
 mod unix_info {
-    use super::*;
     use std::cell::RefCell;
     use std::collections::HashMap;
     use uzers::{get_group_by_gid, get_user_by_uid};
