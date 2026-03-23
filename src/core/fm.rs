@@ -195,11 +195,27 @@ impl FileInfo {
     pub(crate) fn load_extended_info(&mut self, _path: &Path) {
         #[cfg(unix)]
         {
+            use std::os::unix::fs::MetadataExt;
+            use users::{get_group_by_gid, get_user_by_uid};
+
             if let Ok(meta) = symlink_metadata(_path) {
-                use std::os::unix::fs::MetadataExt;
-                self.owner = Some(meta.uid().to_string());
-                self.group = Some(meta.gid().to_string());
+                let uid = meta.uid();
+                let gid = meta.gid();
+
+                self.owner = get_user_by_uid(uid)
+                    .map(|u| u.name().to_string_lossy().into_owned())
+                    .or_else(|| Some(uid.to_string()));
+
+                self.group = get_group_by_gid(gid)
+                    .map(|g| g.name().to_string_lossy().into_owned())
+                    .or_else(|| Some(gid.to_string()));
             }
+        }
+
+        #[cfg(not(unix))]
+        {
+            self.owner = None;
+            self.group = None;
         }
     }
 }
