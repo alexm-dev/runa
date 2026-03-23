@@ -314,6 +314,12 @@ pub(crate) fn draw_status_bar(
                 left_spans.push(Span::styled(date, info_theme.date_style()));
                 left_spans.push(Span::raw(" "));
             }
+
+            if info_opts.file_type() {
+                let file_type = format_file_type(info.file_type());
+                left_spans.push(Span::styled(file_type, info_theme.date_style()));
+                left_spans.push(Span::raw(" "));
+            }
         }
     }
 
