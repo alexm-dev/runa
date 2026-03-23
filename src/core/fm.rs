@@ -192,7 +192,7 @@ impl FileInfo {
         })
     }
 
-    pub(crate) fn load_extended_info(&mut self, _path: &Path) {
+    pub(crate) fn load_extended_info(&mut self, path: &Path) {
         #[cfg(unix)]
         {
             use std::os::unix::fs::MetadataExt;
@@ -214,6 +214,7 @@ impl FileInfo {
 
         #[cfg(not(unix))]
         {
+            let _ = path;
             self.owner = None;
             self.group = None;
         }
