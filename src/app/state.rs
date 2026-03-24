@@ -97,8 +97,8 @@ pub(crate) struct AppState<'a> {
     pub(super) tab_id: Option<usize>,
     pub(super) tab_line: Arc<Vec<Span<'a>>>,
 
-    pub(super) last_info_path: Option<PathBuf>,
-    pub(super) last_info: Option<FileInfo>,
+    pub(super) selected_info_path: Option<PathBuf>,
+    pub(super) selected_info: Option<FileInfo>,
 }
 
 impl<'a> AppState<'a> {
@@ -132,8 +132,8 @@ impl<'a> AppState<'a> {
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
             tab_id: None,
-            last_info_path: None,
-            last_info: None,
+            selected_info_path: None,
+            selected_info: None,
         };
 
         Ok(app)
@@ -204,7 +204,7 @@ impl<'a> AppState<'a> {
 
     #[inline]
     pub(crate) fn current_file_info(&self) -> Option<&FileInfo> {
-        self.last_info.as_ref()
+        self.selected_info.as_ref()
     }
 
     // Entry functions
@@ -540,19 +540,19 @@ impl<'a> AppState<'a> {
 
     pub(crate) fn update_file_info_cache(&mut self) {
         let Some(entry) = self.nav.selected_entry() else {
-            self.last_info = None;
-            self.last_info_path = None;
+            self.selected_info = None;
+            self.selected_info_path = None;
             return;
         };
 
         let path = self.nav.current_dir().join(entry.name());
 
-        if self.last_info_path.as_ref() == Some(&path) {
+        if self.selected_info_path.as_ref() == Some(&path) {
             return;
         }
 
-        self.last_info_path = Some(path.clone());
-        self.last_info = FileInfo::get_file_info(&path).ok();
+        self.selected_info_path = Some(path.clone());
+        self.selected_info = FileInfo::get_file_info(&path).ok();
     }
 }
 

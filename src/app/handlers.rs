@@ -216,6 +216,7 @@ impl<'a> AppState<'a> {
             NavAction::GoToBottom => {
                 self.nav.last_selected();
                 self.refresh_show_info_if_open();
+                self.update_file_info_cache();
                 self.request_preview(workers);
             }
             NavAction::ScrollUp => {
