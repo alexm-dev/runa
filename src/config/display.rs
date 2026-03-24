@@ -247,6 +247,7 @@ pub(crate) struct ShowInfoOptions {
     owner: bool,
     group: bool,
     position: Option<DialogPosition>,
+    status_bar: bool,
 }
 
 /// Public methods for accessing show info configuration options
@@ -293,8 +294,9 @@ impl ShowInfoOptions {
         &self.position
     }
 
-    pub(crate) fn any_info_enabled(&self) -> bool {
-        self.perms || self.size || self.modified
+    #[inline]
+    pub(crate) fn status_bar(&self) -> bool {
+        self.status_bar
     }
 }
 
@@ -310,6 +312,7 @@ impl Default for ShowInfoOptions {
             owner: true,
             group: true,
             position: None,
+            status_bar: true,
         }
     }
 }
