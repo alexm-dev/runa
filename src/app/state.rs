@@ -18,6 +18,7 @@ use crate::app::actions::{ActionContext, ActionMode, InputMode};
 use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
+use crate::core::FileInfo;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{Overlay, OverlayStack};
 
@@ -25,7 +26,7 @@ use crossterm::event::KeyEvent;
 use ratatui::text::Span;
 
 use std::ffi::OsString;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -95,6 +96,9 @@ pub(crate) struct AppState<'a> {
 
     pub(super) tab_id: Option<usize>,
     pub(super) tab_line: Arc<Vec<Span<'a>>>,
+
+    pub(super) last_info_path: Option<PathBuf>,
+    pub(super) last_info: Option<FileInfo>,
 }
 
 impl<'a> AppState<'a> {
@@ -128,6 +132,8 @@ impl<'a> AppState<'a> {
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
             tab_id: None,
+            last_info_path: None,
+            last_info: None,
         };
 
         Ok(app)
@@ -194,6 +200,11 @@ impl<'a> AppState<'a> {
     #[inline]
     fn tab_id(&self) -> Option<usize> {
         self.tab_id
+    }
+
+    #[inline]
+    pub(crate) fn current_file_info(&self) -> Option<&FileInfo> {
+        self.last_info.as_ref()
     }
 
     // Entry functions
@@ -301,6 +312,7 @@ impl<'a> AppState<'a> {
                     self.is_loading = false;
                     self.request_parent_content(workers);
                     self.request_preview(workers);
+                    self.update_file_info_cache();
                     self.refresh_show_info_if_open();
                     return;
                 }
@@ -524,6 +536,23 @@ impl<'a> AppState<'a> {
             cancel: cancel_token,
             tab_id: self.tab_id(),
         });
+    }
+
+    pub(crate) fn update_file_info_cache(&mut self) {
+        let Some(entry) = self.nav.selected_entry() else {
+            self.last_info = None;
+            self.last_info_path = None;
+            return;
+        };
+
+        let path = self.nav.current_dir().join(entry.name());
+
+        if self.last_info_path.as_ref() == Some(&path) {
+            return;
+        }
+
+        self.last_info_path = Some(path.clone());
+        self.last_info = FileInfo::get_file_info(&path).ok();
     }
 }
 

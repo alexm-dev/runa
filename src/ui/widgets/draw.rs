@@ -269,57 +269,54 @@ pub(crate) fn draw_status_bar(
     let mut left_spans = Vec::with_capacity(6);
 
     if position == StatusPosition::Footer
-        && let Some(entry) = app.nav().selected_entry()
         && display_cfg.info().any_info_enabled()
+        && let Some(info) = app.current_file_info()
     {
-        let full_path = app.nav().current_dir().join(entry.name());
-        if let Ok(info) = FileInfo::get_file_info(&full_path) {
-            let info_opts = display_cfg.info();
-            let info_theme = theme.info();
-            let is_dir = *info.file_type() == FileType::Directory;
+        let info_opts = display_cfg.info();
+        let info_theme = theme.info();
+        let is_dir = *info.file_type() == FileType::Directory;
 
-            if info_opts.perms() {
-                let perms = format!("{:width$}", info.attributes(), width = PERMS_WIDTH);
-                left_spans.push(Span::styled(perms, info_theme.perms_style()));
-                left_spans.push(Span::raw(" "));
-            }
+        if info_opts.perms() {
+            let perms = format!("{:width$}", info.attributes(), width = PERMS_WIDTH);
+            left_spans.push(Span::styled(perms, info_theme.perms_style()));
+            left_spans.push(Span::raw(" "));
+        }
 
-            if info_opts.size() {
-                let size = format_file_size(*info.size(), is_dir);
-                left_spans.push(Span::styled(
-                    format!("{:>8}", size),
-                    info_theme.size_style(),
-                ));
-                left_spans.push(Span::raw(" "));
-            }
+        if info_opts.size() {
+            let size = format_file_size(*info.size(), is_dir);
+            left_spans.push(Span::styled(
+                format!("{:>8}", size),
+                info_theme.size_style(),
+            ));
+            left_spans.push(Span::raw(" "));
+        }
 
-            #[cfg(unix)]
-            if info_opts.owner()
-                && let Some(owner) = info.owner()
-            {
-                left_spans.push(Span::styled(owner.to_owned(), info_theme.owner_style()));
-                left_spans.push(Span::raw(" "));
-            }
+        #[cfg(unix)]
+        if info_opts.owner()
+            && let Some(owner) = info.owner()
+        {
+            left_spans.push(Span::styled(owner.to_owned(), info_theme.owner_style()));
+            left_spans.push(Span::raw(" "));
+        }
 
-            #[cfg(unix)]
-            if info_opts.group()
-                && let Some(group) = info.group()
-            {
-                left_spans.push(Span::styled(group.to_owned(), info_theme.group_style()));
-                left_spans.push(Span::raw(" "));
-            }
+        #[cfg(unix)]
+        if info_opts.group()
+            && let Some(group) = info.group()
+        {
+            left_spans.push(Span::styled(group.to_owned(), info_theme.group_style()));
+            left_spans.push(Span::raw(" "));
+        }
 
-            if info_opts.modified() {
-                let date = format_file_time(*info.modified());
-                left_spans.push(Span::styled(date, info_theme.date_style()));
-                left_spans.push(Span::raw(" "));
-            }
+        if info_opts.modified() {
+            let date = format_file_time(*info.modified());
+            left_spans.push(Span::styled(date, info_theme.date_style()));
+            left_spans.push(Span::raw(" "));
+        }
 
-            if info_opts.file_type() {
-                let file_type = format_file_type(info.file_type());
-                left_spans.push(Span::styled(file_type, info_theme.date_style()));
-                left_spans.push(Span::raw(" "));
-            }
+        if info_opts.file_type() {
+            let file_type = format_file_type(info.file_type());
+            left_spans.push(Span::styled(file_type, info_theme.date_style()));
+            left_spans.push(Span::raw(" "));
         }
     }
 
