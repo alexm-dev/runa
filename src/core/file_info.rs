@@ -211,6 +211,44 @@ impl CachedFileInfo {
     }
 }
 
+#[cfg(unix)]
+mod unix_info {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
+    use uzers::{get_group_by_gid, get_user_by_uid};
+
+    thread_local! {
+        static USER_CACHE: RefCell<HashMap<u32, String>> = RefCell::new(HashMap::new());
+        static GROUP_CACHE: RefCell<HashMap<u32, String>> = RefCell::new(HashMap::new());
+    }
+
+    pub fn resolve_user(uid: u32) -> String {
+        USER_CACHE.with(|cache| {
+            let mut map = cache.borrow_mut();
+            map.entry(uid)
+                .or_insert_with(|| {
+                    get_user_by_uid(uid)
+                        .map(|u| u.name().to_string_lossy().into_owned())
+                        .unwrap_or_else(|| uid.to_string())
+                })
+                .clone()
+        })
+    }
+
+    pub fn resolve_group(gid: u32) -> String {
+        GROUP_CACHE.with(|cache| {
+            let mut map = cache.borrow_mut();
+            map.entry(gid)
+                .or_insert_with(|| {
+                    get_group_by_gid(gid)
+                        .map(|g| g.name().to_string_lossy().into_owned())
+                        .unwrap_or_else(|| gid.to_string())
+                })
+                .clone()
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
