@@ -101,10 +101,11 @@ impl FileEntry {
 /// # Returns
 /// A Result containing a vector of FileEntry structs or an std::io::Error
 pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
-    let mut entries = Vec::with_capacity(256);
+    let count_hint = fs::read_dir(path)?.size_hint().0;
+    let mut entries = Vec::with_capacity(count_hint.max(256));
 
-    for entry in fs::read_dir(path)? {
-        let entry = match entry {
+    for entry_result in fs::read_dir(path)? {
+        let entry = match entry_result {
             Ok(e) => e,
             Err(_) => continue,
         };
@@ -123,19 +124,20 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
             flags |= FileEntry::IS_SYMLINK;
         }
 
-        let path_buf = if (flags & FileEntry::IS_SYMLINK) != 0 {
-            Some(entry.path())
+        let is_symlink = (flags & FileEntry::IS_SYMLINK) != 0;
+        let entry_path = entry.path();
+        let path_buf = if is_symlink {
+            Some(entry_path.clone())
         } else {
             None
         };
 
         #[cfg(unix)]
         {
-            use std::os::unix::ffi::OsStrExt;
             use std::os::unix::fs::PermissionsExt;
 
-            let md_res = if (flags & FileEntry::IS_SYMLINK) != 0 {
-                fs::metadata(entry.path())
+            let md_res = if is_symlink {
+                fs::metadata(&entry_path)
             } else {
                 entry.metadata()
             };
@@ -194,8 +196,8 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                 }
             }
         }
-        let symlink = if (flags & FileEntry::IS_SYMLINK) != 0 {
-            fs::read_link(entry.path()).ok()
+        let symlink = if is_symlink {
+            fs::read_link(&entry_path).ok()
         } else {
             None
         };
