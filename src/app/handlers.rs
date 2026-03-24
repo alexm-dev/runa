@@ -16,7 +16,8 @@ use crate::utils::{
 };
 
 use crossterm::event::{KeyCode::*, KeyEvent};
-use std::path::MAIN_SEPARATOR;
+use std::ffi::OsString;
+use std::path::{MAIN_SEPARATOR, PathBuf};
 use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
@@ -142,21 +143,17 @@ impl<'a> AppState<'a> {
                     self.apply_filter(workers);
                     KeypressResult::Consumed
                 }
-                InputMode::Rename | InputMode::NewFile | InputMode::NewFolder => {
+                InputMode::Rename
+                | InputMode::NewFile
+                | InputMode::NewFolder
+                | InputMode::MoveFile
+                | InputMode::GoToPath => {
                     self.actions.action_insert_at_cursor(c);
                     KeypressResult::Consumed
                 }
                 InputMode::Find => {
                     self.actions.action_insert_at_cursor(c);
                     self.actions.find_debounce(Duration::from_millis(120));
-                    KeypressResult::Consumed
-                }
-                InputMode::MoveFile => {
-                    self.actions.action_insert_at_cursor(c);
-                    KeypressResult::Consumed
-                }
-                InputMode::GoToPath => {
-                    self.actions.action_insert_at_cursor(c);
                     KeypressResult::Consumed
                 }
             },
@@ -428,12 +425,7 @@ impl<'a> AppState<'a> {
         }
 
         let exited_name = current.file_name().map(|n| n.to_os_string());
-        self.nav.save_position();
-        self.nav.set_path(parent_path);
-
-        self.request_dir_load(workers, exited_name);
-        self.request_parent_content(workers);
-
+        self.navigate_to(workers, parent_path, exited_name);
         KeypressResult::Continue
     }
 
@@ -458,10 +450,7 @@ impl<'a> AppState<'a> {
 
         match std::fs::read_dir(&entry_path) {
             Ok(_) => {
-                self.nav.save_position();
-                self.nav.set_path(entry_path);
-                self.request_dir_load(workers, None);
-                self.request_parent_content(workers);
+                self.navigate_to(workers, entry_path, None);
                 KeypressResult::Continue
             }
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
@@ -534,10 +523,7 @@ impl<'a> AppState<'a> {
             return;
         }
 
-        self.nav.save_position();
-        self.nav.set_path(target_dir);
-        self.request_dir_load(workers, focus);
-        self.request_parent_content(workers);
+        self.navigate_to(workers, target_dir, focus);
 
         self.exit_input_mode();
     }
@@ -636,10 +622,7 @@ impl<'a> AppState<'a> {
 
     fn handle_go_to_home(&mut self, workers: &Workers) {
         if let Some(home_path) = get_home() {
-            self.nav.save_position();
-            self.nav.set_path(home_path.clone());
-            self.request_dir_load(workers, None);
-            self.request_parent_content(workers);
+            self.navigate_to(workers, home_path.clone(), None);
         }
     }
 
@@ -659,10 +642,7 @@ impl<'a> AppState<'a> {
 
         if let Ok(meta) = std::fs::metadata(&abs_path) {
             if meta.is_dir() {
-                self.nav.save_position();
-                self.nav.set_path(abs_path.clone());
-                self.request_dir_load(workers, None);
-                self.request_parent_content(workers);
+                self.navigate_to(workers, abs_path.clone(), None);
             } else {
                 self.push_overlay_message(
                     "Error: Not a directory".to_string(),
@@ -944,5 +924,12 @@ impl<'a> AppState<'a> {
         }
 
         self.overlays_mut().push(Overlay::Message { text });
+    }
+
+    fn navigate_to(&mut self, workers: &Workers, path: PathBuf, focus: Option<OsString>) {
+        self.nav.save_position();
+        self.nav.set_path(path);
+        self.request_dir_load(workers, focus);
+        self.request_parent_content(workers);
     }
 }

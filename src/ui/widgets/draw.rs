@@ -98,18 +98,6 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
             }
             let dialog_text = Text::from(dialog_lines);
 
-            let dialog_style = DialogStyle {
-                border: Borders::ALL,
-                border_style: widget.border_style_or(Style::default().fg(Color::Red)),
-                bg: widget.bg_or_theme(),
-                fg: widget.fg_or_theme(),
-                title: Some(Span::styled(
-                    " Confirm Delete ",
-                    Style::default().fg(Color::Red),
-                )),
-                ..Default::default()
-            };
-
             let dialog_layout = DialogLayout {
                 area: frame.area(),
                 position,
@@ -120,7 +108,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 frame,
                 dialog_layout,
                 border_type,
-                &dialog_style,
+                &get_dialog_style(app, Style::default().fg(Color::Red), "Confirm Delete"),
                 dialog_text,
                 Some(Alignment::Left),
                 Some(app.actions().scroll()),
@@ -149,18 +137,6 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 }
             } else {
                 String::new()
-            };
-
-            let dialog_style = DialogStyle {
-                border: Borders::ALL,
-                border_style: widget.border_style_or(accent_style),
-                bg: widget.bg_or_theme(),
-                fg: widget.fg_or_theme(),
-                title: Some(Span::styled(
-                    format!(" {} ", prompt),
-                    widget.title_style_or_theme(),
-                )),
-                ..Default::default()
             };
 
             let dialog_layout = DialogLayout {
@@ -196,7 +172,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 frame,
                 dialog_layout,
                 border_type,
-                &dialog_style,
+                &get_dialog_style(app, accent_style, prompt),
                 dialog_text,
                 Some(Alignment::Left),
                 Some(app.actions().scroll()),
@@ -205,18 +181,6 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
             frame
                 .set_cursor_position((dialog_area.x + 1 + cursor_offset as u16, dialog_area.y + 1));
         } else {
-            let dialog_style = DialogStyle {
-                border: Borders::ALL,
-                border_style: widget.border_style_or(accent_style),
-                bg: widget.bg_or_theme(),
-                fg: widget.fg_or_theme(),
-                title: Some(Span::styled(
-                    format!(" {} ", prompt),
-                    widget.title_style_or_theme(),
-                )),
-                ..Default::default()
-            };
-
             let dialog_layout = DialogLayout {
                 area: frame.area(),
                 position,
@@ -235,7 +199,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 frame,
                 dialog_layout,
                 border_type,
-                &dialog_style,
+                &get_dialog_style(app, accent_style, prompt),
                 display_input,
                 Some(Alignment::Left),
                 None,
@@ -516,7 +480,6 @@ pub(crate) fn draw_show_info_dialog(
     info: &FileInfo,
 ) {
     let theme = app.config().theme();
-    let widget_info = theme.widget();
     let info_cfg = &app.config().display().info();
 
     let label_style = theme.widget().label_style_or_theme();
@@ -582,18 +545,6 @@ pub(crate) fn draw_show_info_dialog(
     let width = raw_width.min(area.width as usize) as u16;
     let height = (lines.len() + border_pad).min(area.height as usize) as u16;
 
-    let dialog_style = DialogStyle {
-        border: Borders::ALL,
-        border_style: widget_info.border_style_or(accent_style),
-        bg: widget_info.bg_or_theme(),
-        fg: widget_info.fg_or_theme(),
-        title: Some(Span::styled(
-            " File Info ",
-            widget_info.title_style_or_theme(),
-        )),
-        ..Default::default()
-    };
-
     let dialog_layout = DialogLayout {
         area,
         position,
@@ -604,7 +555,7 @@ pub(crate) fn draw_show_info_dialog(
         frame,
         dialog_layout,
         border_type,
-        &dialog_style,
+        &get_dialog_style(app, accent_style, "File Info"),
         Text::from(lines),
         Some(Alignment::Left),
         None,
@@ -662,29 +613,8 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     let indicator_width = indicator.width() + 2;
     let max_input_width = field_width.saturating_sub(indicator_width);
 
-    let (display_input, cursor_x) = if input_text.width() <= max_input_width {
-        (
-            input_text.to_string(),
-            input_text[..cursor_pos.min(input_text.len())].width(),
-        )
-    } else {
-        let mut cur_width = 0;
-        let mut start = input_text.len();
-        for (idx, ch) in input_text.char_indices().rev() {
-            cur_width += ch.width().unwrap_or(0);
-            if cur_width > max_input_width {
-                start = idx + ch.len_utf8();
-                break;
-            }
-        }
-        let display = input_text[start..].to_string();
-        let cursor = if cursor_pos < start {
-            0
-        } else {
-            input_text[start..cursor_pos.min(input_text.len())].width()
-        };
-        (display, cursor)
-    };
+    let (display_input, cursor_x) = input_field_view(input_text, cursor_pos, max_input_width);
+
     let pad_width = max_input_width.saturating_sub(display_input.width());
     let mut line_input = vec![Span::styled(
         display_input,
@@ -735,15 +665,6 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
         }
     }
 
-    let dialog_style = DialogStyle {
-        border: Borders::ALL,
-        border_style: widget.border_style_or(accent_style),
-        bg: widget.bg_or_theme(),
-        fg: widget.fg_or_theme(),
-        title: Some(Span::styled(" Find ", widget.title_style_or_theme())),
-        ..Default::default()
-    };
-
     draw_dialog(
         frame,
         DialogLayout {
@@ -752,7 +673,7 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
             size,
         },
         border_type,
-        &dialog_style,
+        &get_dialog_style(app, accent_style, "Find"),
         display_lines,
         Some(Alignment::Left),
         None,
@@ -798,14 +719,6 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
     let position = widget.go_to_help_position();
 
     let border_type = app.config().display().border_shape().as_border_type();
-    let dialog_style = DialogStyle {
-        border: Borders::ALL,
-        border_style: widget.border_style_or(accent_style),
-        bg: widget.bg_or_theme(),
-        fg: widget.fg_or_theme(),
-        title: Some(Span::styled("Go to", widget.title_style_or_theme())),
-        ..Default::default()
-    };
 
     draw_dialog(
         frame,
@@ -815,7 +728,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
             size,
         },
         border_type,
-        &dialog_style,
+        &get_dialog_style(app, accent_style, "Go to"),
         line,
         Some(Alignment::Center),
         None,
@@ -830,7 +743,6 @@ pub(crate) fn draw_message_overlay(
     accent_style: Style,
     text: &str,
 ) {
-    let widget = app.config().theme().widget();
     let position = DialogPosition::BottomRight;
     let border_type = app.config().display().border_shape().as_border_type();
 
@@ -852,15 +764,6 @@ pub(crate) fn draw_message_overlay(
 
     let dialog_size = DialogSize::Custom(width, height);
 
-    let dialog_style = DialogStyle {
-        border: Borders::ALL,
-        border_style: widget.border_style_or(accent_style),
-        bg: widget.bg_or_theme(),
-        fg: widget.fg_or_theme(),
-        title: Some(Span::styled(" Message ", widget.title_style_or_theme())),
-        ..Default::default()
-    };
-
     let mut dialog_rect = dialog_area(area, dialog_size, position);
 
     if dialog_rect.y + dialog_rect.height >= area.y + area.height && dialog_rect.y > area.y {
@@ -877,7 +780,7 @@ pub(crate) fn draw_message_overlay(
         frame,
         custom_layout,
         border_type,
-        &dialog_style,
+        &get_dialog_style(app, accent_style, "Message"),
         text,
         Some(Alignment::Left),
         None,
@@ -1031,22 +934,11 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
     lines.push(Line::raw(""));
 
     let content_height = lines.len() as u16;
-
     let dynamic_width = (area.width * 60 / 100).clamp(45, 80);
 
     let max_allowed_height = (area.height * 80 / 100).max(12);
     let dynamic_height = (content_height + 1).min(max_allowed_height);
-
     let size = DialogSize::Custom(dynamic_width, dynamic_height);
-
-    let dialog_style = DialogStyle {
-        border: Borders::ALL,
-        border_style: widget.border_style_or(accent_style),
-        bg: widget.bg_or_theme(),
-        fg: widget.fg_or_theme(),
-        title: Some(Span::styled(" Keybinds ", widget.title_style_or_theme())),
-        ..Default::default()
-    };
 
     draw_dialog(
         frame,
@@ -1056,7 +948,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
             size,
         },
         border_type,
-        &dialog_style,
+        &get_dialog_style(app, accent_style, "Keybinds"),
         Text::from(lines),
         Some(Alignment::Left),
         Some(app.actions().scroll()),
@@ -1084,4 +976,19 @@ fn dialog_position_unified(
     let display_cfg = app.config().display();
     let base = configured.unwrap_or(fallback);
     adjusted_dialog_position(base, display_cfg.is_unified())
+}
+
+fn get_dialog_style(app: &AppState, accent: Style, title: &str) -> DialogStyle {
+    let widget_cfg = app.config().theme().widget();
+    DialogStyle {
+        border: Borders::ALL,
+        border_style: widget_cfg.border_style_or(accent),
+        bg: widget_cfg.bg_or_theme(),
+        fg: widget_cfg.fg_or_theme(),
+        title: Some(Span::styled(
+            format!(" {title} "),
+            widget_cfg.title_style_or_theme(),
+        )),
+        ..Default::default()
+    }
 }
