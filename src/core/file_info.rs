@@ -1,3 +1,13 @@
+//! FileInfo struct and related functions for retrieving and formatting
+//! file information for the ShowInfo overlay and the status line.
+//!
+//! This module defines the [FileInfo] struct which holds relevant
+//! information about a file, such as its name, size, modified time,
+//! attributes, and type.
+//!
+//! The main entry point is [FileInfo::get_file_info], which takes a
+//! file path and returns a populated [FileInfo] instance.
+
 use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
