@@ -269,7 +269,7 @@ pub(crate) fn draw_status_bar(
     let mut left_spans = Vec::with_capacity(12);
 
     if position == StatusPosition::Footer
-        && display_cfg.info().any_info_enabled()
+        && display_cfg.info().status_bar()
         && let Some(info) = app.current_file_info()
     {
         let info_opts = display_cfg.info();
@@ -292,23 +292,36 @@ pub(crate) fn draw_status_bar(
         }
 
         #[cfg(unix)]
-        if info_opts.owner()
-            && let Some(owner) = cached.owner()
         {
-            push_span(
-                &mut left_spans,
-                Span::styled(owner, info_theme.owner_style()),
-            );
-        }
+            let owner = if info_opts.owner() {
+                cached.owner()
+            } else {
+                None
+            };
 
-        #[cfg(unix)]
-        if info_opts.group()
-            && let Some(group) = cached.group()
-        {
-            push_span(
-                &mut left_spans,
-                Span::styled(group, info_theme.group_style()),
-            );
+            let group = if info_opts.group() {
+                cached.group()
+            } else {
+                None
+            };
+
+            match (owner, group) {
+                (Some(o), Some(g)) => {
+                    // combined → NO separator between them
+                    let combined = format!("{o} {g}");
+                    push_span(
+                        &mut left_spans,
+                        Span::styled(combined, info_theme.owner_style()), // or pick style
+                    );
+                }
+                (Some(o), None) => {
+                    push_span(&mut left_spans, Span::styled(o, info_theme.owner_style()));
+                }
+                (None, Some(g)) => {
+                    push_span(&mut left_spans, Span::styled(g, info_theme.group_style()));
+                }
+                _ => {}
+            }
         }
 
         if info_opts.modified()
@@ -1089,7 +1102,7 @@ fn dialog_position_unified(
 #[inline(always)]
 fn push_span<'a>(spans: &mut Vec<Span<'a>>, span: Span<'a>) {
     if !spans.is_empty() {
-        spans.push(Span::raw(" "));
+        spans.push(Span::raw(" | "));
     }
     spans.push(span);
 }
