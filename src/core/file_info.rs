@@ -213,39 +213,57 @@ impl CachedFileInfo {
 
 #[cfg(unix)]
 mod unix_info {
-    use std::cell::RefCell;
     use std::collections::HashMap;
+    use std::sync::{OnceLock, RwLock};
     use uzers::{get_group_by_gid, get_user_by_uid};
 
-    thread_local! {
-        static USER_CACHE: RefCell<HashMap<u32, String>> = RefCell::new(HashMap::new());
-        static GROUP_CACHE: RefCell<HashMap<u32, String>> = RefCell::new(HashMap::new());
+    static USER_CACHE: OnceLock<RwLock<HashMap<u32, String>>> = OnceLock::new();
+    static GROUP_CACHE: OnceLock<RwLock<HashMap<u32, String>>> = OnceLock::new();
+
+    fn get_user_map() -> &'static RwLock<HashMap<u32, String>> {
+        USER_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
     }
 
-    pub fn resolve_user(uid: u32) -> String {
-        USER_CACHE.with(|cache| {
-            let mut map = cache.borrow_mut();
-            map.entry(uid)
-                .or_insert_with(|| {
-                    get_user_by_uid(uid)
-                        .map(|u| u.name().to_string_lossy().into_owned())
-                        .unwrap_or_else(|| uid.to_string())
-                })
-                .clone()
-        })
+    fn get_group_map() -> &'static RwLock<HashMap<u32, String>> {
+        GROUP_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
     }
 
-    pub fn resolve_group(gid: u32) -> String {
-        GROUP_CACHE.with(|cache| {
-            let mut map = cache.borrow_mut();
-            map.entry(gid)
-                .or_insert_with(|| {
-                    get_group_by_gid(gid)
-                        .map(|g| g.name().to_string_lossy().into_owned())
-                        .unwrap_or_else(|| gid.to_string())
-                })
-                .clone()
-        })
+    pub(super) fn resolve_user(uid: u32) -> String {
+        let cache = get_user_map();
+
+        if let Ok(map) = cache.read() {
+            if let Some(name) = map.get(&uid) {
+                return name.clone();
+            }
+        }
+
+        let mut map = cache.write().unwrap();
+        map.entry(uid)
+            .or_insert_with(|| {
+                get_user_by_uid(uid)
+                    .map(|u| u.name().to_string_lossy().into_owned())
+                    .unwrap_or_else(|| uid.to_string())
+            })
+            .clone()
+    }
+
+    pub(super) fn resolve_group(gid: u32) -> String {
+        let cache = get_group_map();
+
+        if let Ok(map) = cache.read() {
+            if let Some(name) = map.get(&gid) {
+                return name.clone();
+            }
+        }
+
+        let mut map = cache.write().unwrap();
+        map.entry(gid)
+            .or_insert_with(|| {
+                get_group_by_gid(gid)
+                    .map(|g| g.name().to_string_lossy().into_owned())
+                    .unwrap_or_else(|| gid.to_string())
+            })
+            .clone()
     }
 }
 
