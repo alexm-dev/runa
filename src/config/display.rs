@@ -64,6 +64,11 @@ impl Display {
     }
 
     #[inline]
+    pub(crate) fn is_no_borders(&self) -> bool {
+        matches!(self.borders, BorderStyle::None)
+    }
+
+    #[inline]
     pub(crate) fn border_shape(&self) -> &BorderShape {
         &self.border_shape
     }

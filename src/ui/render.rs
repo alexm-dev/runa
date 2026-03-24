@@ -59,6 +59,9 @@ pub(crate) fn render(
     let clipboard_style = marker_theme.clipboard_style_or_theme();
 
     root_area = render_root_and_header(frame, app, root_area);
+    if display_cfg.is_no_borders() {
+        root_area.height = root_area.height.saturating_sub(1);
+    }
 
     // Render Panes
     let chunks = layout_chunks(root_area, app);

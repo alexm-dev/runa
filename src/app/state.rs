@@ -18,7 +18,7 @@ use crate::app::actions::{ActionContext, ActionMode, InputMode};
 use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::FileInfo;
+use crate::core::file_info::{CachedFileInfo, FileInfo};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{Overlay, OverlayStack};
 
@@ -26,7 +26,7 @@ use crossterm::event::KeyEvent;
 use ratatui::text::Span;
 
 use std::ffi::OsString;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -97,8 +97,7 @@ pub(crate) struct AppState<'a> {
     pub(super) tab_id: Option<usize>,
     pub(super) tab_line: Arc<Vec<Span<'a>>>,
 
-    pub(super) selected_info_path: Option<PathBuf>,
-    pub(super) selected_info: Option<FileInfo>,
+    pub(super) selected_info: Option<CachedFileInfo>,
 }
 
 impl<'a> AppState<'a> {
@@ -132,7 +131,6 @@ impl<'a> AppState<'a> {
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
             tab_id: None,
-            selected_info_path: None,
             selected_info: None,
         };
 
@@ -203,7 +201,7 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn current_file_info(&self) -> Option<&FileInfo> {
+    pub(crate) fn current_file_info(&self) -> Option<&CachedFileInfo> {
         self.selected_info.as_ref()
     }
 
@@ -541,18 +539,22 @@ impl<'a> AppState<'a> {
     pub(crate) fn update_file_info_cache(&mut self) {
         let Some(entry) = self.nav.selected_entry() else {
             self.selected_info = None;
-            self.selected_info_path = None;
             return;
         };
 
         let path = self.nav.current_dir().join(entry.name());
 
-        if self.selected_info_path.as_ref() == Some(&path) {
+        if let Some(cached) = &self.selected_info
+            && cached.path() == path
+        {
             return;
         }
 
-        self.selected_info_path = Some(path.clone());
-        self.selected_info = FileInfo::get_file_info(&path).ok();
+        if let Ok(info) = FileInfo::get_file_info(&path) {
+            self.selected_info = Some(CachedFileInfo::new(path, info));
+        } else {
+            self.selected_info = None;
+        }
     }
 }
 

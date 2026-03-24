@@ -7,7 +7,7 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{Action, FileAction, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::app::{Clipboard, NavState, Workers};
-use crate::core::FileInfo;
+use crate::core::file_info::FileInfo;
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::Overlay;
 use crate::utils::{

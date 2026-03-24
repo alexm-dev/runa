@@ -6,7 +6,8 @@
 //!
 //! Also formatts FileTypes to be used by FileInfo and ShowInfo overlay widget.
 
-use crate::core::{FileEntry, FileType};
+use crate::core::FileEntry;
+use crate::core::file_info::FileType;
 use crate::utils::{
     clean_display_path, normalize_relative_path, shorten_home_path, with_lowered_stack,
 };
@@ -31,11 +32,6 @@ const MAX_PREVIEW_SIZE: u64 = 5_000 * 1024 * 1024;
 const HEADER_PEEK_BYTES: usize = 8;
 // Bytes to peek for null bytes in binary detections
 const BINARY_PEEK_BYTES: usize = 1024;
-
-#[cfg(windows)]
-pub(crate) const PERMS_WIDTH: usize = 5;
-#[cfg(unix)]
-pub(crate) const PERMS_WIDTH: usize = 10;
 
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.

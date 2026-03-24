@@ -5,7 +5,7 @@
 //!
 //! Is used throughout the ui modules and in handlers.rs.
 
-use crate::core::FileInfo;
+use crate::core::file_info::FileInfo;
 use std::slice;
 
 #[derive(Clone)]

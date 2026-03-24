@@ -7,9 +7,9 @@
 
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
-use crate::core::formatter::{PERMS_WIDTH, format_file_size, format_file_time, format_file_type};
+use crate::core::file_info::{FileInfo, FileType};
+use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
 use crate::core::worker::Workers;
-use crate::core::{FileInfo, FileType};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
@@ -17,7 +17,7 @@ use crate::utils::clean_display_path;
 
 use ratatui::{
     Frame,
-    layout::{Alignment, Rect},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph},
@@ -266,7 +266,7 @@ pub(crate) fn draw_status_bar(
     let marker_theme = theme.marker();
     let use_icons = display_cfg.icons();
 
-    let mut left_spans = Vec::with_capacity(6);
+    let mut left_spans = Vec::with_capacity(12);
 
     if position == StatusPosition::Footer
         && display_cfg.info().any_info_enabled()
@@ -274,49 +274,53 @@ pub(crate) fn draw_status_bar(
     {
         let info_opts = display_cfg.info();
         let info_theme = theme.info();
-        let is_dir = *info.file_type() == FileType::Directory;
+        let cached = info.strings();
 
-        if info_opts.perms() {
-            let perms = format!("{:width$}", info.attributes(), width = PERMS_WIDTH);
-            left_spans.push(Span::styled(perms, info_theme.perms_style()));
-            left_spans.push(Span::raw(" "));
+        if info_opts.perms()
+            && let Some(perms) = cached.perms()
+        {
+            push_span(
+                &mut left_spans,
+                Span::styled(perms, info_theme.perms_style()),
+            );
         }
 
-        if info_opts.size() {
-            let size = format_file_size(*info.size(), is_dir);
-            left_spans.push(Span::styled(
-                format!("{:>8}", size),
-                info_theme.size_style(),
-            ));
-            left_spans.push(Span::raw(" "));
+        if info_opts.size()
+            && let Some(size) = cached.size()
+        {
+            push_span(&mut left_spans, Span::styled(size, info_theme.size_style()));
         }
 
         #[cfg(unix)]
         if info_opts.owner()
-            && let Some(owner) = info.owner()
+            && let Some(owner) = cached.owner()
         {
-            left_spans.push(Span::styled(owner.to_owned(), info_theme.owner_style()));
-            left_spans.push(Span::raw(" "));
+            push_span(
+                &mut left_spans,
+                Span::styled(owner, info_theme.owner_style()),
+            );
         }
 
         #[cfg(unix)]
         if info_opts.group()
-            && let Some(group) = info.group()
+            && let Some(group) = cached.group()
         {
-            left_spans.push(Span::styled(group.to_owned(), info_theme.group_style()));
-            left_spans.push(Span::raw(" "));
+            push_span(
+                &mut left_spans,
+                Span::styled(group, info_theme.group_style()),
+            );
         }
 
-        if info_opts.modified() {
-            let date = format_file_time(*info.modified());
-            left_spans.push(Span::styled(date, info_theme.date_style()));
-            left_spans.push(Span::raw(" "));
+        if info_opts.modified()
+            && let Some(date) = cached.date()
+        {
+            push_span(&mut left_spans, Span::styled(date, info_theme.date_style()));
         }
 
-        if info_opts.file_type() {
-            let file_type = format_file_type(info.file_type());
-            left_spans.push(Span::styled(file_type, info_theme.date_style()));
-            left_spans.push(Span::raw(" "));
+        if info_opts.file_type()
+            && let Some(ft) = cached.file_type()
+        {
+            push_span(&mut left_spans, Span::styled(ft, info_theme.date_style()));
         }
     }
 
@@ -337,19 +341,26 @@ pub(crate) fn draw_status_bar(
             && let Some(start) = app.worker_time()
             && start.elapsed() >= Duration::from_millis(200)
         {
-            let task_msg = if active_ops > 0 {
+            if active_ops > 0 {
                 let symbols: &[&str] = if use_icons {
                     &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
                 } else {
                     &["-", "\\", "|", "/"]
                 };
+
                 let tick = start.elapsed().as_millis() / 100;
                 let spinner = symbols[tick as usize % symbols.len()];
-                format!("Tasks: {} FileOp({})", spinner, total_ops)
+
+                spans.push(Span::styled("Tasks: ", base_style));
+                spans.push(Span::styled(spinner, base_style));
+                spans.push(Span::styled(" FileOp(", base_style));
+                spans.push(Span::styled(total_ops.to_string(), base_style));
+                spans.push(Span::styled(")", base_style));
             } else {
-                format!("Tasks: FileOp({})", total_ops)
-            };
-            spans.push(Span::styled(task_msg, base_style));
+                spans.push(Span::styled("Tasks: FileOp(", base_style));
+                spans.push(Span::styled(total_ops.to_string(), base_style));
+                spans.push(Span::styled(")", base_style));
+            }
         }
     }
 
@@ -361,7 +372,9 @@ pub(crate) fn draw_status_bar(
             add_sep(&mut spans);
             let icon = if use_icons { "󰆏 " } else { "" };
             let style = marker_theme.clipboard_style_or_theme();
-            spans.push(Span::styled(format!("{}{} copied", icon, count), style));
+            spans.push(Span::styled(icon, style));
+            spans.push(Span::styled(count.to_string(), style));
+            spans.push(Span::styled(" copied", style));
         }
     }
 
@@ -382,7 +395,8 @@ pub(crate) fn draw_status_bar(
             if !is_redundant {
                 add_sep(&mut spans);
                 let style = marker_theme.style_or_theme();
-                spans.push(Span::styled(format!("{} marked", marker_count), style));
+                spans.push(Span::styled(marker_count.to_string(), style));
+                spans.push(Span::styled(" marked", style));
             }
         }
     }
@@ -430,14 +444,23 @@ pub(crate) fn draw_status_bar(
         ratatui::widgets::Block::default().padding(ratatui::widgets::Padding::horizontal(1));
 
     if position == StatusPosition::Footer && !left_spans.is_empty() {
-        let left_w: u16 = left_spans.iter().map(|s| s.width() as u16).sum();
-        let right_w: u16 = spans.iter().map(|s| s.width() as u16).sum();
-        let space_count = area.width.saturating_sub(left_w + right_w + 2) as usize;
+        let inner = block.inner(rect);
 
-        let mut final_line = left_spans;
-        final_line.push(Span::raw(" ".repeat(space_count)));
-        final_line.extend(spans);
-        frame.render_widget(Paragraph::new(Line::from(final_line)).block(block), rect);
+        let chunks = Layout::horizontal([
+            Constraint::Length(left_spans.iter().map(|s| s.width() as u16).sum()),
+            Constraint::Min(0),
+            Constraint::Length(spans.iter().map(|s| s.width() as u16).sum()),
+        ])
+        .split(inner);
+
+        frame.render_widget(Paragraph::new(Line::from(left_spans)), chunks[0]);
+
+        frame.render_widget(
+            Paragraph::new(Line::from(spans)).alignment(Alignment::Right),
+            chunks[2],
+        );
+
+        frame.render_widget(block, rect);
     } else {
         frame.render_widget(
             Paragraph::new(Line::from(spans))
@@ -1061,4 +1084,12 @@ fn dialog_position_unified(
     let display_cfg = app.config().display();
     let base = configured.unwrap_or(fallback);
     adjusted_dialog_position(base, display_cfg.is_unified())
+}
+
+#[inline(always)]
+fn push_span<'a>(spans: &mut Vec<Span<'a>>, span: Span<'a>) {
+    if !spans.is_empty() {
+        spans.push(Span::raw(" "));
+    }
+    spans.push(span);
 }

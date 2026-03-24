@@ -3,17 +3,14 @@
 //! Provides the FileEntry struct which is used throughout runa.
 //! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
-use crate::core::formatter::format_attributes;
-
 #[cfg(windows)]
 use crate::utils::with_lowered_stack;
 
 use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
-use std::fs::{self, symlink_metadata};
+use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 /// Represents a single entry in a directory listing
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
@@ -96,114 +93,6 @@ impl FileEntry {
         with_lowered_stack(ext, |lowered| match lowered {
             "exe" | "com" | "bat" | "cmd" | "ps1" => *flags |= Self::IS_EXECUTABLE,
             _ => {}
-        })
-    }
-}
-
-/// Enumerator for the filye types which are then shown inside [FileInfo]
-///
-/// Hold File, Directory, Symlink and Other types.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) enum FileType {
-    File,
-    Directory,
-    Symlink,
-    Other,
-}
-
-/// Main FileInfo struct that holds each info field for the ShowInfo overlay widget.
-/// Holds name, size, modified time, attributes string, and file type.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct FileInfo {
-    name: OsString,
-    size: Option<u64>,
-    modified: Option<SystemTime>,
-    attributes: String,
-    file_type: FileType,
-    owner: Option<String>,
-    group: Option<String>,
-}
-
-impl FileInfo {
-    // Accessors
-
-    #[inline]
-    pub(crate) fn name(&self) -> &OsString {
-        &self.name
-    }
-
-    #[inline]
-    pub(crate) fn size(&self) -> &Option<u64> {
-        &self.size
-    }
-
-    #[inline]
-    pub(crate) fn modified(&self) -> &Option<SystemTime> {
-        &self.modified
-    }
-
-    #[inline]
-    pub(crate) fn attributes(&self) -> &str {
-        &self.attributes
-    }
-
-    #[inline]
-    pub(crate) fn file_type(&self) -> &FileType {
-        &self.file_type
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn owner(&self) -> Option<&str> {
-        self.owner.as_deref()
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn group(&self) -> Option<&str> {
-        self.group.as_deref()
-    }
-
-    /// Main file info getter used by the ShowInfo overlay functions
-    /// # Returns
-    /// A FileInfo struct populated with the file's information.
-    pub(crate) fn get_file_info(path: &Path) -> io::Result<FileInfo> {
-        let metadata = symlink_metadata(path)?;
-
-        let file_type = if metadata.is_file() {
-            FileType::File
-        } else if metadata.is_dir() {
-            FileType::Directory
-        } else if metadata.file_type().is_symlink() {
-            FileType::Symlink
-        } else {
-            FileType::Other
-        };
-
-        #[cfg(unix)]
-        let (owner, group) = {
-            use std::os::unix::fs::MetadataExt;
-            (
-                Some(unix_info::resolve_user(metadata.uid())),
-                Some(unix_info::resolve_group(metadata.gid())),
-            )
-        };
-
-        #[cfg(not(unix))]
-        let (owner, group) = (None, None);
-
-        Ok(FileInfo {
-            name: path.file_name().unwrap_or_default().to_os_string(),
-            size: if metadata.is_file() {
-                Some(metadata.len())
-            } else {
-                None
-            },
-            modified: metadata.modified().ok(),
-            attributes: format_attributes(&metadata),
-            file_type,
-            owner,
-            group,
         })
     }
 }
@@ -356,10 +245,6 @@ mod unix_info {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{self, File};
-    use std::io::Write;
-    use std::path::PathBuf;
-    use tempfile::TempDir;
 
     #[test]
     fn file_entry_flags() -> Result<(), Box<dyn std::error::Error>> {
@@ -371,40 +256,6 @@ mod tests {
         let fe_dir = FileEntry::new(OsString::from(".hidden_folder"), flags, None);
         assert!(fe_dir.is_dir());
         assert!(!fe_dir.is_symlink());
-        Ok(())
-    }
-
-    #[test]
-    fn file_info_basic_file() -> Result<(), Box<dyn std::error::Error>> {
-        let tmp = TempDir::new()?;
-        let file_path = tmp.path().join("hello.txt");
-        let mut file = File::create(&file_path)?;
-        writeln!(file, "abc123")?;
-
-        let info = FileInfo::get_file_info(&file_path)?;
-        assert_eq!(info.file_type(), &FileType::File);
-        assert_eq!(info.name().to_string_lossy(), "hello.txt");
-        assert!(info.size().is_some());
-        Ok(())
-    }
-
-    #[test]
-    fn file_info_directory() -> Result<(), Box<dyn std::error::Error>> {
-        let tmp = TempDir::new()?;
-        let dir_path = tmp.path().join("emptydir");
-        fs::create_dir(&dir_path)?;
-
-        let info = FileInfo::get_file_info(&dir_path)?;
-        assert_eq!(info.file_type(), &FileType::Directory);
-        assert_eq!(info.size(), &None);
-        Ok(())
-    }
-
-    #[test]
-    fn browse_nonexistent() -> Result<(), Box<dyn std::error::Error>> {
-        let path = PathBuf::from("/path/does/not/exist");
-        let result = browse_dir(&path);
-        assert!(result.is_err());
         Ok(())
     }
 }
