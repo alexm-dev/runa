@@ -392,7 +392,7 @@ impl Default for ShowInfoOptions {
             group: true,
             position: None,
             status_bar: true,
-            format: Some("{perms} | {size} | {owner} {group} | {date}".to_string()),
+            format: Some("{perms} | {size}".to_string()),
             segments: Vec::new(),
         };
 
@@ -405,7 +405,7 @@ impl Default for ShowInfoOptions {
             perms: true,
             position: None,
             status_bar: true,
-            format: Some("{perms} | {size} | {date}".to_string()),
+            format: Some("{perms} | {size}".to_string()),
             segments: Vec::new(),
         };
 
