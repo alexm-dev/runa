@@ -108,7 +108,12 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 frame,
                 dialog_layout,
                 border_type,
-                &get_dialog_style(app, Style::default().fg(Color::Red), "Confirm Delete"),
+                &get_dialog_style(
+                    app,
+                    Style::default().fg(Color::Red),
+                    "Confirm Delete",
+                    Some(Style::default().fg(Color::Red)),
+                ),
                 dialog_text,
                 Some(Alignment::Left),
                 Some(app.actions().scroll()),
@@ -172,7 +177,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 frame,
                 dialog_layout,
                 border_type,
-                &get_dialog_style(app, accent_style, prompt),
+                &get_dialog_style(app, accent_style, prompt, None),
                 dialog_text,
                 Some(Alignment::Left),
                 Some(app.actions().scroll()),
@@ -199,7 +204,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 frame,
                 dialog_layout,
                 border_type,
-                &get_dialog_style(app, accent_style, prompt),
+                &get_dialog_style(app, accent_style, prompt, None),
                 display_input,
                 Some(Alignment::Left),
                 None,
@@ -555,7 +560,7 @@ pub(crate) fn draw_show_info_dialog(
         frame,
         dialog_layout,
         border_type,
-        &get_dialog_style(app, accent_style, "File Info"),
+        &get_dialog_style(app, accent_style, "File Info", None),
         Text::from(lines),
         Some(Alignment::Left),
         None,
@@ -673,7 +678,7 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
             size,
         },
         border_type,
-        &get_dialog_style(app, accent_style, "Find"),
+        &get_dialog_style(app, accent_style, "Find", None),
         display_lines,
         Some(Alignment::Left),
         None,
@@ -728,7 +733,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
             size,
         },
         border_type,
-        &get_dialog_style(app, accent_style, "Go to"),
+        &get_dialog_style(app, accent_style, "Go to", None),
         line,
         Some(Alignment::Center),
         None,
@@ -763,9 +768,7 @@ pub(crate) fn draw_message_overlay(
     let height = ((line_count + border_pad).min(area.height as usize)) as u16;
 
     let dialog_size = DialogSize::Custom(width, height);
-
     let mut dialog_rect = dialog_area(area, dialog_size, position);
-
     if dialog_rect.y + dialog_rect.height >= area.y + area.height && dialog_rect.y > area.y {
         dialog_rect.y -= 1;
     }
@@ -780,7 +783,7 @@ pub(crate) fn draw_message_overlay(
         frame,
         custom_layout,
         border_type,
-        &get_dialog_style(app, accent_style, "Message"),
+        &get_dialog_style(app, accent_style, "Message", None),
         text,
         Some(Alignment::Left),
         None,
@@ -903,7 +906,6 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
 
     let mk_line = |key_text: &str, desc: &str| -> Line<'static> {
         let key_string = format!("{:>width$}", key_text, width = key_w);
-
         Line::from(vec![
             Span::raw(margin_spacer.to_string()),
             Span::styled(key_string, key_style),
@@ -948,7 +950,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
             size,
         },
         border_type,
-        &get_dialog_style(app, accent_style, "Keybinds"),
+        &get_dialog_style(app, accent_style, "Keybinds", None),
         Text::from(lines),
         Some(Alignment::Left),
         Some(app.actions().scroll()),
@@ -978,17 +980,20 @@ fn dialog_position_unified(
     adjusted_dialog_position(base, display_cfg.is_unified())
 }
 
-fn get_dialog_style(app: &AppState, accent: Style, title: &str) -> DialogStyle {
+fn get_dialog_style(
+    app: &AppState,
+    accent: Style,
+    title: &str,
+    title_style_override: Option<Style>,
+) -> DialogStyle {
     let widget_cfg = app.config().theme().widget();
+    let title_style = title_style_override.unwrap_or_else(|| widget_cfg.title_style_or_theme());
     DialogStyle {
         border: Borders::ALL,
         border_style: widget_cfg.border_style_or(accent),
         bg: widget_cfg.bg_or_theme(),
         fg: widget_cfg.fg_or_theme(),
-        title: Some(Span::styled(
-            format!(" {title} "),
-            widget_cfg.title_style_or_theme(),
-        )),
+        title: Some(Span::styled(format!(" {title} "), title_style)),
         ..Default::default()
     }
 }
