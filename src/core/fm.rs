@@ -134,6 +134,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
 
         #[cfg(unix)]
         {
+            use std::os::unix::ffi::OsStrExt;
             use std::os::unix::fs::PermissionsExt;
 
             let md_res = if is_symlink {
