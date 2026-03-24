@@ -231,10 +231,10 @@ mod unix_info {
     pub(super) fn resolve_user(uid: u32) -> String {
         let cache = get_user_map();
 
-        if let Ok(map) = cache.read() {
-            if let Some(name) = map.get(&uid) {
-                return name.clone();
-            }
+        if let Ok(map) = cache.read()
+            && let Some(name) = map.get(&uid)
+        {
+            return name.clone();
         }
 
         let mut map = cache.write().unwrap();
@@ -250,10 +250,10 @@ mod unix_info {
     pub(super) fn resolve_group(gid: u32) -> String {
         let cache = get_group_map();
 
-        if let Ok(map) = cache.read() {
-            if let Some(name) = map.get(&gid) {
-                return name.clone();
-            }
+        if let Ok(map) = cache.read()
+            && let Some(name) = map.get(&gid)
+        {
+            return name.clone();
         }
 
         let mut map = cache.write().unwrap();
