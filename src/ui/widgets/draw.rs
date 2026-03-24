@@ -7,9 +7,12 @@
 
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
-use crate::core::file_info::{FileInfo, FileType};
-use crate::core::formatter::{format_file_size, format_file_time, format_file_type};
-use crate::core::worker::Workers;
+use crate::config::display::{StatusSegment, StatusTag};
+use crate::core::{
+    file_info::{FileInfo, FileType},
+    formatter::{format_file_size, format_file_time, format_file_type},
+    worker::Workers,
+};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
@@ -272,68 +275,52 @@ pub(crate) fn draw_status_bar(
         && display_cfg.info().status_bar()
         && let Some(info) = app.current_file_info()
     {
-        let info_opts = display_cfg.info();
         let info_theme = theme.info();
         let cached = info.strings();
+        let separator_style = theme.accent_style();
 
-        if info_opts.perms()
-            && let Some(perms) = cached.perms()
-        {
-            push_span(
-                &mut left_spans,
-                Span::styled(perms, info_theme.perms_style()),
-            );
-        }
+        let segments = display_cfg.info().segmensts();
 
-        if info_opts.size()
-            && let Some(size) = cached.size()
-        {
-            push_span(&mut left_spans, Span::styled(size, info_theme.size_style()));
-        }
-
-        #[cfg(unix)]
-        {
-            let owner = if info_opts.owner() {
-                cached.owner()
-            } else {
-                None
-            };
-
-            let group = if info_opts.group() {
-                cached.group()
-            } else {
-                None
-            };
-
-            match (owner, group) {
-                (Some(o), Some(g)) => {
-                    // combined → NO separator between them
-                    let combined = format!("{o} {g}");
-                    push_span(
-                        &mut left_spans,
-                        Span::styled(combined, info_theme.owner_style()), // or pick style
-                    );
+        for segment in segments {
+            match segment {
+                StatusSegment::Literal(lit) => {
+                    left_spans.push(Span::styled(lit, separator_style));
                 }
-                (Some(o), None) => {
-                    push_span(&mut left_spans, Span::styled(o, info_theme.owner_style()));
-                }
-                (None, Some(g)) => {
-                    push_span(&mut left_spans, Span::styled(g, info_theme.group_style()));
-                }
-                _ => {}
+                StatusSegment::Tag(tag) => match tag {
+                    StatusTag::Perms => {
+                        if let Some(p) = cached.perms() {
+                            left_spans.push(Span::styled(p, info_theme.perms_style()));
+                        }
+                    }
+                    StatusTag::Size => {
+                        if let Some(s) = cached.size() {
+                            left_spans.push(Span::styled(s, info_theme.size_style()));
+                        }
+                    }
+                    StatusTag::Mtime => {
+                        if let Some(d) = cached.date() {
+                            left_spans.push(Span::styled(d, info_theme.date_style()));
+                        }
+                    }
+                    StatusTag::Type => {
+                        if let Some(t) = cached.file_type() {
+                            left_spans.push(Span::styled(t, info_theme.date_style()));
+                        }
+                    }
+                    #[cfg(unix)]
+                    StatusTag::Owner => {
+                        if let Some(o) = cached.owner() {
+                            left_spans.push(Span::styled(o, info_theme.owner_style()));
+                        }
+                    }
+                    #[cfg(unix)]
+                    StatusTag::Group => {
+                        if let Some(g) = cached.group() {
+                            left_spans.push(Span::styled(g, info_theme.group_style()));
+                        }
+                    }
+                },
             }
-        }
-
-        if info_opts.modified()
-            && let Some(date) = cached.date()
-        {
-            push_span(&mut left_spans, Span::styled(date, info_theme.date_style()));
-        }
-
-        if info_opts.file_type()
-            && let Some(ft) = cached.file_type()
-        {
-            push_span(&mut left_spans, Span::styled(ft, info_theme.date_style()));
         }
     }
 
@@ -1097,12 +1084,4 @@ fn dialog_position_unified(
     let display_cfg = app.config().display();
     let base = configured.unwrap_or(fallback);
     adjusted_dialog_position(base, display_cfg.is_unified())
-}
-
-#[inline(always)]
-fn push_span<'a>(spans: &mut Vec<Span<'a>>, span: Span<'a>) {
-    if !spans.is_empty() {
-        spans.push(Span::raw(" | "));
-    }
-    spans.push(span);
 }

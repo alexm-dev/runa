@@ -5,7 +5,7 @@
 
 use crate::ui::widgets::DialogPosition;
 use ratatui::widgets::BorderType;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 /// Display configuration options
 ///
@@ -236,22 +236,30 @@ impl Default for LayoutConfig {
 /// that can be displayed, as well as an optional position for the dialog
 ///
 /// Positions can be specified using the DialogPosition enum
-#[derive(Deserialize, Debug)]
-#[serde(default)]
+#[derive(Debug)]
 pub(crate) struct ShowInfoOptions {
     name: bool,
     file_type: bool,
     size: bool,
     modified: bool,
     perms: bool,
+    #[cfg(unix)]
     owner: bool,
+    #[cfg(unix)]
     group: bool,
     position: Option<DialogPosition>,
     status_bar: bool,
+    format: Option<String>,
+    segments: Vec<StatusSegment>,
 }
 
-/// Public methods for accessing show info configuration options
 impl ShowInfoOptions {
+    pub(crate) fn init_status_format(&mut self) {
+        if let Some(fmt) = &self.format {
+            self.segments = parse_status_format(fmt);
+        }
+    }
+
     #[inline]
     pub(crate) fn name(&self) -> bool {
         self.name
@@ -298,12 +306,83 @@ impl ShowInfoOptions {
     pub(crate) fn status_bar(&self) -> bool {
         self.status_bar
     }
+
+    #[inline]
+    pub(crate) fn segmensts(&self) -> &[StatusSegment] {
+        &self.segments
+    }
 }
 
-/// Default show info configuration options
+impl<'de> Deserialize<'de> for ShowInfoOptions {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(default)]
+        struct Helper {
+            name: bool,
+            file_type: bool,
+            size: bool,
+            modified: bool,
+            perms: bool,
+            #[cfg(unix)]
+            owner: bool,
+            #[cfg(unix)]
+            group: bool,
+            position: Option<DialogPosition>,
+            status_bar: bool,
+            format: Option<String>,
+        }
+
+        impl Default for Helper {
+            fn default() -> Self {
+                let def = ShowInfoOptions::default();
+                Self {
+                    name: def.name,
+                    file_type: def.file_type,
+                    size: def.size,
+                    modified: def.modified,
+                    perms: def.perms,
+                    #[cfg(unix)]
+                    owner: def.owner,
+                    #[cfg(unix)]
+                    group: def.group,
+                    position: def.position,
+                    status_bar: def.status_bar,
+                    format: def.format,
+                }
+            }
+        }
+
+        let h = Helper::deserialize(deserializer)?;
+
+        let mut info = ShowInfoOptions {
+            name: h.name,
+            file_type: h.file_type,
+            size: h.size,
+            modified: h.modified,
+            perms: h.perms,
+            #[cfg(unix)]
+            owner: h.owner,
+            #[cfg(unix)]
+            group: h.group,
+            position: h.position,
+            status_bar: h.status_bar,
+            format: h.format,
+            segments: Vec::new(),
+        };
+
+        info.init_status_format();
+        Ok(info)
+    }
+}
+
+// Default show info configuration options
 impl Default for ShowInfoOptions {
     fn default() -> Self {
-        ShowInfoOptions {
+        #[cfg(unix)]
+        let mut options = ShowInfoOptions {
             name: true,
             file_type: false,
             size: true,
@@ -313,8 +392,44 @@ impl Default for ShowInfoOptions {
             group: true,
             position: None,
             status_bar: true,
-        }
+            format: Some("{perms} | {size} | {owner} {group} | {date}".to_string()),
+            segments: Vec::new(),
+        };
+
+        #[cfg(not(unix))]
+        let mut options = ShowInfoOptions {
+            name: true,
+            file_type: false,
+            size: true,
+            modified: true,
+            perms: true,
+            position: None,
+            status_bar: true,
+            format: Some("{perms} | {size} | {date}".to_string()),
+            segments: Vec::new(),
+        };
+
+        options.init_status_format();
+        options
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum StatusTag {
+    Perms,
+    Size,
+    Mtime,
+    Type,
+    #[cfg(unix)]
+    Owner,
+    #[cfg(unix)]
+    Group,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum StatusSegment {
+    Literal(String),
+    Tag(StatusTag),
 }
 
 /// Entry count position options
@@ -515,4 +630,45 @@ impl BorderShape {
             BorderShape::Thick => BorderType::Thick,
         }
     }
+}
+
+fn parse_status_format(fmt: &str) -> Vec<StatusSegment> {
+    let mut segments = Vec::new();
+    let mut cursor = 0;
+
+    while let Some(start) = fmt[cursor..].find('{') {
+        let start = cursor + start;
+        if let Some(end) = fmt[start..].find('}') {
+            let end = start + end;
+
+            if start > cursor {
+                segments.push(StatusSegment::Literal(fmt[cursor..start].to_string()));
+            }
+
+            let tag_str = &fmt[start + 1..end];
+            let tag = match tag_str {
+                "perms" => Some(StatusTag::Perms),
+                "size" => Some(StatusTag::Size),
+                "mtime" | "date" => Some(StatusTag::Mtime),
+                "type" => Some(StatusTag::Type),
+                #[cfg(unix)]
+                "owner" => Some(StatusTag::Owner),
+                #[cfg(unix)]
+                "group" => Some(StatusTag::Group),
+                _ => None,
+            };
+
+            if let Some(t) = tag {
+                segments.push(StatusSegment::Tag(t));
+            }
+            cursor = end + 1;
+        } else {
+            break;
+        }
+    }
+
+    if cursor < fmt.len() {
+        segments.push(StatusSegment::Literal(fmt[cursor..].to_string()));
+    }
+    segments
 }

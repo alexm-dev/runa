@@ -186,8 +186,12 @@ pub(crate) fn draw_preview(
 
         PreviewData::File(text) => {
             frame.render_widget(
-                Paragraph::new(text.clone())
-                    .block(context.block.border_style(context.accent_style)),
+                Paragraph::new(text.clone()).block(
+                    context
+                        .block
+                        .border_style(context.accent_style)
+                        .border_type(context.border_type),
+                ),
                 context.area,
             );
         }
