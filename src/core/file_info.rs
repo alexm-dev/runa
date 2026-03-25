@@ -238,7 +238,7 @@ mod unix_info {
         GROUP_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
     }
 
-    fn resolve_user(uid: u32) -> String {
+    pub(super) fn resolve_user(uid: u32) -> String {
         let cache = get_user_map();
 
         if let Ok(map) = cache.read()
@@ -257,7 +257,7 @@ mod unix_info {
             .clone()
     }
 
-    fn resolve_group(gid: u32) -> String {
+    pub(super) fn resolve_group(gid: u32) -> String {
         let cache = get_group_map();
 
         if let Ok(map) = cache.read()
