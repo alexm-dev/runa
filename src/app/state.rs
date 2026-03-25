@@ -542,14 +542,14 @@ impl<'a> AppState<'a> {
             return;
         };
 
-        let path = self.nav.current_dir().join(entry.name());
-
         if let Some(cached) = &self.selected_info
-            && cached.path() == path
+            && cached.path().parent() == Some(self.nav.current_dir())
+            && cached.path().file_name() == Some(entry.name())
         {
             return;
         }
 
+        let path = self.nav.current_dir().join(entry.name());
         if let Ok(info) = FileInfo::get_file_info(&path) {
             self.selected_info = Some(CachedFileInfo::new(path, info));
         } else {

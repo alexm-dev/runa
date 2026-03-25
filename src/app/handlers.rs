@@ -802,14 +802,12 @@ impl<'a> AppState<'a> {
         let maybe_idx = self
             .overlays()
             .find_index(|o| matches!(o, Overlay::ShowInfo { .. }));
+        let Some(i) = maybe_idx else { return };
 
-        if let Some(i) = maybe_idx
-            && let Some(entry) = self.nav.selected_shown_entry()
-        {
-            let path = self.nav.current_dir().join(entry.name());
-            if let Ok(file_info) = FileInfo::get_file_info(&path)
-                && let Some(Overlay::ShowInfo { info }) = self.overlays_mut().get_mut(i)
-            {
+        if let Some(cached) = &self.selected_info {
+            let file_info = cached.info().clone();
+
+            if let Some(Overlay::ShowInfo { info }) = self.overlays_mut().get_mut(i) {
                 *info = file_info;
             }
         }

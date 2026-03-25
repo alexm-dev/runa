@@ -177,6 +177,7 @@ impl FileInfoStrings {
 
 pub(crate) struct CachedFileInfo {
     path: PathBuf,
+    info: FileInfo,
     strings: FileInfoStrings,
 }
 
@@ -197,12 +198,21 @@ impl CachedFileInfo {
             file_type: Some(format_file_type(info.file_type())),
         };
 
-        Self { path, strings }
+        Self {
+            path,
+            info,
+            strings,
+        }
     }
 
     #[inline]
     pub(crate) fn path(&self) -> &Path {
         &self.path
+    }
+
+    #[inline]
+    pub(crate) fn info(&self) -> &FileInfo {
+        &self.info
     }
 
     #[inline]
@@ -228,7 +238,7 @@ mod unix_info {
         GROUP_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
     }
 
-    pub(super) fn resolve_user(uid: u32) -> String {
+    fn resolve_user(uid: u32) -> String {
         let cache = get_user_map();
 
         if let Ok(map) = cache.read()
@@ -237,7 +247,7 @@ mod unix_info {
             return name.clone();
         }
 
-        let mut map = cache.write().unwrap();
+        let mut map = cache.write().unwrap_or_else(|e| e.into_inner());
         map.entry(uid)
             .or_insert_with(|| {
                 get_user_by_uid(uid)
@@ -247,7 +257,7 @@ mod unix_info {
             .clone()
     }
 
-    pub(super) fn resolve_group(gid: u32) -> String {
+    fn resolve_group(gid: u32) -> String {
         let cache = get_group_map();
 
         if let Ok(map) = cache.read()
@@ -256,7 +266,7 @@ mod unix_info {
             return name.clone();
         }
 
-        let mut map = cache.write().unwrap();
+        let mut map = cache.write().unwrap_or_else(|e| e.into_inner());
         map.entry(gid)
             .or_insert_with(|| {
                 get_group_by_gid(gid)
