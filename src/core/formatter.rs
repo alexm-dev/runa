@@ -190,10 +190,11 @@ pub(crate) fn format_attributes(meta: &Metadata) -> String {
         } else {
             '-'
         });
-        out.push(if attr & 0x02 != 0 { 'h' } else { '-' });
-        out.push(if attr & 0x04 != 0 { 's' } else { '-' });
+
         out.push(if attr & 0x20 != 0 { 'a' } else { '-' });
         out.push(if attr & 0x01 != 0 { 'r' } else { '-' });
+        out.push(if attr & 0x02 != 0 { 'h' } else { '-' });
+        out.push(if attr & 0x04 != 0 { 's' } else { '-' });
         out
     }
 }
