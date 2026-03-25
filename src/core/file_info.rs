@@ -42,7 +42,9 @@ pub(crate) struct FileInfo {
     modified: Option<SystemTime>,
     attributes: String,
     file_type: FileType,
+    #[cfg(unix)]
     owner: Option<String>,
+    #[cfg(unix)]
     group: Option<String>,
 }
 
@@ -111,9 +113,6 @@ impl FileInfo {
             )
         };
 
-        #[cfg(not(unix))]
-        let (owner, group) = (None, None);
-
         Ok(FileInfo {
             name: path.file_name().unwrap_or_default().to_os_string(),
             size: if metadata.is_file() {
@@ -124,7 +123,9 @@ impl FileInfo {
             modified: metadata.modified().ok(),
             attributes: format_attributes(&metadata),
             file_type,
+            #[cfg(unix)]
             owner,
+            #[cfg(unix)]
             group,
         })
     }

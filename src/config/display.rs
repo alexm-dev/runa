@@ -381,28 +381,16 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
 // Default show info configuration options
 impl Default for ShowInfoOptions {
     fn default() -> Self {
-        #[cfg(unix)]
         let mut options = ShowInfoOptions {
             name: true,
             file_type: false,
             size: true,
             modified: true,
             perms: true,
+            #[cfg(unix)]
             owner: true,
+            #[cfg(unix)]
             group: true,
-            position: None,
-            status_bar: true,
-            format: Some("{perms} | {size}".to_string()),
-            segments: Vec::new(),
-        };
-
-        #[cfg(not(unix))]
-        let mut options = ShowInfoOptions {
-            name: true,
-            file_type: false,
-            size: true,
-            modified: true,
-            perms: true,
             position: None,
             status_bar: true,
             format: Some("{perms} | {size}".to_string()),
