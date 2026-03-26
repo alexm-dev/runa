@@ -32,9 +32,7 @@ impl<'a> AppState<'a> {
     /// Consumes keys related to input editing and mode confirmation/cancellation.
     pub(super) fn handle_input_mode(&mut self, workers: &Workers, key: KeyEvent) -> KeypressResult {
         let prev_action_mode = self.actions().mode().clone();
-        let mode = if let ActionMode::Input { mode, .. } = &prev_action_mode {
-            mode.clone()
-        } else {
+        let ActionMode::Input { mode, .. } = &prev_action_mode else {
             return KeypressResult::Continue;
         };
 
@@ -434,7 +432,7 @@ impl<'a> AppState<'a> {
         }
 
         let exited_name = current.file_name().map(|n| n.to_os_string());
-        self.navigate_to(workers, parent_path, exited_name);
+        self.navigate_to(parent_path, exited_name, workers);
         KeypressResult::Continue
     }
 
@@ -459,7 +457,7 @@ impl<'a> AppState<'a> {
 
         match std::fs::read_dir(&entry_path) {
             Ok(_) => {
-                self.navigate_to(workers, entry_path, None);
+                self.navigate_to(entry_path, None, workers);
                 KeypressResult::Continue
             }
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
@@ -531,9 +529,7 @@ impl<'a> AppState<'a> {
             self.push_overlay_message(msg, Duration::from_secs(3));
             return;
         }
-
-        self.navigate_to(workers, target_dir, focus);
-
+        self.navigate_to(target_dir, focus, workers);
         self.exit_input_mode();
     }
 
@@ -631,7 +627,7 @@ impl<'a> AppState<'a> {
 
     fn handle_go_to_home(&mut self, workers: &Workers) {
         if let Some(home_path) = get_home() {
-            self.navigate_to(workers, home_path.clone(), None);
+            self.navigate_to(home_path.clone(), None, workers);
         }
     }
 
@@ -651,7 +647,7 @@ impl<'a> AppState<'a> {
 
         if let Ok(meta) = std::fs::metadata(&abs_path) {
             if meta.is_dir() {
-                self.navigate_to(workers, abs_path.clone(), None);
+                self.navigate_to(abs_path.clone(), None, workers);
             } else {
                 self.push_overlay_message(
                     "Error: Not a directory".to_string(),
@@ -717,7 +713,6 @@ impl<'a> AppState<'a> {
             return;
         }
 
-        // target doesn't exist -> normal create (non-overwrite)
         let fileop_tx = workers.fileop_tx();
         self.actions.action_create(&mut self.nav, false, fileop_tx);
     }
@@ -1036,7 +1031,7 @@ impl<'a> AppState<'a> {
         self.overlays_mut().push(Overlay::Message { text });
     }
 
-    fn navigate_to(&mut self, workers: &Workers, path: PathBuf, focus: Option<OsString>) {
+    fn navigate_to(&mut self, path: PathBuf, focus: Option<OsString>, workers: &Workers) {
         self.nav.save_position();
         self.nav.set_path(path);
         self.request_dir_load(workers, focus);
