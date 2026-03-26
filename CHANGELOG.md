@@ -7,7 +7,7 @@ All the changes made to runa are documented here.
 ### Added
 - **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`
 - **CLI tab start**: Added multi-tab startup via cli args. Example: `rn /path1/ /path2/ /path3/`.
-- **Overwrite File**: Added an overwrite functionality and confirm widget when renaming or creating a file with the same name.
+- **Overwrite File**: Added an overwrite functionality and confirm widget when renaming or creating a file with the same name of a different file.
 - **Status Line Info**: Added file informations to the status line.
 - **Status Line customization**: Added a format field to `[display.info] format = {perms} | {date} | etc..` to customize the the status line at the bottom left.
 
