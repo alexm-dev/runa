@@ -403,7 +403,16 @@ fn copy_recursive_inner(src: &Path, dest: &Path) -> io::Result<()> {
 }
 
 pub(crate) fn merge_dir(src: &Path, dst: &Path, overwrite: bool) -> io::Result<()> {
-    fs::create_dir_all(dst)?;
+    if !dst.exists() {
+        fs::create_dir_all(dst)?;
+    }
+
+    if dst.starts_with(src) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Cannot move a directory into itself",
+        ));
+    }
 
     for entry_res in fs::read_dir(src)? {
         let entry = entry_res?;
@@ -411,46 +420,69 @@ pub(crate) fn merge_dir(src: &Path, dst: &Path, overwrite: bool) -> io::Result<(
         let src_path = entry.path();
         let dst_path = dst.join(&name);
 
-        if src_path.is_dir() {
+        let file_type = entry.file_type()?;
+
+        if file_type.is_dir() {
             if dst_path.exists() {
-                if dst_path.is_dir() {
+                let dst_is_dir = fs::symlink_metadata(&dst_path)?.is_dir();
+
+                if dst_is_dir {
                     merge_dir(&src_path, &dst_path, overwrite)?;
-                    fs::remove_dir(&src_path)?;
+
+                    let _ = fs::remove_dir(&src_path);
                 } else {
                     if overwrite {
                         fs::remove_file(&dst_path)?;
-                        fs::rename(&src_path, &dst_path)?;
+                        rename_with_fallback(&src_path, &dst_path, true)?;
                     } else {
                         let unique = get_unused_path(&dst_path);
-                        fs::rename(&src_path, &unique)?;
+                        rename_with_fallback(&src_path, &unique, true)?;
                     }
                 }
             } else {
-                fs::rename(&src_path, &dst_path)?;
+                rename_with_fallback(&src_path, &dst_path, true)?;
             }
         } else {
             if dst_path.exists() {
+                let dst_is_dir = fs::symlink_metadata(&dst_path)?.is_dir();
+
                 if overwrite {
-                    if dst_path.is_dir() {
+                    if dst_is_dir {
                         let unique = get_unused_path(&dst_path);
-                        fs::rename(&src_path, &unique)?;
+                        rename_with_fallback(&src_path, &unique, false)?;
                     } else {
                         fs::remove_file(&dst_path)?;
-                        fs::rename(&src_path, &dst_path)?;
+                        rename_with_fallback(&src_path, &dst_path, false)?;
                     }
                 } else {
                     let unique = get_unused_path(&dst_path);
-                    fs::rename(&src_path, &unique)?;
+                    rename_with_fallback(&src_path, &unique, false)?;
                 }
             } else {
-                fs::rename(&src_path, &dst_path)?;
+                rename_with_fallback(&src_path, &dst_path, false)?;
             }
         }
     }
 
-    match fs::remove_dir(src) {
-        Ok(()) => Ok(()),
-        Err(_) => fs::remove_dir_all(src),
+    let _ = fs::remove_dir(src);
+
+    Ok(())
+}
+
+/// Helper function to safely handle EXDEV (Cross-device link) errors
+/// when moving files or directories between different drives/partitions.
+pub(crate) fn rename_with_fallback(src: &Path, dst: &Path, is_dir: bool) -> io::Result<()> {
+    match fs::rename(src, dst) {
+        Ok(_) => Ok(()),
+        Err(_) => {
+            if is_dir {
+                copy_recursive(src, dst)?;
+                fs::remove_dir_all(src)
+            } else {
+                fs::copy(src, dst)?;
+                fs::remove_file(src)
+            }
+        }
     }
 }
 

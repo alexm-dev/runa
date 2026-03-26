@@ -17,7 +17,9 @@ use crate::config::display::PreviewMethod;
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
-use crate::utils::{copy_recursive, get_unused_path, is_preview_deny, merge_dir};
+use crate::utils::{
+    copy_recursive, get_unused_path, is_preview_deny, merge_dir, rename_with_fallback,
+};
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -458,12 +460,14 @@ fn start_fileop_worker(
                                     ))
                                 } else {
                                     focus_target = target.file_name().map(|n| n.to_os_string());
-                                    std::fs::rename(&old, &target).map_err(|e| e.to_string())
+                                    rename_with_fallback(&old, &target, old.is_dir())
+                                        .map_err(|e| e.to_string())
                                 }
                             }
                         } else {
                             focus_target = target.file_name().map(|n| n.to_os_string());
-                            std::fs::rename(&old, &target).map_err(|e| e.to_string())
+                            rename_with_fallback(&old, &target, old.is_dir())
+                                .map_err(|e| e.to_string())
                         }
                     }
                 }
