@@ -47,235 +47,249 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
         let move_size = widget.move_size_or(DialogSize::Custom(70, 14));
         let border_type = app.config().display().border_shape().as_border_type();
 
-        if let InputMode::ConfirmDelete { is_trash } = mode {
-            let confirm_size = widget.confirm_size_or(DialogSize::Large);
-            let mut targets: Vec<String> = app
-                .nav()
-                .get_action_targets()
-                .into_iter()
-                .map(|p| {
-                    p.file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_default()
-                })
-                .collect();
-            targets.sort();
+        match mode {
+            InputMode::ConfirmDelete { is_trash } => {
+                let confirm_size = widget.confirm_size_or(DialogSize::Large);
+                let mut targets: Vec<String> = app
+                    .nav()
+                    .get_action_targets()
+                    .into_iter()
+                    .map(|p| {
+                        p.file_name()
+                            .map(|n| n.to_string_lossy().into_owned())
+                            .unwrap_or_default()
+                    })
+                    .collect();
+                targets.sort();
 
-            let heading = if *is_trash {
-                "Files to move to trash"
-            } else {
-                "Files to delete"
-            };
-
-            let preview = if !targets.is_empty() {
-                format!(
-                    "{heading} ({}):\n{}",
-                    targets.len(),
-                    targets
-                        .iter()
-                        .map(|n| format!("  - {}", n))
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                )
-            } else {
-                String::new()
-            };
-
-            let dialog_area = dialog_area(frame.area(), confirm_size, position);
-            let visible_width = dialog_area.width.saturating_sub(2) as usize;
-
-            let mut dialog_lines = vec![
-                Line::raw(prompt),
-                Line::from(vec![Span::styled(
-                    "─".repeat(visible_width),
-                    widget.border_style_or(Style::default().fg(Color::Red)),
-                )]),
-            ];
-            if !preview.is_empty() {
-                for line in preview.lines() {
-                    dialog_lines.push(Line::raw(line));
-                }
-            }
-            let dialog_text = Text::from(dialog_lines);
-
-            let dialog_layout = DialogLayout {
-                area: frame.area(),
-                position,
-                size: confirm_size,
-            };
-
-            draw_dialog(
-                frame,
-                dialog_layout,
-                border_type,
-                &get_dialog_style(
-                    app,
-                    Style::default().fg(Color::Red),
-                    "Confirm Delete",
-                    Some(Style::default().fg(Color::Red)),
-                ),
-                dialog_text,
-                Some(Alignment::Left),
-                Some(app.actions().scroll()),
-            );
-        } else if *mode == InputMode::MoveFile {
-            let targets_set = app.nav().get_action_targets();
-            let mut action_targets: Vec<_> = targets_set.iter().collect();
-            action_targets.sort();
-
-            let preview = if !action_targets.is_empty() {
-                if action_targets.len() == 1 {
-                    format!(
-                        "File to move: {}",
-                        clean_display_path(&action_targets[0].to_string_lossy())
-                    )
+                let heading = if *is_trash {
+                    "Files to move to trash"
                 } else {
+                    "Files to delete"
+                };
+
+                let preview = if !targets.is_empty() {
                     format!(
-                        "Files to move ({}):\n{}",
-                        action_targets.len(),
-                        action_targets
+                        "{heading} ({}):\n{}",
+                        targets.len(),
+                        targets
                             .iter()
-                            .map(|p| format!("  - {}", clean_display_path(&p.to_string_lossy())))
+                            .map(|n| format!("  - {}", n))
                             .collect::<Vec<_>>()
                             .join("\n")
                     )
+                } else {
+                    String::new()
+                };
+
+                let dialog_area = dialog_area(frame.area(), confirm_size, position);
+                let visible_width = dialog_area.width.saturating_sub(2) as usize;
+
+                let mut dialog_lines = vec![
+                    Line::raw(prompt),
+                    Line::from(vec![Span::styled(
+                        "─".repeat(visible_width),
+                        widget.border_style_or(Style::default().fg(Color::Red)),
+                    )]),
+                ];
+                if !preview.is_empty() {
+                    for line in preview.lines() {
+                        dialog_lines.push(Line::raw(line));
+                    }
                 }
-            } else {
-                String::new()
-            };
+                let dialog_text = Text::from(dialog_lines);
 
-            let dialog_layout = DialogLayout {
-                area: frame.area(),
-                position,
-                size: move_size,
-            };
+                let dialog_layout = DialogLayout {
+                    area: frame.area(),
+                    position,
+                    size: confirm_size,
+                };
 
-            let input_text = app.actions().input_buffer();
-            let cursor_pos = app.actions().input_cursor_pos();
-            let dialog_area = dialog_area(frame.area(), move_size, position);
-            let visible_width = dialog_area.width.saturating_sub(2) as usize;
-
-            let (display_input, cursor_offset) =
-                input_field_view(input_text, cursor_pos, visible_width);
-
-            let want_separator = move_size != DialogSize::Small && !preview.is_empty();
-            let mut dialog_lines = vec![Line::raw(display_input)];
-            if want_separator {
-                dialog_lines.push(Line::from(vec![Span::styled(
-                    "─".repeat(visible_width),
-                    accent_style,
-                )]));
+                draw_dialog(
+                    frame,
+                    dialog_layout,
+                    border_type,
+                    &get_dialog_style(
+                        app,
+                        Style::default().fg(Color::Red),
+                        "Confirm Delete",
+                        Some(Style::default().fg(Color::Red)),
+                    ),
+                    dialog_text,
+                    Some(Alignment::Left),
+                    Some(app.actions().scroll()),
+                );
             }
-            if !preview.is_empty() {
-                for lines in preview.lines() {
-                    dialog_lines.push(Line::raw(lines));
+
+            InputMode::MoveFile => {
+                let targets_set = app.nav().get_action_targets();
+                let mut action_targets: Vec<_> = targets_set.iter().collect();
+                action_targets.sort();
+
+                let preview = if !action_targets.is_empty() {
+                    if action_targets.len() == 1 {
+                        format!(
+                            "File to move: {}",
+                            clean_display_path(&action_targets[0].to_string_lossy())
+                        )
+                    } else {
+                        format!(
+                            "Files to move ({}):\n{}",
+                            action_targets.len(),
+                            action_targets
+                                .iter()
+                                .map(|p| format!(
+                                    "  - {}",
+                                    clean_display_path(&p.to_string_lossy())
+                                ))
+                                .collect::<Vec<_>>()
+                                .join("\n")
+                        )
+                    }
+                } else {
+                    String::new()
+                };
+
+                let dialog_layout = DialogLayout {
+                    area: frame.area(),
+                    position,
+                    size: move_size,
+                };
+
+                let input_text = app.actions().input_buffer();
+                let cursor_pos = app.actions().input_cursor_pos();
+                let dialog_area = dialog_area(frame.area(), move_size, position);
+                let visible_width = dialog_area.width.saturating_sub(2) as usize;
+
+                let (display_input, cursor_offset) =
+                    input_field_view(input_text, cursor_pos, visible_width);
+
+                let want_separator = move_size != DialogSize::Small && !preview.is_empty();
+                let mut dialog_lines = vec![Line::raw(display_input)];
+                if want_separator {
+                    dialog_lines.push(Line::from(vec![Span::styled(
+                        "─".repeat(visible_width),
+                        accent_style,
+                    )]));
                 }
+                if !preview.is_empty() {
+                    for lines in preview.lines() {
+                        dialog_lines.push(Line::raw(lines));
+                    }
+                }
+                let dialog_text = Text::from(dialog_lines);
+
+                draw_dialog(
+                    frame,
+                    dialog_layout,
+                    border_type,
+                    &get_dialog_style(app, accent_style, prompt, None),
+                    dialog_text,
+                    Some(Alignment::Left),
+                    Some(app.actions().scroll()),
+                );
+
+                frame.set_cursor_position((
+                    dialog_area.x + 1 + cursor_offset as u16,
+                    dialog_area.y + 1,
+                ));
             }
-            let dialog_text = Text::from(dialog_lines);
 
-            draw_dialog(
-                frame,
-                dialog_layout,
-                border_type,
-                &get_dialog_style(app, accent_style, prompt, None),
-                dialog_text,
-                Some(Alignment::Left),
-                Some(app.actions().scroll()),
-            );
+            InputMode::ConfirmOverwrite { is_dir, old, new } => {
+                let confirm_size = widget.confirm_size_or(DialogSize::Large);
 
-            frame
-                .set_cursor_position((dialog_area.x + 1 + cursor_offset as u16, dialog_area.y + 1));
-        } else if let InputMode::ConfirmOverwrite { is_dir, old, new } = mode {
-            let confirm_size = widget.confirm_size_or(DialogSize::Large);
-
-            // Build a readable preview: either a rename (old -> new) or a create that will overwrite new
-            let target_name = new
-                .as_ref()
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
-
-            let preview = if let Some(src) = old {
-                let src_name = src
+                let target_name = new
                     .as_ref()
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_default();
-                format!(
-                    "Rename will overwrite target:\n  From: {}\n  To:   {}",
-                    src_name, target_name
-                )
-            } else {
-                let kind = if *is_dir { "directory" } else { "file" };
-                format!("This {kind} will be overwritten:\n  {}", target_name)
-            };
 
-            let dialog_area = dialog_area(frame.area(), confirm_size, position);
-            let visible_width = dialog_area.width.saturating_sub(2) as usize;
+                let preview = if let Some(src) = old {
+                    let src_name = src
+                        .as_ref()
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    format!(
+                        "Rename will overwrite target:\n  From: {}\n  To:   {}",
+                        src_name, target_name
+                    )
+                } else {
+                    let kind = if *is_dir { "directory" } else { "file" };
+                    format!("This {kind} will be overwritten:\n  {}", target_name)
+                };
 
-            let mut dialog_lines = vec![
-                Line::raw(prompt),
-                Line::from(vec![Span::styled(
-                    "─".repeat(visible_width),
-                    widget.border_style_or(Style::default().fg(Color::Yellow)),
-                )]),
-            ];
+                let dialog_area = dialog_area(frame.area(), confirm_size, position);
+                let visible_width = dialog_area.width.saturating_sub(2) as usize;
 
-            if !preview.is_empty() {
-                for line in preview.lines() {
-                    dialog_lines.push(Line::raw(line));
+                let mut dialog_lines = vec![
+                    Line::raw(prompt),
+                    Line::from(vec![Span::styled(
+                        "─".repeat(visible_width),
+                        widget.border_style_or(Style::default().fg(Color::Yellow)),
+                    )]),
+                ];
+
+                if !preview.is_empty() {
+                    for line in preview.lines() {
+                        dialog_lines.push(Line::raw(line));
+                    }
                 }
+
+                let dialog_text = Text::from(dialog_lines);
+
+                let dialog_layout = DialogLayout {
+                    area: frame.area(),
+                    position,
+                    size: confirm_size,
+                };
+
+                draw_dialog(
+                    frame,
+                    dialog_layout,
+                    border_type,
+                    &get_dialog_style(
+                        app,
+                        Style::default().fg(Color::Yellow),
+                        "Confirm Overwrite",
+                        Some(Style::default().fg(Color::Yellow)),
+                    ),
+                    dialog_text,
+                    Some(Alignment::Left),
+                    Some(app.actions().scroll()),
+                );
             }
 
-            let dialog_text = Text::from(dialog_lines);
+            _ => {
+                let dialog_layout = DialogLayout {
+                    area: frame.area(),
+                    position,
+                    size,
+                };
 
-            let dialog_layout = DialogLayout {
-                area: frame.area(),
-                position,
-                size: confirm_size,
-            };
+                let input_text = app.actions().input_buffer();
+                let cursor_pos = app.actions().input_cursor_pos();
+                let dialog_area = dialog_area(frame.area(), size, position);
+                let visible_width = dialog_area.width.saturating_sub(2) as usize;
 
-            draw_dialog(
-                frame,
-                dialog_layout,
-                border_type,
-                &get_dialog_style(
-                    app,
-                    Style::default().fg(Color::Yellow),
-                    "Confirm Overwrite",
-                    Some(Style::default().fg(Color::Yellow)),
-                ),
-                dialog_text,
-                Some(Alignment::Left),
-                Some(app.actions().scroll()),
-            );
-        } else {
-            let dialog_layout = DialogLayout {
-                area: frame.area(),
-                position,
-                size,
-            };
+                let (display_input, cursor_offset) =
+                    input_field_view(input_text, cursor_pos, visible_width);
 
-            let input_text = app.actions().input_buffer();
-            let cursor_pos = app.actions().input_cursor_pos();
-            let dialog_area = dialog_area(frame.area(), size, position);
-            let visible_width = dialog_area.width.saturating_sub(2) as usize;
+                draw_dialog(
+                    frame,
+                    dialog_layout,
+                    border_type,
+                    &get_dialog_style(app, accent_style, prompt, None),
+                    display_input,
+                    Some(Alignment::Left),
+                    None,
+                );
 
-            let (display_input, cursor_offset) =
-                input_field_view(input_text, cursor_pos, visible_width);
-
-            draw_dialog(
-                frame,
-                dialog_layout,
-                border_type,
-                &get_dialog_style(app, accent_style, prompt, None),
-                display_input,
-                Some(Alignment::Left),
-                None,
-            );
-
-            frame
-                .set_cursor_position((dialog_area.x + 1 + cursor_offset as u16, dialog_area.y + 1));
+                frame.set_cursor_position((
+                    dialog_area.x + 1 + cursor_offset as u16,
+                    dialog_area.y + 1,
+                ));
+            }
         }
     }
 }
