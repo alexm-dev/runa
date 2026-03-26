@@ -395,6 +395,7 @@ impl ActionContext {
                 overwrite: true,
             },
         });
+        self.exit_mode();
     }
 
     pub(crate) fn action_create_overwrite(
@@ -410,6 +411,7 @@ impl ActionContext {
                 overwrite: true,
             },
         });
+        self.exit_mode();
     }
 }
 
