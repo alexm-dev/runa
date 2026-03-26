@@ -7,16 +7,23 @@ All the changes made to runa are documented here.
 ### Added
 - **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`
 - **CLI tab start**: Added multi-tab startup via cli args. Example: `rn /path1/ /path2/ /path3/`.
+- **Overwrite File**: Added an overwrite functionality and confirm widget when renaming or creating a file with the same name.
+- **Status Line Info**: Added file informations to the status line.
+- **Status Line customization**: Added a format field to `[display.info] format = {perms} | {date} | etc..` to customize the the status line at the bottom left.
 
 ### Fixed
 - **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
+- **File Info Attributes**: Fixed the file attributes / permissions string being ordered wrong on Windows.
+- **Border Style Reset**: Fixed an issue where the border style would reset to `square` for the preview pane.
 
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
+- **AppState handlers**: Moved all handlers into sub-modules. (file_actions, nav_actions, input_mode and overlay).
+- **FileInfo module**: Moved all `FileInfo` related functions and structs to a new core module. `core/file_info.rs`
+- **FileInfo Widget**: Moved customization of the widget form of FileInfo to `[theme.widget]` instead of `[theme.info]` which now holds the colorpairs (fg, bg) for each info tag instead.
 
 ### Internal
 - **Dependency Update**: Updated dependencies via `cargo update`
-
 
 ---
 
