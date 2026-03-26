@@ -185,6 +185,70 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
 
             frame
                 .set_cursor_position((dialog_area.x + 1 + cursor_offset as u16, dialog_area.y + 1));
+        } else if let InputMode::ConfirmOverwrite { is_dir, old, new } = mode {
+            let confirm_size = widget.confirm_size_or(DialogSize::Large);
+
+            // Build a readable preview: either a rename (old -> new) or a create that will overwrite new
+            let target_name = new
+                .as_ref()
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+
+            let preview = if let Some(src) = old {
+                let src_name = src
+                    .as_ref()
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                format!(
+                    "Rename will overwrite target:\n  From: {}\n  To:   {}",
+                    src_name, target_name
+                )
+            } else {
+                let kind = if *is_dir { "directory" } else { "file" };
+                format!("This {kind} will be overwritten:\n  {}", target_name)
+            };
+
+            let dialog_area = dialog_area(frame.area(), confirm_size, position);
+            let visible_width = dialog_area.width.saturating_sub(2) as usize;
+
+            let mut dialog_lines = vec![
+                Line::raw(prompt),
+                Line::from(vec![Span::styled(
+                    "─".repeat(visible_width),
+                    widget.border_style_or(Style::default().fg(Color::Yellow)),
+                )]),
+            ];
+
+            if !preview.is_empty() {
+                for line in preview.lines() {
+                    dialog_lines.push(Line::raw(line));
+                }
+            }
+
+            let dialog_text = Text::from(dialog_lines);
+
+            let dialog_layout = DialogLayout {
+                area: frame.area(),
+                position,
+                size: confirm_size,
+            };
+
+            draw_dialog(
+                frame,
+                dialog_layout,
+                border_type,
+                &get_dialog_style(
+                    app,
+                    Style::default().fg(Color::Yellow),
+                    "Confirm Overwrite",
+                    Some(Style::default().fg(Color::Yellow)),
+                ),
+                dialog_text,
+                Some(Alignment::Left),
+                Some(app.actions().scroll()),
+            );
         } else {
             let dialog_layout = DialogLayout {
                 area: frame.area(),

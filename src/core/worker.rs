@@ -17,7 +17,7 @@ use crate::config::display::PreviewMethod;
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
-use crate::utils::{copy_recursive, get_unused_path, is_preview_deny};
+use crate::utils::{copy_recursive, get_unused_path, is_preview_deny, merge_dir};
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -189,6 +189,7 @@ pub(crate) enum FileOperation {
     Rename {
         old: PathBuf,
         new: PathBuf,
+        overwrite: bool,
     },
     Copy {
         src: Vec<PathBuf>,
@@ -199,6 +200,7 @@ pub(crate) enum FileOperation {
     Create {
         path: PathBuf,
         is_dir: bool,
+        overwrite: bool,
     },
 }
 
@@ -412,36 +414,117 @@ fn start_fileop_worker(
                     }
                     op_result
                 }
-                FileOperation::Rename { old, new } => {
+                FileOperation::Rename {
+                    old,
+                    new,
+                    overwrite,
+                } => {
                     let target = new;
-
                     let is_case_rename = old.to_string_lossy().to_lowercase()
                         == target.to_string_lossy().to_lowercase();
 
-                    if target.exists() && !is_case_rename {
+                    if target.exists() && !is_case_rename && !overwrite {
                         Err(format!(
                             "Rename failed: '{}' already exists",
                             target.file_name().unwrap_or_default().to_string_lossy()
                         ))
                     } else {
-                        focus_target = target.file_name().map(|n| n.to_os_string());
-                        std::fs::rename(&old, &target).map_err(|e| e.to_string())
+                        if target.exists() && !is_case_rename && overwrite {
+                            if old.is_dir() && target.is_dir() {
+                                match merge_dir(&old, &target, true) {
+                                    Ok(()) => {
+                                        focus_target = target.file_name().map(|n| n.to_os_string());
+                                        Ok(())
+                                    }
+                                    Err(e) => Err(format!(
+                                        "Could not merge directories '{}' -> '{}': {}",
+                                        old.display(),
+                                        target.display(),
+                                        e
+                                    )),
+                                }
+                            } else {
+                                let remove_res = if target.is_dir() {
+                                    std::fs::remove_dir_all(&target)
+                                } else {
+                                    std::fs::remove_file(&target)
+                                };
+
+                                if let Err(e) = remove_res {
+                                    Err(format!(
+                                        "Could not remove existing target before rename: {}: {}",
+                                        target.display(),
+                                        e
+                                    ))
+                                } else {
+                                    focus_target = target.file_name().map(|n| n.to_os_string());
+                                    std::fs::rename(&old, &target).map_err(|e| e.to_string())
+                                }
+                            }
+                        } else {
+                            focus_target = target.file_name().map(|n| n.to_os_string());
+                            std::fs::rename(&old, &target).map_err(|e| e.to_string())
+                        }
                     }
                 }
-                FileOperation::Create { path, is_dir } => {
-                    let target = get_unused_path(&path);
-                    focus_target = target.file_name().map(|n| n.to_os_string());
-
-                    let res = if is_dir {
-                        std::fs::create_dir_all(&target)
+                FileOperation::Create {
+                    path,
+                    is_dir,
+                    overwrite,
+                } => {
+                    let target = if overwrite {
+                        path
                     } else {
-                        std::fs::OpenOptions::new()
-                            .write(true)
-                            .create_new(true)
-                            .open(&target)
-                            .map(|_| ())
+                        get_unused_path(&path)
                     };
-                    res.map_err(|e| e.to_string())
+
+                    if target.exists() {
+                        if target.is_dir() {
+                            if is_dir {
+                                focus_target = target.file_name().map(|n| n.to_os_string());
+                                Ok(())
+                            } else {
+                                Err(format!(
+                                    "Create failed: '{}' is an existing directory",
+                                    target.display()
+                                ))
+                            }
+                        } else {
+                            let remove_res = std::fs::remove_file(&target);
+                            if let Err(e) = remove_res {
+                                Err(format!(
+                                    "Could not remove existing file before create: {}: {}",
+                                    target.display(),
+                                    e
+                                ))
+                            } else {
+                                focus_target = target.file_name().map(|n| n.to_os_string());
+                                if is_dir {
+                                    std::fs::create_dir_all(&target).map_err(|e| e.to_string())
+                                } else {
+                                    std::fs::OpenOptions::new()
+                                        .write(true)
+                                        .create_new(true)
+                                        .open(&target)
+                                        .map(|_| ())
+                                        .map_err(|e| e.to_string())
+                                }
+                            }
+                        }
+                    } else {
+                        // Target doesn't exist (or overwrite=false made an unused path) -> create.
+                        focus_target = target.file_name().map(|n| n.to_os_string());
+                        if is_dir {
+                            std::fs::create_dir_all(&target).map_err(|e| e.to_string())
+                        } else {
+                            std::fs::OpenOptions::new()
+                                .write(true)
+                                .create_new(true)
+                                .open(&target)
+                                .map(|_| ())
+                                .map_err(|e| e.to_string())
+                        }
+                    }
                 }
                 FileOperation::Copy {
                     src,
@@ -596,6 +679,7 @@ mod tests {
             op: FileOperation::Create {
                 path: temp.path().join("new_file.txt"),
                 is_dir: false,
+                overwrite: false,
             },
         })?;
 
@@ -926,6 +1010,7 @@ mod tests {
             op: FileOperation::Create {
                 path: file_path.clone(),
                 is_dir: false,
+                overwrite: false,
             },
         })?;
 

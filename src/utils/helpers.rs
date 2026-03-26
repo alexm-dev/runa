@@ -402,6 +402,58 @@ fn copy_recursive_inner(src: &Path, dest: &Path) -> io::Result<()> {
     Ok(())
 }
 
+pub(crate) fn merge_dir(src: &Path, dst: &Path, overwrite: bool) -> io::Result<()> {
+    fs::create_dir_all(dst)?;
+
+    for entry_res in fs::read_dir(src)? {
+        let entry = entry_res?;
+        let name = entry.file_name();
+        let src_path = entry.path();
+        let dst_path = dst.join(&name);
+
+        if src_path.is_dir() {
+            if dst_path.exists() {
+                if dst_path.is_dir() {
+                    merge_dir(&src_path, &dst_path, overwrite)?;
+                    fs::remove_dir(&src_path)?;
+                } else {
+                    if overwrite {
+                        fs::remove_file(&dst_path)?;
+                        fs::rename(&src_path, &dst_path)?;
+                    } else {
+                        let unique = get_unused_path(&dst_path);
+                        fs::rename(&src_path, &unique)?;
+                    }
+                }
+            } else {
+                fs::rename(&src_path, &dst_path)?;
+            }
+        } else {
+            if dst_path.exists() {
+                if overwrite {
+                    if dst_path.is_dir() {
+                        let unique = get_unused_path(&dst_path);
+                        fs::rename(&src_path, &unique)?;
+                    } else {
+                        fs::remove_file(&dst_path)?;
+                        fs::rename(&src_path, &dst_path)?;
+                    }
+                } else {
+                    let unique = get_unused_path(&dst_path);
+                    fs::rename(&src_path, &unique)?;
+                }
+            } else {
+                fs::rename(&src_path, &dst_path)?;
+            }
+        }
+    }
+
+    match fs::remove_dir(src) {
+        Ok(()) => Ok(()),
+        Err(_) => fs::remove_dir_all(src),
+    }
+}
+
 /// Calls f closure with a lowercase (ASCII) version of a entry name if any are uppercase ASCII.
 /// Using a stack buffer for names <= 64 bytes or with unchanged name otherwise.
 /// Falls through for Unicode and long strings with no heap allocations.

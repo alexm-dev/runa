@@ -31,13 +31,20 @@ pub(crate) enum ActionMode {
 /// Enumerates all the available input field modes
 ///
 /// Used to select the prompts, behavior and the style of the input dialog.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) enum InputMode {
     Rename,
     NewFile,
     NewFolder,
     Filter,
-    ConfirmDelete { is_trash: bool },
+    ConfirmDelete {
+        is_trash: bool,
+    },
+    ConfirmOverwrite {
+        is_dir: bool,
+        old: Option<Arc<PathBuf>>,
+        new: Arc<PathBuf>,
+    },
     Find,
     MoveFile,
     GoToPath,
@@ -270,6 +277,7 @@ impl ActionContext {
                 op: FileOperation::Rename {
                     old: old_path,
                     new: new_path,
+                    overwrite: false,
                 },
             });
         }
@@ -293,7 +301,11 @@ impl ActionContext {
 
         let path = nav.current_dir().join(&self.input_buffer);
         let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Create { path, is_dir },
+            op: FileOperation::Create {
+                path,
+                is_dir,
+                overwrite: false,
+            },
         });
         self.exit_mode();
     }
@@ -368,6 +380,36 @@ impl ActionContext {
     /// Moves the input cursor to the end of the input buffer.
     pub(crate) fn action_cursor_end(&mut self) {
         self.input_cursor_pos = self.input_buffer.len();
+    }
+
+    pub(crate) fn action_rename_overwrite(
+        &mut self,
+        old: Arc<PathBuf>,
+        new: Arc<PathBuf>,
+        worker_tx: &Sender<WorkerTask>,
+    ) {
+        let _ = worker_tx.send(WorkerTask::FileOp {
+            op: FileOperation::Rename {
+                old: (*old).clone(),
+                new: (*new).clone(),
+                overwrite: true,
+            },
+        });
+    }
+
+    pub(crate) fn action_create_overwrite(
+        &mut self,
+        path: Arc<PathBuf>,
+        is_dir: bool,
+        worker_tx: &Sender<WorkerTask>,
+    ) {
+        let _ = worker_tx.send(WorkerTask::FileOp {
+            op: FileOperation::Create {
+                path: (*path).clone(),
+                is_dir,
+                overwrite: true,
+            },
+        });
     }
 }
 
