@@ -1,9 +1,14 @@
 //! File action handlers for AppState.
 //!
-//! The main function in this module is `handle_file_action`, which takes a
-//! `FileAction` and performs the corresponding operation based on the user's
-//! input. It also includes helper functions for specific actions, such as
-//! opening a file in an editor.
+//! Defines [handle_file_action] method which dispatches file actions
+//! to the central [app::state::handle_keypress].
+//!
+//! Also defines handlers for each file action (open, delete, copy, etc)
+//! which perform the necessary state updates
+//! and call the appropriate methods in the actions module.
+//!
+//! This module is responsible for connecting file actions
+//! to the underlying logic that performs those actions,
 
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::FileAction;

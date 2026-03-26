@@ -1,3 +1,15 @@
+//! Input handlers for AppState, covering all key events that occur
+//! while in an input mode (rename, filter, etc).
+//!
+//! This module is responsible for processing key events related to text input,
+//! mode confirmation/cancellation and any special keys relevant
+//! to the specific input modes (e.g., Tab for autocomplete in path input).
+//!
+//! Defines the central [handle_input_mode] function that routes key events
+//! to the appropriate handlers based on the current input mode as well as
+//! helper functions for entering/exiting input modes
+//! and processing specific actions within those modes.
+
 use crate::app::Workers;
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{Action, NavAction, PrefixCommand, SystemAction};
@@ -10,7 +22,7 @@ use crossterm::event::{KeyCode::*, KeyEvent};
 use std::path::MAIN_SEPARATOR;
 use std::time::Duration;
 
-/// AppState input and action handlers
+/// AppState input handlers
 impl<'a> AppState<'a> {
     // AppState core handlers
 

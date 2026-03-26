@@ -1,3 +1,8 @@
+//! Overlay handlers for AppState.
+//!
+//! This module defines the overlay-related functions for the central
+//! [app::state::handle_keypress] function.
+
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::file_info::FileInfo;
 use crate::ui::overlays::Overlay;

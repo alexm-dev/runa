@@ -1,7 +1,9 @@
 //! Action context and input mode logic for runa.
 //!
-//! Contains the [ActionContext] struct, tracking user input state, clipboard, and action modes.
-//! Defines available modes/actions for file operations (copy, paste, rename, create, delete, filter).
+//! Contains the [ActionContext] struct, tracking user input state,
+//! clipboard, and action modes.
+//! Defines available modes/actions for file operations like
+//! copy, paste, rename, create, delete, filter.
 
 use crate::app::Clipboard;
 use crate::app::keymap::KeyPrefix;

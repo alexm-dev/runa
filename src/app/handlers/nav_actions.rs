@@ -1,3 +1,15 @@
+//! Navigation actions handler for AppState
+//!
+//! This module contains the implementation of navigation-related actions for the AppState.
+//!
+//! It includes handling of actions such as moving up/down the file list,
+//! navigating into directories, going to the parent directory,
+//! toggling markers, clearing filters, and more.
+//!
+//! The functions in this module are responsible for updating
+//! the navigation state, requesting previews, and managing the file information cache
+//! as needed based on user interactions.
+
 use crate::app::keymap::NavAction;
 use crate::app::state::{AppState, KeypressResult};
 use crate::app::{Clipboard, NavState, Workers};
