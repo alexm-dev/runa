@@ -581,9 +581,6 @@ pub(crate) fn draw_show_info_dialog(
         }
     };
 
-    if info_cfg.name() {
-        add_line("Name:", info_strings.name());
-    }
     if info_cfg.file_type() {
         add_line("Type:", info_strings.file_type());
     }
@@ -599,12 +596,12 @@ pub(crate) fn draw_show_info_dialog(
 
     #[cfg(unix)]
     if info_cfg.owner() {
-        add_line("Owner:", strings.owner());
+        add_line("Owner:", info_strings.owner());
     }
 
     #[cfg(unix)]
     if info_cfg.group() {
-        add_line("Group:", strings.group());
+        add_line("Group:", info_strings.group());
     }
 
     if lines.is_empty() {
