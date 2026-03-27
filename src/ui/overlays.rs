@@ -70,27 +70,12 @@ impl OverlayStack {
         self.overlays.retain(f);
     }
 
-    pub(crate) fn get_mut(&mut self, index: usize) -> Option<&mut Overlay> {
-        self.overlays.get_mut(index)
-    }
-
-    pub(crate) fn find_index<F>(&self, f: F) -> Option<usize>
-    where
-        F: FnMut(&Overlay) -> bool,
-    {
-        self.overlays.iter().position(f)
-    }
-
     pub(crate) fn is_open(&self, kind: OverlayKind) -> bool {
         self.iter().any(|o| o.kind() == kind)
     }
 
-    pub(crate) fn retain_kind(&mut self, kind: OverlayKind) {
-        self.retain(|o| o.kind() == kind);
-    }
-
-    pub(crate) fn index_of(&self, kind: OverlayKind) -> Option<usize> {
-        self.find_index(|o| o.kind() == kind)
+    pub(crate) fn remove_kind(&mut self, kind: OverlayKind) {
+        self.retain(|o| o.kind() != kind);
     }
 
     pub(crate) fn is_top(&self, kind: OverlayKind) -> bool {
