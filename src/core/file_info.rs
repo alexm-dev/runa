@@ -281,7 +281,7 @@ mod tests {
 
         let info = FileInfo::get_file_info(&file_path)?;
         assert_eq!(info.file_type(), &FileType::File);
-        assert_eq!(info.name().to_string_lossy(), "hello.txt");
+        assert_eq!(info.name.to_string_lossy(), "hello.txt");
         assert!(info.size().is_some());
         Ok(())
     }
