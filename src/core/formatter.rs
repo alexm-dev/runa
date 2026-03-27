@@ -9,7 +9,8 @@
 use crate::core::FileEntry;
 use crate::core::file_info::FileType;
 use crate::utils::{
-    clean_display_path, normalize_relative_path, shorten_home_path, with_lowered_stack,
+    clean_display_path, is_regular_file, normalize_relative_path, shorten_home_path,
+    with_lowered_stack,
 };
 
 use chrono::{DateTime, Local};
@@ -292,6 +293,10 @@ pub(crate) fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
 /// A vector of strings, each representing a line from the file or directory preview.
 pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
+
+    if !is_regular_file(path) {
+        return vec![sanitize_to_exact_width("[Not a regular file]", pane_width)];
+    }
 
     // File Read and binary Check
     match File::open(path) {

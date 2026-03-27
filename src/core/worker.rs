@@ -18,7 +18,8 @@ use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
 use crate::utils::{
-    copy_recursive, get_unused_path, is_preview_deny, merge_dir, rename_with_fallback,
+    copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
+    rename_with_fallback,
 };
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
@@ -317,7 +318,7 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
             let lines = match preview_method {
                 PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width),
                 PreviewMethod::Bat => {
-                    if is_preview_deny(&path) {
+                    if !is_regular_file(&path) || is_preview_deny(&path) {
                         safe_read_preview(&path, max_lines, pane_width)
                     } else {
                         match preview_bat(&path, max_lines, args.as_slice()) {

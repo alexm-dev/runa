@@ -305,6 +305,20 @@ pub(crate) fn validate_path(path: &Path) -> io::Result<()> {
     Ok(())
 }
 
+pub(crate) fn is_regular_file(path: &Path) -> bool {
+    #[cfg(unix)]
+    {
+        std::fs::symlink_metadata(path)
+            .map(|md| md.file_type().is_file())
+            .unwrap_or(false)
+    }
+
+    #[cfg(not(unix))]
+    {
+        path.is_file()
+    }
+}
+
 /// Helper to resolve the initial loaded for path string.
 /// Checks if the path arg is a file and then loads the parent directory of that file.
 /// Used by cli path args.
