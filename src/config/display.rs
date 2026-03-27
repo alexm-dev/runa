@@ -526,6 +526,8 @@ pub(crate) struct PreviewOptions {
     theme: Option<String>,
     #[serde(default = "PreviewOptions::default_wrap")]
     wrap: bool,
+    #[serde(default = "PreviewOptions::default_tab_width")]
+    tab_width: usize,
 }
 
 /// Public methods for accessing preview configuration options
@@ -536,6 +538,7 @@ impl PreviewOptions {
             style: BatStyle::Plain,
             theme: None,
             wrap: false,
+            tab_width: 4,
         }
     }
 
@@ -546,6 +549,11 @@ impl PreviewOptions {
     #[inline]
     fn default_wrap() -> bool {
         false
+    }
+
+    #[inline]
+    fn default_tab_width() -> usize {
+        4
     }
 
     #[inline]
@@ -561,6 +569,7 @@ impl PreviewOptions {
         let mut args = Vec::with_capacity(10);
         args.push("--color=always".to_string());
         args.push("--paging=never".to_string());
+        args.push(format!("--tabs={}", self.tab_width));
         args.push(format!("--terminal-width={}", pane_width));
         args.push(
             match self.style {
