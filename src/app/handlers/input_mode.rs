@@ -252,7 +252,7 @@ impl<'a> AppState<'a> {
         prompt: String,
         initial: Option<String>,
     ) {
-        self.overlays_mut().retain_kind(OverlayKind::KeybindHelp);
+        self.overlays_mut().remove_kind(OverlayKind::KeybindHelp);
 
         let buffer = initial.unwrap_or_default();
         self.actions

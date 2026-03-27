@@ -247,7 +247,7 @@ impl<'a> AppState<'a> {
         {
             self.notification_time = None;
 
-            self.overlays_mut().retain_kind(OverlayKind::Message);
+            self.overlays_mut().remove_kind(OverlayKind::Message);
 
             changed = true;
         }

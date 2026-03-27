@@ -24,7 +24,7 @@ impl<'a> AppState<'a> {
         self.actions.scroll().reset();
 
         if self.overlays().is_open(OverlayKind::KeybindHelp) {
-            self.overlays_mut().retain_kind(OverlayKind::KeybindHelp);
+            self.overlays_mut().remove_kind(OverlayKind::KeybindHelp);
             return Some(KeypressResult::Consumed);
         }
         None
@@ -58,7 +58,7 @@ impl<'a> AppState<'a> {
         let is_open = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if is_open {
-            self.overlays_mut().retain_kind(OverlayKind::ShowInfo);
+            self.overlays_mut().remove_kind(OverlayKind::ShowInfo);
         } else {
             self.show_file_info();
         }
@@ -80,7 +80,7 @@ impl<'a> AppState<'a> {
         let is_open = self.overlays().is_open(OverlayKind::KeybindHelp);
 
         if is_open {
-            self.overlays_mut().retain_kind(OverlayKind::KeybindHelp);
+            self.overlays_mut().remove_kind(OverlayKind::KeybindHelp);
         } else {
             self.overlays_mut().push(Overlay::KeybindHelp);
         }
