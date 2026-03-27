@@ -295,7 +295,10 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
     if !is_regular_file(path) {
-        return vec![sanitize_to_exact_width("[Not a regular file]", pane_width)];
+        return vec![sanitize_to_exact_width(
+            "[Not a regular file - preview skipped]",
+            pane_width,
+        )];
     }
 
     // File Read and binary Check
@@ -303,7 +306,10 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
         Ok(mut file) => {
             if let Ok(metadata) = file.metadata() {
                 if !metadata.is_file() {
-                    return vec![sanitize_to_exact_width("[Not a regular file]", pane_width)];
+                    return vec![sanitize_to_exact_width(
+                        "[Not a regular file - preview skipped]",
+                        pane_width,
+                    )];
                 }
 
                 if metadata.len() > MAX_PREVIEW_SIZE {
