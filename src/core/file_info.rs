@@ -52,11 +52,6 @@ impl FileInfo {
     // Accessors
 
     #[inline]
-    pub(crate) fn name(&self) -> &OsString {
-        &self.name
-    }
-
-    #[inline]
     pub(crate) fn size(&self) -> &Option<u64> {
         &self.size
     }
