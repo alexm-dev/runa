@@ -308,7 +308,7 @@ impl ShowInfoOptions {
     }
 
     #[inline]
-    pub(crate) fn segmensts(&self) -> &[StatusSegment] {
+    pub(crate) fn segments(&self) -> &[StatusSegment] {
         &self.segments
     }
 }

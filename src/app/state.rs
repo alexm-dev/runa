@@ -20,7 +20,7 @@ use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::file_info::{CachedFileInfo, FileInfo};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
-use crate::ui::overlays::{Overlay, OverlayStack};
+use crate::ui::overlays::{Overlay, OverlayKind, OverlayStack};
 
 use crossterm::event::KeyEvent;
 use ratatui::text::Span;
@@ -97,7 +97,7 @@ pub(crate) struct AppState<'a> {
     pub(super) tab_id: Option<usize>,
     pub(super) tab_line: Arc<Vec<Span<'a>>>,
 
-    pub(super) selected_info: Option<CachedFileInfo>,
+    pub(super) selected_info: Option<Arc<CachedFileInfo>>,
 }
 
 impl<'a> AppState<'a> {
@@ -202,7 +202,7 @@ impl<'a> AppState<'a> {
 
     #[inline]
     pub(crate) fn current_file_info(&self) -> Option<&CachedFileInfo> {
-        self.selected_info.as_ref()
+        self.selected_info.as_deref()
     }
 
     // Entry functions
@@ -537,6 +537,14 @@ impl<'a> AppState<'a> {
     }
 
     pub(crate) fn update_file_info_cache(&mut self) {
+        let status_info = self.config.display().info().status_bar();
+        let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
+
+        if !status_info && !info_overlay {
+            self.selected_info = None;
+            return;
+        }
+
         let Some(entry) = self.nav.selected_entry() else {
             self.selected_info = None;
             return;
@@ -551,7 +559,7 @@ impl<'a> AppState<'a> {
 
         let path = self.nav.current_dir().join(entry.name());
         if let Ok(info) = FileInfo::get_file_info(&path) {
-            self.selected_info = Some(CachedFileInfo::new(path, info));
+            self.selected_info = Some(Arc::new(CachedFileInfo::new(path, info)));
         } else {
             self.selected_info = None;
         }

@@ -4,9 +4,10 @@
 //! [app::state::handle_keypress] function.
 
 use crate::app::state::{AppState, KeypressResult};
-use crate::ui::overlays::Overlay;
+use crate::ui::overlays::{Overlay, OverlayKind};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
@@ -48,7 +49,7 @@ impl<'a> AppState<'a> {
         let Some(i) = maybe_idx else { return };
 
         if let Some(cached) = &self.selected_info {
-            let file_info = cached.info().clone();
+            let file_info = Arc::clone(cached);
 
             if let Some(Overlay::ShowInfo { info }) = self.overlays_mut().get_mut(i) {
                 *info = file_info;
@@ -59,7 +60,7 @@ impl<'a> AppState<'a> {
     /// Shows the file info overlay for the currently selected entry.
     fn show_file_info(&mut self) {
         if let Some(cached) = &self.selected_info {
-            let file_info = cached.info().clone();
+            let file_info = Arc::clone(cached);
             self.overlays_mut()
                 .push(Overlay::ShowInfo { info: file_info });
         }
@@ -67,10 +68,7 @@ impl<'a> AppState<'a> {
 
     /// Toggles the file info overlay.
     pub(super) fn toggle_file_info(&mut self) {
-        let is_open = self
-            .overlays()
-            .iter()
-            .any(|o| matches!(o, Overlay::ShowInfo { .. }));
+        let is_open = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if is_open {
             self.overlays_mut()
@@ -93,10 +91,7 @@ impl<'a> AppState<'a> {
     }
 
     pub(super) fn toggle_keybind_help(&mut self) {
-        let is_open = self
-            .overlays()
-            .iter()
-            .any(|o| matches!(o, Overlay::KeybindHelp));
+        let is_open = self.overlays().is_open(OverlayKind::KeybindHelp);
 
         if is_open {
             self.overlays_mut()

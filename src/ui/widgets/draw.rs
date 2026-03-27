@@ -8,11 +8,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
-use crate::core::{
-    file_info::{FileInfo, FileType},
-    formatter::{format_file_size, format_file_time, format_file_type},
-    worker::Workers,
-};
+use crate::core::{file_info::CachedFileInfo, worker::Workers};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
@@ -326,7 +322,7 @@ pub(crate) fn draw_status_bar(
         let cached = info.strings();
         let separator_style = theme.accent_style();
 
-        let segments = display_cfg.info().segmensts();
+        let segments = display_cfg.info().segments();
 
         for segment in segments {
             match segment {
@@ -341,7 +337,8 @@ pub(crate) fn draw_status_bar(
                     }
                     StatusTag::Size => {
                         if let Some(s) = cached.size() {
-                            left_spans.push(Span::styled(s, info_theme.size_style()));
+                            let padded_size = format!("{:>8}", s);
+                            left_spans.push(Span::styled(padded_size, info_theme.size_style()));
                         }
                     }
                     StatusTag::Mtime => {
@@ -560,7 +557,7 @@ pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
     accent_style: Style,
-    info: &FileInfo,
+    info_cache: &CachedFileInfo,
 ) {
     let theme = app.config().theme();
     let info_cfg = &app.config().display().info();
@@ -568,49 +565,46 @@ pub(crate) fn draw_show_info_dialog(
     let label_style = theme.widget().label_style_or_theme();
     let value_style = theme.widget().value_style_or_theme();
 
+    let info_strings = info_cache.strings();
+
     let position = dialog_position_unified(info_cfg.position(), app, DialogPosition::BottomLeft);
     let border_type = app.config().display().border_shape().as_border_type();
 
     let mut lines: Vec<Line> = Vec::with_capacity(5);
 
-    let mut add_line = |label: &str, value: String| {
-        lines.push(Line::from(vec![
-            Span::styled(format!("{:<11}", label), label_style),
-            Span::styled(value, value_style),
-        ]));
+    let mut add_line = |label: &str, value: Option<&str>| {
+        if let Some(v) = value {
+            lines.push(Line::from(vec![
+                Span::styled(format!("{:<11}", label), label_style),
+                Span::styled(v.to_string(), value_style),
+            ]));
+        }
     };
 
     if info_cfg.name() {
-        add_line("Name:", info.name().to_string_lossy().into_owned());
+        add_line("Name:", info_strings.name());
     }
     if info_cfg.file_type() {
-        add_line("Type:", format_file_type(info.file_type()).into());
+        add_line("Type:", info_strings.file_type());
     }
     if info_cfg.size() {
-        add_line(
-            "Size:",
-            format_file_size(*info.size(), info.file_type() == &FileType::Directory),
-        );
+        add_line("Size:", info_strings.size());
     }
     if info_cfg.modified() {
-        add_line("Modified:", format_file_time(*info.modified()));
+        add_line("Modified:", info_strings.date());
     }
     if info_cfg.perms() {
-        add_line("Perms:", info.attributes().to_string());
+        add_line("Perms:", info_strings.perms());
     }
 
     #[cfg(unix)]
-    if info_cfg.owner()
-        && let Some(owner) = info.owner()
-    {
-        add_line("Owner:", owner.to_owned());
+    if info_cfg.owner() {
+        add_line("Owner:", strings.owner());
     }
 
     #[cfg(unix)]
-    if info_cfg.group()
-        && let Some(group) = info.group()
-    {
-        add_line("Group:", group.to_owned());
+    if info_cfg.group() {
+        add_line("Group:", strings.group());
     }
 
     if lines.is_empty() {

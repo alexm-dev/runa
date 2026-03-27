@@ -5,19 +5,39 @@
 //!
 //! Is used throughout the ui modules and in handlers.rs.
 
-use crate::core::file_info::FileInfo;
+use crate::core::file_info::CachedFileInfo;
 use std::slice;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub(crate) enum Overlay {
-    ShowInfo { info: FileInfo },
+    ShowInfo { info: Arc<CachedFileInfo> },
     Message { text: String },
+    PrefixHelp,
+    KeybindHelp,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum OverlayKind {
+    ShowInfo,
+    Message,
     PrefixHelp,
     KeybindHelp,
 }
 
 pub(crate) struct OverlayStack {
     overlays: Vec<Overlay>,
+}
+
+impl Overlay {
+    pub(crate) fn kind(&self) -> OverlayKind {
+        match self {
+            Overlay::ShowInfo { .. } => OverlayKind::ShowInfo,
+            Overlay::Message { .. } => OverlayKind::Message,
+            Overlay::PrefixHelp => OverlayKind::PrefixHelp,
+            Overlay::KeybindHelp => OverlayKind::KeybindHelp,
+        }
+    }
 }
 
 impl OverlayStack {
@@ -59,6 +79,10 @@ impl OverlayStack {
         F: FnMut(&Overlay) -> bool,
     {
         self.overlays.iter().position(f)
+    }
+
+    pub(crate) fn is_open(&self, kind: OverlayKind) -> bool {
+        self.iter().any(|o| o.kind() == kind)
     }
 }
 

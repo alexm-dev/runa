@@ -178,7 +178,6 @@ impl FileInfoStrings {
 
 pub(crate) struct CachedFileInfo {
     path: PathBuf,
-    info: FileInfo,
     strings: FileInfoStrings,
 }
 
@@ -188,7 +187,7 @@ impl CachedFileInfo {
 
         let strings = FileInfoStrings {
             perms: Some(format!("{:width$}", info.attributes(), width = PERMS_WIDTH)),
-            size: Some(format!("{:>8}", format_file_size(*info.size(), is_dir))),
+            size: Some(format_file_size(*info.size(), is_dir)),
 
             #[cfg(unix)]
             owner: info.owner().map(|o| o.to_string()),
@@ -199,21 +198,12 @@ impl CachedFileInfo {
             file_type: Some(format_file_type(info.file_type())),
         };
 
-        Self {
-            path,
-            info,
-            strings,
-        }
+        Self { path, strings }
     }
 
     #[inline]
     pub(crate) fn path(&self) -> &Path {
         &self.path
-    }
-
-    #[inline]
-    pub(crate) fn info(&self) -> &FileInfo {
-        &self.info
     }
 
     #[inline]
