@@ -24,6 +24,7 @@ This new option does not globally overwrite the indentation of the `bat` preview
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
 - **FileInfo Widget**: Moved customization of the widget form of FileInfo to `[theme.widget]` instead of `[theme.info]` which now holds the `ColorPair` (fg, bg) for each info tag instead.
+- **Editor Configuration**: Changed how `runa` resolves the editor configured in `runa.toml`. It is now possible to use `code` on Windows instead of `code.cmd` for Visual Studio Code although both work.
 
 ### Internal
 - **Dependency Update**: Updated dependencies via `cargo update`
