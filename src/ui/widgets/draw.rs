@@ -351,7 +351,7 @@ pub(crate) fn draw_status_bar(
                     }
                     StatusTag::Type => {
                         if let Some(t) = cached.file_type() {
-                            left_spans.push(Span::styled(t, info_theme.date_style()));
+                            left_spans.push(Span::styled(t, info_theme.file_type_style()));
                         }
                     }
                     #[cfg(unix)]
