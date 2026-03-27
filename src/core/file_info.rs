@@ -51,26 +51,6 @@ pub(crate) struct FileInfo {
 impl FileInfo {
     // Accessors
 
-    #[inline]
-    pub(crate) fn size(&self) -> &Option<u64> {
-        &self.size
-    }
-
-    #[inline]
-    pub(crate) fn modified(&self) -> &Option<SystemTime> {
-        &self.modified
-    }
-
-    #[inline]
-    pub(crate) fn attributes(&self) -> &str {
-        &self.attributes
-    }
-
-    #[inline]
-    pub(crate) fn file_type(&self) -> &FileType {
-        &self.file_type
-    }
-
     #[cfg(unix)]
     #[inline]
     pub(crate) fn owner(&self) -> Option<&str> {
@@ -127,6 +107,7 @@ impl FileInfo {
 }
 
 pub(crate) struct FileInfoStrings {
+    name: Option<String>,
     perms: Option<String>,
     size: Option<String>,
     #[cfg(unix)]
@@ -138,6 +119,11 @@ pub(crate) struct FileInfoStrings {
 }
 
 impl FileInfoStrings {
+    #[inline]
+    pub(crate) fn name(&self) -> Option<&str> {
+        self.name.as_deref()
+    }
+
     #[inline]
     pub(crate) fn perms(&self) -> Option<&str> {
         self.perms.as_deref()
@@ -178,19 +164,20 @@ pub(crate) struct CachedFileInfo {
 
 impl CachedFileInfo {
     pub(crate) fn new(path: PathBuf, info: FileInfo) -> Self {
-        let is_dir = *info.file_type() == FileType::Directory;
+        let is_dir = info.file_type == FileType::Directory;
 
         let strings = FileInfoStrings {
-            perms: Some(format!("{:width$}", info.attributes(), width = PERMS_WIDTH)),
-            size: Some(format_file_size(*info.size(), is_dir)),
+            name: Some(info.name.to_string_lossy().into_owned()),
+            perms: Some(format!("{:width$}", info.attributes, width = PERMS_WIDTH)),
+            size: Some(format_file_size(info.size, is_dir)),
 
             #[cfg(unix)]
             owner: info.owner().map(|o| o.to_string()),
             #[cfg(unix)]
             group: info.group().map(|g| g.to_string()),
 
-            date: Some(format_file_time(*info.modified())),
-            file_type: Some(format_file_type(info.file_type())),
+            date: Some(format_file_time(info.modified)),
+            file_type: Some(format_file_type(&info.file_type)),
         };
 
         Self { path, strings }
@@ -280,9 +267,9 @@ mod tests {
         writeln!(file, "abc123")?;
 
         let info = FileInfo::get_file_info(&file_path)?;
-        assert_eq!(info.file_type(), &FileType::File);
+        assert_eq!(&info.file_type, &FileType::File);
         assert_eq!(info.name.to_string_lossy(), "hello.txt");
-        assert!(info.size().is_some());
+        assert!(info.size.is_some());
         Ok(())
     }
 
@@ -293,8 +280,8 @@ mod tests {
         fs::create_dir(&dir_path)?;
 
         let info = FileInfo::get_file_info(&dir_path)?;
-        assert_eq!(info.file_type(), &FileType::Directory);
-        assert_eq!(info.size(), &None);
+        assert_eq!(&info.file_type, &FileType::Directory);
+        assert_eq!(&info.size, &None);
         Ok(())
     }
 

@@ -581,6 +581,9 @@ pub(crate) fn draw_show_info_dialog(
         }
     };
 
+    if info_cfg.name() {
+        add_line("Name:", info_strings.name());
+    }
     if info_cfg.file_type() {
         add_line("Type:", info_strings.file_type());
     }

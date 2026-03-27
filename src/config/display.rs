@@ -261,6 +261,11 @@ impl ShowInfoOptions {
     }
 
     #[inline]
+    pub(crate) fn name(&self) -> bool {
+        self.name
+    }
+
+    #[inline]
     pub(crate) fn file_type(&self) -> bool {
         self.file_type
     }
