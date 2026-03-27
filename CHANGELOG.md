@@ -17,6 +17,8 @@ All the changes made to runa are documented here.
 - **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
 - **File Info Attributes**: Fixed the file attributes / permissions string being ordered wrong on Windows.
 - **Border Style Reset**: Fixed an issue where the border style would reset to `square` for the preview pane.
+- **Bat Preview Indentation**: Fixed an issue where `PreviewMethod::Bat` (`method = bat` in the config) ignored indentation of some files.
+To fix this, added an `[display.preview] tab_width = 4` configuration option for bat, that sets the indentation tab width.
 
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
