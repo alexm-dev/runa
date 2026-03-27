@@ -51,18 +51,6 @@ pub(crate) struct FileInfo {
 impl FileInfo {
     // Accessors
 
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn owner(&self) -> Option<&str> {
-        self.owner.as_deref()
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn group(&self) -> Option<&str> {
-        self.group.as_deref()
-    }
-
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileInfo struct populated with the file's information.
@@ -172,9 +160,9 @@ impl CachedFileInfo {
             size: Some(format_file_size(info.size, is_dir)),
 
             #[cfg(unix)]
-            owner: info.owner().map(|o| o.to_string()),
+            owner: info.owner.map(|o| o.to_string()),
             #[cfg(unix)]
-            group: info.group().map(|g| g.to_string()),
+            group: info.group.map(|g| g.to_string()),
 
             date: Some(format_file_time(info.modified)),
             file_type: Some(format_file_type(&info.file_type)),
