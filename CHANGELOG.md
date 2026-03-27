@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.9.0-alpha.2] - UNRELEASED
+## [0.9.0-beta.1] - UNRELEASED
 
 ### Added
 - **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`
@@ -10,20 +10,23 @@ All the changes made to runa are documented here.
 - **Overwrite File**: Added an overwrite functionality and confirm widget when renaming or creating a file with the same name of a different file.
 - **Status Line Info**: Added file information to the status line which is also customizable via `[display.info] format = {perms} | {date} | etc..`.
 - **Owner/Group Info**: Added specific Owner/Group file information for Unix.
+- **Select All**: Added a keybind to select / toggle all entries in a directory. Mapped by default to `select_all = ["<c-a>"]`
 
 ### Fixed
+- **Bat Preview Edge Case**: Fixed an issue that could cause the terminal session to crash due to bat preview not falling back to internal preview when a file is not a regular file.
 - **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
 - **File Info Attributes**: Fixed the file attributes / permissions string being ordered wrong on Windows.
 - **Border Style Reset**: Fixed an issue where the border style would reset to `square` for the preview pane.
 
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
-- **AppState handlers**: Moved all handlers into sub-modules. (file_actions, nav_actions, input_mode and overlay).
-- **FileInfo module**: Moved all `FileInfo` related functions and structs to a new core module. `core/file_info.rs`
 - **FileInfo Widget**: Moved customization of the widget form of FileInfo to `[theme.widget]` instead of `[theme.info]` which now holds the `ColorPair` (fg, bg) for each info tag instead.
 
 ### Internal
 - **Dependency Update**: Updated dependencies via `cargo update`
+- **AppState handlers**: Moved all handlers into sub-modules. (file_actions, nav_actions, input_mode and overlay).
+- **FileInfo module**: Moved all `FileInfo` related functions and structs to a new core module. `core/file_info.rs`
+
 
 ---
 
