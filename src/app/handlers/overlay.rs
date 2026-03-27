@@ -4,7 +4,6 @@
 //! [app::state::handle_keypress] function.
 
 use crate::app::state::{AppState, KeypressResult};
-use crate::core::file_info::FileInfo;
 use crate::ui::overlays::Overlay;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -59,12 +58,10 @@ impl<'a> AppState<'a> {
 
     /// Shows the file info overlay for the currently selected entry.
     fn show_file_info(&mut self) {
-        if let Some(entry) = self.nav.selected_shown_entry() {
-            let path = self.nav.current_dir().join(entry.name());
-            if let Ok(file_info) = FileInfo::get_file_info(&path) {
-                self.overlays_mut()
-                    .push(Overlay::ShowInfo { info: file_info });
-            }
+        if let Some(cached) = &self.selected_info {
+            let file_info = cached.info().clone();
+            self.overlays_mut()
+                .push(Overlay::ShowInfo { info: file_info });
         }
     }
 
