@@ -143,11 +143,11 @@ impl<'a> AppState<'a> {
 
             Char(c) => match mode {
                 InputMode::ConfirmDelete { .. } => {
-                    self.process_confirm_delete_char(workers, c);
+                    self.process_confirm_char(workers, c, Self::confirm_delete);
                     KeypressResult::Consumed
                 }
                 InputMode::ConfirmOverwrite { .. } => {
-                    self.process_confirm_overwrite_char(workers, c);
+                    self.process_confirm_char(workers, c, Self::confirm_overwrite);
                     KeypressResult::Consumed
                 }
                 InputMode::Filter => {
@@ -267,17 +267,12 @@ impl<'a> AppState<'a> {
         self.actions.exit_mode();
     }
 
-    /// Processes a character input for the confirm delete input mode.
-    fn process_confirm_delete_char(&mut self, workers: &Workers, c: char) {
+    fn process_confirm_char<F>(&mut self, workers: &Workers, c: char, on_confirm: F)
+    where
+        F: FnOnce(&mut Self, &Workers),
+    {
         if matches!(c, 'y' | 'Y') {
-            self.confirm_delete(workers);
-        }
-        self.exit_input_mode();
-    }
-
-    fn process_confirm_overwrite_char(&mut self, workers: &Workers, c: char) {
-        if matches!(c, 'y' | 'Y') {
-            self.confirm_overwrite(workers);
+            on_confirm(self, workers);
         }
         self.exit_input_mode();
     }
