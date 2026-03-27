@@ -57,7 +57,7 @@ impl<'a> AppState<'a> {
             FileAction::Find => self.prompt_find(),
             FileAction::MoveFile => self.prompt_move(),
             FileAction::ClearClipboard => {
-                self.actions.action_clear_clipboard(clipboard);
+                clipboard.clear();
                 self.request_preview(workers);
             }
         }

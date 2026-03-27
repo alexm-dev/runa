@@ -65,7 +65,7 @@ impl<'a> AppState<'a> {
             NavAction::ClearAll => {
                 self.nav.clear_markers();
                 self.nav.clear_filters();
-                self.actions.action_clear_clipboard(clipboard);
+                clipboard.clear();
                 self.request_preview(workers);
             }
             NavAction::GoToBottom => {
@@ -81,6 +81,7 @@ impl<'a> AppState<'a> {
                 self.actions.scroll().scroll_down();
             }
             NavAction::SelectAll => {
+                clipboard.clear();
                 self.nav.select_all();
                 self.request_preview(workers);
                 self.update_file_info_cache();

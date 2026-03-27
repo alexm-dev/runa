@@ -42,6 +42,13 @@ pub(crate) struct Clipboard {
     pub(crate) is_cut: bool,
 }
 
+impl Clipboard {
+    pub(crate) fn clear(&mut self) {
+        self.entries = None;
+        self.is_cut = false;
+    }
+}
+
 /// The main struct of runa
 /// Contains the AppContainer, the shared clipboard and the worker pool
 pub(crate) struct RunaRoot<'a> {
