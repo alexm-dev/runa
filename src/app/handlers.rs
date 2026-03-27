@@ -6,4 +6,4 @@
 mod file_actions;
 mod input_mode;
 mod nav_actions;
-mod overlay;
+mod overlay_handlers;

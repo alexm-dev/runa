@@ -20,7 +20,7 @@ use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::file_info::{CachedFileInfo, FileInfo};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
-use crate::ui::overlays::{Overlay, OverlayKind, OverlayStack};
+use crate::ui::overlays::{OverlayKind, OverlayStack};
 
 use crossterm::event::KeyEvent;
 use ratatui::text::Span;
@@ -247,8 +247,7 @@ impl<'a> AppState<'a> {
         {
             self.notification_time = None;
 
-            self.overlays_mut()
-                .retain(|o| !matches!(o, Overlay::Message { .. }));
+            self.overlays_mut().retain_kind(OverlayKind::Message);
 
             changed = true;
         }
@@ -571,6 +570,7 @@ impl<'a> AppState<'a> {
 mod tests {
     use super::*;
     use crate::core::FileEntry;
+    use crate::ui::overlays::Overlay;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use std::ffi::OsString;
     use std::time::{Duration, Instant};
@@ -606,11 +606,7 @@ mod tests {
         let changed = app.tick(&workers);
         assert!(changed);
         assert!(app.notification_time.is_none());
-        assert!(
-            !app.overlays()
-                .iter()
-                .any(|o| matches!(o, Overlay::Message { .. }))
-        );
+        assert!(!app.overlays().is_open(OverlayKind::Message));
         Ok(())
     }
 

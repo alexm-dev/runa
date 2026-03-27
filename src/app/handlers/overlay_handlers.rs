@@ -4,6 +4,7 @@
 //! [app::state::handle_keypress] function.
 
 use crate::app::state::{AppState, KeypressResult};
+use crate::core::file_info::CachedFileInfo;
 use crate::ui::overlays::{Overlay, OverlayKind};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -22,13 +23,8 @@ impl<'a> AppState<'a> {
 
         self.actions.scroll().reset();
 
-        if self
-            .overlays()
-            .iter()
-            .any(|o| matches!(o, Overlay::KeybindHelp))
-        {
-            self.overlays_mut()
-                .retain(|o| !matches!(o, Overlay::KeybindHelp));
+        if self.overlays().is_open(OverlayKind::KeybindHelp) {
+            self.overlays_mut().retain_kind(OverlayKind::KeybindHelp);
             return Some(KeypressResult::Consumed);
         }
         None
@@ -43,26 +39,17 @@ impl<'a> AppState<'a> {
 
     /// Refreshes the file info overlay if it is currently open.
     pub(crate) fn refresh_show_info_if_open(&mut self) {
-        let maybe_idx = self
-            .overlays()
-            .find_index(|o| matches!(o, Overlay::ShowInfo { .. }));
-        let Some(i) = maybe_idx else { return };
-
-        if let Some(cached) = &self.selected_info {
-            let file_info = Arc::clone(cached);
-
-            if let Some(Overlay::ShowInfo { info }) = self.overlays_mut().get_mut(i) {
-                *info = file_info;
-            }
+        if let (Some(new_info), Some(info)) = (
+            self.selected_info_clone(),
+            self.overlays_mut().find_show_info_mut(),
+        ) {
+            *info = new_info;
         }
     }
-
     /// Shows the file info overlay for the currently selected entry.
     fn show_file_info(&mut self) {
-        if let Some(cached) = &self.selected_info {
-            let file_info = Arc::clone(cached);
-            self.overlays_mut()
-                .push(Overlay::ShowInfo { info: file_info });
+        if let Some(info) = self.selected_info_clone() {
+            self.overlays_mut().push(Overlay::ShowInfo { info });
         }
     }
 
@@ -71,21 +58,20 @@ impl<'a> AppState<'a> {
         let is_open = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if is_open {
-            self.overlays_mut()
-                .retain(|o| !matches!(o, Overlay::ShowInfo { .. }));
+            self.overlays_mut().retain_kind(OverlayKind::ShowInfo);
         } else {
             self.show_file_info();
         }
     }
 
     pub(super) fn show_prefix_help(&mut self) {
-        if !matches!(self.overlays().top(), Some(Overlay::PrefixHelp)) {
+        if !self.overlays().is_top(OverlayKind::PrefixHelp) {
             self.overlays_mut().push(Overlay::PrefixHelp);
         }
     }
 
     pub(crate) fn hide_prefix_help(&mut self) {
-        if matches!(self.overlays().top(), Some(Overlay::PrefixHelp)) {
+        if self.overlays().is_top(OverlayKind::PrefixHelp) {
             self.overlays_mut().pop();
         }
     }
@@ -94,8 +80,7 @@ impl<'a> AppState<'a> {
         let is_open = self.overlays().is_open(OverlayKind::KeybindHelp);
 
         if is_open {
-            self.overlays_mut()
-                .retain(|o| !matches!(o, Overlay::KeybindHelp));
+            self.overlays_mut().retain_kind(OverlayKind::KeybindHelp);
         } else {
             self.overlays_mut().push(Overlay::KeybindHelp);
         }
@@ -105,10 +90,14 @@ impl<'a> AppState<'a> {
     pub(crate) fn push_overlay_message(&mut self, text: String, duration: Duration) {
         self.notification_time = Some(Instant::now() + duration);
 
-        if matches!(self.overlays.top(), Some(Overlay::Message { .. })) {
+        if self.overlays().is_top(OverlayKind::Message) {
             self.overlays_mut().pop();
         }
 
         self.overlays_mut().push(Overlay::Message { text });
+    }
+
+    fn selected_info_clone(&self) -> Option<Arc<CachedFileInfo>> {
+        self.selected_info.as_ref().map(Arc::clone)
     }
 }

@@ -15,7 +15,7 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{Action, NavAction, PrefixCommand, SystemAction};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
-use crate::ui::overlays::Overlay;
+use crate::ui::overlays::OverlayKind;
 use crate::utils::expand_home_path;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -252,8 +252,7 @@ impl<'a> AppState<'a> {
         prompt: String,
         initial: Option<String>,
     ) {
-        self.overlays_mut()
-            .retain(|o| !matches!(o, Overlay::KeybindHelp));
+        self.overlays_mut().retain_kind(OverlayKind::KeybindHelp);
 
         let buffer = initial.unwrap_or_default();
         self.actions

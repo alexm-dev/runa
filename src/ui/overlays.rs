@@ -84,6 +84,25 @@ impl OverlayStack {
     pub(crate) fn is_open(&self, kind: OverlayKind) -> bool {
         self.iter().any(|o| o.kind() == kind)
     }
+
+    pub(crate) fn retain_kind(&mut self, kind: OverlayKind) {
+        self.retain(|o| o.kind() == kind);
+    }
+
+    pub(crate) fn index_of(&self, kind: OverlayKind) -> Option<usize> {
+        self.find_index(|o| o.kind() == kind)
+    }
+
+    pub(crate) fn is_top(&self, kind: OverlayKind) -> bool {
+        self.top().map(|o| o.kind() == kind).unwrap_or(false)
+    }
+
+    pub(crate) fn find_show_info_mut(&mut self) -> Option<&mut Arc<CachedFileInfo>> {
+        self.overlays.iter_mut().find_map(|o| match o {
+            Overlay::ShowInfo { info } => Some(info),
+            _ => None,
+        })
+    }
 }
 
 impl Default for OverlayStack {
