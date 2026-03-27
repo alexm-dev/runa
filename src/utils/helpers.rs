@@ -104,12 +104,19 @@ pub(crate) fn parse_color(s: &str) -> Color {
 ///
 /// Temporary disables raw mode and exits alternate sceen while the editor runs.
 /// On return, restores raw mode and alternate sceen.
-pub(crate) fn open_in_editor(editor: &Editor, file_path: &std::path::Path) -> std::io::Result<()> {
+pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Result<()> {
+    let editor_path = editor.resolved_path().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Editor '{}' not found", editor.cmd()),
+        )
+    })?;
+
     let mut stdout = io::stdout();
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
 
-    let status = std::process::Command::new(editor.cmd())
+    let status = std::process::Command::new(editor_path)
         .arg(file_path)
         .status();
 

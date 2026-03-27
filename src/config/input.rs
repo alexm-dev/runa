@@ -3,6 +3,8 @@
 //! This module defines the input configuration options which are read from the runa.toml
 //! configuration file.
 
+use std::path::PathBuf;
+
 use serde::Deserialize;
 
 /// Input configuration options of all actions
@@ -43,13 +45,6 @@ pub(crate) struct Keys {
     keybind_help: Vec<String>,
     scroll_up: Vec<String>,
     scroll_down: Vec<String>,
-}
-
-/// Editor configuration options
-#[derive(Deserialize, Debug)]
-#[serde(default)]
-pub(crate) struct Editor {
-    cmd: String,
 }
 
 macro_rules! accessor {
@@ -152,6 +147,13 @@ impl Default for Keys {
     }
 }
 
+/// Editor configuration options
+#[derive(Deserialize, Debug)]
+#[serde(default)]
+pub(crate) struct Editor {
+    cmd: String,
+}
+
 /// Public methods for accessing editor configuration options
 impl Editor {
     #[inline]
@@ -160,8 +162,12 @@ impl Editor {
         if trimmed.is_empty() { "vim" } else { trimmed }
     }
 
+    pub(crate) fn resolved_path(&self) -> Option<PathBuf> {
+        which::which(self.cmd()).ok()
+    }
+
     pub(crate) fn exists(&self) -> bool {
-        which::which(self.cmd()).is_ok()
+        self.resolved_path().is_some()
     }
 }
 
