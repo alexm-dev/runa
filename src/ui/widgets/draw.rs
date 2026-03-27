@@ -910,6 +910,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
     let fmt_prefix =
         |leader: &str, list: &[String]| -> String { format!("{leader} + {}", fmt_keys(list)) };
 
+    #[rustfmt::skip]
     let sections: Vec<(&str, Vec<(String, &'static str)>)> = vec![
         (
             "Navigation",
@@ -922,6 +923,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
                 (fmt_keys(keys.clear_markers()), "Clear markers"),
                 (fmt_keys(keys.clear_filter()), "Clear filter"),
                 (fmt_keys(keys.clear_all()), "Clear all markers and filters"),
+                (fmt_keys(keys.select_all()), "Select all entries in the current directory"),
                 (fmt_keys(keys.go_to_bottom()), "Go to bottom"),
                 (fmt_keys(keys.scroll_up()), "Scroll widget up"),
                 (fmt_keys(keys.scroll_down()), "Scroll widget down"),
