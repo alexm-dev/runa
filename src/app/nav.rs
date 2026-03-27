@@ -258,8 +258,6 @@ impl NavState {
         }
     }
 
-    // Filter functions
-
     /// Returns an iterator over the entries that match the current filter.
     /// If the filter is empty, returns all entries.
     pub(crate) fn shown_entries(&self) -> Box<dyn Iterator<Item = &FileEntry> + '_> {

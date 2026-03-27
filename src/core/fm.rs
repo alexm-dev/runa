@@ -53,12 +53,11 @@ impl FileEntry {
         &self.name
     }
 
-    #[inline]
     pub(crate) fn name_str(&self) -> Cow<'_, str> {
         self.name.to_string_lossy()
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn flags(&self) -> u8 {
         self.flags
     }

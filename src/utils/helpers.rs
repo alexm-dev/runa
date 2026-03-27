@@ -503,7 +503,7 @@ pub(crate) fn rename_with_fallback(src: &Path, dst: &Path, is_dir: bool) -> io::
 /// Calls f closure with a lowercase (ASCII) version of a entry name if any are uppercase ASCII.
 /// Using a stack buffer for names <= 64 bytes or with unchanged name otherwise.
 /// Falls through for Unicode and long strings with no heap allocations.
-#[inline(always)]
+#[inline]
 pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R {
     const BUFFER_SIZE: usize = 64;
     if name.len() <= BUFFER_SIZE {
