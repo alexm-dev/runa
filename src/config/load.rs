@@ -204,6 +204,7 @@ preview = true
 # theme = "default"
 # style = "plain"
 # wrap = false
+# tab_width = 4
 
 # [display.layout]
 # parent = 20
@@ -217,6 +218,8 @@ preview = true
 # modified = true
 # perms = false
 # position = "bottom_left"
+# status_bar = true
+# format = "{perms} | {size}"
 
 # [display.status]
 # entry_count = "footer"
@@ -317,13 +320,12 @@ name = "default"
 # line_format = "[{idx}]"
 
 # [theme.info]
-# color.fg = "default"
-# color.bg = "default"
-# border.fg = "default"
-# border.bg = "default"
-# title.fg = "default"
-# title.bg = "default"
-# position = "bottom_left"
+# perms = "lightgreen"
+# size = "default"
+# date = "default"
+# file_type = "default"
+# owner = "default"
+# group = "default"
 
 # [editor]
 # cmd = "nvim"
@@ -350,6 +352,7 @@ name = "default"
 # clear_filter = ["<c-f>"]
 # clear_clipboard = ["<f2>"]
 # clear_all = ["<c-l>"]
+# select_all = ["<c-a>"]
 # alternate_delete = ["<m-d>"]
 # go_to_bottom = ["G"]
 # keybind_help = ["?"]

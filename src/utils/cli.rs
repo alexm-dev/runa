@@ -101,10 +101,11 @@ fn print_help() {
         r#"runa - A fast and lightweight terminal file manager written in Rust
 
 USAGE:
-  rn [PATH]
+  rn [PATH]...
 
 PATH:
   Directory to open (defaults to current directory)
+  Pass multiple paths to open each in a separate tab
 
 OPTIONS:
       --init              Generate a minimal default configuration
@@ -146,6 +147,7 @@ const KEYBINDS_TEXT: &str = r##"
   clear_filter              ["<c-f>"]
   clear_clipboard           ["<f2>"]
   clear_all                 ["<c-l>"]
+  select_all                ["<c-a>"]
   alternate_delete          ["<m-d>"]
   go_to_bottom              ["G"]
   keybind_help              ["?"]
@@ -194,6 +196,9 @@ runa - Full Configuration Guide (runa.toml)
   max_find_results           Max results for find (default: 2000, min: 15, max: 1_000_000)
   move_to_trash              Move files to trash bin instead of permanent deletion
 
+[general.startup]
+  tabs                       Configuration of startup paths as tabs
+
 =========================
  Display Settings
 =========================
@@ -219,6 +224,7 @@ runa - Full Configuration Guide (runa.toml)
   theme                      Set the bat method theme. (only works if method = "bat")
   style                      Set the bat style. (only works if method = "bat")
   wrap                       Toggle line wrapping in the preview pane (only works if method = "bat")
+  tab_width                  Set the tab indentation of bat previews
 
 [display.layout]
   parent                     Width % for parent pane
@@ -231,6 +237,8 @@ runa - Full Configuration Guide (runa.toml)
   size
   modified
   perms
+  status_bar
+  format
 
 [display.status]             Toggle the status line options ("footer", "header, or "none" to disable)
   entry_count
@@ -287,11 +295,13 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   inactive.fg/bg             Coloring for the inactive tab
   line_format                Customization of the whole tab line. line_format = ["{idx}{marker}"]
 
-[theme.info]                 File Info overlay widget
-  color.fg/bg,
-  border.fg/bg,
-  title.fg/bg,
-  position                   "center", "top_left", [x, y], { x, y }
+[theme.info]                 File Info status line customization
+  perms
+  size
+  date
+  file_type
+  owner
+  group
 
 =========================
  Editor
