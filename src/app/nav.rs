@@ -91,6 +91,18 @@ impl NavState {
         }
     }
 
+    pub(crate) fn select_all(&mut self) {
+        if self.entries.is_empty() {
+            return;
+        }
+
+        let paths_to_mark: Vec<PathBuf> = self
+            .shown_entries()
+            .map(|e| self.current_dir.join(e.name()))
+            .collect();
+        self.markers.extend(paths_to_mark);
+    }
+
     // Navigation functions
 
     /// Prepares a new request by incrementing the request ID.

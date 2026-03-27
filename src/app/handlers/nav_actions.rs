@@ -80,6 +80,11 @@ impl<'a> AppState<'a> {
             NavAction::ScrollDown => {
                 self.actions.scroll().scroll_down();
             }
+            NavAction::SelectAll => {
+                self.nav.select_all();
+                self.request_preview(workers);
+                self.update_file_info_cache();
+            }
             _ => {}
         }
         KeypressResult::Continue

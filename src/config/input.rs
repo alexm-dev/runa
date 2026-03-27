@@ -31,6 +31,7 @@ pub(crate) struct Keys {
     clear_filter: Vec<String>,
     clear_all: Vec<String>,
     alternate_delete: Vec<String>,
+    select_all: Vec<String>,
     go_to_top: Vec<String>,
     go_to_home: Vec<String>,
     go_to_path: Vec<String>,
@@ -87,6 +88,7 @@ accessor!(
     clear_filter,
     clear_all,
     alternate_delete,
+    select_all,
     go_to_top,
     go_to_home,
     go_to_path,
@@ -128,6 +130,7 @@ impl Default for Keys {
             clear_clipboard: vec!["<f2>".into()],
             clear_filter: vec!["<c-f>".into()],
             clear_all: vec!["<c-l>".into()],
+            select_all: vec!["<c-a>".into()],
 
             alternate_delete: vec!["<m-d>".into()],
 
