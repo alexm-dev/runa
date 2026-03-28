@@ -230,6 +230,7 @@ impl<'a> AppState<'a> {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => {
                 self.handle_go_to_top(workers);
+                self.update_file_info_cache();
                 self.refresh_show_info_if_open();
             }
             PrefixCommand::Nav(NavAction::GoToHome) => {
