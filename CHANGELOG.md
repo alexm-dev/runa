@@ -2,6 +2,16 @@
 
 All the changes made to runa are documented here.
 
+## [0.9.1] - 2026-03-28
+
+#### Small patch to the configuration documentation for the release archives.
+
+### Fixed
+- **Documentation**: Fixed a typo in `configuration.md` that could cause the `toml` section to be highlighted incorrectly in editors.
+
+---
+
+
 ## [0.9.0] - 2026-03-28
 
 #### Expanded the tab functionality with startup tabs, file information on the status line and more.
