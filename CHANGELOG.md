@@ -7,19 +7,20 @@ All the changes made to runa are documented here.
 #### Expanded the tab functionality with startup tabs, file information on the status line and more.
 
 ### Added
-- **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`
+- **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`.
 - **CLI tab start**: Added multi-tab startup via CLI args. Example: `rn /path1/ /path2/ /path3/`.
 - **Overwrite File**: Added an overwrite functionality and a confirmation widget when renaming or creating a file with the same name as an existing file.
 - **Status Line Info**: Added file information to the status line, customizable via `[display.info] format = {perms} | {date} | etc..`.
 - **Owner/Group Info**: Added specific Owner/Group file information for Unix.
-- **Select All**: Added a keybind to select entries in a directory. Mapped by default to `select_all = ["<c-a>"]`
+- **Select All**: Added a keybind to select entries in a directory. Mapped by default to `select_all = ["<c-a>"]`.
+- **File Dates**: Added further file information timestamps: `created` and `accessed` and added a `date_format` string configuration to set the desired date format.
 
 ### Fixed
 - **Bat Preview Edge Case**: Fixed an issue that could cause the terminal session to crash when `bat` failed to fall back to the internal preview for non-regular files.
 - **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
 - **File Info Attributes**: Fixed an issue where file attributes/permissions strings were ordered incorrectly on Windows.
 - **Border Style Reset**: Fixed an issue where the border style for the preview pane would reset to `square`.
-Native Path Display: Fixed a bug where Windows paths would inconsistently show forward slashes (`C:/`) in the UI header and tab line
+- **Native Path Display**: Fixed a bug where Windows paths would inconsistently show forward slashes (`C:/`) in the UI header and tab line.
 - **Bat Preview Indentation**: Fixed an issue where `PreviewMethod::Bat` (`method = bat` in the config) ignored indentation of some files.
     - Added `[display.preview] tab_width = 4` to set the indentation width for `bat`. This provides a fallback for files with no defined indentation.
 
@@ -33,8 +34,8 @@ Native Path Display: Fixed a bug where Windows paths would inconsistently show f
 
 ### Internal
 - **Dependency Update**: Updated dependencies via `cargo update`
-- **AppState handlers**: Moved all handlers into sub-modules. (file_actions, nav_actions, input_mode and overlay).
-- **FileInfo module**: Moved all `FileInfo` related functions and structs to a new core module. `core/file_info.rs`
+- **AppState handlers**: Moved all handlers into sub-modules. (file_actions, nav_actions, input_mode and overlay_handlers).
+- **FileInfo module**: Moved all `FileInfo` related functions and structs to a new core module: `core/file_info.rs`.
 
 
 ---
