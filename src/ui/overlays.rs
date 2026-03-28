@@ -9,7 +9,6 @@ use crate::core::file_info::CachedFileInfo;
 use std::slice;
 use std::sync::Arc;
 
-#[derive(Clone)]
 pub(crate) enum Overlay {
     ShowInfo { info: Arc<CachedFileInfo> },
     Message { text: String },
