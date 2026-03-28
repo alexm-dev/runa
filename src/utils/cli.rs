@@ -236,9 +236,12 @@ runa - Full Configuration Guide (runa.toml)
   file_type
   size
   modified
+  created
+  accessed
   perms
   status_bar
-  format
+  format                     Configuration of the status line format string
+  date_format                Configuration of the file information timestamps
 
 [display.status]             Toggle the status line options ("footer", "header, or "none" to disable)
   entry_count
@@ -296,12 +299,15 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   line_format                Customization of the whole tab line. line_format = ["{idx}{marker}"]
 
 [theme.info]                 File Info status line customization
-  perms
-  size
-  date
-  file_type
-  owner
-  group
+  perms.fg/bg
+  size.fg/bg
+  date.fg/bg
+  modified.fg/bg
+  created.fg/bg
+  accessed.fg/bg
+  file_type.fg/bg
+  owner.fg/bg
+  group.fg/bg
 
 =========================
  Editor

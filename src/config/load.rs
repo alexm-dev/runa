@@ -214,12 +214,15 @@ preview = true
 # [display.info]
 # name = true
 # file_type = false
+# perms = false
 # size = true
 # modified = true
-# perms = false
+# created = true
+# accessed = false
 # position = "bottom_left"
 # status_bar = true
 # format = "{perms} | {size}"
+# date_format = "%Y-%m-%d %H:%M"
 
 # [display.status]
 # entry_count = "footer"
@@ -320,12 +323,24 @@ name = "default"
 # line_format = "[{idx}]"
 
 # [theme.info]
-# perms = "lightgreen"
-# size = "default"
-# date = "default"
-# file_type = "default"
-# owner = "default"
-# group = "default"
+# perms.fg = "lightgreen"
+# perms.bg = "default"
+# size.fg = "default"
+# size.bg = "default"
+# date.fg = "default"
+# date.bg = "default"
+# modified.fg = "default"
+# modified.bg = "default"
+# created.fg = "default"
+# created.bg = "default"
+# accessed.fg = "default"
+# accessed.bg = "default"
+# file_type.fg = "default"
+# file_type.bg = "default"
+# owner.fg = "default"
+# owner.bg = "default"
+# group.fg = "default"
+# group.bg = "default"
 
 # [editor]
 # cmd = "nvim"
