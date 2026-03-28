@@ -9,9 +9,11 @@ use crate::app::KeypressResult;
 use crate::app::keymap::TabAction;
 use crate::app::{AppContainer, AppState};
 use crate::core::worker::Workers;
+use crate::utils::shorten_home_path;
 
 use ratatui::text::Span;
 use std::ffi::OsString;
+use std::path::Path;
 use std::sync::Arc;
 
 pub(crate) struct TabManager<'a> {
@@ -147,7 +149,9 @@ impl<'a> TabManager<'a> {
 
                 let name = if tab_theme.uses_name() {
                     let cwd = tab.nav.current_dir();
-                    cwd.file_name()
+                    let shortened = shorten_home_path(cwd);
+                    Path::new(&shortened)
+                        .file_name()
                         .map(|os_str| os_str.to_string_lossy().into_owned())
                         .unwrap_or_else(|| cwd.to_string_lossy().into_owned())
                 } else {
