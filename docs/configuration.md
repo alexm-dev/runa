@@ -59,7 +59,7 @@ sudo dnf install bat fd-find    # Fedora/RHEL
 Launch `runa` by simply running `rn`. You can also specify a starting directory:
 
 - `rn`: Opens up runa at the current directory.
-- `rn /path/to/dir`: Opens runa at the specified location.
+- `rn /path/to/dir`: Opens runa at the specified location. With multiple path arguments, runa starts each path as an tab.
 
 If you don't have a config file yet, you can generate one automatically:
 
@@ -108,6 +108,14 @@ max_find_results = 2000
 # This will set the default delete key, the alternate_delete key will then alternate between the toggle.
 move_to_trash = true
 
+# Configure up to 9 startup tabs by defining the paths of which the tabs will open at startup.
+# Ommiting this starts runa normally at the current directory.
+[general.startup]
+# 'cwd' or '.' starts the tab normally at the current dir.
+# Tab placments are determined by the index of the vector. Meaning ['tab0', 'tab1', 'tab2'].
+# Note: Use single quotes (' ') for paths to avoid backslash escaping issues on Windows.
+# If you use double quotes (" "), remember to escape your backslashes (e.g. "C:\\Path\\") on Windows.
+tabs = ['cwd', '/path/', '/path/', ...]
 
 [display]
 # Show the selection icon next to the file/directory name
@@ -175,6 +183,10 @@ theme = "default"
 # If true, all the lines are wrapped to the pane width
 wrap = "false"
 
+# Configure the tab indentation of `bat`.
+# This does not overwrite every file preview indentation.
+tab_width = 4
+
 [display.layout]
 # Display ratios for panes (will be scaled to 100%)
 parent = 20
@@ -187,8 +199,31 @@ name = true
 file_type = true
 size = true
 modified = true
+created = true
+accessed = false
 perms = true
 position = "default"
+
+# Enable file information on the status bar on the bottom left
+status_bar = true
+# Configure the format string of the file information on the status bar if enabled.
+# Available keys are:
+# perms, size, mtime/modified, btime/created, atime/accessed, type, and on unix additonally: owner, group.
+format = "{perms} | {size}"
+
+# Configure the date format for file timestamps (Modified, Created, Accessed).
+# This uses the standard stftime / chrono format strings.
+# Specifiers:
+#   %Y - 4 digit year (2026)
+#   %y - 2 digit year (26)
+#   %m - Month number (01-12)
+#   %b - Month name (Jan, Feb, etc.)
+#   %d - Day of the month
+#   %H - Hour
+#   %M - Minute
+#   %S - Second
+#   %p - AM/PM
+date_format = "%Y-%m-%d %H:%M"
 
 # Display the status line options on the stauts line (Header or Footer)
 [display.status]
@@ -422,6 +457,7 @@ goto_help.size = [58, 3]
 goto_help.position = "bottom"
 
 # Configuration for the status_line
+# For marker and copy status, the configuration from [theme.marker] sets each status line section.
 [theme.status_line]
 fg = "default"
 bg = "default"
@@ -441,18 +477,40 @@ inactive.bg = "default"
 # Example: line_format = "[{idx}{name}{marker}]"
 line_format = "[{idx}]"
 
-# Configuration for the File info widget
+# Customization for the status line File information.
 [theme.info]
-color.fg = "default"
-color.bg = "default"
+perms.fg = "lightgreen"
+perms.bg = "default"
 
-border.fg = "default"
-border.bg = "default"
+size.fg = "default"
+size.bg = "default"
 
-title.fg = "magenta"
-title.bg = "default"
+# Global color for all date/time fields (acts as default)
+date.fg = "default"
+date.bg = "default"
 
-position = "bottom_left"
+# Specific overrides for each timestamp field (optional)
+# These will take precedence over date if defined.
+modified.fg = "default"
+modified.bg = "default"
+
+created.fg = "default"
+created.bg = "default"
+
+accessed.fg = "default"
+accessed.bg = "default"
+
+# File type coloring
+file_type.fg = "default"
+file_type.bg = "default"
+
+# Owner and Group are only available on Linux / Unix
+owner.fg = "default"
+owner.bg = "default"
+
+group.fg = "default"
+group.bg = "default"
+
 ```
 
 
@@ -462,7 +520,6 @@ position = "bottom_left"
 ```toml
 [editor]
 # Command to open files (e.g., "nvim", "code", etc.)
-# "code.cmd" on windows
 cmd = "nvim"
 ```
 
@@ -506,6 +563,7 @@ clear_markers       = ["<c-c>"]
 clear_filter        = ["<c-f>"]
 clear_clipboard     = ["<f2>"]
 clear_all           = ["<c-l>"]
+select_all          = ["<c-a>"]
 alternate_delete    = ["<m-d>"]    # Alternates between move_to_trash and permanently delete
 go_to_bottom        = ["G"]
 keybind_help        = ["?"]
@@ -518,7 +576,6 @@ go_to_path          = ["p"]
 # Tab actions
 tab_new             = ["<c-t>"]
 tab_close           = ["<c-w>"]
-tab_cycle           = ["<c-n>"]
 tab_next            = ["<c-n>"]
 tab_prev            = ["<c-p>"]
 
