@@ -19,12 +19,14 @@ All the changes made to runa are documented here.
 - **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
 - **File Info Attributes**: Fixed an issue where file attributes/permissions strings were ordered incorrectly on Windows.
 - **Border Style Reset**: Fixed an issue where the border style for the preview pane would reset to `square`.
+Native Path Display: Fixed a bug where Windows paths would inconsistently show forward slashes (`C:/`) in the UI header and tab line
 - **Bat Preview Indentation**: Fixed an issue where `PreviewMethod::Bat` (`method = bat` in the config) ignored indentation of some files.
     - Added `[display.preview] tab_width = 4` to set the indentation width for `bat`. This provides a fallback for files with no defined indentation.
 
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
 - **Editor Configuration**: Changed how `runa` resolves the editor configured in `runa.toml`. It is now possible to use `code` on Windows instead of `code.cmd` for Visual Studio Code although both work.
+- **Tab Line**: The home directory is now shortened to `~` in the tab line.
 - **[BREAKING] FileInfo Widget**: Moved customization of the FileInfo widget to `[theme.widget]`.
     - **Note**: `[theme.info]` now specifically holds the `ColorPair` (fg, bg) for status line info tags.
     - **Action Required**: If you have a custom theme, move your previous `[theme.info]` widget settings to `[theme.widget]` to maintain your UI appearance.
