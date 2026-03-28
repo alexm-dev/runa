@@ -2,29 +2,32 @@
 
 All the changes made to runa are documented here.
 
-## [0.9.0-beta.1] - UNRELEASED
+## [0.9.0] - 2026-03-28
+
+#### Expanded the tab functionality with startup tabs, file information on the status line and more.
 
 ### Added
 - **Tab Config**: Added configurable startup tabs in `runa.toml` under `[general.startup] tabs = ['/path/', '...']`
-- **CLI tab start**: Added multi-tab startup via cli args. Example: `rn /path1/ /path2/ /path3/`.
-- **Overwrite File**: Added an overwrite functionality and confirm widget when renaming or creating a file with the same name of a different file.
-- **Status Line Info**: Added file information to the status line which is also customizable via `[display.info] format = {perms} | {date} | etc..`.
+- **CLI tab start**: Added multi-tab startup via CLI args. Example: `rn /path1/ /path2/ /path3/`.
+- **Overwrite File**: Added an overwrite functionality and a confirmation widget when renaming or creating a file with the same name as an existing file.
+- **Status Line Info**: Added file information to the status line, customizable via `[display.info] format = {perms} | {date} | etc..`.
 - **Owner/Group Info**: Added specific Owner/Group file information for Unix.
-- **Select All**: Added a keybind to select / toggle all entries in a directory. Mapped by default to `select_all = ["<c-a>"]`
+- **Select All**: Added a keybind to select entries in a directory. Mapped by default to `select_all = ["<c-a>"]`
 
 ### Fixed
-- **Bat Preview Edge Case**: Fixed an issue that could cause the terminal session to crash due to bat preview not falling back to internal preview when a file is not a regular file.
+- **Bat Preview Edge Case**: Fixed an issue that could cause the terminal session to crash when `bat` failed to fall back to the internal preview for non-regular files.
 - **Rename conflict**: Fixed an issue where renaming a file does not check for case-sensitivity, resulting in errors when renaming a file. Example: `test.txt` renamed to `Test.txt`.
-- **File Info Attributes**: Fixed the file attributes / permissions string being ordered wrong on Windows.
-- **Border Style Reset**: Fixed an issue where the border style would reset to `square` for the preview pane.
+- **File Info Attributes**: Fixed an issue where file attributes/permissions strings were ordered incorrectly on Windows.
+- **Border Style Reset**: Fixed an issue where the border style for the preview pane would reset to `square`.
 - **Bat Preview Indentation**: Fixed an issue where `PreviewMethod::Bat` (`method = bat` in the config) ignored indentation of some files.
-To fix this, added an `[display.preview] tab_width = 4` configuration option for `bat`, that sets the indentation tab width.
-This new option does not globally overwrite the indentation of the `bat` preview, but it does for those files that had none at all.
+    - Added `[display.preview] tab_width = 4` to set the indentation width for `bat`. This provides a fallback for files with no defined indentation.
 
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
-- **FileInfo Widget**: Moved customization of the widget form of FileInfo to `[theme.widget]` instead of `[theme.info]` which now holds the `ColorPair` (fg, bg) for each info tag instead.
 - **Editor Configuration**: Changed how `runa` resolves the editor configured in `runa.toml`. It is now possible to use `code` on Windows instead of `code.cmd` for Visual Studio Code although both work.
+- **FileInfo Widget** [BREAKING]: Moved customization of the FileInfo widget to `[theme.widget]`.
+    - **Note**: `[theme.info]` now specifically holds the `ColorPair` (fg, bg) for status line info tags.
+    - **Action Required**: If you have a custom theme, move your previous `[theme.info]` widget settings to `[theme.widget]` to maintain your UI appearance.
 
 ### Internal
 - **Dependency Update**: Updated dependencies via `cargo update`
