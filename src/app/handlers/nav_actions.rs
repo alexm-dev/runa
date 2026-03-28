@@ -13,7 +13,8 @@
 use crate::app::keymap::NavAction;
 use crate::app::state::{AppState, KeypressResult};
 use crate::app::{Clipboard, NavState, Workers};
-use crate::utils::{clean_display_path, expand_home_path_buf, get_home, normalize_relative_path};
+use crate::core::formatter::format_display_path;
+use crate::utils::{clean_display_path, expand_home_path_buf, get_home};
 
 use std::ffi::OsString;
 use std::path::PathBuf;
@@ -228,7 +229,7 @@ impl<'a> AppState<'a> {
         let absolute_dest = match resolved_path.canonicalize() {
             Ok(p) => p,
             Err(e) => {
-                let norm_msg = normalize_relative_path(&resolved_path);
+                let norm_msg = format_display_path(&resolved_path);
                 self.push_overlay_message(
                     format!("Move failed: {}: {}", e, norm_msg),
                     Duration::from_secs(3),
@@ -246,7 +247,7 @@ impl<'a> AppState<'a> {
         }
 
         if let Err(e) = std::fs::read_dir(&absolute_dest) {
-            let norm_msg = normalize_relative_path(&absolute_dest);
+            let norm_msg = format_display_path(&absolute_dest);
             self.push_overlay_message(
                 format!("Move failed: Permission denied in {}: {}", norm_msg, e),
                 Duration::from_secs(3),
@@ -255,7 +256,7 @@ impl<'a> AppState<'a> {
         }
 
         if !absolute_dest.is_dir() {
-            let norm_msg = normalize_relative_path(&absolute_dest);
+            let norm_msg = format_display_path(&absolute_dest);
             self.push_overlay_message(
                 format!("Move failed: not a directory: {}", norm_msg),
                 Duration::from_secs(3),
@@ -271,7 +272,7 @@ impl<'a> AppState<'a> {
                 let msg = if absolute_dest == absolute_src {
                     "Move failed: source and destination are the same".to_string()
                 } else {
-                    let normalized = normalize_relative_path(&absolute_src);
+                    let normalized = format_display_path(&absolute_src);
                     let display_path = clean_display_path(&normalized);
                     format!(
                         "Move failed: cannot move directory into its own sub directory: {}",

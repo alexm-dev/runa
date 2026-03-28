@@ -39,7 +39,8 @@ fn startup_container<'a>(
             break;
         }
 
-        if path.to_string_lossy() == "." || path.to_string_lossy() == "cwd" {
+        let path_str = path.to_string_lossy();
+        if path_str == "." || path_str == "cwd" {
             if let Ok(mut state) = app::AppState::new(config) {
                 state.initialize(workers, None);
                 tabs.push(state);
@@ -48,10 +49,7 @@ fn startup_container<'a>(
             let target = resolve_initial_dir(&path);
 
             if let Err(e) = validate_path(&target) {
-                return Err(io::Error::new(
-                    e.kind(),
-                    format!("{}: '{}'", e, path.to_string_lossy()),
-                ));
+                return Err(io::Error::new(e.kind(), format!("{}: '{}'", e, path_str)));
             }
 
             let mut state = app::AppState::from_dir(config, &target)?;

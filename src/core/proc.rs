@@ -19,7 +19,7 @@
 //! The module also includes [complete_dirs_with_fd] function to enable the move file function to have
 //! auto-completion of paths via fd.
 
-use crate::utils::{flatten_separators, normalize_relative_path, normalize_separators};
+use crate::utils::{flatten_separators, normalize_search_path, normalize_separators};
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -111,7 +111,7 @@ impl FindResult {
 
     pub(crate) fn relative(&self, base: &Path) -> Cow<'_, str> {
         let rel = self.path.strip_prefix(base).unwrap_or(&self.path);
-        normalize_relative_path(rel)
+        normalize_search_path(rel)
     }
 }
 

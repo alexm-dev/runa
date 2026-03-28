@@ -8,10 +8,7 @@
 
 use crate::core::FileEntry;
 use crate::core::file_info::FileType;
-use crate::utils::{
-    clean_display_path, is_regular_file, normalize_relative_path, shorten_home_path,
-    with_lowered_stack,
-};
+use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
@@ -236,9 +233,17 @@ pub(crate) fn format_file_time(modified: Option<SystemTime>) -> String {
 }
 
 pub(crate) fn format_display_path(path: &Path) -> String {
-    let path_short = shorten_home_path(path);
-    let path_norm = normalize_relative_path(Path::new(&path_short));
-    clean_display_path(&path_norm).to_string()
+    let path_str = path.to_string_lossy();
+    let cleaned = clean_display_path(&path_str);
+    let path_short = shorten_home_path(cleaned);
+    #[cfg(windows)]
+    {
+        path_short.replace('/', "\\")
+    }
+    #[cfg(not(windows))]
+    {
+        path_short
+    }
 }
 
 /// Calculating the pane widht and clean the output to the widht of the pane

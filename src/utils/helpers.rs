@@ -205,7 +205,7 @@ pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
 }
 
 /// Normalize a relative path to use forward slashes for consistency across platforms.
-pub(crate) fn normalize_relative_path(path: &Path) -> Cow<'_, str> {
+pub(crate) fn normalize_search_path(path: &Path) -> Cow<'_, str> {
     let rel = path.to_string_lossy();
 
     #[cfg(windows)]
