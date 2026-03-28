@@ -334,10 +334,18 @@ pub(crate) fn is_regular_file(path: &Path) -> bool {
 /// -> runa started at `~`
 pub(crate) fn resolve_initial_dir(path_arg: &Path) -> PathBuf {
     let expaned = expand_home_path_buf(path_arg);
-    if expaned.is_file() {
-        expaned.parent().map(|p| p.to_path_buf()).unwrap_or(expaned)
+
+    let mut normalized = PathBuf::new();
+    for component in expaned.components() {
+        normalized.push(component);
+    }
+    if normalized.is_file() {
+        normalized
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or(normalized)
     } else {
-        expaned
+        normalized
     }
 }
 
