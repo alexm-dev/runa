@@ -737,6 +737,9 @@ pub(crate) struct InfoStatusTheme {
     perms: ColorPair,
     size: ColorPair,
     date: ColorPair,
+    modified: ColorPair,
+    created: ColorPair,
+    accessed: ColorPair,
     file_type: ColorPair,
     #[cfg(unix)]
     owner: ColorPair,
@@ -753,6 +756,9 @@ impl Default for InfoStatusTheme {
             },
             size: ColorPair::default(),
             date: ColorPair::default(),
+            modified: ColorPair::default(),
+            created: ColorPair::default(),
+            accessed: ColorPair::default(),
             file_type: ColorPair::default(),
             #[cfg(unix)]
             owner: ColorPair::default(),
@@ -763,6 +769,12 @@ impl Default for InfoStatusTheme {
 }
 
 impl InfoStatusTheme {
+    fn resolve_date(&self, specific: &ColorPair) -> Style {
+        let defaults = &Theme::internal_defaults().info;
+
+        specific.resolve(&self.date).style_or(&defaults.date)
+    }
+
     pub(crate) fn perms_style(&self) -> Style {
         self.perms.style_or(&Theme::internal_defaults().info.perms)
     }
@@ -771,8 +783,16 @@ impl InfoStatusTheme {
         self.size.style_or(&Theme::internal_defaults().info.size)
     }
 
-    pub(crate) fn date_style(&self) -> Style {
-        self.date.style_or(&Theme::internal_defaults().info.date)
+    pub(crate) fn modified_style(&self) -> Style {
+        self.resolve_date(&self.modified)
+    }
+
+    pub(crate) fn created_style(&self) -> Style {
+        self.resolve_date(&self.created)
+    }
+
+    pub(crate) fn accessed_style(&self) -> Style {
+        self.resolve_date(&self.accessed)
     }
 
     pub(crate) fn file_type_style(&self) -> Style {

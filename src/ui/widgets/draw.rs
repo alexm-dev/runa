@@ -343,17 +343,17 @@ pub(crate) fn draw_status_bar(
                     }
                     StatusTag::Mtime => {
                         if let Some(d) = cached.modified() {
-                            left_spans.push(Span::styled(d, info_theme.date_style()));
+                            left_spans.push(Span::styled(d, info_theme.modified_style()));
                         }
                     }
                     StatusTag::Btime => {
                         if let Some(b) = cached.created() {
-                            left_spans.push(Span::styled(b, info_theme.date_style()));
+                            left_spans.push(Span::styled(b, info_theme.created_style()));
                         }
                     }
                     StatusTag::Atime => {
                         if let Some(a) = cached.accessed() {
-                            left_spans.push(Span::styled(a, info_theme.date_style()));
+                            left_spans.push(Span::styled(a, info_theme.accessed_style()));
                         }
                     }
                     StatusTag::Type => {
