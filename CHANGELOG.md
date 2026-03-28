@@ -25,7 +25,7 @@ All the changes made to runa are documented here.
 ### Changed
 - **Tab Cycle**: Removed the redundant `tab_cycle` keybind, since its basically the same as `tab_next`.
 - **Editor Configuration**: Changed how `runa` resolves the editor configured in `runa.toml`. It is now possible to use `code` on Windows instead of `code.cmd` for Visual Studio Code although both work.
-- **FileInfo Widget** [BREAKING]: Moved customization of the FileInfo widget to `[theme.widget]`.
+- **[BREAKING] FileInfo Widget**: Moved customization of the FileInfo widget to `[theme.widget]`.
     - **Note**: `[theme.info]` now specifically holds the `ColorPair` (fg, bg) for status line info tags.
     - **Action Required**: If you have a custom theme, move your previous `[theme.info]` widget settings to `[theme.widget]` to maintain your UI appearance.
 
