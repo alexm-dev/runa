@@ -43,6 +43,8 @@ pub(crate) struct FileInfo {
     name: OsString,
     size: Option<u64>,
     modified: Option<SystemTime>,
+    created: Option<SystemTime>,
+    accessed: Option<SystemTime>,
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
@@ -87,6 +89,8 @@ impl FileInfo {
                 None
             },
             modified: metadata.modified().ok(),
+            created: metadata.created().ok(),
+            accessed: metadata.accessed().ok(),
             attributes: format_attributes(&metadata),
             file_type,
             #[cfg(unix)]
@@ -101,12 +105,14 @@ pub(crate) struct FileInfoStrings {
     name: Option<String>,
     perms: Option<String>,
     size: Option<String>,
+    modified: Option<String>,
+    created: Option<String>,
+    accessed: Option<String>,
+    file_type: Option<&'static str>,
     #[cfg(unix)]
     owner: Option<Arc<str>>,
     #[cfg(unix)]
     group: Option<Arc<str>>,
-    date: Option<String>,
-    file_type: Option<&'static str>,
 }
 
 impl FileInfoStrings {
@@ -125,6 +131,26 @@ impl FileInfoStrings {
         self.size.as_deref()
     }
 
+    #[inline]
+    pub(crate) fn modified(&self) -> Option<&str> {
+        self.modified.as_deref()
+    }
+
+    #[inline]
+    pub(crate) fn created(&self) -> Option<&str> {
+        self.created.as_deref()
+    }
+
+    #[inline]
+    pub(crate) fn accessed(&self) -> Option<&str> {
+        self.accessed.as_deref()
+    }
+
+    #[inline]
+    pub(crate) fn file_type(&self) -> Option<&'static str> {
+        self.file_type
+    }
+
     #[cfg(unix)]
     #[inline]
     pub(crate) fn owner(&self) -> Option<&str> {
@@ -135,16 +161,6 @@ impl FileInfoStrings {
     #[inline]
     pub(crate) fn group(&self) -> Option<&str> {
         self.group.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn date(&self) -> Option<&str> {
-        self.date.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn file_type(&self) -> Option<&'static str> {
-        self.file_type
     }
 }
 
@@ -161,14 +177,15 @@ impl CachedFileInfo {
             name: Some(info.name.to_string_lossy().into_owned()),
             perms: Some(format!("{:width$}", info.attributes, width = PERMS_WIDTH)),
             size: Some(format_file_size(info.size, is_dir)),
+            modified: Some(format_file_time(info.modified)),
+            created: Some(format_file_time(info.created)),
+            accessed: Some(format_file_time(info.accessed)),
+            file_type: Some(format_file_type(&info.file_type)),
 
             #[cfg(unix)]
             owner: info.owner,
             #[cfg(unix)]
             group: info.group,
-
-            date: Some(format_file_time(info.modified)),
-            file_type: Some(format_file_type(&info.file_type)),
         };
 
         Self { path, strings }

@@ -342,8 +342,18 @@ pub(crate) fn draw_status_bar(
                         }
                     }
                     StatusTag::Mtime => {
-                        if let Some(d) = cached.date() {
+                        if let Some(d) = cached.modified() {
                             left_spans.push(Span::styled(d, info_theme.date_style()));
+                        }
+                    }
+                    StatusTag::Btime => {
+                        if let Some(b) = cached.created() {
+                            left_spans.push(Span::styled(b, info_theme.date_style()));
+                        }
+                    }
+                    StatusTag::Atime => {
+                        if let Some(a) = cached.accessed() {
+                            left_spans.push(Span::styled(a, info_theme.date_style()));
                         }
                     }
                     StatusTag::Type => {
@@ -570,7 +580,7 @@ pub(crate) fn draw_show_info_dialog(
     let position = dialog_position_unified(info_cfg.position(), app, DialogPosition::BottomLeft);
     let border_type = app.config().display().border_shape().as_border_type();
 
-    let mut lines: Vec<Line> = Vec::with_capacity(5);
+    let mut lines: Vec<Line> = Vec::with_capacity(9);
 
     let mut add_line = |label: &str, value: Option<&str>| {
         if let Some(v) = value {
@@ -591,7 +601,13 @@ pub(crate) fn draw_show_info_dialog(
         add_line("Size:", info_strings.size());
     }
     if info_cfg.modified() {
-        add_line("Modified:", info_strings.date());
+        add_line("Modified:", info_strings.modified());
+    }
+    if info_cfg.created() {
+        add_line("Created", info_strings.created());
+    }
+    if info_cfg.accessed() {
+        add_line("Accessed", info_strings.accessed());
     }
     if info_cfg.perms() {
         add_line("Perms:", info_strings.perms());
@@ -601,7 +617,6 @@ pub(crate) fn draw_show_info_dialog(
     if info_cfg.owner() {
         add_line("Owner:", info_strings.owner());
     }
-
     #[cfg(unix)]
     if info_cfg.group() {
         add_line("Group:", info_strings.group());

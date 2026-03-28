@@ -242,6 +242,8 @@ pub(crate) struct ShowInfoOptions {
     file_type: bool,
     size: bool,
     modified: bool,
+    created: bool,
+    accessed: bool,
     perms: bool,
     #[cfg(unix)]
     owner: bool,
@@ -278,6 +280,16 @@ impl ShowInfoOptions {
     #[inline]
     pub(crate) fn modified(&self) -> bool {
         self.modified
+    }
+
+    #[inline]
+    pub(crate) fn created(&self) -> bool {
+        self.created
+    }
+
+    #[inline]
+    pub(crate) fn accessed(&self) -> bool {
+        self.accessed
     }
 
     #[inline]
@@ -325,6 +337,8 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
             file_type: bool,
             size: bool,
             modified: bool,
+            created: bool,
+            accessed: bool,
             perms: bool,
             #[cfg(unix)]
             owner: bool,
@@ -343,6 +357,8 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
                     file_type: def.file_type,
                     size: def.size,
                     modified: def.modified,
+                    created: def.created,
+                    accessed: def.accessed,
                     perms: def.perms,
                     #[cfg(unix)]
                     owner: def.owner,
@@ -362,6 +378,8 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
             file_type: h.file_type,
             size: h.size,
             modified: h.modified,
+            created: h.created,
+            accessed: h.accessed,
             perms: h.perms,
             #[cfg(unix)]
             owner: h.owner,
@@ -386,6 +404,8 @@ impl Default for ShowInfoOptions {
             file_type: false,
             size: true,
             modified: true,
+            created: true,
+            accessed: false,
             perms: true,
             #[cfg(unix)]
             owner: true,
@@ -407,6 +427,8 @@ pub(crate) enum StatusTag {
     Perms,
     Size,
     Mtime,
+    Btime,
+    Atime,
     Type,
     #[cfg(unix)]
     Owner,
@@ -646,7 +668,9 @@ fn parse_status_format(fmt: &str) -> Vec<StatusSegment> {
             let tag = match tag_str {
                 "perms" => Some(StatusTag::Perms),
                 "size" => Some(StatusTag::Size),
-                "mtime" | "date" => Some(StatusTag::Mtime),
+                "mtime" | "modified" => Some(StatusTag::Mtime),
+                "btime" | "created" => Some(StatusTag::Btime),
+                "atime" | "accessed" => Some(StatusTag::Atime),
                 "type" => Some(StatusTag::Type),
                 #[cfg(unix)]
                 "owner" => Some(StatusTag::Owner),
