@@ -17,6 +17,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+#[cfg(unix)]
+use std::sync::Arc;
+
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
 #[cfg(unix)]
@@ -43,9 +46,9 @@ pub(crate) struct FileInfo {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    owner: Option<String>,
+    owner: Option<Arc<str>>,
     #[cfg(unix)]
-    group: Option<String>,
+    group: Option<Arc<str>>,
 }
 
 impl FileInfo {
@@ -99,9 +102,9 @@ pub(crate) struct FileInfoStrings {
     perms: Option<String>,
     size: Option<String>,
     #[cfg(unix)]
-    owner: Option<String>,
+    owner: Option<Arc<str>>,
     #[cfg(unix)]
-    group: Option<String>,
+    group: Option<Arc<str>>,
     date: Option<String>,
     file_type: Option<&'static str>,
 }
@@ -160,9 +163,9 @@ impl CachedFileInfo {
             size: Some(format_file_size(info.size, is_dir)),
 
             #[cfg(unix)]
-            owner: info.owner.map(|o| o.to_string()),
+            owner: info.owner,
             #[cfg(unix)]
-            group: info.group.map(|g| g.to_string()),
+            group: info.group,
 
             date: Some(format_file_time(info.modified)),
             file_type: Some(format_file_type(&info.file_type)),
@@ -185,56 +188,53 @@ impl CachedFileInfo {
 #[cfg(unix)]
 mod unix_info {
     use std::collections::HashMap;
-    use std::sync::{OnceLock, RwLock};
+    use std::sync::{Arc, OnceLock, RwLock};
     use uzers::{get_group_by_gid, get_user_by_uid};
 
-    static USER_CACHE: OnceLock<RwLock<HashMap<u32, String>>> = OnceLock::new();
-    static GROUP_CACHE: OnceLock<RwLock<HashMap<u32, String>>> = OnceLock::new();
+    static USER_CACHE: OnceLock<RwLock<HashMap<u32, Arc<str>>>> = OnceLock::new();
+    static GROUP_CACHE: OnceLock<RwLock<HashMap<u32, Arc<str>>>> = OnceLock::new();
 
-    fn get_user_map() -> &'static RwLock<HashMap<u32, String>> {
-        USER_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
+    fn get_cache(
+        lock: &'static OnceLock<RwLock<HashMap<u32, Arc<str>>>>,
+    ) -> &'static RwLock<HashMap<u32, Arc<str>>> {
+        lock.get_or_init(|| RwLock::new(HashMap::new()))
     }
 
-    fn get_group_map() -> &'static RwLock<HashMap<u32, String>> {
-        GROUP_CACHE.get_or_init(|| RwLock::new(HashMap::new()))
-    }
-
-    pub(super) fn resolve_user(uid: u32) -> String {
-        let cache = get_user_map();
+    fn resolve_id<F>(
+        id: u32,
+        lock: &'static OnceLock<RwLock<HashMap<u32, Arc<str>>>>,
+        f: F,
+    ) -> Arc<str>
+    where
+        F: FnOnce(u32) -> Option<String>,
+    {
+        let cache = get_cache(lock);
 
         if let Ok(map) = cache.read()
-            && let Some(name) = map.get(&uid)
+            && let Some(name) = map.get(&id)
         {
-            return name.clone();
+            return Arc::clone(name);
         }
 
         let mut map = cache.write().unwrap_or_else(|e| e.into_inner());
-        map.entry(uid)
+        map.entry(id)
             .or_insert_with(|| {
-                get_user_by_uid(uid)
-                    .map(|u| u.name().to_string_lossy().into_owned())
-                    .unwrap_or_else(|| uid.to_string())
+                let name = f(id).unwrap_or_else(|| id.to_string());
+                Arc::from(name)
             })
             .clone()
     }
 
-    pub(super) fn resolve_group(gid: u32) -> String {
-        let cache = get_group_map();
+    pub(super) fn resolve_user(uid: u32) -> Arc<str> {
+        resolve_id(uid, &USER_CACHE, |id| {
+            get_user_by_uid(id).map(|u| u.name().to_string_lossy().into_owned())
+        })
+    }
 
-        if let Ok(map) = cache.read()
-            && let Some(name) = map.get(&gid)
-        {
-            return name.clone();
-        }
-
-        let mut map = cache.write().unwrap_or_else(|e| e.into_inner());
-        map.entry(gid)
-            .or_insert_with(|| {
-                get_group_by_gid(gid)
-                    .map(|g| g.name().to_string_lossy().into_owned())
-                    .unwrap_or_else(|| gid.to_string())
-            })
-            .clone()
+    pub(super) fn resolve_group(gid: u32) -> Arc<str> {
+        resolve_id(gid, &GROUP_CACHE, |id| {
+            get_group_by_gid(id).map(|g| g.name().to_string_lossy().into_owned())
+        })
     }
 }
 
