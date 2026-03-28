@@ -4,6 +4,7 @@
 //! configuration file.
 
 use crate::ui::widgets::DialogPosition;
+use chrono::format::{Item, StrftimeItems};
 use ratatui::widgets::BorderType;
 use serde::{Deserialize, Deserializer};
 
@@ -252,6 +253,7 @@ pub(crate) struct ShowInfoOptions {
     position: Option<DialogPosition>,
     status_bar: bool,
     format: Option<String>,
+    date_format: String,
     segments: Vec<StatusSegment>,
 }
 
@@ -320,8 +322,41 @@ impl ShowInfoOptions {
     }
 
     #[inline]
+    pub(crate) fn date_format(&self) -> &str {
+        &self.date_format
+    }
+
+    #[inline]
     pub(crate) fn segments(&self) -> &[StatusSegment] {
         &self.segments
+    }
+
+    fn validate_date_format(fmt: Option<String>) -> String {
+        let default_fmt = "%Y-%m-%d %H:%M".to_string();
+
+        let Some(user_str) = fmt else {
+            return default_fmt;
+        };
+
+        if user_str.is_empty() || user_str.len() > 64 {
+            return default_fmt;
+        }
+
+        let mut has_date_specifier = false;
+
+        for item in StrftimeItems::new(&user_str) {
+            match item {
+                Item::Error => return default_fmt,
+                Item::Space(_) | Item::Literal(_) => continue,
+                _ => has_date_specifier = true,
+            }
+        }
+
+        if has_date_specifier {
+            user_str
+        } else {
+            default_fmt
+        }
     }
 }
 
@@ -347,6 +382,7 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
             position: Option<DialogPosition>,
             status_bar: bool,
             format: Option<String>,
+            date_format: Option<String>,
         }
 
         impl Default for Helper {
@@ -367,6 +403,7 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
                     position: def.position,
                     status_bar: def.status_bar,
                     format: def.format,
+                    date_format: Some(def.date_format),
                 }
             }
         }
@@ -388,6 +425,7 @@ impl<'de> Deserialize<'de> for ShowInfoOptions {
             position: h.position,
             status_bar: h.status_bar,
             format: h.format,
+            date_format: ShowInfoOptions::validate_date_format(h.date_format),
             segments: Vec::new(),
         };
 
@@ -414,6 +452,7 @@ impl Default for ShowInfoOptions {
             position: None,
             status_bar: true,
             format: Some("{perms} | {size}".to_string()),
+            date_format: "%Y-%m-%d %H:%M".to_string(),
             segments: Vec::new(),
         };
 

@@ -558,7 +558,8 @@ impl<'a> AppState<'a> {
 
         let path = self.nav.current_dir().join(entry.name());
         if let Ok(info) = FileInfo::get_file_info(&path) {
-            self.selected_info = Some(Arc::new(CachedFileInfo::new(path, info)));
+            let date_format = self.config.display().info().date_format();
+            self.selected_info = Some(Arc::new(CachedFileInfo::new(path, info, date_format)));
         } else {
             self.selected_info = None;
         }

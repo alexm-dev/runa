@@ -170,16 +170,16 @@ pub(crate) struct CachedFileInfo {
 }
 
 impl CachedFileInfo {
-    pub(crate) fn new(path: PathBuf, info: FileInfo) -> Self {
+    pub(crate) fn new(path: PathBuf, info: FileInfo, time_format: &str) -> Self {
         let is_dir = info.file_type == FileType::Directory;
 
         let strings = FileInfoStrings {
             name: Some(info.name.to_string_lossy().into_owned()),
             perms: Some(format!("{:width$}", info.attributes, width = PERMS_WIDTH)),
             size: Some(format_file_size(info.size, is_dir)),
-            modified: Some(format_file_time(info.modified)),
-            created: Some(format_file_time(info.created)),
-            accessed: Some(format_file_time(info.accessed)),
+            modified: Some(format_file_time(info.modified, time_format)),
+            created: Some(format_file_time(info.created, time_format)),
+            accessed: Some(format_file_time(info.accessed, time_format)),
             file_type: Some(format_file_type(&info.file_type)),
 
             #[cfg(unix)]

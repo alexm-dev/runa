@@ -223,12 +223,17 @@ pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
 }
 
 /// Formats the file modification time into a human-readable string.
-pub(crate) fn format_file_time(time: Option<SystemTime>) -> String {
+pub(crate) fn format_file_time(time: Option<SystemTime>, format: &str) -> String {
     let Some(t) = time else {
         return "-".to_string();
     };
     let dt: DateTime<Local> = DateTime::from(t);
-    dt.format("%Y-%m-%d %H:%M").to_string()
+
+    let formatted = dt.format(format).to_string();
+    if formatted.is_empty() {
+        return dt.format("%Y-%m-%d %H:%M").to_string();
+    }
+    formatted
 }
 
 pub(crate) fn format_display_path(path: &Path) -> String {
