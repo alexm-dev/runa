@@ -261,6 +261,8 @@ impl WorkerResponse {
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
 fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
+        #[cfg(unix)]
+        let mut id_cache = crate::core::file_info::unix_info::IndentyCache::new();
         while let Ok(task) = task_rx.recv() {
             match task {
                 WorkerTask::LoadDirectory {
@@ -308,9 +310,31 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     time_format,
                 } => match FileInfo::get_file_info(&path, None) {
                     Ok(info) => {
-                        let cached = Arc::new(CachedFileInfo::new(path, info, &time_format));
+                        #[cfg(unix)]
+                        let mut cached = CachedFileInfo::new(path, info, &time_format);
+                        #[cfg(not(unix))]
+                        let cached = CachedFileInfo::new(path, info, &time_format);
+
+                        #[cfg(unix)]
+                        {
+                            if let Some(uid) = cached.owner_uid {
+                                let name = id_cache.resolve_user(uid);
+                                // get_mut() on a Mutex we own is safe and fast
+                                if let Ok(mut guard) = cached.owner_name.get_mut() {
+                                    *guard = Some(name);
+                                }
+                            }
+                            if let Some(gid) = cached.group_gid {
+                                let name = id_cache.resolve_group(gid);
+                                if let Ok(mut guard) = cached.group_name.get_mut() {
+                                    *guard = Some(name);
+                                }
+                            }
+                        }
+
+                        // Send the Arc-wrapped version
                         let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
-                            info: cached,
+                            info: Arc::new(cached),
                             request_id,
                         });
                     }

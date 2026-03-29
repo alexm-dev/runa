@@ -258,6 +258,50 @@ impl CachedFileInfo {
     }
 }
 
+#[cfg(unix)]
+mod unix_info {
+    use std::collections::HashMap;
+    use std::sync::Arc;
+
+    pub(crate) struct IdentityCache {
+        users: HashMap<u32, Arc<str>>,
+        groups: HashMap<u32, Arc<str>>,
+    }
+
+    impl IdentityCache {
+        pub fn new() -> Self {
+            Self {
+                users: HashMap::with_capacity(32),
+                groups: HashMap::with_capacity(32),
+            }
+        }
+
+        pub fn resolve_user(&mut self, uid: u32) -> Arc<str> {
+            if let Some(name) = self.users.get(&uid) {
+                return Arc::clone(name);
+            }
+            let name: Arc<str> = uzers::get_user_by_uid(uid)
+                .map(|u| u.name().to_string_lossy().into())
+                .unwrap_or_else(|| uid.to_string().into());
+
+            self.users.insert(uid, Arc::clone(&name));
+            name
+        }
+
+        pub fn resolve_group(&mut self, gid: u32) -> Arc<str> {
+            if let Some(name) = self.groups.get(&gid) {
+                return Arc::clone(name);
+            }
+            let name: Arc<str> = uzers::get_group_by_gid(gid)
+                .map(|g| g.name().to_string_lossy().into())
+                .unwrap_or_else(|| gid.to_string().into());
+
+            self.groups.insert(gid, Arc::clone(&name));
+            name
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
