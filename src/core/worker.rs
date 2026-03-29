@@ -633,21 +633,21 @@ fn start_fileop_worker(
 fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         #[cfg(unix)]
-        let mut id_cache = crate::core::file_info::unix_info::IdentityCache::new();
+        let mut cache = crate::core::file_info::unix_info::UserGroupCache::new();
         while let Ok(task) = task_rx.recv() {
             if let WorkerTask::GetFileInfo { path, request_id } = task {
                 match FileInfo::get_file_info(&path, None) {
                     Ok(info) => {
                         #[cfg(unix)]
-                        let mut cached = CachedFileInfo::new(path, info);
+                        let mut file_info = CachedFileInfo::new(path, info);
                         #[cfg(not(unix))]
-                        let cached = CachedFileInfo::new(path, info);
+                        let file_info = CachedFileInfo::new(path, info);
 
                         #[cfg(unix)]
-                        cached.prepare_unix_names(&mut id_cache);
+                        info.prepare_unix_names(&mut cache);
 
                         let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
-                            info: Arc::new(cached),
+                            info: Arc::new(file_info),
                             request_id,
                         });
                     }

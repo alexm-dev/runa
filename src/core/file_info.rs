@@ -11,6 +11,7 @@
 use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
+
 use std::ffi::OsString;
 use std::fs::{self, symlink_metadata};
 use std::io;
@@ -18,9 +19,10 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 #[cfg(unix)]
-use std::sync::Arc;
-#[cfg(unix)]
-use std::sync::OnceLock;
+use {
+    crate::core::file_info::unix_info::UserGroupCache,
+    std::sync::{Arc, OnceLock},
+};
 
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
@@ -139,16 +141,15 @@ impl CachedFileInfo {
             attributes: info.attributes,
             file_type: info.file_type,
             #[cfg(unix)]
-            unix_meta: info.owner_uid.and_then(|uid| {
-                info.group_gid.map(|gid| {
-                    Box::new(UnixMetadata {
-                        uid,
-                        gid,
-                        owner_name: OnceLock::new(),
-                        group_name: OnceLock::new(),
-                    })
-                })
-            }),
+            unix_meta: match (info.owner_uid, info.group_gid) {
+                (Some(uid), Some(gid)) => Some(Box::new(UnixMetadata {
+                    uid,
+                    gid,
+                    owner_name: OnceLock::new(),
+                    group_name: OnceLock::new(),
+                })),
+                _ => None,
+            },
         }
     }
 
@@ -198,37 +199,28 @@ impl CachedFileInfo {
     #[cfg(unix)]
     pub(crate) fn owner(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
-
-        let name_opt = meta.owner_name.get_or_init(|| {
-            uzers::get_user_by_uid(meta.uid)
-                .map(|u| u.name().to_string_lossy().into())
-                .or_else(|| Some(meta.uid.to_string().into()))
-        });
-
-        name_opt.as_ref().map(Arc::clone)
+        let name = meta
+            .owner_name
+            .get_or_init(|| Some(UserGroupCache::fetch_user(meta.uid)));
+        name.as_ref().map(Arc::clone)
     }
 
     #[cfg(unix)]
     pub(crate) fn group(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
 
-        let name_opt = meta.group_name.get_or_init(|| {
-            uzers::get_group_by_gid(meta.gid)
-                .map(|g| g.name().to_string_lossy().into())
-                .or_else(|| Some(meta.gid.to_string().into()))
-        });
+        let name = meta
+            .group_name
+            .get_or_init(|| Some(UserGroupCache::fetch_group(meta.gid)));
 
-        name_opt.as_ref().map(Arc::clone)
+        name.as_ref().map(Arc::clone)
     }
 
     #[cfg(unix)]
-    pub(crate) fn prepare_unix_names(
-        &mut self,
-        id_cache: &mut crate::core::file_info::unix_info::IdentityCache,
-    ) {
+    pub(crate) fn prepare_unix_names(&mut self, cache: &mut UserGroupCache) {
         if let Some(meta) = self.unix_meta.as_mut() {
-            let owner = id_cache.resolve_user(meta.uid);
-            let group = id_cache.resolve_group(meta.gid);
+            let owner = cache.resolve_user(meta.uid);
+            let group = cache.resolve_group(meta.gid);
 
             meta.owner_name = OnceLock::from(Some(owner));
             meta.group_name = OnceLock::from(Some(group));
@@ -241,12 +233,12 @@ pub(crate) mod unix_info {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    pub(crate) struct IdentityCache {
+    pub(crate) struct UserGroupCache {
         users: HashMap<u32, Arc<str>>,
         groups: HashMap<u32, Arc<str>>,
     }
 
-    impl IdentityCache {
+    impl UserGroupCache {
         pub(crate) fn new() -> Self {
             Self {
                 users: HashMap::with_capacity(32),
@@ -254,28 +246,30 @@ pub(crate) mod unix_info {
             }
         }
 
-        pub(crate) fn resolve_user(&mut self, uid: u32) -> Arc<str> {
-            if let Some(name) = self.users.get(&uid) {
-                return Arc::clone(name);
-            }
-            let name: Arc<str> = uzers::get_user_by_uid(uid)
+        pub(crate) fn fetch_user(uid: u32) -> Arc<str> {
+            uzers::get_user_by_uid(uid)
                 .map(|u| u.name().to_string_lossy().into())
-                .unwrap_or_else(|| uid.to_string().into());
+                .unwrap_or_else(|| uid.to_string().into())
+        }
 
-            self.users.insert(uid, Arc::clone(&name));
-            name
+        pub(crate) fn fetch_group(gid: u32) -> Arc<str> {
+            uzers::get_group_by_gid(gid)
+                .map(|g| g.name().to_string_lossy().into())
+                .unwrap_or_else(|| gid.to_string().into())
+        }
+
+        pub(crate) fn resolve_user(&mut self, uid: u32) -> Arc<str> {
+            self.users
+                .entry(uid)
+                .or_insert_with(|| Self::fetch_user(uid))
+                .clone()
         }
 
         pub(crate) fn resolve_group(&mut self, gid: u32) -> Arc<str> {
-            if let Some(name) = self.groups.get(&gid) {
-                return Arc::clone(name);
-            }
-            let name: Arc<str> = uzers::get_group_by_gid(gid)
-                .map(|g| g.name().to_string_lossy().into())
-                .unwrap_or_else(|| gid.to_string().into());
-
-            self.groups.insert(gid, Arc::clone(&name));
-            name
+            self.groups
+                .entry(gid)
+                .or_insert_with(|| Self::fetch_group(gid))
+                .clone()
         }
     }
 }
