@@ -4,16 +4,18 @@ All the changes made to runa are documented here.
 
 ## [0.9.2] - UNRELEASED
 
+#### Performance improvement patch. Improves efficiency of file information for the status line and the widget.
+
 ### Changed
 - **File Info**: Added a new `GetFileInfo` worker task to handle all relevant `file_info` calls in a `bounded(1)` thread.
 - **InfoState**: Added a new `info.rs` module to hold the file information state and handle worker response synchronization.
 
 ### Internal
-- **Tests**: Added new tests to `file_info.rs` to test metadata retrival and formatting of the `FileInfo` struct.
+- **Tests**: Added new tests to `file_info.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
-    - Owner/Group File information: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
-    - File information String: Removed `FileInfoStrings` to not store precomputed and formatted strings and instead rely on lazy computation. (eager vs lazy)
-    - Selected Indeces Cache: Added `selected_indeces` to store the the indeces of a FileEntry in a vector instead of recalculating resulting in navigation changes being now more performant.
+    - **File Info**: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
+    - **File Info Formatting**: Removed `FileInfoStrings` to not store precomputed and formatted strings and instead rely on lazy computation. (eager vs lazy)
+    - **Selected Indices Cache**: Added `selected_indeces` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
 
 ---
