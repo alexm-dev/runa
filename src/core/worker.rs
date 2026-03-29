@@ -14,7 +14,7 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use crate::config::display::PreviewMethod;
-use crate::core::file_info::FileInfo;
+use crate::core::file_info::{FileInfo, unix_info::UserGroupCache};
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
@@ -22,9 +22,6 @@ use crate::utils::{
     copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
     rename_with_fallback,
 };
-
-#[cfg(unix)]
-use crate::core::file_info::unix_info::UserGroupCache;
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -637,15 +634,12 @@ fn start_fileop_worker(
 /// Starts the file information worker thread.
 fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
-        #[cfg(unix)]
         let mut cache = UserGroupCache::new();
         while let Ok(task) = task_rx.recv() {
             if let WorkerTask::GetFileInfo { path, request_id } = task {
                 match FileInfo::new(path, None) {
                     Ok(info) => {
-                        #[cfg(unix)]
-                        info.prepare_unix_names(&mut cache);
-
+                        let info = info.with_unix_metadata(&mut cache);
                         let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
                             info: Arc::new(info),
                             request_id,
