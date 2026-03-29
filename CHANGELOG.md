@@ -14,7 +14,7 @@ All the changes made to runa are documented here.
 - **Tests**: Added new tests to `file_info.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
     - **File Info**: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
-    - **File Info Formatting**: Removed `FileInfoStrings` to not store precomputed and formatted strings and instead rely on lazy computation. (eager vs lazy)
+    - **File Info Formatting**: Removed `FileInfoStrings` to not store pre-computed and formatted strings and instead rely on lazy computation. (eager vs lazy)
     - **Selected Indices Cache**: Added `selected_indeces` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
 
