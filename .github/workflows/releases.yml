@@ -123,11 +123,6 @@ jobs:
           mkdir dist -ErrorAction SilentlyContinue
           Copy-Item $binPath "dist\$binName" -Force
 
-      - name: Attest binary
-        uses: actions/attest@v4
-        with:
-          subject-path: dist/rn*
-
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
@@ -186,19 +181,20 @@ jobs:
           sha256sum runa-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - name: Attest archives and SHA256SUMS.txt
+      - name: Attest Files
         uses: actions/attest@v4
         with:
           subject-path: |
             dist/runa-*.tar.gz
             dist/runa-*.zip
             dist/SHA256SUMS.txt
+            artifacts/bin-*/runa-*/rn*
 
-      - name: Dry Run - Upload Final Assets
+      - name: Inspect Final Dist Folder
         uses: actions/upload-artifact@v4
         with:
-          name: final-release-dry-run
-          path: dist/*
+          name: final-release-package-check
+          path: dist/
 
       # - name: Extract changelog section
       #   id: extract_changelog
