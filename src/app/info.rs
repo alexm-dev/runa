@@ -8,6 +8,9 @@
 
 use crate::core::file_info::FileInfo;
 
+#[cfg(unix)]
+use {crate::core::file_info::unix_info::UserGroupCache, std::cell::RefCell};
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -18,6 +21,8 @@ pub(crate) struct InfoState {
     pending: Option<(u64, PathBuf)>,
     selected_info: Option<Arc<FileInfo>>,
     last_request_time: Instant,
+    #[cfg(unix)]
+    cache: RefCell<UserGroupCache>,
 }
 
 impl InfoState {
@@ -27,7 +32,19 @@ impl InfoState {
             pending: None,
             selected_info: None,
             last_request_time: Instant::now() - Duration::from_secs(1),
+            #[cfg(unix)]
+            cache: RefCell::new(UserGroupCache::new()),
         }
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn resolve_owner(&self, info: &FileInfo) -> Option<Arc<str>> {
+        Some(self.cache.borrow_mut().resolve_user(info.uid()))
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn resolve_group(&self, info: &FileInfo) -> Option<Arc<str>> {
+        Some(self.cache.borrow_mut().resolve_group(info.gid()))
     }
 
     pub(crate) fn prepare_new_request(&mut self) -> u64 {

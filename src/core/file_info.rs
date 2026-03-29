@@ -17,11 +17,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
-use crate::core::file_info::unix_info::UserGroupCache;
-
-#[cfg(unix)]
-use std::sync::{Arc, OnceLock};
-
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
 #[cfg(unix)]
@@ -81,8 +76,6 @@ impl FileInfo {
             Some(Box::new(UnixMetadata {
                 uid: metadata.uid(),
                 gid: metadata.gid(),
-                owner_name: OnceLock::new(),
-                group_name: OnceLock::new(),
             }))
         };
 
@@ -147,63 +140,21 @@ impl FileInfo {
     }
 
     #[cfg(unix)]
-    pub(crate) fn owner(&self) -> Option<Arc<str>> {
-        let meta = self.unix_meta.as_ref()?;
-        let name = meta
-            .owner_name
-            .get_or_init(|| Some(UserGroupCache::fetch_user(meta.uid)));
-        name.as_ref().map(Arc::clone)
+    pub(crate) fn uid(&self) -> u32 {
+        self.unix_meta.as_ref().map(|m| m.uid).unwrap_or(0)
     }
 
     #[cfg(unix)]
-    pub(crate) fn group(&self) -> Option<Arc<str>> {
-        let meta = self.unix_meta.as_ref()?;
-        let name = meta
-            .group_name
-            .get_or_init(|| Some(UserGroupCache::fetch_group(meta.gid)));
-
-        name.as_ref().map(Arc::clone)
-    }
-
-    #[cfg(unix)]
-    pub(crate) fn prepare_unix_names(&mut self, cache: &mut UserGroupCache) {
-        if let Some(meta) = self.unix_meta.as_mut() {
-            let owner = cache.resolve_user(meta.uid);
-            let group = cache.resolve_group(meta.gid);
-
-            meta.owner_name = OnceLock::from(Some(owner));
-            meta.group_name = OnceLock::from(Some(group));
-        }
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn with_unix_metadata(mut self, cache: &mut UserGroupCache) -> Self {
-        self.prepare_unix_names(cache);
-        self
-    }
-
-    #[cfg(not(unix))]
-    #[inline]
-    pub(crate) fn with_unix_metadata(self, _cache: &mut UserGroupCache) -> Self {
-        self
+    pub(crate) fn gid(&self) -> u32 {
+        self.unix_meta.as_ref().map(|m| m.gid).unwrap_or(0)
     }
 }
 
 #[cfg(unix)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct UnixMetadata {
     pub(crate) uid: u32,
     pub(crate) gid: u32,
-    pub(crate) owner_name: OnceLock<Option<Arc<str>>>,
-    pub(crate) group_name: OnceLock<Option<Arc<str>>>,
-}
-
-#[cfg(unix)]
-impl PartialEq for UnixMetadata {
-    fn eq(&self, other: &Self) -> bool {
-        self.uid == other.uid && self.gid == other.gid
-    }
 }
 
 #[cfg(unix)]
@@ -211,6 +162,7 @@ pub(crate) mod unix_info {
     use std::collections::HashMap;
     use std::sync::Arc;
 
+    #[derive(Debug, Clone)]
     pub(crate) struct UserGroupCache {
         users: HashMap<u32, Arc<str>>,
         groups: HashMap<u32, Arc<str>>,
@@ -219,8 +171,8 @@ pub(crate) mod unix_info {
     impl UserGroupCache {
         pub(crate) fn new() -> Self {
             Self {
-                users: HashMap::with_capacity(32),
-                groups: HashMap::with_capacity(32),
+                users: HashMap::new(),
+                groups: HashMap::new(),
             }
         }
 
@@ -248,17 +200,6 @@ pub(crate) mod unix_info {
                 .entry(gid)
                 .or_insert_with(|| Self::fetch_group(gid))
                 .clone()
-        }
-    }
-}
-
-/// ZST form of UserGroupCache for non unix
-#[cfg(not(unix))]
-pub(crate) mod unix_info {
-    pub(crate) struct UserGroupCache;
-    impl UserGroupCache {
-        pub(crate) fn new() -> Self {
-            Self
         }
     }
 }

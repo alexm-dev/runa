@@ -357,13 +357,13 @@ pub(crate) fn draw_status_bar(
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
-                        if let Some(o) = info.owner() {
+                        if let Some(o) = app.info().resolve_owner(info) {
                             left_spans.push(Span::styled(o.to_string(), info_theme.owner_style()));
                         }
                     }
                     #[cfg(unix)]
                     StatusTag::Group => {
-                        if let Some(g) = info.group() {
+                        if let Some(g) = app.info().resolve_group(info) {
                             left_spans.push(Span::styled(g.to_string(), info_theme.group_style()));
                         }
                     }
@@ -610,14 +610,15 @@ pub(crate) fn draw_show_info_dialog(
     #[cfg(unix)]
     {
         if info_cfg.owner()
-            && let Some(o) = info_cache.owner()
+            && let Some(o) = app.info().resolve_owner(info_cache)
         {
-            add_line("Owner:", Cow::Borrowed(&o));
+            add_line("Owner:", Cow::Owned(o.to_string()));
         }
+
         if info_cfg.group()
-            && let Some(g) = info_cache.group()
+            && let Some(g) = app.info().resolve_group(info_cache)
         {
-            add_line("Group:", Cow::Borrowed(&g));
+            add_line("Group:", Cow::Owned(g.to_string()));
         }
     }
 

@@ -174,6 +174,11 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
+    pub(crate) fn info(&self) -> &InfoState {
+        &self.info
+    }
+
+    #[inline]
     pub(crate) fn is_loading(&self) -> bool {
         self.is_loading
     }
@@ -238,7 +243,8 @@ impl<'a> AppState<'a> {
     }
 
     pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
-        if !self.info.can_request(25) {
+        const FILE_INFO_DEBOUNCE: u64 = 25;
+        if !self.info.can_request(FILE_INFO_DEBOUNCE) {
             return;
         }
 
@@ -246,7 +252,6 @@ impl<'a> AppState<'a> {
         let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if !status_info && !info_overlay {
-            self.info.clear();
             return;
         }
 
