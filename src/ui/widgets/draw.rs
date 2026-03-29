@@ -615,11 +615,11 @@ pub(crate) fn draw_show_info_dialog(
 
     #[cfg(unix)]
     if info_cfg.owner() {
-        add_line("Owner:", info_strings.owner());
+        add_line("Owner:", info_cache.owner_name());
     }
     #[cfg(unix)]
     if info_cfg.group() {
-        add_line("Group:", info_strings.group());
+        add_line("Group:", info_cache.group_name());
     }
 
     if lines.is_empty() {

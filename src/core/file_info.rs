@@ -49,6 +49,10 @@ pub(crate) struct FileInfo {
     accessed: Option<SystemTime>,
     attributes: String,
     file_type: FileType,
+    #[cfg(unix)]
+    owner_uid: Option<u32>,
+    #[cfg(unix)]
+    group_gid: Option<u32>,
 }
 
 impl FileInfo {
@@ -102,80 +106,6 @@ impl FileInfo {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct FileInfoStrings {
-    name: Option<String>,
-    perms: Option<String>,
-    size: Option<String>,
-    modified: Option<String>,
-    created: Option<String>,
-    accessed: Option<String>,
-    file_type: Option<&'static str>,
-    #[cfg(unix)]
-    owner: Option<Arc<str>>,
-    #[cfg(unix)]
-    group: Option<Arc<str>>,
-}
-
-impl FileInfoStrings {
-    #[inline]
-    pub(crate) fn name(&self) -> Option<&str> {
-        self.name.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn perms(&self) -> Option<&str> {
-        self.perms.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn size(&self) -> Option<&str> {
-        self.size.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn modified(&self) -> Option<&str> {
-        self.modified.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn created(&self) -> Option<&str> {
-        self.created.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn accessed(&self) -> Option<&str> {
-        self.accessed.as_deref()
-    }
-
-    #[inline]
-    pub(crate) fn file_type(&self) -> Option<&'static str> {
-        self.file_type
-    }
-
-    #[cfg(unix)]
-    fn get_unix_sync_str<F>(&self, selector: F) -> Option<Arc<str>>
-    where
-        F: FnOnce(&UnixMetadata) -> &Mutex<Option<Arc<str>>>,
-    {
-        let meta = self.unix_meta.as_ref()?;
-        let mutex = selector(meta);
-        mutex.lock().ok()?.as_ref().map(Arc::clone)
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn owner_name(&self) -> Option<Arc<str>> {
-        self.get_unix_sync_str(|m| &m.owner_name)
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn group_name(&self) -> Option<Arc<str>> {
-        self.get_unix_sync_str(|m| &m.group_name)
-    }
-}
-
 #[cfg(unix)]
 #[derive(Debug)]
 pub(crate) struct UnixMetadata {
@@ -187,58 +117,78 @@ pub(crate) struct UnixMetadata {
 
 #[derive(Debug)]
 pub(crate) struct CachedFileInfo {
-    pub(crate) path: PathBuf,
-    pub(crate) strings: FileInfoStrings,
+    path: PathBuf,
+    size: Option<u64>,
+    modified: Option<SystemTime>,
+    created: Option<SystemTime>,
+    accessed: Option<SystemTime>,
+    attributes: String,
+    file_type: FileType,
     #[cfg(unix)]
-    pub(crate) unix_meta: Option<Box<UnixMetadata>>,
+    unix_meta: Option<Box<UnixMetadata>>,
 }
 
 impl CachedFileInfo {
-    pub(crate) fn new(path: PathBuf, info: FileInfo, time_format: &str) -> Self {
-        let is_dir = info.file_type == FileType::Directory;
-
-        let strings = FileInfoStrings {
-            name: Some(info.name.to_string_lossy().into_owned()),
-            perms: Some(format!("{:width$}", info.attributes, width = PERMS_WIDTH)),
-            size: Some(format_file_size(info.size, is_dir)),
-            modified: Some(format_file_time(info.modified, time_format)),
-            created: Some(format_file_time(info.created, time_format)),
-            accessed: Some(format_file_time(info.accessed, time_format)),
-            file_type: Some(format_file_type(&info.file_type)),
-            #[cfg(unix)]
-            owner: None,
-            #[cfg(unix)]
-            group: None,
-        };
-
-        #[cfg(unix)]
-        let unix_meta = info.owner_uid.and_then(|uid| {
-            info.group_gid.map(|gid| {
-                Box::new(UnixMetadata {
-                    uid,
-                    gid,
-                    owner_name: Mutex::new(None),
-                    group_name: Mutex::new(None),
-                })
-            })
-        });
-
+    pub(crate) fn new(path: PathBuf, info: FileInfo) -> Self {
         Self {
             path,
-            strings,
+            size: info.size,
+            modified: info.modified,
+            created: info.created,
+            accessed: info.accessed,
+            attributes: info.attributes,
+            file_type: info.file_type,
             #[cfg(unix)]
-            unix_meta,
+            unix_meta: info.owner_uid.and_then(|uid| {
+                info.group_gid.map(|gid| {
+                    Box::new(UnixMetadata {
+                        uid,
+                        gid,
+                        owner: Mutex::new(None),
+                        group: Mutex::new(None),
+                    })
+                })
+            }),
         }
     }
 
     #[inline]
-    pub(crate) fn path(&self) -> &Path {
-        &self.path
+    pub(crate) fn name(&self) -> &str {
+        self.path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or_default()
     }
 
     #[inline]
-    pub(crate) fn strings(&self) -> &FileInfoStrings {
-        &self.strings
+    pub(crate) fn perms(&self) -> String {
+        format!("{:width$}", self.attributes, width = PERMS_WIDTH)
+    }
+
+    #[inline]
+    pub(crate) fn size(&self) -> String {
+        format_file_size(self.size, self.file_type == FileType::Directory)
+    }
+
+    #[inline]
+    pub(crate) fn modified(&self, fmt: &str) -> String {
+        format_file_time(self.modified, fmt)
+    }
+
+    #[inline]
+    pub(crate) fn file_type(&self) -> &'static str {
+        format_file_type(&self.file_type)
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn owner(&self) -> Option<Arc<str>> {
+        // We use your existing resolution logic directly
+        self.resolved_owner_name()
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn group(&self) -> Option<Arc<str>> {
+        self.resolved_group_name()
     }
 
     #[cfg(unix)]
