@@ -190,6 +190,12 @@ jobs:
           sha256sum runa-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      - name: Dry Run - Upload Final Assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: final-release-dry-run
+          path: dist/*
+
       # - name: Extract changelog section
       #   id: extract_changelog
       #   shell: bash
