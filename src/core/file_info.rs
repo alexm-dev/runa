@@ -196,17 +196,6 @@ impl CachedFileInfo {
     }
 
     #[cfg(unix)]
-    pub(crate) fn owner(&self) -> Option<Arc<str>> {
-        // We use your existing resolution logic directly
-        self.resolved_owner_name()
-    }
-
-    #[cfg(unix)]
-    pub(crate) fn group(&self) -> Option<Arc<str>> {
-        self.resolved_group_name()
-    }
-
-    #[cfg(unix)]
     fn resolve_unix_name<T, F>(
         &self,
         id: T,
@@ -235,7 +224,7 @@ impl CachedFileInfo {
     }
 
     #[cfg(unix)]
-    pub(crate) fn resolved_owner_name(&self) -> Option<Arc<str>> {
+    pub(crate) fn owner(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
         self.resolve_unix_name(meta.uid, &meta.owner_name, |id| {
             uzers::get_user_by_uid(id).map(|u| u.name().to_os_string())
@@ -243,7 +232,7 @@ impl CachedFileInfo {
     }
 
     #[cfg(unix)]
-    pub(crate) fn resolved_group_name(&self) -> Option<Arc<str>> {
+    pub(crate) fn group(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
         self.resolve_unix_name(meta.gid, &meta.group_name, |id| {
             uzers::get_group_by_gid(id).map(|g| g.name().to_os_string())
