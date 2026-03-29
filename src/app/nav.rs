@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 pub(crate) struct NavState {
     current_dir: PathBuf,
     entries: Vec<FileEntry>,
+    shown_indices: Vec<usize>,
     selected: usize,
     positions: HashMap<PathBuf, usize>,
     markers: HashSet<PathBuf>,
@@ -29,6 +30,7 @@ impl NavState {
         Self {
             current_dir: path,
             entries: Vec::new(),
+            shown_indices: Vec::new(),
             selected: 0,
             positions: HashMap::new(),
             markers: HashSet::new(),
@@ -86,8 +88,8 @@ impl NavState {
     }
 
     pub(crate) fn last_selected(&mut self) {
-        if !self.entries.is_empty() {
-            self.selected = self.entries.len().saturating_sub(1);
+        if !self.shown_indices.is_empty() {
+            self.selected = self.shown_indices.len().saturating_sub(1);
         }
     }
 
@@ -141,9 +143,11 @@ impl NavState {
 
     /// Saves the current selection position for the current directory.
     pub(crate) fn save_position(&mut self) {
-        if !self.entries.is_empty() {
-            self.positions
-                .insert(self.current_dir.clone(), self.selected);
+        if !self.entries.is_empty()
+            && !self.shown_indices.is_empty()
+            && let Some(&abs_idx) = self.shown_indices.get(self.selected)
+        {
+            self.positions.insert(self.current_dir.clone(), abs_idx);
         }
     }
 
@@ -175,30 +179,29 @@ impl NavState {
         self.entries = entries;
 
         self.restore_filter_for_current_dir();
+        self.rebuild_shown_cache();
 
-        if let Some(f) = focus {
-            self.selected = self.entries.iter().position(|e| e.name() == f).unwrap_or(0);
+        if self.entries.is_empty() || self.shown_indices.is_empty() {
+            self.selected = 0;
+            return;
+        }
+
+        let mut target_abs_idx = if let Some(f) = focus {
+            self.entries
+                .iter()
+                .position(|e| e.name() == f.as_os_str())
+                .unwrap_or(0)
         } else {
-            self.selected = self.positions.get(&self.current_dir).cloned().unwrap_or(0);
-        }
+            self.positions.get(&self.current_dir).cloned().unwrap_or(0)
+        };
 
-        self.selected = self.selected.min(self.entries.len().saturating_sub(1));
+        target_abs_idx = target_abs_idx.min(self.entries.len().saturating_sub(1));
 
-        if !self.filter.is_empty() && !self.entries.is_empty() {
-            let selected_entry_name = self
-                .entries
-                .get(self.selected)
-                .map(|e| e.name().to_os_string());
-            if let Some(name) = selected_entry_name {
-                let filtered_idx = self
-                    .shown_entries()
-                    .position(|e| e.name() == name.as_os_str())
-                    .unwrap_or(0);
-                self.selected = filtered_idx
-            } else {
-                self.selected = 0;
-            }
-        }
+        self.selected = self
+            .shown_indices
+            .iter()
+            .position(|&i| i == target_abs_idx)
+            .unwrap_or(0);
     }
 
     /// Toggles the marker state of the currently selected entry.
@@ -233,11 +236,11 @@ impl NavState {
         }
 
         if self.selected == count - 1 {
-            if jump && count > 1 {
+            if jump {
                 self.selected = 0;
             }
         } else {
-            self.selected = self.selected.wrapping_add(1)
+            self.selected += 1;
         }
     }
 
@@ -260,36 +263,21 @@ impl NavState {
 
     /// Returns an iterator over the entries that match the current filter.
     /// If the filter is empty, returns all entries.
-    pub(crate) fn shown_entries(&self) -> Box<dyn Iterator<Item = &FileEntry> + '_> {
-        if self.filter.is_empty() {
-            Box::new(self.entries.iter())
-        } else {
-            let filter_lower = self.filter.to_lowercase();
-
-            Box::new(
-                self.entries
-                    .iter()
-                    .filter(move |e| e.name_str().to_lowercase().contains(&filter_lower)),
-            )
-        }
+    pub(crate) fn shown_entries(&self) -> impl Iterator<Item = &FileEntry> {
+        self.shown_indices
+            .iter()
+            .filter_map(|&i| self.entries.get(i))
     }
 
     /// Returns the number of entries that match the current filter.
     pub(crate) fn shown_entries_len(&self) -> usize {
-        if self.filter.is_empty() {
-            self.entries.len()
-        } else {
-            let filter_lower = self.filter.to_lowercase();
-            self.entries
-                .iter()
-                .filter(|e| e.name_str().to_lowercase().contains(&filter_lower))
-                .count()
-        }
+        self.shown_indices.len()
     }
 
     /// Returns a reference to the currently selected entry that matches the filter.
     pub(crate) fn selected_shown_entry(&self) -> Option<&FileEntry> {
-        self.shown_entries().nth(self.selected)
+        let actual_idx = self.shown_indices.get(self.selected)?;
+        self.entries.get(*actual_idx)
     }
 
     /// Sets a new filter string, preserving the selected entry if possible.
@@ -302,20 +290,37 @@ impl NavState {
         self.filter = filter;
         self.save_filter_for_current_dir();
 
-        let new_idx = if let Some(ref name) = target_name {
-            self.shown_entries()
-                .position(|e| e.name() == name.as_os_str())
-        } else {
-            None
-        };
+        self.rebuild_shown_cache();
 
-        self.selected = new_idx.unwrap_or(0);
+        if let Some(name) = target_name {
+            self.selected = self
+                .shown_indices
+                .iter()
+                .position(|&i| self.entries[i].name() == name)
+                .unwrap_or(0);
+        } else {
+            self.selected = 0;
+        }
     }
 
     /// Clears the current filter.
     pub(crate) fn clear_filters(&mut self) {
+        let prev_abs = self.shown_indices.get(self.selected).cloned();
+
         self.filter.clear();
         self.save_filter_for_current_dir();
+
+        self.rebuild_shown_cache();
+
+        if let Some(abs_idx) = prev_abs {
+            self.selected = self
+                .shown_indices
+                .iter()
+                .position(|&i| i == abs_idx)
+                .unwrap_or(0);
+        } else {
+            self.selected = 0;
+        }
     }
 
     /// Saves the current filter for the current directory.
@@ -335,6 +340,26 @@ impl NavState {
             .get(&self.current_dir)
             .cloned()
             .unwrap_or_default();
+    }
+
+    fn rebuild_shown_cache(&mut self) {
+        if self.filter.is_empty() {
+            self.shown_indices = (0..self.entries.len()).collect();
+        } else {
+            let filter_lower = self.filter.to_lowercase();
+            self.shown_indices = self
+                .entries
+                .iter()
+                .enumerate()
+                .filter(|(_, e)| e.name_str().to_lowercase().contains(&filter_lower))
+                .map(|(i, _)| i)
+                .collect();
+        }
+
+        let len = self.shown_indices.len();
+        if self.selected >= len {
+            self.selected = len.saturating_sub(1);
+        }
     }
 }
 
