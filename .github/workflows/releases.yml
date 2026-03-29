@@ -162,7 +162,11 @@ jobs:
       - name: Attest Binaries
         uses: actions/attest@v4
         with:
-          subject-path: "artifacts/bin-*/**/rn*"
+          subject-path: |
+            dist/runa-*.tar.gz
+            dist/runa-*.zip
+            dist/SHA256SUMS.txt
+            artifacts/bin-*/**/rn*
 
       - name: Create archives
         shell: bash
