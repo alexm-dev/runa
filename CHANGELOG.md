@@ -6,12 +6,7 @@ All the changes made to runa are documented here.
 
 ### Changed
 - **File Info**: Added a new `GetFileInfo` worker task to handle all relevant `file_info` calls in a `bounded(1)` thread.
-- **InfoState**: Added a new app module to hold the file information state and handle worker response synchronization.
-- **Binary Attestation**: All binaries are now cryptographically attested and signed using  the GitHub Action runner.  
-It is now possible to verify the integrity and origin of any `rn` binary using the GitHub CLI:
-    ```bash
-    gh attestation verify ./rn --owner alexm-dev
-    ```
+- **InfoState**: Added a new `info.rs` module to hold the file information state and handle worker response synchronization.
 
 ### Internal
 - **Performance:**
