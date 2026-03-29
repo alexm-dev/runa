@@ -59,6 +59,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.inputs.tag }}
+          fetch_depth: 0
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -182,6 +185,12 @@ jobs:
           cd dist
           sha256sum runa-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Upload Final Release Assets
+        uses: actions/upload-artifact@v7
+        with:
+          name: final-release-dist
+          path: dist/*
 
       # - name: Extract changelog section
       #   id: extract_changelog
