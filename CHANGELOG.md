@@ -8,11 +8,10 @@ All the changes made to runa are documented here.
 - **File Info**: Added a new `GetFileInfo` worker task to handle all relevant `file_info` calls in a `bounded(1)` thread.
 - **InfoState**: Added a new app module to hold the file information state and handle worker response synchronization.
 - **Binary Attestation**: All binaries are now cryptographically attested and signed using  the GitHub Action runner.
-    - Now possible to verify the integrity and origin of any `rn` binary using the GitHub CLI:
-
-    ```bash
-    gh attestation verify ./rn --owner alexm-dev
-    ```
+It is now possible to verify the integrity and origin of any `rn` binary using the GitHub CLI:
+```bash
+gh attestation verify ./rn --owner alexm-dev
+```
 
 ### Internal
 - **Performance:**
@@ -124,6 +123,7 @@ All the changes made to runa are documented here.
 ### Breaking Changes
 - Due to `[display.status]` now also storing the `entry_count` value, you will need to move the old `entry_count` into `[display.status]`:
 - Before:
+
 
     ```toml
     [display]
