@@ -9,6 +9,7 @@ All the changes made to runa are documented here.
 - **InfoState**: Added a new `info.rs` module to hold the file information state and handle worker response synchronization.
 
 ### Internal
+- **Tests**: Added new tests to `file_info.rs` to test metadata retrival and formatting of the `FileInfo` struct.
 - **Performance:**
     - Owner/Group File information: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
     - File information String: Removed `FileInfoStrings` to not store precomputed and formatted strings and instead rely on lazy computation. (eager vs lazy)
