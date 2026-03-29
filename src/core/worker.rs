@@ -317,17 +317,15 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
 
                         #[cfg(unix)]
                         {
-                            if let Some(uid) = cached.owner_uid {
-                                let name = id_cache.resolve_user(uid);
-                                // get_mut() on a Mutex we own is safe and fast
-                                if let Ok(mut guard) = cached.owner_name.get_mut() {
-                                    *guard = Some(name);
+                            if let Some(ref mut meta) = cached.unix_meta {
+                                let owner_name = id_cache.resolve_user(meta.uid);
+                                let group_name = id_cache.resolve_group(meta.gid);
+
+                                if let Ok(guard) = meta.owner_name.get_mut() {
+                                    *guard = Some(owner_name);
                                 }
-                            }
-                            if let Some(gid) = cached.group_gid {
-                                let name = id_cache.resolve_group(gid);
-                                if let Ok(mut guard) = cached.group_name.get_mut() {
-                                    *guard = Some(name);
+                                if let Ok(guard) = meta.group_name.get_mut() {
+                                    *guard = Some(group_name);
                                 }
                             }
                         }

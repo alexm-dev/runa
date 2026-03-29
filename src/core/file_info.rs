@@ -49,10 +49,6 @@ pub(crate) struct FileInfo {
     accessed: Option<SystemTime>,
     attributes: String,
     file_type: FileType,
-    #[cfg(unix)]
-    owner_uid: Option<u32>,
-    #[cfg(unix)]
-    group_gid: Option<u32>,
 }
 
 impl FileInfo {
@@ -158,16 +154,35 @@ impl FileInfoStrings {
     }
 
     #[cfg(unix)]
-    #[inline]
-    pub(crate) fn owner(&self) -> Option<&str> {
-        self.owner.as_deref()
+    fn get_unix_sync_str<F>(&self, selector: F) -> Option<Arc<str>>
+    where
+        F: FnOnce(&UnixMetadata) -> &Mutex<Option<Arc<str>>>,
+    {
+        let meta = self.unix_meta.as_ref()?;
+        let mutex = selector(meta);
+        mutex.lock().ok()?.as_ref().map(Arc::clone)
     }
 
     #[cfg(unix)]
     #[inline]
-    pub(crate) fn group(&self) -> Option<&str> {
-        self.group.as_deref()
+    pub(crate) fn owner_name(&self) -> Option<Arc<str>> {
+        self.get_unix_sync_str(|m| &m.owner_name)
     }
+
+    #[cfg(unix)]
+    #[inline]
+    pub(crate) fn group_name(&self) -> Option<Arc<str>> {
+        self.get_unix_sync_str(|m| &m.group_name)
+    }
+}
+
+#[cfg(unix)]
+#[derive(Debug)]
+pub(crate) struct UnixMetadata {
+    pub(crate) uid: u32,
+    pub(crate) gid: u32,
+    pub(crate) owner: Mutex<Option<Arc<str>>>,
+    pub(crate) group: Mutex<Option<Arc<str>>>,
 }
 
 #[derive(Debug)]
@@ -175,13 +190,7 @@ pub(crate) struct CachedFileInfo {
     pub(crate) path: PathBuf,
     pub(crate) strings: FileInfoStrings,
     #[cfg(unix)]
-    pub(crate) owner_uid: Option<u32>,
-    #[cfg(unix)]
-    pub(crate) group_gid: Option<u32>,
-    #[cfg(unix)]
-    pub(crate) owner_name: Mutex<Option<Arc<str>>>,
-    #[cfg(unix)]
-    pub(crate) group_name: Mutex<Option<Arc<str>>>,
+    pub(crate) unix_meta: Option<Box<UnixMetadata>>,
 }
 
 impl CachedFileInfo {
@@ -202,17 +211,23 @@ impl CachedFileInfo {
             group: None,
         };
 
+        #[cfg(unix)]
+        let unix_meta = info.owner_uid.and_then(|uid| {
+            info.group_gid.map(|gid| {
+                Box::new(UnixMetadata {
+                    uid,
+                    gid,
+                    owner_name: Mutex::new(None),
+                    group_name: Mutex::new(None),
+                })
+            })
+        });
+
         Self {
             path,
             strings,
             #[cfg(unix)]
-            owner_uid: info.owner_uid,
-            #[cfg(unix)]
-            group_gid: info.group_gid,
-            #[cfg(unix)]
-            owner_name: Mutex::new(None),
-            #[cfg(unix)]
-            group_name: Mutex::new(None),
+            unix_meta,
         }
     }
 
@@ -228,10 +243,10 @@ impl CachedFileInfo {
 
     #[cfg(unix)]
     pub(crate) fn resolved_owner_name(&self) -> Option<Arc<str>> {
-        let uid = self.owner_uid?;
+        let meta = self.unix_meta.as_ref()?;
+        let uid = meta.uid;
 
-        {
-            let guard = self.owner_name.lock().unwrap();
+        if let Ok(guard) = meta.owner_name.lock() {
             if let Some(name) = guard.as_ref() {
                 return Some(Arc::clone(name));
             }
@@ -241,17 +256,18 @@ impl CachedFileInfo {
             .map(|u| u.name().to_string_lossy().into())
             .unwrap_or_else(|| uid.to_string().into());
 
-        let mut guard = self.owner_name.lock().unwrap();
-        *guard = Some(Arc::clone(&name));
+        if let Ok(mut guard) = meta.owner_name.lock() {
+            *guard = Some(Arc::clone(&name));
+        }
         Some(name)
     }
 
     #[cfg(unix)]
     pub(crate) fn resolved_group_name(&self) -> Option<Arc<str>> {
-        let gid = self.group_gid?;
+        let meta = self.unix_meta.as_ref()?;
+        let gid = meta.gid;
 
-        {
-            let guard = self.group_name.lock().unwrap();
+        if let Ok(guard) = meta.group_name.lock() {
             if let Some(name) = guard.as_ref() {
                 return Some(Arc::clone(name));
             }
@@ -261,8 +277,9 @@ impl CachedFileInfo {
             .map(|g| g.name().to_string_lossy().into())
             .unwrap_or_else(|| gid.to_string().into());
 
-        let mut guard = self.group_name.lock().unwrap();
-        *guard = Some(Arc::clone(&name));
+        if let Ok(mut guard) = meta.group_name.lock() {
+            *guard = Some(Arc::clone(&name));
+        }
         Some(name)
     }
 }
