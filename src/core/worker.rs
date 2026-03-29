@@ -644,7 +644,7 @@ fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                         let file_info = CachedFileInfo::new(path, info);
 
                         #[cfg(unix)]
-                        info.prepare_unix_names(&mut cache);
+                        file_info.prepare_unix_names(&mut cache);
 
                         let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
                             info: Arc::new(file_info),
