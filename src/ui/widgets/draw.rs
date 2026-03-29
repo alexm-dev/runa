@@ -21,6 +21,8 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, Borders, Paragraph},
 };
+
+use std::borrow::Cow;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -319,8 +321,8 @@ pub(crate) fn draw_status_bar(
         && let Some(info) = app.current_file_info()
     {
         let info_theme = theme.info();
-        let cached = info.strings();
         let separator_style = theme.accent_style();
+        let date_format = app.config().display().info().date_format().to_string();
 
         let segments = display_cfg.info().segments();
 
@@ -331,46 +333,38 @@ pub(crate) fn draw_status_bar(
                 }
                 StatusSegment::Tag(tag) => match tag {
                     StatusTag::Perms => {
-                        if let Some(p) = cached.perms() {
-                            left_spans.push(Span::styled(p, info_theme.perms_style()));
-                        }
+                        left_spans.push(Span::styled(info.perms(), info_theme.perms_style()));
                     }
                     StatusTag::Size => {
-                        if let Some(s) = cached.size() {
-                            let padded_size = format!("{:>8}", s);
-                            left_spans.push(Span::styled(padded_size, info_theme.size_style()));
-                        }
+                        let padded_size = format!("{:>8}", info.size());
+                        left_spans.push(Span::styled(padded_size, info_theme.size_style()));
                     }
                     StatusTag::Mtime => {
-                        if let Some(d) = cached.modified() {
-                            left_spans.push(Span::styled(d, info_theme.modified_style()));
-                        }
+                        let modified = info.modified(&date_format);
+                        left_spans.push(Span::styled(modified, info_theme.modified_style()));
                     }
                     StatusTag::Btime => {
-                        if let Some(b) = cached.created() {
-                            left_spans.push(Span::styled(b, info_theme.created_style()));
-                        }
+                        let created = info.created(&date_format);
+                        left_spans.push(Span::styled(created, info_theme.created_style()));
                     }
                     StatusTag::Atime => {
-                        if let Some(a) = cached.accessed() {
-                            left_spans.push(Span::styled(a, info_theme.accessed_style()));
-                        }
+                        let accessed = info.accessed(&date_format);
+                        left_spans.push(Span::styled(accessed, info_theme.accessed_style()));
                     }
                     StatusTag::Type => {
-                        if let Some(t) = cached.file_type() {
-                            left_spans.push(Span::styled(t, info_theme.file_type_style()));
-                        }
+                        left_spans
+                            .push(Span::styled(info.file_type(), info_theme.file_type_style()));
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
-                        if let Some(o) = cached.owner() {
-                            left_spans.push(Span::styled(o, info_theme.owner_style()));
+                        if let Some(o) = info.owner() {
+                            left_spans.push(Span::styled(o.to_string(), info_theme.owner_style()));
                         }
                     }
                     #[cfg(unix)]
                     StatusTag::Group => {
-                        if let Some(g) = cached.group() {
-                            left_spans.push(Span::styled(g, info_theme.group_style()));
+                        if let Some(g) = info.group() {
+                            left_spans.push(Span::styled(g.to_string(), info_theme.group_style()));
                         }
                     }
                 },
@@ -571,55 +565,60 @@ pub(crate) fn draw_show_info_dialog(
 ) {
     let theme = app.config().theme();
     let info_cfg = &app.config().display().info();
+    let date_format = info_cfg.date_format();
 
     let label_style = theme.widget().label_style_or_theme();
     let value_style = theme.widget().value_style_or_theme();
-
-    let info_strings = info_cache.strings();
 
     let position = dialog_position_unified(info_cfg.position(), app, DialogPosition::BottomLeft);
     let border_type = app.config().display().border_shape().as_border_type();
 
     let mut lines: Vec<Line> = Vec::with_capacity(9);
 
-    let mut add_line = |label: &str, value: Option<&str>| {
-        if let Some(v) = value {
+    let mut add_line = |label: &str, value: std::borrow::Cow<'_, str>| {
+        if !value.is_empty() {
+            let owned_value: String = value.into_owned();
             lines.push(Line::from(vec![
                 Span::styled(format!("{:<11}", label), label_style),
-                Span::styled(v.to_string(), value_style),
+                Span::styled(owned_value, value_style),
             ]));
         }
     };
 
     if info_cfg.name() {
-        add_line("Name:", info_strings.name());
+        add_line("Name:", Cow::Borrowed(info_cache.name()));
     }
     if info_cfg.file_type() {
-        add_line("Type:", info_strings.file_type());
+        add_line("Type:", Cow::Borrowed(info_cache.file_type()));
     }
     if info_cfg.size() {
-        add_line("Size:", info_strings.size());
+        add_line("Size:", Cow::Owned(info_cache.size()));
     }
     if info_cfg.modified() {
-        add_line("Modified:", info_strings.modified());
+        add_line("Modified:", Cow::Owned(info_cache.modified(date_format)));
     }
     if info_cfg.created() {
-        add_line("Created", info_strings.created());
+        add_line("Created", Cow::Owned(info_cache.created(date_format)));
     }
     if info_cfg.accessed() {
-        add_line("Accessed", info_strings.accessed());
+        add_line("Accessed", Cow::Owned(info_cache.accessed(date_format)));
     }
     if info_cfg.perms() {
-        add_line("Perms:", info_strings.perms());
+        add_line("Perms:", Cow::Owned(info_cache.perms()));
     }
 
     #[cfg(unix)]
-    if info_cfg.owner() {
-        add_line("Owner:", info_cache.owner_name());
-    }
-    #[cfg(unix)]
-    if info_cfg.group() {
-        add_line("Group:", info_cache.group_name());
+    {
+        if info_cfg.owner()
+            && let Some(o) = info_cache.owner()
+        {
+            add_line("Owner:", Cow::Borrowed(&o));
+        }
+        if info_cfg.group()
+            && let Some(g) = info_cache.group()
+        {
+            add_line("Group:", Cow::Borrowed(&g));
+        }
     }
 
     if lines.is_empty() {

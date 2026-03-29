@@ -554,6 +554,10 @@ impl<'a> AppState<'a> {
     }
 
     pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
+        if !self.info.can_request(25) {
+            return;
+        }
+
         let status_info = self.config.display().info().status_bar();
         let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
 
@@ -577,15 +581,13 @@ impl<'a> AppState<'a> {
         }
 
         let path = self.nav.current_dir().join(entry.name());
-        let req_id = self.info.next_request_id();
-        let date_format = self.config.display().info().date_format().to_string();
+        let req_id = self.info.prepare_new_request();
 
         if workers
             .nav_io_tx()
             .try_send(WorkerTask::GetFileInfo {
                 path: path.clone(),
                 request_id: req_id,
-                time_format: date_format,
             })
             .is_ok()
         {

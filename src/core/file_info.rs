@@ -111,8 +111,8 @@ impl FileInfo {
 pub(crate) struct UnixMetadata {
     pub(crate) uid: u32,
     pub(crate) gid: u32,
-    pub(crate) owner: Mutex<Option<Arc<str>>>,
-    pub(crate) group: Mutex<Option<Arc<str>>>,
+    pub(crate) owner_name: Mutex<Option<Arc<str>>>,
+    pub(crate) group_name: Mutex<Option<Arc<str>>>,
 }
 
 #[derive(Debug)]
@@ -125,7 +125,7 @@ pub(crate) struct CachedFileInfo {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    unix_meta: Option<Box<UnixMetadata>>,
+    pub(crate) unix_meta: Option<Box<UnixMetadata>>,
 }
 
 impl CachedFileInfo {
@@ -144,12 +144,17 @@ impl CachedFileInfo {
                     Box::new(UnixMetadata {
                         uid,
                         gid,
-                        owner: Mutex::new(None),
-                        group: Mutex::new(None),
+                        owner_name: Mutex::new(None),
+                        group_name: Mutex::new(None),
                     })
                 })
             }),
         }
+    }
+
+    #[inline]
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
     }
 
     #[inline]
@@ -173,6 +178,16 @@ impl CachedFileInfo {
     #[inline]
     pub(crate) fn modified(&self, fmt: &str) -> String {
         format_file_time(self.modified, fmt)
+    }
+
+    #[inline]
+    pub(crate) fn created(&self, fmt: &str) -> String {
+        format_file_time(self.created, fmt)
+    }
+
+    #[inline]
+    pub(crate) fn accessed(&self, fmt: &str) -> String {
+        format_file_time(self.accessed, fmt)
     }
 
     #[inline]

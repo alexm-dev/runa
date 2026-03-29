@@ -188,7 +188,6 @@ pub(crate) enum WorkerTask {
     GetFileInfo {
         path: PathBuf,
         request_id: u64,
-        time_format: String,
     },
 }
 
@@ -304,45 +303,43 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     }
                 },
 
-                WorkerTask::GetFileInfo {
-                    path,
-                    request_id,
-                    time_format,
-                } => match FileInfo::get_file_info(&path, None) {
-                    Ok(info) => {
-                        #[cfg(unix)]
-                        let mut cached = CachedFileInfo::new(path, info, &time_format);
-                        #[cfg(not(unix))]
-                        let cached = CachedFileInfo::new(path, info, &time_format);
+                WorkerTask::GetFileInfo { path, request_id } => {
+                    match FileInfo::get_file_info(&path, None) {
+                        Ok(info) => {
+                            #[cfg(unix)]
+                            let mut cached = CachedFileInfo::new(path, info);
+                            #[cfg(not(unix))]
+                            let cached = CachedFileInfo::new(path, info);
 
-                        #[cfg(unix)]
-                        {
-                            if let Some(ref mut meta) = cached.unix_meta {
-                                let owner_name = id_cache.resolve_user(meta.uid);
-                                let group_name = id_cache.resolve_group(meta.gid);
+                            #[cfg(unix)]
+                            {
+                                if let Some(ref mut meta) = cached.unix_meta {
+                                    let owner_name = id_cache.resolve_user(meta.uid);
+                                    let group_name = id_cache.resolve_group(meta.gid);
 
-                                if let Ok(guard) = meta.owner_name.get_mut() {
-                                    *guard = Some(owner_name);
-                                }
-                                if let Ok(guard) = meta.group_name.get_mut() {
-                                    *guard = Some(group_name);
+                                    if let Ok(guard) = meta.owner_name.get_mut() {
+                                        *guard = Some(owner_name);
+                                    }
+                                    if let Ok(guard) = meta.group_name.get_mut() {
+                                        *guard = Some(group_name);
+                                    }
                                 }
                             }
-                        }
 
-                        // Send the Arc-wrapped version
-                        let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
-                            info: Arc::new(cached),
-                            request_id,
-                        });
+                            // Send the Arc-wrapped version
+                            let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
+                                info: Arc::new(cached),
+                                request_id,
+                            });
+                        }
+                        Err(e) => {
+                            let _ = res_tx.send(WorkerResponse::Error(
+                                format!("Metadata Error: {}", e),
+                                Some(request_id),
+                            ));
+                        }
                     }
-                    Err(e) => {
-                        let _ = res_tx.send(WorkerResponse::Error(
-                            format!("Metadata Error: {}", e),
-                            Some(request_id),
-                        ));
-                    }
-                },
+                }
                 _ => {}
             }
         }

@@ -2,12 +2,14 @@ use crate::core::file_info::CachedFileInfo;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub(crate) struct InfoState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
     selected_info: Option<Arc<CachedFileInfo>>,
+    last_request_time: Instant,
 }
 
 impl InfoState {
@@ -16,13 +18,19 @@ impl InfoState {
             request_id: 0,
             pending: None,
             selected_info: None,
+            last_request_time: Instant::now() - Duration::from_secs(1),
         }
     }
 
-    pub(crate) fn next_request_id(&mut self) -> u64 {
+    pub(crate) fn prepare_new_request(&mut self) -> u64 {
+        self.last_request_time = Instant::now();
         let id = self.request_id;
         self.request_id = self.request_id.wrapping_add(1);
         id
+    }
+
+    pub(crate) fn can_request(&self, debounce_ms: u64) -> bool {
+        self.last_request_time.elapsed() >= Duration::from_millis(debounce_ms)
     }
 
     pub(crate) fn set_pending(&mut self, id: u64, path: PathBuf) {
