@@ -173,6 +173,7 @@ impl<'a> AppState<'a> {
         &self.parent
     }
 
+    #[cfg(unix)]
     #[inline]
     pub(crate) fn info(&self) -> &InfoState {
         &self.info
