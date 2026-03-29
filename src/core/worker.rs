@@ -262,7 +262,7 @@ impl WorkerResponse {
 fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         #[cfg(unix)]
-        let mut id_cache = crate::core::file_info::unix_info::IndentityCache::new();
+        let mut id_cache = crate::core::file_info::unix_info::IdentityCache::new();
         while let Ok(task) = task_rx.recv() {
             match task {
                 WorkerTask::LoadDirectory {
