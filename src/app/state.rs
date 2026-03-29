@@ -235,6 +235,52 @@ impl<'a> AppState<'a> {
         }
     }
 
+    pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
+        if !self.info.can_request(25) {
+            return;
+        }
+
+        let status_info = self.config.display().info().status_bar();
+        let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
+
+        if !status_info && !info_overlay {
+            self.info.clear_selected_info();
+            self.info.clear_pending();
+            return;
+        }
+
+        let Some(entry) = self.nav.selected_entry() else {
+            self.info.clear_selected_info();
+            self.info.clear_pending();
+            return;
+        };
+
+        let path = self.nav.current_dir().join(entry.name());
+
+        if let Some(cached) = self.info.selected_info()
+            && cached.path() == path
+        {
+            return;
+        }
+
+        if self.info.is_pending_path(&path) {
+            return;
+        }
+
+        let req_id = self.info.prepare_new_request();
+
+        if workers
+            .nav_io_tx()
+            .try_send(WorkerTask::GetFileInfo {
+                path: path.clone(),
+                request_id: req_id,
+            })
+            .is_ok()
+        {
+            self.info.set_pending(req_id, path);
+        }
+    }
+
     /// The heart of the app: updates state and handles worker messages
     ///
     /// Is used by the main event loop to update the application state.
@@ -308,8 +354,6 @@ impl<'a> AppState<'a> {
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
                     self.nav.update_from_worker(path, entries, focus);
                     self.is_loading = false;
-                    self.info.clear_pending();
-                    self.info.clear_selected_info();
 
                     self.request_parent_content(workers);
                     self.request_preview(workers);
@@ -551,48 +595,6 @@ impl<'a> AppState<'a> {
             cancel: cancel_token,
             tab_id: self.tab_id(),
         });
-    }
-
-    pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
-        if !self.info.can_request(25) {
-            return;
-        }
-
-        let status_info = self.config.display().info().status_bar();
-        let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
-
-        if !status_info && !info_overlay {
-            self.info.clear_selected_info();
-            self.info.clear_pending();
-            return;
-        }
-
-        let Some(entry) = self.nav.selected_entry() else {
-            self.info.clear_selected_info();
-            self.info.clear_pending();
-            return;
-        };
-
-        if let Some(cached) = self.info.selected_info()
-            && cached.path().parent() == Some(self.nav.current_dir())
-            && cached.path().file_name() == Some(entry.name())
-        {
-            return;
-        }
-
-        let path = self.nav.current_dir().join(entry.name());
-        let req_id = self.info.prepare_new_request();
-
-        if workers
-            .nav_io_tx()
-            .try_send(WorkerTask::GetFileInfo {
-                path: path.clone(),
-                request_id: req_id,
-            })
-            .is_ok()
-        {
-            self.info.set_pending(req_id, path);
-        }
     }
 }
 

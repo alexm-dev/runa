@@ -29,6 +29,10 @@ impl InfoState {
         id
     }
 
+    pub(crate) fn is_pending_path(&self, path: &Path) -> bool {
+        self.pending.as_ref().is_some_and(|(_, p)| p == path)
+    }
+
     pub(crate) fn can_request(&self, debounce_ms: u64) -> bool {
         self.last_request_time.elapsed() >= Duration::from_millis(debounce_ms)
     }
