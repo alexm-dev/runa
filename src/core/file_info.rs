@@ -208,7 +208,6 @@ impl CachedFileInfo {
     #[cfg(unix)]
     pub(crate) fn group(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
-
         let name = meta
             .group_name
             .get_or_init(|| Some(UserGroupCache::fetch_group(meta.gid)));

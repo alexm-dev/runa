@@ -1,3 +1,11 @@
+//! InfoState module for AppState usage.
+//!
+//! [InfoState] struct to wrap the [CachedFileInfo] from `core::file_info` and
+//! manage the state of info requests, pending paths, and selected file info.
+//!
+//! This module provides methods to prepare new info requests, check pending paths,
+//! debounce requests, and manage the selected file info state.
+
 use crate::core::file_info::CachedFileInfo;
 
 use std::path::{Path, PathBuf};
@@ -41,10 +49,6 @@ impl InfoState {
         self.pending = Some((id, path));
     }
 
-    pub(crate) fn clear_pending(&mut self) {
-        self.pending = None;
-    }
-
     pub(crate) fn matches_pending(&self, id: u64, path: &Path) -> bool {
         if let Some((pid, p)) = &self.pending {
             *pid == id && p == path
@@ -65,7 +69,12 @@ impl InfoState {
         self.selected_info = info;
     }
 
-    pub(crate) fn clear_selected_info(&mut self) {
+    pub(crate) fn clear_pending(&mut self) {
+        self.pending = None;
+    }
+
+    pub(crate) fn clear(&mut self) {
+        self.pending = None;
         self.selected_info = None;
     }
 }

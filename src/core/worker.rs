@@ -6,7 +6,7 @@
 //! Small changes here can have big effects since this module is tightly integrated with every part
 //! of runa.
 //!
-//! Requests [WorkerTask] come in from the AppState or UI via channels, and results or errors
+//! Requests [WorkerTask] come in from the RunaRoot or UI via channels, and results or errors
 //! [WorkerResponse] go back the same way. All filesystem I/O and previews happen on these threads
 //!
 //! # Caution:
@@ -22,6 +22,9 @@ use crate::utils::{
     copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
     rename_with_fallback,
 };
+
+#[cfg(unix)]
+use crate::core::file_info::unix_info::UserGroupCache;
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -47,7 +50,7 @@ pub(crate) struct Workers {
 
 /// Manages worker thread channels for different task types.
 ///
-/// Each major operation (I/O (nav, preview, parent), preview, find, file-ops) has its own dedicated worker thread.
+/// Each major operation (I/O (nav, preview, parent), preview, file info, find, file-ops) has its own dedicated worker thread.
 ///
 /// The find worker uses a bounded channel of size 1: this design ensures that only the
 /// latest find request will be processed, automatically skipping obsolete queued requests
@@ -113,6 +116,7 @@ impl Workers {
         &self.preview_file_tx
     }
 
+    /// Accessor for the file information worker task sender
     #[inline]
     pub(crate) fn info_tx(&self) -> &Sender<WorkerTask> {
         &self.info_tx
@@ -630,10 +634,11 @@ fn start_fileop_worker(
     });
 }
 
+/// Starts the file information worker thread.
 fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         #[cfg(unix)]
-        let mut cache = crate::core::file_info::unix_info::UserGroupCache::new();
+        let mut cache = UserGroupCache::new();
         while let Ok(task) = task_rx.recv() {
             if let WorkerTask::GetFileInfo { path, request_id } = task {
                 match FileInfo::get_file_info(&path, None) {

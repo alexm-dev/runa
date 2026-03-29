@@ -32,11 +32,9 @@ impl<'a> AppState<'a> {
         match action {
             NavAction::GoUp => {
                 self.move_nav_if_possible(workers, |nav| nav.move_up());
-                self.refresh_show_info_if_open();
             }
             NavAction::GoDown => {
                 self.move_nav_if_possible(workers, |nav| nav.move_down());
-                self.refresh_show_info_if_open();
             }
             NavAction::GoParent => {
                 let res = self.handle_go_parent(workers);

@@ -46,6 +46,7 @@ impl<'a> AppState<'a> {
             *info = new_info;
         }
     }
+
     /// Shows the file info overlay for the currently selected entry.
     fn show_file_info(&mut self) {
         if let Some(info) = self.selected_info_clone() {

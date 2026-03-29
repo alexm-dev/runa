@@ -8,6 +8,7 @@
 //! - Current layout metrics
 //! - Communication with worker threads via crossbeam_channel
 //! - Notification and message handling
+//! - Tab managment (Tab IDs and titles)
 //!
 //! This module coordinates user input processing, keybindings, state mutation,
 //! pane switching and communication with worder tasks
@@ -71,6 +72,7 @@ impl Default for LayoutMetrics {
 /// Includes:
 /// - References to configuration settings and the keymaps.
 /// - Models for navigation, actions, file previews, and parent directory pane
+/// - File information state for updating UI widgets.
 /// - Live layout information
 /// - Notification timing and loading indicators
 /// - UI overlay for a seamless widet rendering
@@ -244,14 +246,12 @@ impl<'a> AppState<'a> {
         let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if !status_info && !info_overlay {
-            self.info.clear_selected_info();
-            self.info.clear_pending();
+            self.info.clear();
             return;
         }
 
         let Some(entry) = self.nav.selected_entry() else {
-            self.info.clear_selected_info();
-            self.info.clear_pending();
+            self.info.clear();
             return;
         };
 
@@ -391,6 +391,7 @@ impl<'a> AppState<'a> {
                     }
                 }
             }
+
             WorkerResponse::PreviewLoaded {
                 lines,
                 request_id,
@@ -409,8 +410,8 @@ impl<'a> AppState<'a> {
             }
 
             WorkerResponse::FileInfoLoaded { info, request_id } => {
-                let info_path = info.path().to_path_buf();
-                if self.info.matches_pending(request_id, info_path.as_path()) {
+                let info_path = info.path();
+                if self.info.matches_pending(request_id, info_path) {
                     if info_path.parent() == Some(self.nav.current_dir())
                         && let Some(sel) = self.nav.selected_entry()
                         && info_path.file_name() == Some(sel.name())
