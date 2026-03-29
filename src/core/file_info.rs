@@ -222,7 +222,10 @@ impl CachedFileInfo {
     }
 
     #[cfg(unix)]
-    pub(crate) fn prepare_unix_names(&mut self, id_cache: &mut IdentityCache) {
+    pub(crate) fn prepare_unix_names(
+        &mut self,
+        id_cache: &mut crate::core::file_info::unix_info::IdentityCache,
+    ) {
         if let Some(meta) = self.unix_meta.as_mut() {
             let owner = id_cache.resolve_user(meta.uid);
             let group = id_cache.resolve_group(meta.gid);
