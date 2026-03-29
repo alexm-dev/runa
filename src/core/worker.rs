@@ -312,19 +312,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                             let cached = CachedFileInfo::new(path, info);
 
                             #[cfg(unix)]
-                            {
-                                if let Some(ref mut meta) = cached.unix_meta {
-                                    let owner_name = id_cache.resolve_user(meta.uid);
-                                    let group_name = id_cache.resolve_group(meta.gid);
-
-                                    if let Ok(guard) = meta.owner_name.get_mut() {
-                                        *guard = Some(owner_name);
-                                    }
-                                    if let Ok(guard) = meta.group_name.get_mut() {
-                                        *guard = Some(group_name);
-                                    }
-                                }
-                            }
+                            cached.prepare_unix_names(id_cache);
 
                             // Send the Arc-wrapped version
                             let _ = res_tx.send(WorkerResponse::FileInfoLoaded {

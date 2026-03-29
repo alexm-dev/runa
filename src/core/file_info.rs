@@ -125,7 +125,7 @@ pub(crate) struct CachedFileInfo {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    pub(crate) unix_meta: Option<Box<UnixMetadata>>,
+    unix_meta: Option<Box<UnixMetadata>>,
 }
 
 impl CachedFileInfo {
@@ -237,6 +237,22 @@ impl CachedFileInfo {
         self.resolve_unix_name(meta.gid, &meta.group_name, |id| {
             uzers::get_group_by_gid(id).map(|g| g.name().to_os_string())
         })
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn prepare_unix_names(&mut self, id_cache: &mut IdentityCache) {
+        if let Some(meta) = self.unix_meta.as_mut() {
+            let owner = id_cache.resolve_user(meta.uid);
+            let group = id_cache.resolve_group(meta.gid);
+
+            if let Ok(owner_guard) = meta.owner_name.get_mut() {
+                *owner_guard = Some(owner);
+            }
+
+            if let Ok(group_guard) = meta.group_name.get_mut() {
+                *group_guard = Some(group);
+            }
+        }
     }
 }
 
