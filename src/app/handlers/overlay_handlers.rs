@@ -4,7 +4,7 @@
 //! [app::state::handle_keypress] function.
 
 use crate::app::state::{AppState, KeypressResult};
-use crate::core::file_info::CachedFileInfo;
+use crate::core::file_info::FileInfo;
 use crate::ui::overlays::{Overlay, OverlayKind};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -98,7 +98,7 @@ impl<'a> AppState<'a> {
         self.overlays_mut().push(Overlay::Message { text });
     }
 
-    fn selected_info_clone(&self) -> Option<Arc<CachedFileInfo>> {
+    fn selected_info_clone(&self) -> Option<Arc<FileInfo>> {
         self.info.selected_info_arc().map(Arc::clone)
     }
 }

@@ -14,7 +14,7 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use crate::config::display::PreviewMethod;
-use crate::core::file_info::{CachedFileInfo, FileInfo};
+use crate::core::file_info::FileInfo;
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
@@ -253,7 +253,7 @@ pub(crate) enum WorkerResponse {
         tab_id: Option<usize>,
     },
     FileInfoLoaded {
-        info: Arc<CachedFileInfo>,
+        info: Arc<FileInfo>,
         request_id: u64,
     },
     Error(String, Option<u64>),
@@ -641,18 +641,13 @@ fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
         let mut cache = UserGroupCache::new();
         while let Ok(task) = task_rx.recv() {
             if let WorkerTask::GetFileInfo { path, request_id } = task {
-                match FileInfo::get_file_info(&path, None) {
+                match FileInfo::new(path, None) {
                     Ok(info) => {
                         #[cfg(unix)]
-                        let mut file_info = CachedFileInfo::new(path, info);
-                        #[cfg(not(unix))]
-                        let file_info = CachedFileInfo::new(path, info);
-
-                        #[cfg(unix)]
-                        file_info.prepare_unix_names(&mut cache);
+                        info.prepare_unix_names(&mut cache);
 
                         let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
-                            info: Arc::new(file_info),
+                            info: Arc::new(info),
                             request_id,
                         });
                     }

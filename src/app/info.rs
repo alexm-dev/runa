@@ -6,7 +6,7 @@
 //! This module provides methods to prepare new info requests, check pending paths,
 //! debounce requests, and manage the selected file info state.
 
-use crate::core::file_info::CachedFileInfo;
+use crate::core::file_info::FileInfo;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 pub(crate) struct InfoState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
-    selected_info: Option<Arc<CachedFileInfo>>,
+    selected_info: Option<Arc<FileInfo>>,
     last_request_time: Instant,
 }
 
@@ -57,15 +57,15 @@ impl InfoState {
         }
     }
 
-    pub(crate) fn selected_info(&self) -> Option<&CachedFileInfo> {
+    pub(crate) fn selected_info(&self) -> Option<&FileInfo> {
         self.selected_info.as_deref()
     }
 
-    pub(crate) fn selected_info_arc(&self) -> Option<&Arc<CachedFileInfo>> {
+    pub(crate) fn selected_info_arc(&self) -> Option<&Arc<FileInfo>> {
         self.selected_info.as_ref()
     }
 
-    pub(crate) fn set_selected_info(&mut self, info: Option<Arc<CachedFileInfo>>) {
+    pub(crate) fn set_selected_info(&mut self, info: Option<Arc<FileInfo>>) {
         self.selected_info = info;
     }
 

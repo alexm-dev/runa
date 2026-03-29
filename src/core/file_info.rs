@@ -12,7 +12,6 @@ use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
 
-use std::ffi::OsString;
 use std::fs::{self, symlink_metadata};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -44,7 +43,7 @@ pub(crate) enum FileType {
 /// Holds name, size, modified time, attributes string, and file type.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileInfo {
-    name: OsString,
+    path: PathBuf,
     size: Option<u64>,
     modified: Option<SystemTime>,
     created: Option<SystemTime>,
@@ -52,9 +51,7 @@ pub(crate) struct FileInfo {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    owner_uid: Option<u32>,
-    #[cfg(unix)]
-    group_gid: Option<u32>,
+    unix_meta: Option<Box<UnixMetadata>>,
 }
 
 impl FileInfo {
@@ -63,13 +60,10 @@ impl FileInfo {
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileInfo struct populated with the file's information.
-    pub(crate) fn get_file_info(
-        path: &Path,
-        metadata: Option<fs::Metadata>,
-    ) -> io::Result<FileInfo> {
+    pub(crate) fn new(path: PathBuf, metadata: Option<fs::Metadata>) -> io::Result<FileInfo> {
         let metadata = match metadata {
             Some(m) => m,
-            None => symlink_metadata(path)?,
+            None => symlink_metadata(&path)?,
         };
 
         let file_type = if metadata.is_file() {
@@ -83,13 +77,18 @@ impl FileInfo {
         };
 
         #[cfg(unix)]
-        let (owner_uid, group_gid) = {
+        let unix_meta = {
             use std::os::unix::fs::MetadataExt;
-            (Some(metadata.uid()), Some(metadata.gid()))
+            Some(Box::new(UnixMetadata {
+                uid: metadata.uid(),
+                gid: metadata.gid(),
+                owner_name: OnceLock::new(),
+                group_name: OnceLock::new(),
+            }))
         };
 
         Ok(FileInfo {
-            name: path.file_name().unwrap_or_default().to_os_string(),
+            path,
             size: if metadata.is_file() {
                 Some(metadata.len())
             } else {
@@ -101,56 +100,8 @@ impl FileInfo {
             attributes: format_attributes(&metadata),
             file_type,
             #[cfg(unix)]
-            owner_uid,
-            #[cfg(unix)]
-            group_gid,
+            unix_meta,
         })
-    }
-}
-
-#[cfg(unix)]
-#[derive(Debug)]
-pub(crate) struct UnixMetadata {
-    pub(crate) uid: u32,
-    pub(crate) gid: u32,
-    pub(crate) owner_name: OnceLock<Option<Arc<str>>>,
-    pub(crate) group_name: OnceLock<Option<Arc<str>>>,
-}
-
-#[derive(Debug)]
-pub(crate) struct CachedFileInfo {
-    path: PathBuf,
-    size: Option<u64>,
-    modified: Option<SystemTime>,
-    created: Option<SystemTime>,
-    accessed: Option<SystemTime>,
-    attributes: String,
-    file_type: FileType,
-    #[cfg(unix)]
-    unix_meta: Option<Box<UnixMetadata>>,
-}
-
-impl CachedFileInfo {
-    pub(crate) fn new(path: PathBuf, info: FileInfo) -> Self {
-        Self {
-            path,
-            size: info.size,
-            modified: info.modified,
-            created: info.created,
-            accessed: info.accessed,
-            attributes: info.attributes,
-            file_type: info.file_type,
-            #[cfg(unix)]
-            unix_meta: match (info.owner_uid, info.group_gid) {
-                (Some(uid), Some(gid)) => Some(Box::new(UnixMetadata {
-                    uid,
-                    gid,
-                    owner_name: OnceLock::new(),
-                    group_name: OnceLock::new(),
-                })),
-                _ => None,
-            },
-        }
     }
 
     #[inline]
@@ -228,6 +179,15 @@ impl CachedFileInfo {
 }
 
 #[cfg(unix)]
+#[derive(Debug)]
+pub(crate) struct UnixMetadata {
+    pub(crate) uid: u32,
+    pub(crate) gid: u32,
+    pub(crate) owner_name: OnceLock<Option<Arc<str>>>,
+    pub(crate) group_name: OnceLock<Option<Arc<str>>>,
+}
+
+#[cfg(unix)]
 pub(crate) mod unix_info {
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -289,9 +249,9 @@ mod tests {
         let mut file = File::create(&file_path)?;
         writeln!(file, "abc123")?;
 
-        let info = FileInfo::get_file_info(&file_path, None)?;
+        let info = FileInfo::new(file_path, None)?;
         assert_eq!(&info.file_type, &FileType::File);
-        assert_eq!(info.name.to_string_lossy(), "hello.txt");
+        assert_eq!(info.name(), "hello.txt");
         assert!(info.size.is_some());
         Ok(())
     }
@@ -302,7 +262,7 @@ mod tests {
         let dir_path = tmp.path().join("emptydir");
         fs::create_dir(&dir_path)?;
 
-        let info = FileInfo::get_file_info(&dir_path, None)?;
+        let info = FileInfo::new(dir_path, None)?;
         assert_eq!(&info.file_type, &FileType::Directory);
         assert_eq!(&info.size, &None);
         Ok(())

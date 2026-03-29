@@ -20,7 +20,7 @@ use crate::app::info::InfoState;
 use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::file_info::CachedFileInfo;
+use crate::core::file_info::FileInfo;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -204,7 +204,7 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn current_file_info(&self) -> Option<&CachedFileInfo> {
+    pub(crate) fn current_file_info(&self) -> Option<&FileInfo> {
         self.info.selected_info()
     }
 

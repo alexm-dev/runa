@@ -8,7 +8,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
-use crate::core::{file_info::CachedFileInfo, worker::Workers};
+use crate::core::{file_info::FileInfo, worker::Workers};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
@@ -561,7 +561,7 @@ pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
     accent_style: Style,
-    info_cache: &CachedFileInfo,
+    info_cache: &FileInfo,
 ) {
     let theme = app.config().theme();
     let info_cfg = &app.config().display().info();
