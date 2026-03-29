@@ -20,7 +20,7 @@ use std::time::SystemTime;
 #[cfg(unix)]
 use std::sync::Arc;
 #[cfg(unix)]
-use std::sync::Mutex;
+use std::sync::OnceLock;
 
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
@@ -111,8 +111,8 @@ impl FileInfo {
 pub(crate) struct UnixMetadata {
     pub(crate) uid: u32,
     pub(crate) gid: u32,
-    pub(crate) owner_name: Mutex<Option<Arc<str>>>,
-    pub(crate) group_name: Mutex<Option<Arc<str>>>,
+    pub(crate) owner_name: OnceLock<Option<Arc<str>>>,
+    pub(crate) group_name: OnceLock<Option<Arc<str>>>,
 }
 
 #[derive(Debug)]
@@ -144,8 +144,8 @@ impl CachedFileInfo {
                     Box::new(UnixMetadata {
                         uid,
                         gid,
-                        owner_name: Mutex::new(None),
-                        group_name: Mutex::new(None),
+                        owner_name: OnceLock::new(),
+                        group_name: OnceLock::new(),
                     })
                 })
             }),
@@ -196,47 +196,29 @@ impl CachedFileInfo {
     }
 
     #[cfg(unix)]
-    fn resolve_unix_name<T, F>(
-        &self,
-        id: T,
-        mutex: &Mutex<Option<Arc<str>>>,
-        lookup: F,
-    ) -> Option<Arc<str>>
-    where
-        T: std::fmt::Display + Copy,
-        F: FnOnce(T) -> Option<std::ffi::OsString>,
-    {
-        if let Ok(guard) = mutex.lock()
-            && let Some(name) = guard.as_ref()
-        {
-            return Some(Arc::clone(name));
-        }
-
-        let resolved: Arc<str> = lookup(id)
-            .map(|s| s.to_string_lossy().into())
-            .unwrap_or_else(|| id.to_string().into());
-
-        if let Ok(mut guard) = mutex.lock() {
-            *guard = Some(Arc::clone(&resolved));
-        }
-
-        Some(resolved)
-    }
-
-    #[cfg(unix)]
     pub(crate) fn owner(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
-        self.resolve_unix_name(meta.uid, &meta.owner_name, |id| {
-            uzers::get_user_by_uid(id).map(|u| u.name().to_os_string())
-        })
+
+        let name_opt = meta.owner_name.get_or_init(|| {
+            uzers::get_user_by_uid(meta.uid)
+                .map(|u| u.name().to_string_lossy().into())
+                .or_else(|| Some(meta.uid.to_string().into()))
+        });
+
+        name_opt.as_ref().map(Arc::clone)
     }
 
     #[cfg(unix)]
     pub(crate) fn group(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
-        self.resolve_unix_name(meta.gid, &meta.group_name, |id| {
-            uzers::get_group_by_gid(id).map(|g| g.name().to_os_string())
-        })
+
+        let name_opt = meta.group_name.get_or_init(|| {
+            uzers::get_group_by_gid(meta.gid)
+                .map(|g| g.name().to_string_lossy().into())
+                .or_else(|| Some(meta.gid.to_string().into()))
+        });
+
+        name_opt.as_ref().map(Arc::clone)
     }
 
     #[cfg(unix)]
@@ -245,13 +227,8 @@ impl CachedFileInfo {
             let owner = id_cache.resolve_user(meta.uid);
             let group = id_cache.resolve_group(meta.gid);
 
-            if let Ok(owner_guard) = meta.owner_name.get_mut() {
-                *owner_guard = Some(owner);
-            }
-
-            if let Ok(group_guard) = meta.group_name.get_mut() {
-                *group_guard = Some(group);
-            }
+            meta.owner_name = OnceLock::from(Some(owner));
+            meta.group_name = OnceLock::from(Some(group));
         }
     }
 }

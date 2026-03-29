@@ -38,6 +38,7 @@ pub(crate) struct Workers {
     parent_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
+    info_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
@@ -61,6 +62,7 @@ impl Workers {
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
         let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
+        let (info_tx, info_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
@@ -72,6 +74,7 @@ impl Workers {
         start_io_worker(parent_io_rx, res_tx.clone());
         start_io_worker(preview_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
+        start_info_worker(info_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
 
@@ -80,6 +83,7 @@ impl Workers {
             parent_io_tx,
             preview_io_tx,
             preview_file_tx,
+            info_tx,
             find_tx,
             fileop_tx,
             response_rx,
@@ -107,6 +111,11 @@ impl Workers {
     #[inline]
     pub(crate) fn preview_file_tx(&self) -> &Sender<WorkerTask> {
         &self.preview_file_tx
+    }
+
+    #[inline]
+    pub(crate) fn info_tx(&self) -> &Sender<WorkerTask> {
+        &self.info_tx
     }
 
     /// Accessor for the find worker task sender.
@@ -260,75 +269,48 @@ impl WorkerResponse {
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
 fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
-        #[cfg(unix)]
-        let mut id_cache = crate::core::file_info::unix_info::IdentityCache::new();
         while let Ok(task) = task_rx.recv() {
-            match task {
-                WorkerTask::LoadDirectory {
-                    path,
-                    focus,
-                    dirs_first,
-                    show_hidden,
-                    show_symlink,
-                    show_system,
-                    case_insensitive,
-                    always_show,
-                    request_id,
-                    tab_id,
-                } => match browse_dir(&path) {
-                    Ok(mut entries) => {
-                        let formatter = Formatter::new(
-                            dirs_first,
-                            show_hidden,
-                            show_symlink,
-                            show_system,
-                            case_insensitive,
-                            always_show,
-                        );
-                        formatter.filter_entries(&mut entries);
-                        formatter.sort_entries(&mut entries);
-                        let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
-                            path,
-                            entries,
-                            focus,
-                            request_id,
-                            tab_id,
-                        });
-                    }
-                    Err(e) => {
-                        let _ = res_tx.send(WorkerResponse::Error(
-                            format!("I/O Error: {}", e),
-                            Some(request_id),
-                        ));
-                    }
-                },
-
-                WorkerTask::GetFileInfo { path, request_id } => {
-                    match FileInfo::get_file_info(&path, None) {
-                        Ok(info) => {
-                            #[cfg(unix)]
-                            let mut cached = CachedFileInfo::new(path, info);
-                            #[cfg(not(unix))]
-                            let cached = CachedFileInfo::new(path, info);
-
-                            #[cfg(unix)]
-                            cached.prepare_unix_names(id_cache);
-
-                            // Send the Arc-wrapped version
-                            let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
-                                info: Arc::new(cached),
-                                request_id,
-                            });
-                        }
-                        Err(e) => {
-                            let _ = res_tx.send(WorkerResponse::Error(
-                                format!("Metadata Error: {}", e),
-                                Some(request_id),
-                            ));
-                        }
-                    }
+            let WorkerTask::LoadDirectory {
+                path,
+                focus,
+                dirs_first,
+                show_hidden,
+                show_symlink,
+                show_system,
+                case_insensitive,
+                always_show,
+                request_id,
+                tab_id,
+            } = task
+            else {
+                continue;
+            };
+            match browse_dir(&path) {
+                Ok(mut entries) => {
+                    let formatter = Formatter::new(
+                        dirs_first,
+                        show_hidden,
+                        show_symlink,
+                        show_system,
+                        case_insensitive,
+                        always_show,
+                    );
+                    formatter.filter_entries(&mut entries);
+                    formatter.sort_entries(&mut entries);
+                    let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
+                        path,
+                        entries,
+                        focus,
+                        request_id,
+                        tab_id,
+                    });
                 }
-                _ => {}
+                Err(e) => {
+                    let _ = res_tx.send(WorkerResponse::Error(
+                        format!("I/O Error: {}", e),
+                        Some(request_id),
+                    ));
+                }
             }
         }
     });
@@ -553,7 +535,6 @@ fn start_fileop_worker(
                             }
                         }
                     } else {
-                        // Target doesn't exist (or overwrite=false made an unused path) -> create.
                         focus_target = target.file_name().map(|n| n.to_os_string());
                         if is_dir {
                             std::fs::create_dir_all(&target).map_err(|e| e.to_string())
@@ -643,6 +624,39 @@ fn start_fileop_worker(
                 }
                 Err(e) => {
                     let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), None));
+                }
+            }
+        }
+    });
+}
+
+fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        #[cfg(unix)]
+        let mut id_cache = crate::core::file_info::unix_info::IdentityCache::new();
+        while let Ok(task) = task_rx.recv() {
+            if let WorkerTask::GetFileInfo { path, request_id } = task {
+                match FileInfo::get_file_info(&path, None) {
+                    Ok(info) => {
+                        #[cfg(unix)]
+                        let mut cached = CachedFileInfo::new(path, info);
+                        #[cfg(not(unix))]
+                        let cached = CachedFileInfo::new(path, info);
+
+                        #[cfg(unix)]
+                        cached.prepare_unix_names(id_cache);
+
+                        let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
+                            info: Arc::new(cached),
+                            request_id,
+                        });
+                    }
+                    Err(e) => {
+                        let _ = res_tx.send(WorkerResponse::Error(
+                            format!("Metadata Error: {}", e),
+                            Some(request_id),
+                        ));
+                    }
                 }
             }
         }

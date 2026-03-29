@@ -270,7 +270,7 @@ impl<'a> AppState<'a> {
         let req_id = self.info.prepare_new_request();
 
         if workers
-            .nav_io_tx()
+            .info_tx()
             .try_send(WorkerTask::GetFileInfo {
                 path: path.clone(),
                 request_id: req_id,
