@@ -246,4 +246,45 @@ mod tests {
         assert!(result.is_err());
         Ok(())
     }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_file_info_symlink() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = TempDir::new()?;
+        let target_path = tmp.path().join("target.txt");
+        File::create(&target_path)?;
+
+        let link_path = tmp.path().join("link.txt");
+        std::os::unix::fs::symlink(&target_path, &link_path)?;
+
+        let info = FileInfo::new(link_path, None)?;
+        assert_eq!(info.file_type, FileType::Symlink);
+        assert_eq!(info.name(), "link.txt");
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_unix_metadata_retrieval() -> Result<(), Box<dyn std::error::Error>> {
+        let tmp = TempDir::new()?;
+        let file_path = tmp.path().join("unix_test.txt");
+        File::create(&file_path)?;
+        let info = FileInfo::new(file_path, None)?;
+
+        assert!(info.unix_meta.is_some());
+        assert!(info.uid() > 0 || info.uid() == 0);
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_user_group_cache() {
+        let mut cache = unix_info::UserGroupCache::new();
+
+        let user = cache.resolve_user(0);
+        assert!(!user.is_empty());
+
+        let user_again = cache.resolve_user(0);
+        assert_eq!(user, user_again);
+    }
 }
