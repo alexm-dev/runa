@@ -207,45 +207,47 @@ impl CachedFileInfo {
     }
 
     #[cfg(unix)]
+    fn resolve_unix_name<T, F>(
+        &self,
+        id: T,
+        mutex: &Mutex<Option<Arc<str>>>,
+        lookup: F,
+    ) -> Option<Arc<str>>
+    where
+        T: std::fmt::Display + Copy,
+        F: FnOnce(T) -> Option<std::ffi::OsString>,
+    {
+        if let Ok(guard) = mutex.lock()
+            && let Some(name) = guard.as_ref()
+        {
+            return Some(Arc::clone(name));
+        }
+
+        let resolved: Arc<str> = lookup(id)
+            .map(|s| s.to_string_lossy().into())
+            .unwrap_or_else(|| id.to_string().into());
+
+        if let Ok(mut guard) = mutex.lock() {
+            *guard = Some(Arc::clone(&resolved));
+        }
+
+        Some(resolved)
+    }
+
+    #[cfg(unix)]
     pub(crate) fn resolved_owner_name(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
-        let uid = meta.uid;
-
-        if let Ok(guard) = meta.owner_name.lock() {
-            if let Some(name) = guard.as_ref() {
-                return Some(Arc::clone(name));
-            }
-        }
-
-        let name: Arc<str> = uzers::get_user_by_uid(uid)
-            .map(|u| u.name().to_string_lossy().into())
-            .unwrap_or_else(|| uid.to_string().into());
-
-        if let Ok(mut guard) = meta.owner_name.lock() {
-            *guard = Some(Arc::clone(&name));
-        }
-        Some(name)
+        self.resolve_unix_name(meta.uid, &meta.owner_name, |id| {
+            uzers::get_user_by_uid(id).map(|u| u.name().to_os_string())
+        })
     }
 
     #[cfg(unix)]
     pub(crate) fn resolved_group_name(&self) -> Option<Arc<str>> {
         let meta = self.unix_meta.as_ref()?;
-        let gid = meta.gid;
-
-        if let Ok(guard) = meta.group_name.lock() {
-            if let Some(name) = guard.as_ref() {
-                return Some(Arc::clone(name));
-            }
-        }
-
-        let name: Arc<str> = uzers::get_group_by_gid(gid)
-            .map(|g| g.name().to_string_lossy().into())
-            .unwrap_or_else(|| gid.to_string().into());
-
-        if let Ok(mut guard) = meta.group_name.lock() {
-            *guard = Some(Arc::clone(&name));
-        }
-        Some(name)
+        self.resolve_unix_name(meta.gid, &meta.group_name, |id| {
+            uzers::get_group_by_gid(id).map(|g| g.name().to_os_string())
+        })
     }
 }
 
