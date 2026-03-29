@@ -228,15 +228,19 @@ impl CachedFileInfo {
 
     #[cfg(unix)]
     pub(crate) fn resolved_owner_name(&self) -> Option<Arc<str>> {
-        use std::ops::Deref;
         let uid = self.owner_uid?;
+
         {
             let guard = self.owner_name.lock().unwrap();
-            if let Some(name) = guard.deref() {
+            if let Some(name) = guard.as_ref() {
                 return Some(Arc::clone(name));
             }
         }
-        let name = unix_info::resolve_user(uid);
+
+        let name: Arc<str> = uzers::get_user_by_uid(uid)
+            .map(|u| u.name().to_string_lossy().into())
+            .unwrap_or_else(|| uid.to_string().into());
+
         let mut guard = self.owner_name.lock().unwrap();
         *guard = Some(Arc::clone(&name));
         Some(name)
@@ -245,13 +249,18 @@ impl CachedFileInfo {
     #[cfg(unix)]
     pub(crate) fn resolved_group_name(&self) -> Option<Arc<str>> {
         let gid = self.group_gid?;
+
         {
             let guard = self.group_name.lock().unwrap();
             if let Some(name) = guard.as_ref() {
                 return Some(Arc::clone(name));
             }
         }
-        let name = unix_info::resolve_group(gid);
+
+        let name: Arc<str> = uzers::get_group_by_gid(gid)
+            .map(|g| g.name().to_string_lossy().into())
+            .unwrap_or_else(|| gid.to_string().into());
+
         let mut guard = self.group_name.lock().unwrap();
         *guard = Some(Arc::clone(&name));
         Some(name)
@@ -269,35 +278,11 @@ pub(crate) mod unix_info {
     }
 
     impl IdentityCache {
-        pub fn new() -> Self {
+        pub(crate) fn new() -> Self {
             Self {
                 users: HashMap::with_capacity(32),
                 groups: HashMap::with_capacity(32),
             }
-        }
-
-        pub fn resolve_user(&mut self, uid: u32) -> Arc<str> {
-            if let Some(name) = self.users.get(&uid) {
-                return Arc::clone(name);
-            }
-            let name: Arc<str> = uzers::get_user_by_uid(uid)
-                .map(|u| u.name().to_string_lossy().into())
-                .unwrap_or_else(|| uid.to_string().into());
-
-            self.users.insert(uid, Arc::clone(&name));
-            name
-        }
-
-        pub fn resolve_group(&mut self, gid: u32) -> Arc<str> {
-            if let Some(name) = self.groups.get(&gid) {
-                return Arc::clone(name);
-            }
-            let name: Arc<str> = uzers::get_group_by_gid(gid)
-                .map(|g| g.name().to_string_lossy().into())
-                .unwrap_or_else(|| gid.to_string().into());
-
-            self.groups.insert(gid, Arc::clone(&name));
-            name
         }
     }
 }
