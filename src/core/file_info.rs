@@ -172,16 +172,16 @@ impl FileInfoStrings {
 
 #[derive(Debug)]
 pub(crate) struct CachedFileInfo {
-    path: PathBuf,
-    strings: FileInfoStrings,
+    pub(crate) path: PathBuf,
+    pub(crate) strings: FileInfoStrings,
     #[cfg(unix)]
-    owner_uid: Option<u32>,
+    pub(crate) owner_uid: Option<u32>,
     #[cfg(unix)]
-    group_gid: Option<u32>,
+    pub(crate) group_gid: Option<u32>,
     #[cfg(unix)]
-    owner_name: Mutex<Option<Arc<str>>>,
+    pub(crate) owner_name: Mutex<Option<Arc<str>>>,
     #[cfg(unix)]
-    group_name: Mutex<Option<Arc<str>>>,
+    pub(crate) group_name: Mutex<Option<Arc<str>>>,
 }
 
 impl CachedFileInfo {
@@ -259,7 +259,7 @@ impl CachedFileInfo {
 }
 
 #[cfg(unix)]
-mod unix_info {
+pub(crate) mod unix_info {
     use std::collections::HashMap;
     use std::sync::Arc;
 
