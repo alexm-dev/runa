@@ -336,7 +336,7 @@ pub(crate) fn draw_status_bar(
                         left_spans.push(Span::styled(info.perms(), info_theme.perms_style()));
                     }
                     StatusTag::Size => {
-                        let padded_size = format!("{:>8}", info.size());
+                        let padded_size = format!("{:<8}", info.size());
                         left_spans.push(Span::styled(padded_size, info_theme.size_style()));
                     }
                     StatusTag::Mtime => {
