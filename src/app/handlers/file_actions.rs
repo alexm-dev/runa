@@ -75,7 +75,7 @@ impl<'a> AppState<'a> {
             self.push_overlay_message(msg, Duration::from_secs(3));
             return KeypressResult::Continue;
         }
-        if let Some(entry) = self.nav.selected_shown_entry() {
+        if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             match open_in_editor(self.config.editor(), &path) {
                 Ok(_) => {

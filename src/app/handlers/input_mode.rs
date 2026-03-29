@@ -300,7 +300,7 @@ impl<'a> AppState<'a> {
 
     /// Prompts the user to rename the selected entry.
     pub(super) fn prompt_rename(&mut self) {
-        if let Some(entry) = self.nav.selected_shown_entry() {
+        if let Some(entry) = self.nav.selected_entry() {
             let name = entry.name().to_string_lossy().to_string();
             self.enter_input_mode(InputMode::Rename, "Rename: ".to_string(), Some(name));
         }

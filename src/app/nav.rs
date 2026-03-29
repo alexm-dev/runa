@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 pub(crate) struct NavState {
     current_dir: PathBuf,
     entries: Vec<FileEntry>,
-    shown_indices: Vec<usize>,
     selected: usize,
+    shown_indices: Vec<usize>,
     positions: HashMap<PathBuf, usize>,
     markers: HashSet<PathBuf>,
     filter: String,
@@ -30,8 +30,8 @@ impl NavState {
         Self {
             current_dir: path,
             entries: Vec::new(),
-            shown_indices: Vec::new(),
             selected: 0,
+            shown_indices: Vec::new(),
             positions: HashMap::new(),
             markers: HashSet::new(),
             filter: String::new(),
@@ -76,10 +76,6 @@ impl NavState {
     #[inline]
     pub(crate) fn request_id(&self) -> u64 {
         self.request_id
-    }
-
-    pub(crate) fn selected_entry(&self) -> Option<&FileEntry> {
-        self.selected_shown_entry()
     }
 
     pub(crate) fn first_selected(&mut self) -> usize {
@@ -207,7 +203,7 @@ impl NavState {
     /// Toggles the marker state of the currently selected entry.
     /// If the entry is in the clipboard, it is unmarked and removed from the clipboard.
     pub(crate) fn toggle_marker(&mut self, clipboard: &mut Option<HashSet<PathBuf>>) {
-        if let Some(entry) = self.selected_shown_entry() {
+        if let Some(entry) = self.selected_entry() {
             let path = self.current_dir().join(entry.name());
 
             if let Some(clip) = clipboard
@@ -275,7 +271,7 @@ impl NavState {
     }
 
     /// Returns a reference to the currently selected entry that matches the filter.
-    pub(crate) fn selected_shown_entry(&self) -> Option<&FileEntry> {
+    pub(crate) fn selected_entry(&self) -> Option<&FileEntry> {
         let actual_idx = self.shown_indices.get(self.selected)?;
         self.entries.get(*actual_idx)
     }
@@ -286,7 +282,7 @@ impl NavState {
             return;
         }
 
-        let target_name = self.selected_shown_entry().map(|e| e.name().to_os_string());
+        let target_name = self.selected_entry().map(|e| e.name().to_os_string());
         self.filter = filter;
         self.save_filter_for_current_dir();
 

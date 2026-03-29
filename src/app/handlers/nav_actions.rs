@@ -140,7 +140,7 @@ impl<'a> AppState<'a> {
     /// If the selected entry is a directory, navigates into it, saves the current position,
     /// and requests loading of the new directory and its parent content.
     fn handle_go_into_dir(&mut self, workers: &Workers) -> KeypressResult {
-        let Some(entry) = self.nav.selected_shown_entry() else {
+        let Some(entry) = self.nav.selected_entry() else {
             return KeypressResult::Continue;
         };
 

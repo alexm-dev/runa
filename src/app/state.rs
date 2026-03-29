@@ -513,7 +513,7 @@ impl<'a> AppState<'a> {
 
     /// Requests a preview load for the currently selected entry in the navigation pane
     pub(crate) fn request_preview(&mut self, workers: &Workers) {
-        if let Some(entry) = self.nav.selected_shown_entry() {
+        if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
 
