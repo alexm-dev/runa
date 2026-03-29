@@ -284,6 +284,30 @@ pub(crate) mod unix_info {
                 groups: HashMap::with_capacity(32),
             }
         }
+
+        pub(crate) fn resolve_user(&mut self, uid: u32) -> Arc<str> {
+            if let Some(name) = self.users.get(&uid) {
+                return Arc::clone(name);
+            }
+            let name: Arc<str> = uzers::get_user_by_uid(uid)
+                .map(|u| u.name().to_string_lossy().into())
+                .unwrap_or_else(|| uid.to_string().into());
+
+            self.users.insert(uid, Arc::clone(&name));
+            name
+        }
+
+        pub(crate) fn resolve_group(&mut self, gid: u32) -> Arc<str> {
+            if let Some(name) = self.groups.get(&gid) {
+                return Arc::clone(name);
+            }
+            let name: Arc<str> = uzers::get_group_by_gid(gid)
+                .map(|g| g.name().to_string_lossy().into())
+                .unwrap_or_else(|| gid.to_string().into());
+
+            self.groups.insert(gid, Arc::clone(&name));
+            name
+        }
     }
 }
 
