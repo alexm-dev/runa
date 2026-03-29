@@ -2,6 +2,22 @@
 
 All the changes made to runa are documented here.
 
+## [0.9.2] - UNRELEASED
+
+### Changed
+- **File Info**: Added a new `GetFileInfo` worker task to handle all relevant `file_info` calls in a `bounded(1)` thread.
+- **InfoState**: Added a new app module to hold the file information state and handle worker response synchronization.
+
+### Internal
+- **Performance:**
+    - Owner/Group File information: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
+    - File information String: Removed `FileInfoStrings` to not store precomputed and formatted strings and instead rely on lazy computation. (eager vs lazy)
+    - Selected Indeced Cache: Added `selected_indeces` to store the the indeces of a FileEntry in a vector instead of recalculating resulting in navigation changes being now more performant.
+
+
+---
+
+
 ## [0.9.1] - 2026-03-28
 
 #### Small patch to the configuration documentation for the release archives.
