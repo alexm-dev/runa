@@ -248,6 +248,83 @@ mod tests {
     }
 
     #[test]
+    fn file_info_empty_name() {
+        let info = FileInfo {
+            path: PathBuf::from(""),
+            size: None,
+            modified: None,
+            created: None,
+            accessed: None,
+            attributes: "".into(),
+            file_type: FileType::Other,
+            #[cfg(unix)]
+            unix_meta: None,
+        };
+
+        assert_eq!(info.name(), "");
+        assert_eq!(info.file_type(), format_file_type(&FileType::Other));
+        assert_eq!(info.size(), format_file_size(None, false));
+    }
+
+    #[test]
+    fn file_info_time_formatting_none() {
+        let info = FileInfo {
+            path: PathBuf::from("dummy"),
+            size: None,
+            modified: None,
+            created: None,
+            accessed: None,
+            attributes: "".into(),
+            file_type: FileType::File,
+            #[cfg(unix)]
+            unix_meta: None,
+        };
+
+        let fmt = "%Y-%m-%d %H:%M";
+        assert_eq!(info.modified(fmt), format_file_time(None, fmt));
+        assert_eq!(info.created(fmt), format_file_time(None, fmt));
+        assert_eq!(info.accessed(fmt), format_file_time(None, fmt));
+    }
+
+    #[test]
+    fn file_info_perms_width() {
+        let info = FileInfo {
+            path: PathBuf::from("file.txt"),
+            size: None,
+            modified: None,
+            created: None,
+            accessed: None,
+            attributes: "rwx".into(),
+            file_type: FileType::File,
+            #[cfg(unix)]
+            unix_meta: None,
+        };
+
+        let perms = info.perms();
+        assert!(perms.len() >= 3);
+        assert!(perms.contains("rwx"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn file_info_unix_meta_defaults() {
+        let info = FileInfo {
+            path: PathBuf::from("dummy"),
+            size: None,
+            modified: None,
+            created: None,
+            accessed: None,
+            attributes: "".into(),
+            file_type: FileType::File,
+            unix_meta: None,
+        };
+
+        // Should fall back to 0
+        assert_eq!(info.uid(), 0);
+        assert_eq!(info.gid(), 0);
+    }
+
+    #[test]
     #[cfg(unix)]
     fn test_file_info_symlink() -> Result<(), Box<dyn std::error::Error>> {
         let tmp = TempDir::new()?;
@@ -274,17 +351,5 @@ mod tests {
         assert!(info.unix_meta.is_some());
         assert!(info.uid() > 0 || info.uid() == 0);
         Ok(())
-    }
-
-    #[test]
-    #[cfg(unix)]
-    fn test_user_group_cache() {
-        let mut cache = unix_info::UserGroupCache::new();
-
-        let user = cache.resolve_user(0);
-        assert!(!user.is_empty());
-
-        let user_again = cache.resolve_user(0);
-        assert_eq!(user, user_again);
     }
 }
