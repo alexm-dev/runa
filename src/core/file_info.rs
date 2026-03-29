@@ -12,13 +12,15 @@ use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
 use std::ffi::OsString;
-use std::fs::symlink_metadata;
+use std::fs::{self, symlink_metadata};
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 #[cfg(unix)]
 use std::sync::Arc;
+#[cfg(unix)]
+use std::sync::Mutex;
 
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
@@ -48,9 +50,9 @@ pub(crate) struct FileInfo {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    owner: Option<Arc<str>>,
+    owner_uid: Option<u32>,
     #[cfg(unix)]
-    group: Option<Arc<str>>,
+    group_gid: Option<u32>,
 }
 
 impl FileInfo {
@@ -59,8 +61,14 @@ impl FileInfo {
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileInfo struct populated with the file's information.
-    pub(crate) fn get_file_info(path: &Path) -> io::Result<FileInfo> {
-        let metadata = symlink_metadata(path)?;
+    pub(crate) fn get_file_info(
+        path: &Path,
+        metadata: Option<fs::Metadata>,
+    ) -> io::Result<FileInfo> {
+        let metadata = match metadata {
+            Some(m) => m,
+            None => symlink_metadata(path)?,
+        };
 
         let file_type = if metadata.is_file() {
             FileType::File
@@ -73,12 +81,9 @@ impl FileInfo {
         };
 
         #[cfg(unix)]
-        let (owner, group) = {
+        let (owner_uid, group_gid) = {
             use std::os::unix::fs::MetadataExt;
-            (
-                Some(unix_info::resolve_user(metadata.uid())),
-                Some(unix_info::resolve_group(metadata.gid())),
-            )
+            (Some(metadata.uid()), Some(metadata.gid()))
         };
 
         Ok(FileInfo {
@@ -94,13 +99,14 @@ impl FileInfo {
             attributes: format_attributes(&metadata),
             file_type,
             #[cfg(unix)]
-            owner,
+            owner_uid,
             #[cfg(unix)]
-            group,
+            group_gid,
         })
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct FileInfoStrings {
     name: Option<String>,
     perms: Option<String>,
@@ -164,9 +170,18 @@ impl FileInfoStrings {
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct CachedFileInfo {
     path: PathBuf,
     strings: FileInfoStrings,
+    #[cfg(unix)]
+    owner_uid: Option<u32>,
+    #[cfg(unix)]
+    group_gid: Option<u32>,
+    #[cfg(unix)]
+    owner_name: Mutex<Option<Arc<str>>>,
+    #[cfg(unix)]
+    group_name: Mutex<Option<Arc<str>>>,
 }
 
 impl CachedFileInfo {
@@ -181,14 +196,24 @@ impl CachedFileInfo {
             created: Some(format_file_time(info.created, time_format)),
             accessed: Some(format_file_time(info.accessed, time_format)),
             file_type: Some(format_file_type(&info.file_type)),
-
             #[cfg(unix)]
-            owner: info.owner,
+            owner: None,
             #[cfg(unix)]
-            group: info.group,
+            group: None,
         };
 
-        Self { path, strings }
+        Self {
+            path,
+            strings,
+            #[cfg(unix)]
+            owner_uid: info.owner_uid,
+            #[cfg(unix)]
+            group_gid: info.group_gid,
+            #[cfg(unix)]
+            owner_name: Mutex::new(None),
+            #[cfg(unix)]
+            group_name: Mutex::new(None),
+        }
     }
 
     #[inline]
@@ -200,58 +225,36 @@ impl CachedFileInfo {
     pub(crate) fn strings(&self) -> &FileInfoStrings {
         &self.strings
     }
-}
 
-#[cfg(unix)]
-mod unix_info {
-    use std::collections::HashMap;
-    use std::sync::{Arc, OnceLock, RwLock};
-    use uzers::{get_group_by_gid, get_user_by_uid};
-
-    static USER_CACHE: OnceLock<RwLock<HashMap<u32, Arc<str>>>> = OnceLock::new();
-    static GROUP_CACHE: OnceLock<RwLock<HashMap<u32, Arc<str>>>> = OnceLock::new();
-
-    fn get_cache(
-        lock: &'static OnceLock<RwLock<HashMap<u32, Arc<str>>>>,
-    ) -> &'static RwLock<HashMap<u32, Arc<str>>> {
-        lock.get_or_init(|| RwLock::new(HashMap::new()))
-    }
-
-    fn resolve_id<F>(
-        id: u32,
-        lock: &'static OnceLock<RwLock<HashMap<u32, Arc<str>>>>,
-        f: F,
-    ) -> Arc<str>
-    where
-        F: FnOnce(u32) -> Option<String>,
-    {
-        let cache = get_cache(lock);
-
-        if let Ok(map) = cache.read()
-            && let Some(name) = map.get(&id)
+    #[cfg(unix)]
+    pub(crate) fn resolved_owner_name(&self) -> Option<Arc<str>> {
+        use std::ops::Deref;
+        let uid = self.owner_uid?;
         {
-            return Arc::clone(name);
+            let guard = self.owner_name.lock().unwrap();
+            if let Some(name) = guard.deref() {
+                return Some(Arc::clone(name));
+            }
         }
-
-        let mut map = cache.write().unwrap_or_else(|e| e.into_inner());
-        map.entry(id)
-            .or_insert_with(|| {
-                let name = f(id).unwrap_or_else(|| id.to_string());
-                Arc::from(name)
-            })
-            .clone()
+        let name = unix_info::resolve_user(uid);
+        let mut guard = self.owner_name.lock().unwrap();
+        *guard = Some(Arc::clone(&name));
+        Some(name)
     }
 
-    pub(super) fn resolve_user(uid: u32) -> Arc<str> {
-        resolve_id(uid, &USER_CACHE, |id| {
-            get_user_by_uid(id).map(|u| u.name().to_string_lossy().into_owned())
-        })
-    }
-
-    pub(super) fn resolve_group(gid: u32) -> Arc<str> {
-        resolve_id(gid, &GROUP_CACHE, |id| {
-            get_group_by_gid(id).map(|g| g.name().to_string_lossy().into_owned())
-        })
+    #[cfg(unix)]
+    pub(crate) fn resolved_group_name(&self) -> Option<Arc<str>> {
+        let gid = self.group_gid?;
+        {
+            let guard = self.group_name.lock().unwrap();
+            if let Some(name) = guard.as_ref() {
+                return Some(Arc::clone(name));
+            }
+        }
+        let name = unix_info::resolve_group(gid);
+        let mut guard = self.group_name.lock().unwrap();
+        *guard = Some(Arc::clone(&name));
+        Some(name)
     }
 }
 
@@ -271,7 +274,7 @@ mod tests {
         let mut file = File::create(&file_path)?;
         writeln!(file, "abc123")?;
 
-        let info = FileInfo::get_file_info(&file_path)?;
+        let info = FileInfo::get_file_info(&file_path, None)?;
         assert_eq!(&info.file_type, &FileType::File);
         assert_eq!(info.name.to_string_lossy(), "hello.txt");
         assert!(info.size.is_some());
@@ -284,7 +287,7 @@ mod tests {
         let dir_path = tmp.path().join("emptydir");
         fs::create_dir(&dir_path)?;
 
-        let info = FileInfo::get_file_info(&dir_path)?;
+        let info = FileInfo::get_file_info(&dir_path, None)?;
         assert_eq!(&info.file_type, &FileType::Directory);
         assert_eq!(&info.size, &None);
         Ok(())

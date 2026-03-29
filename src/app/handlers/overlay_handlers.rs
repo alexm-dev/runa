@@ -98,6 +98,6 @@ impl<'a> AppState<'a> {
     }
 
     fn selected_info_clone(&self) -> Option<Arc<CachedFileInfo>> {
-        self.selected_info.as_ref().map(Arc::clone)
+        self.info.selected_info_arc().map(Arc::clone)
     }
 }

@@ -6,6 +6,7 @@
 
 pub(crate) mod actions;
 pub(crate) mod handlers;
+pub(crate) mod info;
 pub(crate) mod keymap;
 mod nav;
 mod parent;

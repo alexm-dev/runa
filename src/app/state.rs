@@ -15,10 +15,11 @@
 //! This is the primary context/state object passed to most UI/Terminal event logic.
 
 use crate::app::actions::{ActionContext, ActionMode, InputMode};
+use crate::app::info::InfoState;
 use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::file_info::{CachedFileInfo, FileInfo};
+use crate::core::file_info::CachedFileInfo;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -88,6 +89,8 @@ pub(crate) struct AppState<'a> {
     pub(super) preview: PreviewState,
     pub(super) parent: ParentState,
 
+    pub(super) info: InfoState,
+
     pub(super) is_loading: bool,
 
     pub(super) notification_time: Option<Instant>,
@@ -96,8 +99,6 @@ pub(crate) struct AppState<'a> {
 
     pub(super) tab_id: Option<usize>,
     pub(super) tab_line: Arc<Vec<Span<'a>>>,
-
-    pub(super) selected_info: Option<Arc<CachedFileInfo>>,
 }
 
 impl<'a> AppState<'a> {
@@ -125,13 +126,13 @@ impl<'a> AppState<'a> {
             actions: ActionContext::default(),
             preview: PreviewState::default(),
             parent: ParentState::default(),
+            info: InfoState::new(),
             is_loading: false,
             notification_time: None,
             worker_time: None,
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
             tab_id: None,
-            selected_info: None,
         };
 
         Ok(app)
@@ -202,7 +203,7 @@ impl<'a> AppState<'a> {
 
     #[inline]
     pub(crate) fn current_file_info(&self) -> Option<&CachedFileInfo> {
-        self.selected_info.as_deref()
+        self.info.selected_info()
     }
 
     // Entry functions
@@ -307,9 +308,12 @@ impl<'a> AppState<'a> {
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
                     self.nav.update_from_worker(path, entries, focus);
                     self.is_loading = false;
+                    self.info.clear_pending();
+                    self.info.clear_selected_info();
+
                     self.request_parent_content(workers);
                     self.request_preview(workers);
-                    self.update_file_info_cache();
+                    self.update_file_info_cache(workers);
                     self.refresh_show_info_if_open();
                     return;
                 }
@@ -357,6 +361,20 @@ impl<'a> AppState<'a> {
                 if need_reload {
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
+                }
+            }
+
+            WorkerResponse::FileInfoLoaded { info, request_id } => {
+                let info_path = info.path().to_path_buf();
+                if self.info.matches_pending(request_id, info_path.as_path()) {
+                    if info_path.parent() == Some(self.nav.current_dir())
+                        && let Some(sel) = self.nav.selected_entry()
+                        && info_path.file_name() == Some(sel.name())
+                    {
+                        self.info.set_selected_info(Some(info));
+                        self.refresh_show_info_if_open();
+                    }
+                    self.info.clear_pending();
                 }
             }
 
@@ -535,21 +553,23 @@ impl<'a> AppState<'a> {
         });
     }
 
-    pub(crate) fn update_file_info_cache(&mut self) {
+    pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
         let status_info = self.config.display().info().status_bar();
         let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if !status_info && !info_overlay {
-            self.selected_info = None;
+            self.info.clear_selected_info();
+            self.info.clear_pending();
             return;
         }
 
         let Some(entry) = self.nav.selected_entry() else {
-            self.selected_info = None;
+            self.info.clear_selected_info();
+            self.info.clear_pending();
             return;
         };
 
-        if let Some(cached) = &self.selected_info
+        if let Some(cached) = self.info.selected_info()
             && cached.path().parent() == Some(self.nav.current_dir())
             && cached.path().file_name() == Some(entry.name())
         {
@@ -557,11 +577,19 @@ impl<'a> AppState<'a> {
         }
 
         let path = self.nav.current_dir().join(entry.name());
-        if let Ok(info) = FileInfo::get_file_info(&path) {
-            let date_format = self.config.display().info().date_format();
-            self.selected_info = Some(Arc::new(CachedFileInfo::new(path, info, date_format)));
-        } else {
-            self.selected_info = None;
+        let req_id = self.info.next_request_id();
+        let date_format = self.config.display().info().date_format().to_string();
+
+        if workers
+            .nav_io_tx()
+            .try_send(WorkerTask::GetFileInfo {
+                path: path.clone(),
+                request_id: req_id,
+                time_format: date_format,
+            })
+            .is_ok()
+        {
+            self.info.set_pending(req_id, path);
         }
     }
 }

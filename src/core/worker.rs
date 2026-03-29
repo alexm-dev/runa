@@ -14,6 +14,7 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use crate::config::display::PreviewMethod;
+use crate::core::file_info::{CachedFileInfo, FileInfo};
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
@@ -184,6 +185,11 @@ pub(crate) enum WorkerTask {
         request_id: u64,
         tab_id: Option<usize>,
     },
+    GetFileInfo {
+        path: PathBuf,
+        request_id: u64,
+        time_format: String,
+    },
 }
 
 /// Supported file system operations the worker can perform.
@@ -234,6 +240,10 @@ pub(crate) enum WorkerResponse {
         request_id: u64,
         tab_id: Option<usize>,
     },
+    FileInfoLoaded {
+        info: Arc<CachedFileInfo>,
+        request_id: u64,
+    },
     Error(String, Option<u64>),
 }
 
@@ -252,47 +262,66 @@ impl WorkerResponse {
 fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadDirectory {
-                path,
-                focus,
-                dirs_first,
-                show_hidden,
-                show_symlink,
-                show_system,
-                case_insensitive,
-                always_show,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-            match browse_dir(&path) {
-                Ok(mut entries) => {
-                    let formatter = Formatter::new(
-                        dirs_first,
-                        show_hidden,
-                        show_symlink,
-                        show_system,
-                        case_insensitive,
-                        always_show,
-                    );
-                    formatter.filter_entries(&mut entries);
-                    formatter.sort_entries(&mut entries);
-                    let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
-                        path,
-                        entries,
-                        focus,
-                        request_id,
-                        tab_id,
-                    });
-                }
-                Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("I/O Error: {}", e),
-                        Some(request_id),
-                    ));
-                }
+            match task {
+                WorkerTask::LoadDirectory {
+                    path,
+                    focus,
+                    dirs_first,
+                    show_hidden,
+                    show_symlink,
+                    show_system,
+                    case_insensitive,
+                    always_show,
+                    request_id,
+                    tab_id,
+                } => match browse_dir(&path) {
+                    Ok(mut entries) => {
+                        let formatter = Formatter::new(
+                            dirs_first,
+                            show_hidden,
+                            show_symlink,
+                            show_system,
+                            case_insensitive,
+                            always_show,
+                        );
+                        formatter.filter_entries(&mut entries);
+                        formatter.sort_entries(&mut entries);
+                        let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
+                            path,
+                            entries,
+                            focus,
+                            request_id,
+                            tab_id,
+                        });
+                    }
+                    Err(e) => {
+                        let _ = res_tx.send(WorkerResponse::Error(
+                            format!("I/O Error: {}", e),
+                            Some(request_id),
+                        ));
+                    }
+                },
+
+                WorkerTask::GetFileInfo {
+                    path,
+                    request_id,
+                    time_format,
+                } => match FileInfo::get_file_info(&path, None) {
+                    Ok(info) => {
+                        let cached = Arc::new(CachedFileInfo::new(path, info, &time_format));
+                        let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
+                            info: cached,
+                            request_id,
+                        });
+                    }
+                    Err(e) => {
+                        let _ = res_tx.send(WorkerResponse::Error(
+                            format!("Metadata Error: {}", e),
+                            Some(request_id),
+                        ));
+                    }
+                },
+                _ => {}
             }
         }
     });

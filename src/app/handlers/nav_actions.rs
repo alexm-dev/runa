@@ -53,7 +53,7 @@ impl<'a> AppState<'a> {
                 self.nav
                     .toggle_marker_advance(&mut clipboard.entries, marker_jump);
                 self.request_preview(workers);
-                self.update_file_info_cache();
+                self.update_file_info_cache(workers);
             }
             NavAction::ClearMarker => {
                 self.nav.clear_markers();
@@ -72,7 +72,7 @@ impl<'a> AppState<'a> {
             NavAction::GoToBottom => {
                 self.nav.last_selected();
                 self.refresh_show_info_if_open();
-                self.update_file_info_cache();
+                self.update_file_info_cache(workers);
                 self.request_preview(workers);
             }
             NavAction::ScrollUp => {
@@ -85,7 +85,7 @@ impl<'a> AppState<'a> {
                 clipboard.clear();
                 self.nav.select_all();
                 self.request_preview(workers);
-                self.update_file_info_cache();
+                self.update_file_info_cache(workers);
             }
             _ => {}
         }
@@ -102,7 +102,7 @@ impl<'a> AppState<'a> {
     {
         if f(&mut self.nav) {
             self.refresh_show_info_if_open();
-            self.update_file_info_cache();
+            self.update_file_info_cache(workers);
             if self.config.display().instant_preview() {
                 self.request_preview(workers);
             } else {
