@@ -12,7 +12,7 @@ All the changes made to runa are documented here.
 - **Performance:**
     - Owner/Group File information: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
     - File information String: Removed `FileInfoStrings` to not store precomputed and formatted strings and instead rely on lazy computation. (eager vs lazy)
-    - Selected Indeced Cache: Added `selected_indeces` to store the the indeces of a FileEntry in a vector instead of recalculating resulting in navigation changes being now more performant.
+    - Selected Indeces Cache: Added `selected_indeces` to store the the indeces of a FileEntry in a vector instead of recalculating resulting in navigation changes being now more performant.
 
 
 ---
