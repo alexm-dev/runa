@@ -5,7 +5,7 @@
 //! information about a file, such as its name, size, modified time,
 //! attributes, and type.
 //!
-//! The main entry point is [FileInfo::get_file_info], which takes a
+//! The main entry point is [FileInfo::new], which takes a
 //! file path and returns a populated [FileInfo] instance.
 
 use crate::core::formatter::{
@@ -45,7 +45,7 @@ pub(crate) struct FileInfo {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    unix_meta: Option<Box<UnixMetadata>>,
+    unix_meta: Option<UnixMetadata>,
 }
 
 impl FileInfo {
@@ -73,10 +73,10 @@ impl FileInfo {
         #[cfg(unix)]
         let unix_meta = {
             use std::os::unix::fs::MetadataExt;
-            Some(Box::new(UnixMetadata {
+            Some(UnixMetadata {
                 uid: metadata.uid(),
                 gid: metadata.gid(),
-            }))
+            })
         };
 
         Ok(FileInfo {
@@ -151,7 +151,7 @@ impl FileInfo {
 }
 
 #[cfg(unix)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct UnixMetadata {
     pub(crate) uid: u32,
     pub(crate) gid: u32,
@@ -171,8 +171,8 @@ pub(crate) mod unix_info {
     impl UserGroupCache {
         pub(crate) fn new() -> Self {
             Self {
-                users: HashMap::new(),
-                groups: HashMap::new(),
+                users: HashMap::with_capacity(8),
+                groups: HashMap::with_capacity(8),
             }
         }
 
