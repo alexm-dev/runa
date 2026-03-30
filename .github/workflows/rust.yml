@@ -53,6 +53,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
       - name: Install cross
         if: ${{ matrix.use_cross }}
         env:
@@ -121,7 +126,6 @@ jobs:
             echo "- **Build:** Failed" >> $GITHUB_STEP_SUMMARY
           fi
 
-          # Report Test Status (only if tests were supposed to run)
           if [[ "${{ matrix.target }}" == "x86_64"* ]]; then
             if [ "${{ steps.test_step.outcome }}" == "success" ]; then
               echo "- **Tests:** Passed" >> $GITHUB_STEP_SUMMARY
@@ -142,8 +146,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          components: rustfmt,clippy
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: clippy-cache
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
@@ -164,6 +170,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: Swatinem/rust-cache@v2
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
