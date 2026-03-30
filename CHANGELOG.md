@@ -16,9 +16,9 @@ All the changes made to runa are documented here.
 
 It is now possible to verify the Integrity and origin of all downloaded artifacts:
 
-    ```bash
-    gh attestation verify --repo alexm-dev/runa <file_name>
-    ```
+```bash
+gh attestation verify --repo alexm-dev/runa <file_name>
+```
 
 ### Internal
 - **Tests**: Added new tests to `metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
