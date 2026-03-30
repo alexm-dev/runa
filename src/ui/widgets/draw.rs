@@ -612,13 +612,13 @@ pub(crate) fn draw_show_info_dialog(
     #[cfg(unix)]
     {
         if info_cfg.owner()
-            && let Some(o) = app.info().resolve_owner(meta_cache)
+            && let Some(o) = app.properties().resolve_owner(meta_cache)
         {
             add_line("Owner:", Cow::Owned(o.to_string()));
         }
 
         if info_cfg.group()
-            && let Some(g) = app.info().resolve_group(meta_cache)
+            && let Some(g) = app.properties().resolve_group(meta_cache)
         {
             add_line("Group:", Cow::Owned(g.to_string()));
         }

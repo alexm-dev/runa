@@ -6,7 +6,7 @@
 use crate::core::metadata::FileMetadata;
 
 #[cfg(unix)]
-use {crate::core::file::unix_info::UserGroupCache, std::cell::RefCell};
+use {crate::core::metadata::unix_meta::UserGroupCache, std::cell::RefCell};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
