@@ -3,6 +3,8 @@
 //! Defines key to an action, parsing from the config, and enum variants
 //! for all navigation, file and actions used by runa.
 
+use crate::Config;
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -91,7 +93,7 @@ pub(crate) struct Keymap {
 impl Keymap {
     /// Builds the keymap from the config
     #[rustfmt::skip]
-    pub(crate) fn from_config(config: &crate::config::Config) -> Self {
+    pub(crate) fn from_config(config: &Config) -> Self {
         let mut map = HashMap::new();
         let mut gmap = HashMap::new();
         let keys = config.keys();
