@@ -4,6 +4,7 @@
 //! information and passes it to relevant UI/Terminal functions
 //! - Configuration (loaded from config files)
 //! - Pane view models for navigation, preview and parent states.
+//! - File property state for the currently selected file, used for the info overlay and status bar.
 //! - Action context for relevant inputs
 //! - Current layout metrics
 //! - Communication with worker threads via crossbeam_channel

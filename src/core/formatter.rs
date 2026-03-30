@@ -145,7 +145,7 @@ impl Formatter {
 /// (`d`, `l`, `h` for hidden, `s` for system, `a` for archive, `r` for read-only). Not all flags map 1:1 to Unix.
 ///
 /// # Returns
-/// A string representing the formatted file attributes used by FileInfo
+/// A string representing the formatted file attributes used by FileMetadata
 pub(crate) fn format_attributes(meta: &Metadata) -> String {
     #[cfg(unix)]
     {

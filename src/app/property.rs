@@ -1,10 +1,7 @@
 //! InfoState module for AppState usage.
 //!
-//! [InfoState] struct to wrap the [CachedFileMetadata] from `core::file_info` and
-//! manage the state of info requests, pending paths, and selected file info.
-//!
-//! This module provides methods to prepare new info requests, check pending paths,
-//! debounce requests, and manage the selected file info state.
+//! [PropertyState] struct to wrap the [FileMetadata] and manage the state of worker requests,
+//! pending paths, and selected file metadata.
 
 use crate::core::metadata::FileMetadata;
 
