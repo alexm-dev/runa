@@ -6,11 +6,11 @@
 
 pub(crate) mod actions;
 pub(crate) mod handlers;
-pub(crate) mod info;
 pub(crate) mod keymap;
 mod nav;
 mod parent;
 pub(crate) mod preview;
+pub(crate) mod property;
 mod state;
 pub(crate) mod tab;
 

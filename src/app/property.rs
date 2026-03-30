@@ -1,36 +1,36 @@
 //! InfoState module for AppState usage.
 //!
-//! [InfoState] struct to wrap the [CachedFileInfo] from `core::file_info` and
+//! [InfoState] struct to wrap the [CachedFileMetadata] from `core::file_info` and
 //! manage the state of info requests, pending paths, and selected file info.
 //!
 //! This module provides methods to prepare new info requests, check pending paths,
 //! debounce requests, and manage the selected file info state.
 
-use crate::core::file_info::FileInfo;
+use crate::core::metadata::FileMetadata;
 
 #[cfg(unix)]
-use {crate::core::file_info::unix_info::UserGroupCache, std::cell::RefCell};
+use {crate::core::file::unix_info::UserGroupCache, std::cell::RefCell};
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
-pub(crate) struct InfoState {
+pub(crate) struct PropertyState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
-    selected_info: Option<Arc<FileInfo>>,
+    selected: Option<Arc<FileMetadata>>,
     last_request_time: Instant,
     #[cfg(unix)]
     cache: RefCell<UserGroupCache>,
 }
 
-impl InfoState {
+impl PropertyState {
     pub(crate) fn new() -> Self {
         Self {
             request_id: 0,
             pending: None,
-            selected_info: None,
+            selected: None,
             last_request_time: Instant::now() - Duration::from_secs(1),
             #[cfg(unix)]
             cache: RefCell::new(UserGroupCache::new()),
@@ -38,12 +38,12 @@ impl InfoState {
     }
 
     #[cfg(unix)]
-    pub(crate) fn resolve_owner(&self, info: &FileInfo) -> Option<Arc<str>> {
+    pub(crate) fn resolve_owner(&self, info: &FileMetadata) -> Option<Arc<str>> {
         Some(self.cache.borrow_mut().resolve_user(info.uid()))
     }
 
     #[cfg(unix)]
-    pub(crate) fn resolve_group(&self, info: &FileInfo) -> Option<Arc<str>> {
+    pub(crate) fn resolve_group(&self, info: &FileMetadata) -> Option<Arc<str>> {
         Some(self.cache.borrow_mut().resolve_group(info.gid()))
     }
 
@@ -74,16 +74,16 @@ impl InfoState {
         }
     }
 
-    pub(crate) fn selected_info(&self) -> Option<&FileInfo> {
-        self.selected_info.as_deref()
+    pub(crate) fn selected(&self) -> Option<&FileMetadata> {
+        self.selected.as_deref()
     }
 
-    pub(crate) fn selected_info_arc(&self) -> Option<&Arc<FileInfo>> {
-        self.selected_info.as_ref()
+    pub(crate) fn selected_arc(&self) -> Option<&Arc<FileMetadata>> {
+        self.selected.as_ref()
     }
 
-    pub(crate) fn set_selected_info(&mut self, info: Option<Arc<FileInfo>>) {
-        self.selected_info = info;
+    pub(crate) fn set_selected(&mut self, meta: Option<Arc<FileMetadata>>) {
+        self.selected = meta;
     }
 
     pub(crate) fn clear_pending(&mut self) {
@@ -92,6 +92,6 @@ impl InfoState {
 
     pub(crate) fn clear(&mut self) {
         self.pending = None;
-        self.selected_info = None;
+        self.selected = None;
     }
 }

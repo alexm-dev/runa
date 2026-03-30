@@ -1,7 +1,6 @@
 //! File and directory browsing logic for runa.
 //!
 //! Provides the FileEntry struct which is used throughout runa.
-//! Also holds all the FileInfo and FileType structs used by the ShowInfo Overlay
 
 #[cfg(windows)]
 use crate::utils::with_lowered_stack;

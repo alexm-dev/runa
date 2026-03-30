@@ -4,7 +4,7 @@
 //! [app::state::handle_keypress] function.
 
 use crate::app::state::{AppState, KeypressResult};
-use crate::core::file_info::FileInfo;
+use crate::core::metadata::FileMetadata;
 use crate::ui::overlays::{Overlay, OverlayKind};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -39,17 +39,17 @@ impl<'a> AppState<'a> {
 
     /// Refreshes the file info overlay if it is currently open.
     pub(crate) fn refresh_show_info_if_open(&mut self) {
-        if let (Some(new_info), Some(info)) = (
-            self.selected_info_clone(),
-            self.overlays_mut().find_show_info_mut(),
-        ) {
-            *info = new_info;
+        if let Some(new_info) = self.selected_metadata_clone()
+            && let Some(info_slot) = self.overlays_mut().find_show_info_mut()
+            && !Arc::ptr_eq(&new_info, info_slot)
+        {
+            *info_slot = new_info;
         }
     }
 
     /// Shows the file info overlay for the currently selected entry.
     fn show_file_info(&mut self) {
-        if let Some(info) = self.selected_info_clone() {
+        if let Some(info) = self.selected_metadata_clone() {
             self.overlays_mut().push(Overlay::ShowInfo { info });
         }
     }
@@ -98,7 +98,7 @@ impl<'a> AppState<'a> {
         self.overlays_mut().push(Overlay::Message { text });
     }
 
-    fn selected_info_clone(&self) -> Option<Arc<FileInfo>> {
-        self.info.selected_info_arc().map(Arc::clone)
+    fn selected_metadata_clone(&self) -> Option<Arc<FileMetadata>> {
+        self.properties.selected_arc().map(Arc::clone)
     }
 }

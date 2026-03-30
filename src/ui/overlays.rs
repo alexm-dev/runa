@@ -5,12 +5,12 @@
 //!
 //! Is used throughout the ui modules and in handlers.rs.
 
-use crate::core::file_info::FileInfo;
+use crate::core::metadata::FileMetadata;
 use std::slice;
 use std::sync::Arc;
 
 pub(crate) enum Overlay {
-    ShowInfo { info: Arc<FileInfo> },
+    ShowInfo { info: Arc<FileMetadata> },
     Message { text: String },
     PrefixHelp,
     KeybindHelp,
@@ -81,7 +81,7 @@ impl OverlayStack {
         self.top().map(|o| o.kind() == kind).unwrap_or(false)
     }
 
-    pub(crate) fn find_show_info_mut(&mut self) -> Option<&mut Arc<FileInfo>> {
+    pub(crate) fn find_show_info_mut(&mut self) -> Option<&mut Arc<FileMetadata>> {
         self.overlays.iter_mut().find_map(|o| match o {
             Overlay::ShowInfo { info } => Some(info),
             _ => None,

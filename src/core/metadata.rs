@@ -1,12 +1,12 @@
-//! FileInfo struct and related functions for retrieving and formatting
+//! FileMetadata struct and related functions for retrieving and formatting
 //! file information for the ShowInfo overlay and the status line.
 //!
-//! This module defines the [FileInfo] struct which holds relevant
+//! This module defines the [FileMetadata] struct which holds relevant
 //! information about a file, such as its name, size, modified time,
 //! attributes, and type.
 //!
-//! The main entry point is [FileInfo::new], which takes a
-//! file path and returns a populated [FileInfo] instance.
+//! The main entry point is [FileMetadata::new], which takes a
+//! file path and returns a populated [FileMetadata] instance.
 
 use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
@@ -22,7 +22,7 @@ pub(crate) const PERMS_WIDTH: usize = 5;
 #[cfg(unix)]
 pub(crate) const PERMS_WIDTH: usize = 10;
 
-/// Enumerator for the filye types which are then shown inside [FileInfo]
+/// Enumerator for the filye types which are then shown inside [FileMetadata]
 ///
 /// Hold File, Directory, Symlink and Other types.
 #[derive(Debug, Clone, PartialEq)]
@@ -33,10 +33,10 @@ pub(crate) enum FileType {
     Other,
 }
 
-/// Main FileInfo struct that holds each info field for the ShowInfo overlay widget.
+/// Main FileMetadata struct that holds each info field for the ShowInfo overlay widget.
 /// Holds name, size, modified time, attributes string, and file type.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct FileInfo {
+pub(crate) struct FileMetadata {
     path: PathBuf,
     size: Option<u64>,
     modified: Option<SystemTime>,
@@ -48,13 +48,13 @@ pub(crate) struct FileInfo {
     unix_meta: Option<UnixMetadata>,
 }
 
-impl FileInfo {
+impl FileMetadata {
     // Accessors
 
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
-    /// A FileInfo struct populated with the file's information.
-    pub(crate) fn new(path: PathBuf) -> io::Result<FileInfo> {
+    /// A FileMetadata struct populated with the file's information.
+    pub(crate) fn new(path: PathBuf) -> io::Result<FileMetadata> {
         let metadata = symlink_metadata(&path)?;
 
         let file_type = if metadata.is_file() {
@@ -76,7 +76,7 @@ impl FileInfo {
             })
         };
 
-        Ok(FileInfo {
+        Ok(FileMetadata {
             path,
             size: if metadata.is_file() {
                 Some(metadata.len())
@@ -155,7 +155,7 @@ pub(crate) struct UnixMetadata {
 }
 
 #[cfg(unix)]
-pub(crate) mod unix_info {
+pub(crate) mod unix_meta {
     use std::collections::HashMap;
     use std::sync::Arc;
 
@@ -211,13 +211,13 @@ mod tests {
     use tempfile::TempDir;
 
     #[test]
-    fn file_info_basic_file() -> Result<(), Box<dyn std::error::Error>> {
+    fn file_metada_basic_file() -> Result<(), Box<dyn std::error::Error>> {
         let tmp = TempDir::new()?;
         let file_path = tmp.path().join("hello.txt");
         let mut file = File::create(&file_path)?;
         writeln!(file, "abc123")?;
 
-        let info = FileInfo::new(file_path)?;
+        let info = FileMetadata::new(file_path)?;
         assert_eq!(&info.file_type, &FileType::File);
         assert_eq!(info.name(), "hello.txt");
         assert!(info.size.is_some());
@@ -225,12 +225,12 @@ mod tests {
     }
 
     #[test]
-    fn file_info_directory() -> Result<(), Box<dyn std::error::Error>> {
+    fn file_metada_directory() -> Result<(), Box<dyn std::error::Error>> {
         let tmp = TempDir::new()?;
         let dir_path = tmp.path().join("emptydir");
         fs::create_dir(&dir_path)?;
 
-        let info = FileInfo::new(dir_path)?;
+        let info = FileMetadata::new(dir_path)?;
         assert_eq!(&info.file_type, &FileType::Directory);
         assert_eq!(&info.size, &None);
         Ok(())
@@ -245,8 +245,8 @@ mod tests {
     }
 
     #[test]
-    fn file_info_empty_name() {
-        let info = FileInfo {
+    fn file_metada_empty_name() {
+        let info = FileMetadata {
             path: PathBuf::from(""),
             size: None,
             modified: None,
@@ -264,8 +264,8 @@ mod tests {
     }
 
     #[test]
-    fn file_info_time_formatting_none() {
-        let info = FileInfo {
+    fn file_metada_time_formatting_none() {
+        let info = FileMetadata {
             path: PathBuf::from("dummy"),
             size: None,
             modified: None,
@@ -284,8 +284,8 @@ mod tests {
     }
 
     #[test]
-    fn file_info_perms_width() {
-        let info = FileInfo {
+    fn file_metada_perms_width() {
+        let info = FileMetadata {
             path: PathBuf::from("file.txt"),
             size: None,
             modified: None,
@@ -304,8 +304,8 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
-    fn file_info_unix_meta_defaults() {
-        let info = FileInfo {
+    fn file_metada_unix_meta_defaults() {
+        let info = FileMetadata {
             path: PathBuf::from("dummy"),
             size: None,
             modified: None,
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     #[cfg(unix)]
-    fn test_file_info_symlink() -> Result<(), Box<dyn std::error::Error>> {
+    fn test_file_metada_symlink() -> Result<(), Box<dyn std::error::Error>> {
         let tmp = TempDir::new()?;
         let target_path = tmp.path().join("target.txt");
         File::create(&target_path)?;
@@ -331,7 +331,7 @@ mod tests {
         let link_path = tmp.path().join("link.txt");
         std::os::unix::fs::symlink(&target_path, &link_path)?;
 
-        let info = FileInfo::new(link_path)?;
+        let info = FileMetadata::new(link_path)?;
         assert_eq!(info.file_type, FileType::Symlink);
         assert_eq!(info.name(), "link.txt");
         Ok(())
@@ -343,7 +343,7 @@ mod tests {
         let tmp = TempDir::new()?;
         let file_path = tmp.path().join("unix_test.txt");
         File::create(&file_path)?;
-        let info = FileInfo::new(file_path)?;
+        let info = FileMetadata::new(file_path)?;
 
         assert!(info.unix_meta.is_some());
         assert!(info.uid() > 0 || info.uid() == 0);

@@ -14,7 +14,7 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use crate::config::display::PreviewMethod;
-use crate::core::file_info::FileInfo;
+use crate::core::metadata::FileMetadata;
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
@@ -38,7 +38,7 @@ pub(crate) struct Workers {
     parent_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
-    info_tx: Sender<WorkerTask>,
+    metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
@@ -47,7 +47,7 @@ pub(crate) struct Workers {
 
 /// Manages worker thread channels for different task types.
 ///
-/// Each major operation (I/O (nav, preview, parent), preview, file info, find, file-ops) has its own dedicated worker thread.
+/// Each major operation (I/O (nav, preview, parent), preview, file metadata, find, file-ops) has its own dedicated worker thread.
 ///
 /// The find worker uses a bounded channel of size 1: this design ensures that only the
 /// latest find request will be processed, automatically skipping obsolete queued requests
@@ -62,7 +62,7 @@ impl Workers {
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
         let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
-        let (info_tx, info_rx) = bounded::<WorkerTask>(1);
+        let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
@@ -74,7 +74,7 @@ impl Workers {
         start_io_worker(parent_io_rx, res_tx.clone());
         start_io_worker(preview_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
-        start_info_worker(info_rx, res_tx.clone());
+        start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
 
@@ -83,7 +83,7 @@ impl Workers {
             parent_io_tx,
             preview_io_tx,
             preview_file_tx,
-            info_tx,
+            metadata_tx,
             find_tx,
             fileop_tx,
             response_rx,
@@ -113,10 +113,10 @@ impl Workers {
         &self.preview_file_tx
     }
 
-    /// Accessor for the file information worker task sender
+    /// Accessor for the file metadatarmation worker task sender
     #[inline]
-    pub(crate) fn info_tx(&self) -> &Sender<WorkerTask> {
-        &self.info_tx
+    pub(crate) fn metadata_tx(&self) -> &Sender<WorkerTask> {
+        &self.metadata_tx
     }
 
     /// Accessor for the find worker task sender.
@@ -195,7 +195,7 @@ pub(crate) enum WorkerTask {
         request_id: u64,
         tab_id: Option<usize>,
     },
-    GetFileInfo {
+    GetFileMetadata {
         path: PathBuf,
         request_id: u64,
     },
@@ -249,8 +249,8 @@ pub(crate) enum WorkerResponse {
         request_id: u64,
         tab_id: Option<usize>,
     },
-    FileInfoLoaded {
-        info: Arc<FileInfo>,
+    FileMetadataLoaded {
+        metadata: Arc<FileMetadata>,
         request_id: u64,
     },
     Error(String, Option<u64>),
@@ -631,15 +631,15 @@ fn start_fileop_worker(
     });
 }
 
-/// Starts the file information worker thread.
-fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+/// Starts the file metadatarmation worker thread.
+fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
-            if let WorkerTask::GetFileInfo { path, request_id } = task {
-                match FileInfo::new(path) {
-                    Ok(info) => {
-                        let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
-                            info: Arc::new(info),
+            if let WorkerTask::GetFileMetadata { path, request_id } = task {
+                match FileMetadata::new(path) {
+                    Ok(meta) => {
+                        let _ = res_tx.send(WorkerResponse::FileMetadataLoaded {
+                            metadata: Arc::new(meta),
                             request_id,
                         });
                     }

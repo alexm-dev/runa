@@ -4,10 +4,10 @@
 //! based on user preferences from the runa.toml configuration.
 //! Used to prepare file lists for display in each pane.
 //!
-//! Also formatts FileTypes to be used by FileInfo and ShowInfo overlay widget.
+//! Also formatts FileTypes to be used by FileMetadata and ShowInfo overlay widget.
 
 use crate::core::FileEntry;
-use crate::core::file_info::FileType;
+use crate::core::metadata::FileType;
 use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
 
 use chrono::{DateTime, Local};

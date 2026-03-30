@@ -16,11 +16,11 @@
 //! This is the primary context/state object passed to most UI/Terminal event logic.
 
 use crate::app::actions::{ActionContext, ActionMode, InputMode};
-use crate::app::info::InfoState;
 use crate::app::keymap::{Action, Keymap, TabAction};
+use crate::app::property::PropertyState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::file_info::FileInfo;
+use crate::core::metadata::FileMetadata;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -91,7 +91,7 @@ pub(crate) struct AppState<'a> {
     pub(super) preview: PreviewState,
     pub(super) parent: ParentState,
 
-    pub(super) info: InfoState,
+    pub(super) properties: PropertyState,
 
     pub(super) is_loading: bool,
 
@@ -128,7 +128,7 @@ impl<'a> AppState<'a> {
             actions: ActionContext::default(),
             preview: PreviewState::default(),
             parent: ParentState::default(),
-            info: InfoState::new(),
+            properties: PropertyState::new(),
             is_loading: false,
             notification_time: None,
             worker_time: None,
@@ -210,8 +210,8 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn current_file_info(&self) -> Option<&FileInfo> {
-        self.info.selected_info()
+    pub(crate) fn current_file_metadata(&self) -> Option<&FileMetadata> {
+        self.properties.selected()
     }
 
     // Entry functions
@@ -245,7 +245,7 @@ impl<'a> AppState<'a> {
 
     pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
         const FILE_INFO_DEBOUNCE: u64 = 25;
-        if !self.info.can_request(FILE_INFO_DEBOUNCE) {
+        if !self.properties.can_request(FILE_INFO_DEBOUNCE) {
             return;
         }
 
@@ -257,33 +257,33 @@ impl<'a> AppState<'a> {
         }
 
         let Some(entry) = self.nav.selected_entry() else {
-            self.info.clear();
+            self.properties.clear();
             return;
         };
 
         let path = self.nav.current_dir().join(entry.name());
 
-        if let Some(cached) = self.info.selected_info()
+        if let Some(cached) = self.properties.selected()
             && cached.path() == path
         {
             return;
         }
 
-        if self.info.is_pending_path(&path) {
+        if self.properties.is_pending_path(&path) {
             return;
         }
 
-        let req_id = self.info.prepare_new_request();
+        let req_id = self.properties.prepare_new_request();
 
         if workers
-            .info_tx()
-            .try_send(WorkerTask::GetFileInfo {
+            .metadata_tx()
+            .try_send(WorkerTask::GetFileMetadata {
                 path: path.clone(),
                 request_id: req_id,
             })
             .is_ok()
         {
-            self.info.set_pending(req_id, path);
+            self.properties.set_pending(req_id, path);
         }
     }
 
@@ -415,17 +415,20 @@ impl<'a> AppState<'a> {
                 }
             }
 
-            WorkerResponse::FileInfoLoaded { info, request_id } => {
-                let info_path = info.path();
-                if self.info.matches_pending(request_id, info_path) {
-                    if info_path.parent() == Some(self.nav.current_dir())
+            WorkerResponse::FileMetadataLoaded {
+                metadata,
+                request_id,
+            } => {
+                let metadata_path = metadata.path();
+                if self.properties.matches_pending(request_id, metadata_path) {
+                    if metadata_path.parent() == Some(self.nav.current_dir())
                         && let Some(sel) = self.nav.selected_entry()
-                        && info_path.file_name() == Some(sel.name())
+                        && metadata_path.file_name() == Some(sel.name())
                     {
-                        self.info.set_selected_info(Some(info));
+                        self.properties.set_selected(Some(metadata));
                         self.refresh_show_info_if_open();
                     }
-                    self.info.clear_pending();
+                    self.properties.clear_pending();
                 }
             }
 

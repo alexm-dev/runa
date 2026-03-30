@@ -8,7 +8,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
-use crate::core::{file_info::FileInfo, worker::Workers};
+use crate::core::{metadata::FileMetadata, worker::Workers};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
@@ -318,7 +318,7 @@ pub(crate) fn draw_status_bar(
 
     if position == StatusPosition::Footer
         && display_cfg.info().status_bar()
-        && let Some(info) = app.current_file_info()
+        && let Some(file_meta) = app.current_file_metadata()
     {
         let info_theme = theme.info();
         let separator_style = theme.accent_style();
@@ -333,37 +333,39 @@ pub(crate) fn draw_status_bar(
                 }
                 StatusSegment::Tag(tag) => match tag {
                     StatusTag::Perms => {
-                        left_spans.push(Span::styled(info.perms(), info_theme.perms_style()));
+                        left_spans.push(Span::styled(file_meta.perms(), info_theme.perms_style()));
                     }
                     StatusTag::Size => {
-                        let padded_size = format!("{:>8}", info.size());
+                        let padded_size = format!("{:>8}", file_meta.size());
                         left_spans.push(Span::styled(padded_size, info_theme.size_style()));
                     }
                     StatusTag::Mtime => {
-                        let modified = info.modified(&date_format);
+                        let modified = file_meta.modified(&date_format);
                         left_spans.push(Span::styled(modified, info_theme.modified_style()));
                     }
                     StatusTag::Btime => {
-                        let created = info.created(&date_format);
+                        let created = file_meta.created(&date_format);
                         left_spans.push(Span::styled(created, info_theme.created_style()));
                     }
                     StatusTag::Atime => {
-                        let accessed = info.accessed(&date_format);
+                        let accessed = file_meta.accessed(&date_format);
                         left_spans.push(Span::styled(accessed, info_theme.accessed_style()));
                     }
                     StatusTag::Type => {
-                        left_spans
-                            .push(Span::styled(info.file_type(), info_theme.file_type_style()));
+                        left_spans.push(Span::styled(
+                            file_meta.file_type(),
+                            info_theme.file_type_style(),
+                        ));
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
-                        if let Some(o) = app.info().resolve_owner(info) {
+                        if let Some(o) = app.file_metadata().resolve_owner(file_meta) {
                             left_spans.push(Span::styled(o.to_string(), info_theme.owner_style()));
                         }
                     }
                     #[cfg(unix)]
                     StatusTag::Group => {
-                        if let Some(g) = app.info().resolve_group(info) {
+                        if let Some(g) = app.file_metadata().resolve_group(file_meta) {
                             left_spans.push(Span::styled(g.to_string(), info_theme.group_style()));
                         }
                     }
@@ -561,7 +563,7 @@ pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
     accent_style: Style,
-    info_cache: &FileInfo,
+    meta_cache: &FileMetadata,
 ) {
     let theme = app.config().theme();
     let info_cfg = &app.config().display().info();
@@ -586,37 +588,37 @@ pub(crate) fn draw_show_info_dialog(
     };
 
     if info_cfg.name() {
-        add_line("Name:", Cow::Borrowed(info_cache.name()));
+        add_line("Name:", Cow::Borrowed(meta_cache.name()));
     }
     if info_cfg.file_type() {
-        add_line("Type:", Cow::Borrowed(info_cache.file_type()));
+        add_line("Type:", Cow::Borrowed(meta_cache.file_type()));
     }
     if info_cfg.size() {
-        add_line("Size:", Cow::Owned(info_cache.size()));
+        add_line("Size:", Cow::Owned(meta_cache.size()));
     }
     if info_cfg.modified() {
-        add_line("Modified:", Cow::Owned(info_cache.modified(date_format)));
+        add_line("Modified:", Cow::Owned(meta_cache.modified(date_format)));
     }
     if info_cfg.created() {
-        add_line("Created", Cow::Owned(info_cache.created(date_format)));
+        add_line("Created", Cow::Owned(meta_cache.created(date_format)));
     }
     if info_cfg.accessed() {
-        add_line("Accessed", Cow::Owned(info_cache.accessed(date_format)));
+        add_line("Accessed", Cow::Owned(meta_cache.accessed(date_format)));
     }
     if info_cfg.perms() {
-        add_line("Perms:", Cow::Owned(info_cache.perms()));
+        add_line("Perms:", Cow::Owned(meta_cache.perms()));
     }
 
     #[cfg(unix)]
     {
         if info_cfg.owner()
-            && let Some(o) = app.info().resolve_owner(info_cache)
+            && let Some(o) = app.info().resolve_owner(meta_cache)
         {
             add_line("Owner:", Cow::Owned(o.to_string()));
         }
 
         if info_cfg.group()
-            && let Some(g) = app.info().resolve_group(info_cache)
+            && let Some(g) = app.info().resolve_group(meta_cache)
         {
             add_line("Group:", Cow::Owned(g.to_string()));
         }
