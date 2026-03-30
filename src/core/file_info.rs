@@ -331,7 +331,7 @@ mod tests {
         let link_path = tmp.path().join("link.txt");
         std::os::unix::fs::symlink(&target_path, &link_path)?;
 
-        let info = FileInfo::new(link_path, None)?;
+        let info = FileInfo::new(link_path)?;
         assert_eq!(info.file_type, FileType::Symlink);
         assert_eq!(info.name(), "link.txt");
         Ok(())
@@ -343,7 +343,7 @@ mod tests {
         let tmp = TempDir::new()?;
         let file_path = tmp.path().join("unix_test.txt");
         File::create(&file_path)?;
-        let info = FileInfo::new(file_path, None)?;
+        let info = FileInfo::new(file_path)?;
 
         assert!(info.unix_meta.is_some());
         assert!(info.uid() > 0 || info.uid() == 0);
