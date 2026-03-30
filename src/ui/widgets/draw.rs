@@ -359,13 +359,13 @@ pub(crate) fn draw_status_bar(
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
-                        if let Some(o) = app.file_metadata().resolve_owner(file_meta) {
+                        if let Some(o) = app.properties.resolve_owner(file_meta) {
                             left_spans.push(Span::styled(o.to_string(), info_theme.owner_style()));
                         }
                     }
                     #[cfg(unix)]
                     StatusTag::Group => {
-                        if let Some(g) = app.file_metadata().resolve_group(file_meta) {
+                        if let Some(g) = app.properties.resolve_group(file_meta) {
                             left_spans.push(Span::styled(g.to_string(), info_theme.group_style()));
                         }
                     }
