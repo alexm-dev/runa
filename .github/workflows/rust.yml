@@ -93,7 +93,7 @@ jobs:
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
-        run: choco install fd bat
+        run: choco install fd bat || echo "Ignored choco failure"
 
       - name: Build
         id: build_step
