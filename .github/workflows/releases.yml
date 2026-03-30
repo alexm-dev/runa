@@ -7,9 +7,6 @@ on:
         description: 'Release tag (e.g., v0.3.4)'
         required: true
 
-permissions:
-  contents: write
-
 jobs:
   build:
     if: github.actor == 'alexm-dev'
