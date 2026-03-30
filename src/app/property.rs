@@ -1,4 +1,4 @@
-//! InfoState module for AppState usage.
+//! File property module for AppState usage.
 //!
 //! [PropertyState] struct to wrap the [FileMetadata] and manage the state of worker requests,
 //! pending paths, and selected file metadata.
