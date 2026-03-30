@@ -176,8 +176,8 @@ impl<'a> AppState<'a> {
 
     #[cfg(unix)]
     #[inline]
-    pub(crate) fn info(&self) -> &InfoState {
-        &self.info
+    pub(crate) fn properties(&self) -> &PropertyState {
+        &self.properties
     }
 
     #[inline]
