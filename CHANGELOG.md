@@ -6,16 +6,26 @@ All the changes made to runa are documented here.
 
 #### Performance improvement patch. Improves efficiency of file information for the status line and the widget.
 
+### Added
+- **Thread**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+
 ### Changed
-- **File Info**: Added a new `GetFileInfo` worker task to handle all relevant `file_info` calls in a `bounded(1)` thread.
-- **InfoState**: Added a new `info.rs` module to hold the file information state and handle worker response synchronization.
+- **FileInfo Renamed**: `FileInfo`, its `file_info.rs` module, and all its references have been to renamed to `FileMetadata` and `metadata` to accurately reflect its purpose better.
+- **PropertyState**: Added a new `property.rs` app sub-module to hold the file metadata handling for `AppState` synchronization.
+- **Archive Attestation**: All release archives are now attested via the release workflow.
+
+It is now possible to verify the Integrity and origin of all downloaded artifacts:
+
+    ```bash
+    gh attestation verify --repo alexm-dev/runa <file_name>
+    ```
 
 ### Internal
-- **Tests**: Added new tests to `file_info.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
+- **Tests**: Added new tests to `metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
-    - **File Info**: Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
-    - **File Info Formatting**: Removed `FileInfoStrings` to not store pre-computed and formatted strings and instead rely on lazy computation. (eager vs lazy)
-    - **Selected Indices Cache**: Added `selected_indeces` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
+    - Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
+    - Removed `FileInfoStrings` to not store pre-computed and formatted strings and instead rely on lazy computation. (eager vs lazy)
+    - Added `selected_indeces` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
 
 ---
