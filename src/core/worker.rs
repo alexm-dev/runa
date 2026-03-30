@@ -636,7 +636,7 @@ fn start_info_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             if let WorkerTask::GetFileInfo { path, request_id } = task {
-                match FileInfo::new(path, None) {
+                match FileInfo::new(path) {
                     Ok(info) => {
                         let _ = res_tx.send(WorkerResponse::FileInfoLoaded {
                             info: Arc::new(info),

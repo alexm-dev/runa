@@ -12,7 +12,7 @@ use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
 
-use std::fs::{self, symlink_metadata};
+use std::fs::symlink_metadata;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -54,11 +54,8 @@ impl FileInfo {
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileInfo struct populated with the file's information.
-    pub(crate) fn new(path: PathBuf, metadata: Option<fs::Metadata>) -> io::Result<FileInfo> {
-        let metadata = match metadata {
-            Some(m) => m,
-            None => symlink_metadata(&path)?,
-        };
+    pub(crate) fn new(path: PathBuf) -> io::Result<FileInfo> {
+        let metadata = symlink_metadata(&path)?;
 
         let file_type = if metadata.is_file() {
             FileType::File
@@ -220,7 +217,7 @@ mod tests {
         let mut file = File::create(&file_path)?;
         writeln!(file, "abc123")?;
 
-        let info = FileInfo::new(file_path, None)?;
+        let info = FileInfo::new(file_path)?;
         assert_eq!(&info.file_type, &FileType::File);
         assert_eq!(info.name(), "hello.txt");
         assert!(info.size.is_some());
@@ -233,7 +230,7 @@ mod tests {
         let dir_path = tmp.path().join("emptydir");
         fs::create_dir(&dir_path)?;
 
-        let info = FileInfo::new(dir_path, None)?;
+        let info = FileInfo::new(dir_path)?;
         assert_eq!(&info.file_type, &FileType::Directory);
         assert_eq!(&info.size, &None);
         Ok(())
