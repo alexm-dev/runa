@@ -14,7 +14,7 @@ All the changes made to runa are documented here.
 - **PropertyState**: Added a new `property.rs` app sub-module to hold the file metadata handling for `AppState` synchronization.
 - **Archive Attestation**: All release archives are now attested via the release workflow.
 
-It is now possible to verify the Integrity and origin of all downloaded artifacts:
+It is now possible to verify the integrity and origin of all downloaded assets:
 
 ```bash
 gh attestation verify --repo alexm-dev/runa <file_name>
