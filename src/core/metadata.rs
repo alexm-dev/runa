@@ -46,7 +46,7 @@ pub(crate) struct FileMetadata {
     attributes: String,
     file_type: FileType,
     #[cfg(unix)]
-    unix_meta: Option<UnixMetadata>,
+    unix_meta: Option<unix_meta::UnixMetadata>,
 }
 
 impl FileMetadata {
@@ -71,7 +71,7 @@ impl FileMetadata {
         #[cfg(unix)]
         let unix_meta = {
             use std::os::unix::fs::MetadataExt;
-            Some(UnixMetadata {
+            Some(unix_meta::UnixMetadata {
                 uid: metadata.uid(),
                 gid: metadata.gid(),
             })
@@ -153,9 +153,9 @@ pub(crate) struct FileMetadataCache {
     accessed: Arc<str>,
     file_type: Arc<str>,
     #[cfg(unix)]
-    owner: Arc<str>,
+    owner: Option<Arc<str>>,
     #[cfg(unix)]
-    group: Arc<str>,
+    group: Option<Arc<str>>,
 }
 
 impl FileMetadataCache {
@@ -175,15 +175,15 @@ impl FileMetadataCache {
             file_type: Arc::from(meta.file_type()),
             #[cfg(unix)]
             owner: if needs.owner {
-                ug_cache.resolve_user(meta.uid())
+                Some(ug_cache.resolve_user(meta.uid()))
             } else {
-                Arc::from("")
+                None
             },
             #[cfg(unix)]
             group: if needs.group {
-                ug_cache.resolve_group(meta.gid())
+                Some(ug_cache.resolve_group(meta.gid()))
             } else {
-                Arc::from("")
+                None
             },
         }
     }
@@ -196,18 +196,17 @@ impl FileMetadataCache {
         created: &str,
         accessed: &str,
         file_type: &str,
-        #[cfg(unix)]
-        owner: &str,
-        #[cfg(unix)]
-        group: &str,
     }
-}
 
-#[cfg(unix)]
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub(crate) struct UnixMetadata {
-    pub(crate) uid: u32,
-    pub(crate) gid: u32,
+    #[cfg(unix)]
+    pub(crate) fn owner(&self) -> &str {
+        self.owner.as_deref().unwrap_or_default()
+    }
+
+    #[cfg(unix)]
+    pub(crate) fn group(&self) -> &str {
+        self.group.as_deref().unwrap_or_default()
+    }
 }
 
 #[cfg(unix)]
@@ -215,7 +214,12 @@ pub(crate) mod unix_meta {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    #[cfg(unix)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
+    pub(crate) struct UnixMetadata {
+        pub(crate) uid: u32,
+        pub(crate) gid: u32,
+    }
+
     #[derive(Debug, Clone, Copy)]
     pub(crate) struct MetadataNeeds {
         pub(crate) owner: bool,

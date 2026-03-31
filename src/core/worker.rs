@@ -611,7 +611,6 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                 path,
                 request_id,
                 date_format,
-
                 #[cfg(unix)]
                 needs,
             } = task
