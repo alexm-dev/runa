@@ -318,7 +318,7 @@ pub(crate) fn draw_status_bar(
 
     if position == StatusPosition::Footer
         && display_cfg.info().status_bar()
-        && let Some(file_meta) = app.current_file_metadata()
+        && let Some(file_meta) = app.selected_metadata()
     {
         let info_theme = theme.info();
         let separator_style = theme.accent_style();

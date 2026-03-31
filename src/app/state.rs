@@ -211,7 +211,7 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn current_file_metadata(&self) -> Option<&FileMetadata> {
+    pub(crate) fn selected_metadata(&self) -> Option<&FileMetadata> {
         self.metadata.selected()
     }
 
