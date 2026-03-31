@@ -8,6 +8,8 @@ All the changes made to runa are documented here.
 
 ### Added
 - **Thread**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+- **Owner/Group Toggle**: The `[display.info] owner/group` configuration options now determine if the `FileMetadata` populates the owner and group fields.  
+    - When disabled, no owner/group file resolution is performed, reducing memory.  
 
 ### Changed
 - **FileInfo Renamed**: `FileInfo`, its `file_info.rs` module, and all its references have been to renamed to `FileMetadata` and `metadata` to accurately reflect its purpose better.
@@ -23,9 +25,8 @@ gh attestation verify --repo alexm-dev/runa <file_name>
 ### Internal
 - **Tests**: Added new tests to `metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
-    - Removed `CachedFileInfo` to not duplicate the file data and instead rely on a lazy loaded `FileInfo`.
-    - Removed `FileInfoStrings` to not store pre-computed and formatted strings and instead rely on lazy computation. (eager vs lazy)
-    - Added `selected_indeces` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
+    - Removed `CachedFileInfo` to avoid duplication of file data. Replaced with `FileMetadataCache` that caches an file metadata as `Arc<str>` for efficient shared access and lazy loading.
+    - Added `selected_indices` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
 
 ---
