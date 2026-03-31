@@ -41,7 +41,7 @@ impl NavState {
         }
     }
 
-    getters! {
+    crate::getters! {
         current_dir: &Path,
         entries: &[FileEntry],
         selected_idx => selected: usize,

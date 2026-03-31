@@ -39,7 +39,7 @@ pub(crate) struct PreviewState {
 }
 
 impl PreviewState {
-    getters! {
+    crate::getters! {
         data: &PreviewData,
         selected_idx: usize,
         request_id: u64,

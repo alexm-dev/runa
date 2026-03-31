@@ -45,7 +45,7 @@ impl FileEntry {
         }
     }
 
-    getters! {
+    crate::getters! {
         name: &OsStr,
         flags: u8,
     }

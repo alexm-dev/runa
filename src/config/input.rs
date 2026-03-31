@@ -47,7 +47,7 @@ pub(crate) struct Keys {
     scroll_down: Vec<String>,
 }
 
-key_accessor!(
+crate::key_accessor!(
     open_file,
     go_up,
     go_down,

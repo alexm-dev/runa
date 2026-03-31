@@ -3,6 +3,13 @@
 //! This module contains macros that are used in multiple places in the codebase.
 //! They are defined here to avoid code duplication and to keep the codebase clean.
 
+/// Getter macro
+///
+/// Usage:
+/// - `field: T`            -> returns by value (T copied)
+/// - `field: &T`           -> returns by reference
+/// - `method => field: T`  -> rename getter function
+/// - [cfg(...)]            -> apply config specific setting to
 #[macro_export]
 macro_rules! getters {
     ($( #[$meta:meta] )? $method:ident => $field:ident : &$type:ty, $($rest:tt)+) => {
@@ -60,6 +67,8 @@ macro_rules! getters {
     () => {};
 }
 
+/// Accessor macro for input keys defined in config/input
+/// Returns `&[String]` by default
 #[macro_export]
 macro_rules! key_accessor {
     ($($name:ident),+ $(,)?) => {

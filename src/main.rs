@@ -1,13 +1,11 @@
 //! main.rs
 //! Entry point for runa
 
-#[macro_use]
-pub(crate) mod utils;
-
 pub(crate) mod app;
 pub(crate) mod config;
 pub(crate) mod core;
 pub(crate) mod ui;
+pub(crate) mod utils;
 
 use std::io;
 use std::path::PathBuf;

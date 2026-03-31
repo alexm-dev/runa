@@ -147,7 +147,7 @@ impl<'a> AppState<'a> {
         self.request_parent_content(workers);
     }
 
-    getters! {
+    crate::getters! {
         config: &Config,
         nav: &NavState,
         actions: &ActionContext,

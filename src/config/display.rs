@@ -44,7 +44,7 @@ pub(crate) struct Display {
 
 /// Public methods for accessing display configuration options
 impl Display {
-    getters! {
+    crate::getters! {
         selection_marker: bool,
         dir_marker: bool,
         border_shape: &BorderShape,
@@ -145,7 +145,7 @@ pub(crate) struct LayoutConfig {
 
 /// Public methods for accessing layout configuration options
 impl LayoutConfig {
-    getters! {
+    crate::getters! {
         parent_ratio => parent: u16,
         main_ratio => main: u16,
         preview_ratio => preview: u16,
@@ -194,7 +194,7 @@ impl ShowInfoOptions {
         }
     }
 
-    getters! {
+    crate::getters! {
         name: bool,
         file_type: bool,
         size: bool,
@@ -401,7 +401,7 @@ impl Default for StatusElements {
 }
 
 impl StatusElements {
-    getters! {
+    crate::getters! {
         entry_count: StatusPosition,
         filter: StatusPosition,
         markers: StatusPosition,

@@ -171,7 +171,7 @@ impl Theme {
         self.parent.entry_style(&self.entry)
     }
 
-    getters! {
+    crate::getters! {
         exe_color: Color,
         selection_icon: &str,
         preview: &PaneTheme,
@@ -406,7 +406,7 @@ pub(crate) struct MarkerTheme {
 }
 
 impl MarkerTheme {
-    getters! {
+    crate::getters! {
         icon: &str,
     }
 
@@ -460,7 +460,7 @@ pub(crate) struct WidgetTheme {
 }
 
 impl WidgetTheme {
-    getters! {
+    crate::getters! {
         position: &Option<DialogPosition>,
         size: &Option<DialogSize>,
         confirm_size: &Option<DialogSize>,
@@ -610,7 +610,7 @@ impl Default for SymlinkTheme {
 }
 
 impl SymlinkTheme {
-    getters! {
+    crate::getters! {
         directory: Color,
         file: Color,
         target: Color,
@@ -646,7 +646,7 @@ impl Default for TabTheme {
 }
 
 impl TabTheme {
-    getters! {
+    crate::getters! {
         marker: &str,
         separator: &str,
     }

@@ -75,7 +75,7 @@ pub(crate) struct ActionContext {
 }
 
 impl ActionContext {
-    getters! {
+    crate::getters! {
         mode: &ActionMode,
         input_buffer: &str,
         input_cursor_pos: usize,
@@ -430,7 +430,7 @@ pub(crate) struct FindState {
 }
 
 impl FindState {
-    getters! {
+    crate::getters! {
         request_id: u64,
         selected: usize,
         results => cache: &Vec<FindResult>,
@@ -524,7 +524,7 @@ pub(crate) struct AutoCompleteState {
 }
 
 impl AutoCompleteState {
-    getters! {
+    crate::getters! {
         suggestions: &Vec<String>,
         last_input: &str,
     }

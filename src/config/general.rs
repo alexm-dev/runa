@@ -87,7 +87,7 @@ impl From<General> for InternalGeneral {
 }
 
 impl InternalGeneral {
-    getters! {
+    crate::getters! {
         dirs_first: bool,
         show_hidden: bool,
         show_symlink: bool,

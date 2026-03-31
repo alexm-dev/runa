@@ -91,7 +91,7 @@ impl Workers {
         }
     }
 
-    getters! {
+    crate::getters! {
         nav_io_tx: &Sender<WorkerTask>,
         parent_io_tx: &Sender<WorkerTask>,
         preview_io_tx: &Sender<WorkerTask>,

@@ -19,7 +19,7 @@ pub(crate) struct ParentState {
 }
 
 impl ParentState {
-    getters! {
+    crate::getters! {
         request_id: u64,
         entries: &[FileEntry],
         selected_idx: Option<usize>,
