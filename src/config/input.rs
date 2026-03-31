@@ -47,20 +47,7 @@ pub(crate) struct Keys {
     scroll_down: Vec<String>,
 }
 
-macro_rules! accessor {
-    ($($name:ident),+ $(,)?) => {
-        impl Keys {
-            $(
-                #[inline]
-                pub(crate) fn $name(&self) -> &[String] {
-                    &self.$name
-                }
-            )+
-        }
-    };
-}
-
-accessor!(
+key_accessor!(
     open_file,
     go_up,
     go_down,

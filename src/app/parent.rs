@@ -19,21 +19,10 @@ pub(crate) struct ParentState {
 }
 
 impl ParentState {
-    // Getters / accessors
-
-    #[inline]
-    pub(crate) fn request_id(&self) -> u64 {
-        self.request_id
-    }
-
-    #[inline]
-    pub(crate) fn entries(&self) -> &[FileEntry] {
-        &self.entries
-    }
-
-    #[inline]
-    pub(crate) fn selected_idx(&self) -> Option<usize> {
-        self.selected_idx
+    getters! {
+        request_id: u64,
+        entries: &[FileEntry],
+        selected_idx: Option<usize>,
     }
 
     pub(crate) fn last_path(&self) -> Option<&Path> {

@@ -45,20 +45,13 @@ impl FileEntry {
         }
     }
 
-    // Accessors
-
-    #[inline]
-    pub(crate) fn name(&self) -> &OsStr {
-        &self.name
+    getters! {
+        name: &OsStr,
+        flags: u8,
     }
 
     pub(crate) fn name_str(&self) -> Cow<'_, str> {
         self.name.to_string_lossy()
-    }
-
-    #[inline]
-    pub(crate) fn flags(&self) -> u8 {
-        self.flags
     }
 
     #[inline]

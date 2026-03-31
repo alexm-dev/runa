@@ -147,52 +147,18 @@ impl<'a> AppState<'a> {
         self.request_parent_content(workers);
     }
 
-    // Getters/ accessors
+    getters! {
+        config: &Config,
+        nav: &NavState,
+        actions: &ActionContext,
+        preview: &PreviewState,
+        parent: &ParentState,
+        is_loading: bool,
+        worker_time: &Option<Instant>,
+        overlays: &OverlayStack,
 
-    #[inline]
-    pub(crate) fn config(&self) -> &Config {
-        self.config
-    }
-
-    #[inline]
-    pub(crate) fn nav(&self) -> &NavState {
-        &self.nav
-    }
-
-    #[inline]
-    pub(crate) fn actions(&self) -> &ActionContext {
-        &self.actions
-    }
-
-    #[inline]
-    pub(crate) fn preview(&self) -> &PreviewState {
-        &self.preview
-    }
-
-    #[inline]
-    pub(crate) fn parent(&self) -> &ParentState {
-        &self.parent
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn meta(&self) -> &MetadataState {
-        &self.metadata
-    }
-
-    #[inline]
-    pub(crate) fn is_loading(&self) -> bool {
-        self.is_loading
-    }
-
-    #[inline]
-    pub(crate) fn worker_time(&self) -> &Option<Instant> {
-        &self.worker_time
-    }
-
-    #[inline]
-    pub(crate) fn overlays(&self) -> &OverlayStack {
-        &self.overlays
+        #[cfg(unix)]
+        meta => metadata: &MetadataState,
     }
 
     #[inline]

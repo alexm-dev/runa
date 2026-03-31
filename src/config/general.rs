@@ -87,44 +87,15 @@ impl From<General> for InternalGeneral {
 }
 
 impl InternalGeneral {
-    #[inline]
-    pub(crate) fn dirs_first(&self) -> bool {
-        self.dirs_first
-    }
-
-    #[inline]
-    pub(crate) fn show_hidden(&self) -> bool {
-        self.show_hidden
-    }
-
-    #[inline]
-    pub(crate) fn show_symlink(&self) -> bool {
-        self.show_symlink
-    }
-
-    #[inline]
-    pub(crate) fn show_system(&self) -> bool {
-        self.show_system
-    }
-
-    #[inline]
-    pub(crate) fn case_insensitive(&self) -> bool {
-        self.case_insensitive
-    }
-
-    #[inline]
-    pub(crate) fn always_show(&self) -> &Arc<HashSet<OsString>> {
-        &self.always_show
-    }
-
-    #[inline]
-    pub(crate) fn max_find_results(&self) -> usize {
-        self.max_find_results
-    }
-
-    #[inline]
-    pub(crate) fn move_to_trash(&self) -> bool {
-        self.move_to_trash
+    getters! {
+        dirs_first: bool,
+        show_hidden: bool,
+        show_symlink: bool,
+        show_system: bool,
+        case_insensitive: bool,
+        always_show: &Arc<HashSet<OsString>>,
+        max_find_results: usize,
+        move_to_trash: bool,
     }
 
     #[inline]

@@ -41,41 +41,14 @@ impl NavState {
         }
     }
 
-    // Getters / Accessors
-
-    #[inline]
-    pub(crate) fn current_dir(&self) -> &Path {
-        &self.current_dir
-    }
-
-    #[inline]
-    pub(crate) fn entries(&self) -> &[FileEntry] {
-        &self.entries
-    }
-
-    #[inline]
-    pub(crate) fn markers(&self) -> &HashSet<PathBuf> {
-        &self.markers
-    }
-
-    #[inline]
-    pub(crate) fn filter(&self) -> &str {
-        &self.filter
-    }
-
-    #[inline]
-    pub(crate) fn selected_idx(&self) -> usize {
-        self.selected
-    }
-
-    #[inline]
-    pub(crate) fn display_path(&self) -> &str {
-        &self.display_path
-    }
-
-    #[inline]
-    pub(crate) fn request_id(&self) -> u64 {
-        self.request_id
+    getters! {
+        current_dir: &Path,
+        entries: &[FileEntry],
+        selected_idx => selected: usize,
+        markers: &HashSet<PathBuf>,
+        filter: &str,
+        display_path: &str,
+        request_id: u64,
     }
 
     pub(crate) fn first_selected(&mut self) -> usize {

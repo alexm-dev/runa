@@ -44,14 +44,23 @@ pub(crate) struct Display {
 
 /// Public methods for accessing display configuration options
 impl Display {
-    #[inline]
-    pub(crate) fn selection_marker(&self) -> bool {
-        self.selection_marker
-    }
-
-    #[inline]
-    pub(crate) fn dir_marker(&self) -> bool {
-        self.dir_marker
+    getters! {
+        selection_marker: bool,
+        dir_marker: bool,
+        border_shape: &BorderShape,
+        titles: bool,
+        icons: bool,
+        separators: bool,
+        parent: bool,
+        preview: bool,
+        preview_underline: bool,
+        preview_underline_color: bool,
+        scroll_padding: usize,
+        toggle_marker_jump: bool,
+        instant_preview: bool,
+        preview_options: &PreviewOptions,
+        info: &ShowInfoOptions,
+        status: &StatusElements,
     }
 
     #[inline]
@@ -70,36 +79,6 @@ impl Display {
     }
 
     #[inline]
-    pub(crate) fn border_shape(&self) -> &BorderShape {
-        &self.border_shape
-    }
-
-    #[inline]
-    pub(crate) fn titles(&self) -> bool {
-        self.titles
-    }
-
-    #[inline]
-    pub(crate) fn icons(&self) -> bool {
-        self.icons
-    }
-
-    #[inline]
-    pub(crate) fn separators(&self) -> bool {
-        self.separators
-    }
-
-    #[inline]
-    pub(crate) fn parent(&self) -> bool {
-        self.parent
-    }
-
-    #[inline]
-    pub(crate) fn preview(&self) -> bool {
-        self.preview
-    }
-
-    #[inline]
     pub(crate) fn parent_ratio(&self) -> u16 {
         self.layout.parent_ratio()
     }
@@ -112,46 +91,6 @@ impl Display {
     #[inline]
     pub(crate) fn preview_ratio(&self) -> u16 {
         self.layout.preview_ratio()
-    }
-
-    #[inline]
-    pub(crate) fn preview_underline(&self) -> bool {
-        self.preview_underline
-    }
-
-    #[inline]
-    pub(crate) fn preview_underline_color(&self) -> bool {
-        self.preview_underline_color
-    }
-
-    #[inline]
-    pub(crate) fn scroll_padding(&self) -> usize {
-        self.scroll_padding
-    }
-
-    #[inline]
-    pub(crate) fn toggle_marker_jump(&self) -> bool {
-        self.toggle_marker_jump
-    }
-
-    #[inline]
-    pub(crate) fn instant_preview(&self) -> bool {
-        self.instant_preview
-    }
-
-    #[inline]
-    pub(crate) fn preview_options(&self) -> &PreviewOptions {
-        &self.preview_options
-    }
-
-    #[inline]
-    pub(crate) fn info(&self) -> &ShowInfoOptions {
-        &self.info
-    }
-
-    #[inline]
-    pub(crate) fn status(&self) -> &StatusElements {
-        &self.status
     }
 
     /// Get padding string based on entry_padding
@@ -206,19 +145,10 @@ pub(crate) struct LayoutConfig {
 
 /// Public methods for accessing layout configuration options
 impl LayoutConfig {
-    #[inline]
-    fn parent_ratio(&self) -> u16 {
-        self.parent
-    }
-
-    #[inline]
-    fn main_ratio(&self) -> u16 {
-        self.main
-    }
-
-    #[inline]
-    fn preview_ratio(&self) -> u16 {
-        self.preview
+    getters! {
+        parent_ratio => parent: u16,
+        main_ratio => main: u16,
+        preview_ratio => preview: u16,
     }
 }
 
@@ -264,71 +194,25 @@ impl ShowInfoOptions {
         }
     }
 
-    #[inline]
-    pub(crate) fn name(&self) -> bool {
-        self.name
-    }
+    getters! {
+        name: bool,
+        file_type: bool,
+        size: bool,
+        modified: bool,
+        created: bool,
+        accessed: bool,
+        perms: bool,
 
-    #[inline]
-    pub(crate) fn file_type(&self) -> bool {
-        self.file_type
-    }
+        #[cfg(unix)]
+        owner: bool,
+        #[cfg(unix)]
+        group: bool,
 
-    #[inline]
-    pub(crate) fn size(&self) -> bool {
-        self.size
-    }
+        position: &Option<DialogPosition>,
+        status_bar: bool,
+        date_format: &str,
+        segments: &[StatusSegment],
 
-    #[inline]
-    pub(crate) fn modified(&self) -> bool {
-        self.modified
-    }
-
-    #[inline]
-    pub(crate) fn created(&self) -> bool {
-        self.created
-    }
-
-    #[inline]
-    pub(crate) fn accessed(&self) -> bool {
-        self.accessed
-    }
-
-    #[inline]
-    pub(crate) fn perms(&self) -> bool {
-        self.perms
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn owner(&self) -> bool {
-        self.owner
-    }
-
-    #[cfg(unix)]
-    #[inline]
-    pub(crate) fn group(&self) -> bool {
-        self.group
-    }
-
-    #[inline]
-    pub(crate) fn position(&self) -> &Option<DialogPosition> {
-        &self.position
-    }
-
-    #[inline]
-    pub(crate) fn status_bar(&self) -> bool {
-        self.status_bar
-    }
-
-    #[inline]
-    pub(crate) fn date_format(&self) -> &str {
-        &self.date_format
-    }
-
-    #[inline]
-    pub(crate) fn segments(&self) -> &[StatusSegment] {
-        &self.segments
     }
 
     fn validate_date_format(fmt: Option<String>) -> String {
@@ -517,34 +401,13 @@ impl Default for StatusElements {
 }
 
 impl StatusElements {
-    #[inline]
-    pub(crate) fn entry_count(&self) -> StatusPosition {
-        self.entry_count
-    }
-
-    #[inline]
-    pub(crate) fn filter(&self) -> StatusPosition {
-        self.filter
-    }
-
-    #[inline]
-    pub(crate) fn markers(&self) -> StatusPosition {
-        self.markers
-    }
-
-    #[inline]
-    pub(crate) fn clipboard(&self) -> StatusPosition {
-        self.clipboard
-    }
-
-    #[inline]
-    pub(crate) fn tasks(&self) -> StatusPosition {
-        self.tasks
-    }
-
-    #[inline]
-    pub(crate) fn tabs(&self) -> StatusPosition {
-        self.tabs
+    getters! {
+        entry_count: StatusPosition,
+        filter: StatusPosition,
+        markers: StatusPosition,
+        clipboard: StatusPosition,
+        tasks: StatusPosition,
+        tabs: StatusPosition,
     }
 }
 

@@ -91,55 +91,16 @@ impl Workers {
         }
     }
 
-    /// Accessor the I/O worker task sender.
-    #[inline]
-    pub(crate) fn nav_io_tx(&self) -> &Sender<WorkerTask> {
-        &self.nav_io_tx
-    }
-
-    #[inline]
-    pub(crate) fn parent_io_tx(&self) -> &Sender<WorkerTask> {
-        &self.parent_io_tx
-    }
-
-    #[inline]
-    pub(crate) fn preview_io_tx(&self) -> &Sender<WorkerTask> {
-        &self.preview_io_tx
-    }
-
-    /// Accessor for the preview worker task sender.
-    #[inline]
-    pub(crate) fn preview_file_tx(&self) -> &Sender<WorkerTask> {
-        &self.preview_file_tx
-    }
-
-    /// Accessor for the file metadatarmation worker task sender
-    #[inline]
-    pub(crate) fn metadata_tx(&self) -> &Sender<WorkerTask> {
-        &self.metadata_tx
-    }
-
-    /// Accessor for the find worker task sender.
-    #[inline]
-    pub(crate) fn find_tx(&self) -> &Sender<WorkerTask> {
-        &self.find_tx
-    }
-
-    /// Accessor for the file operation worker task sender.
-    #[inline]
-    pub(crate) fn fileop_tx(&self) -> &Sender<WorkerTask> {
-        &self.fileop_tx
-    }
-
-    /// Accessor for the worker response receiver.
-    #[inline]
-    pub(crate) fn response_rx(&self) -> &Receiver<WorkerResponse> {
-        &self.response_rx
-    }
-
-    #[inline]
-    pub(crate) fn active(&self) -> &Arc<AtomicUsize> {
-        &self.active
+    getters! {
+        nav_io_tx: &Sender<WorkerTask>,
+        parent_io_tx: &Sender<WorkerTask>,
+        preview_io_tx: &Sender<WorkerTask>,
+        preview_file_tx: &Sender<WorkerTask>,
+        metadata_tx: &Sender<WorkerTask>,
+        find_tx: &Sender<WorkerTask>,
+        fileop_tx: &Sender<WorkerTask>,
+        response_rx: &Receiver<WorkerResponse>,
+        active: &Arc<AtomicUsize>,
     }
 }
 

@@ -11,4 +11,7 @@
 pub(crate) mod cli;
 pub(crate) mod helpers;
 
+#[macro_use]
+pub(crate) mod macros;
+
 pub(crate) use helpers::*;

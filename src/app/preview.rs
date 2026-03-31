@@ -39,21 +39,10 @@ pub(crate) struct PreviewState {
 }
 
 impl PreviewState {
-    // Getters/ Accessors
-
-    #[inline]
-    pub(crate) fn data(&self) -> &PreviewData {
-        &self.data
-    }
-
-    #[inline]
-    pub(crate) fn selected_idx(&self) -> usize {
-        self.selected_idx
-    }
-
-    #[inline]
-    pub(crate) fn request_id(&self) -> u64 {
-        self.request_id
+    getters! {
+        data: &PreviewData,
+        selected_idx: usize,
+        request_id: u64,
     }
 
     pub(crate) fn current_path(&self) -> Option<&Path> {

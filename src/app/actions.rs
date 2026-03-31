@@ -75,21 +75,11 @@ pub(crate) struct ActionContext {
 }
 
 impl ActionContext {
-    // Getters / accessors
-
-    #[inline]
-    pub(crate) fn mode(&self) -> &ActionMode {
-        &self.mode
-    }
-
-    #[inline]
-    pub(crate) fn input_buffer(&self) -> &str {
-        &self.input_buffer
-    }
-
-    #[inline]
-    pub(crate) fn input_cursor_pos(&self) -> usize {
-        self.input_cursor_pos
+    getters! {
+        mode: &ActionMode,
+        input_buffer: &str,
+        input_cursor_pos: usize,
+        scroll: &ScrollState,
     }
 
     pub(crate) fn prefix_recognizer_mut(&mut self) -> &mut KeyPrefix {
@@ -98,10 +88,6 @@ impl ActionContext {
 
     pub(crate) fn autocomplete_mut(&mut self) -> &mut AutoCompleteState {
         &mut self.autocomplete
-    }
-
-    pub(crate) fn scroll(&self) -> &ScrollState {
-        &self.scroll
     }
 
     // Find functions
@@ -444,23 +430,11 @@ pub(crate) struct FindState {
 }
 
 impl FindState {
-    // Getters / Accessors
-    #[inline]
-    fn results(&self) -> &[FindResult] {
-        &self.cache
+    getters! {
+        request_id: u64,
+        selected: usize,
+        results => cache: &Vec<FindResult>,
     }
-
-    #[inline]
-    fn request_id(&self) -> u64 {
-        self.request_id
-    }
-
-    #[inline]
-    fn selected(&self) -> usize {
-        self.selected
-    }
-
-    // Find functions
 
     /// Cancels the current ongoing find operation, if any.
     ///
@@ -550,14 +524,9 @@ pub(crate) struct AutoCompleteState {
 }
 
 impl AutoCompleteState {
-    #[inline]
-    pub(crate) fn suggestions(&self) -> &Vec<String> {
-        &self.suggestions
-    }
-
-    #[inline]
-    pub(crate) fn last_input(&self) -> &str {
-        &self.last_input
+    getters! {
+        suggestions: &Vec<String>,
+        last_input: &str,
     }
 
     pub(crate) fn reset(&mut self) {

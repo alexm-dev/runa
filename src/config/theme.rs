@@ -171,40 +171,14 @@ impl Theme {
         self.parent.entry_style(&self.entry)
     }
 
-    // Accessor methods for various theme properties
-
-    pub(crate) fn exe_color(&self) -> Color {
-        self.exe_color
-    }
-
-    #[inline]
-    pub(crate) fn selection_icon(&self) -> &str {
-        &self.selection_icon
-    }
-
-    #[inline]
-    pub(crate) fn preview(&self) -> &PaneTheme {
-        &self.preview
-    }
-
-    #[inline]
-    pub(crate) fn marker(&self) -> &MarkerTheme {
-        &self.marker
-    }
-
-    #[inline]
-    pub(crate) fn widget(&self) -> &WidgetTheme {
-        &self.widget
-    }
-
-    #[inline]
-    pub(crate) fn info(&self) -> &InfoStatusTheme {
-        &self.info
-    }
-
-    #[inline]
-    pub(crate) fn tab(&self) -> &TabTheme {
-        &self.tab
+    getters! {
+        exe_color: Color,
+        selection_icon: &str,
+        preview: &PaneTheme,
+        marker: &MarkerTheme,
+        widget: &WidgetTheme,
+        info: &InfoStatusTheme,
+        tab: &TabTheme,
     }
 
     /// Apply user overrides on top of a preset theme if a known preset name is provided.
@@ -432,10 +406,8 @@ pub(crate) struct MarkerTheme {
 }
 
 impl MarkerTheme {
-    /// Returns the marker icon.
-    #[inline]
-    pub(crate) fn icon(&self) -> &str {
-        &self.icon
+    getters! {
+        icon: &str,
     }
 
     /// Returns the marker style, falling back to the internal default theme if colors are Reset.
@@ -488,19 +460,11 @@ pub(crate) struct WidgetTheme {
 }
 
 impl WidgetTheme {
-    #[inline]
-    pub(crate) fn position(&self) -> &Option<DialogPosition> {
-        &self.position
-    }
-
-    #[inline]
-    pub(crate) fn size(&self) -> &Option<DialogSize> {
-        &self.size
-    }
-
-    #[inline]
-    pub(crate) fn confirm_size(&self) -> &Option<DialogSize> {
-        &self.confirm_size
+    getters! {
+        position: &Option<DialogPosition>,
+        size: &Option<DialogSize>,
+        confirm_size: &Option<DialogSize>,
+        move_size: &Option<DialogSize>,
     }
 
     /// Returns the confirm dialog size, falling back to the general size, and then to the provided fallback.
@@ -510,10 +474,6 @@ impl WidgetTheme {
             .or_else(|| self.size().as_ref())
             .copied()
             .unwrap_or(fallback)
-    }
-
-    pub(crate) fn move_size(&self) -> &Option<DialogSize> {
-        &self.move_size
     }
 
     pub(crate) fn move_size_or(&self, fallback: DialogSize) -> DialogSize {
@@ -650,16 +610,10 @@ impl Default for SymlinkTheme {
 }
 
 impl SymlinkTheme {
-    pub(crate) fn directory(&self) -> Color {
-        self.directory
-    }
-
-    pub(crate) fn file(&self) -> Color {
-        self.file
-    }
-
-    pub(crate) fn target(&self) -> Color {
-        self.target
+    getters! {
+        directory: Color,
+        file: Color,
+        target: Color,
     }
 }
 
@@ -692,12 +646,9 @@ impl Default for TabTheme {
 }
 
 impl TabTheme {
-    pub(crate) fn marker(&self) -> &str {
-        &self.marker
-    }
-
-    pub(crate) fn separator(&self) -> &str {
-        &self.separator
+    getters! {
+        marker: &str,
+        separator: &str,
     }
 
     pub fn active_style_or_theme(&self) -> Style {
