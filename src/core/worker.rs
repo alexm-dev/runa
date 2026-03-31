@@ -14,7 +14,7 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use crate::config::display::PreviewMethod;
-use crate::core::metadata::FileMetadata;
+use crate::core::metadata::{FileMetadata, FileMetadataCache};
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
@@ -158,6 +158,7 @@ pub(crate) enum WorkerTask {
     },
     GetFileMetadata {
         path: PathBuf,
+        date_format: String,
         request_id: u64,
     },
 }
@@ -211,7 +212,8 @@ pub(crate) enum WorkerResponse {
         tab_id: Option<usize>,
     },
     FileMetadataLoaded {
-        metadata: Arc<FileMetadata>,
+        metadata: Arc<FileMetadataCache>,
+        path: PathBuf,
         request_id: u64,
     },
     Error(String, Option<u64>),
@@ -594,13 +596,28 @@ fn start_fileop_worker(
 
 /// Starts the file metadatarmation worker thread.
 fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    #[cfg(unix)]
+    let mut ug_cache = crate::core::metadata::unix_meta::UserGroupCache::new();
+
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
-            if let WorkerTask::GetFileMetadata { path, request_id } = task {
-                match FileMetadata::new(path) {
+            if let WorkerTask::GetFileMetadata {
+                path,
+                request_id,
+                date_format,
+            } = task
+            {
+                match FileMetadata::new(&path) {
                     Ok(meta) => {
+                        let cache = FileMetadataCache::from(
+                            &meta,
+                            &date_format,
+                            #[cfg(unix)]
+                            &mut ug_cache,
+                        );
                         let _ = res_tx.send(WorkerResponse::FileMetadataLoaded {
-                            metadata: Arc::new(meta),
+                            metadata: Arc::new(cache),
+                            path,
                             request_id,
                         });
                     }
@@ -643,7 +660,7 @@ mod tests {
     }
 
     #[test]
-    fn test_worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
+    fn worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
         let temp = tempdir()?;
         let test_file = temp.path().join("pool_test.txt");

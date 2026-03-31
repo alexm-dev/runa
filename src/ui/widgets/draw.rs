@@ -8,7 +8,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
-use crate::core::{metadata::FileMetadata, worker::Workers};
+use crate::core::{metadata::FileMetadataCache, worker::Workers};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
@@ -22,7 +22,6 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
-use std::borrow::Cow;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -322,7 +321,6 @@ pub(crate) fn draw_status_bar(
     {
         let info_theme = theme.info();
         let separator_style = theme.accent_style();
-        let date_format = app.config().display().info().date_format().to_string();
 
         let segments = display_cfg.info().segments();
 
@@ -340,15 +338,15 @@ pub(crate) fn draw_status_bar(
                         left_spans.push(Span::styled(padded_size, info_theme.size_style()));
                     }
                     StatusTag::Mtime => {
-                        let modified = file_meta.modified(&date_format);
+                        let modified = file_meta.modified();
                         left_spans.push(Span::styled(modified, info_theme.modified_style()));
                     }
                     StatusTag::Btime => {
-                        let created = file_meta.created(&date_format);
+                        let created = file_meta.created();
                         left_spans.push(Span::styled(created, info_theme.created_style()));
                     }
                     StatusTag::Atime => {
-                        let accessed = file_meta.accessed(&date_format);
+                        let accessed = file_meta.accessed();
                         left_spans.push(Span::styled(accessed, info_theme.accessed_style()));
                     }
                     StatusTag::Type => {
@@ -359,15 +357,14 @@ pub(crate) fn draw_status_bar(
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
-                        if let Some(o) = app.meta().resolve_owner(file_meta) {
-                            left_spans.push(Span::styled(o.to_string(), info_theme.owner_style()));
-                        }
+                        let owner = file_meta.owner();
+                        left_spans.push(Span::styled(owner, info_theme.owner_style()));
                     }
+
                     #[cfg(unix)]
                     StatusTag::Group => {
-                        if let Some(g) = app.meta().resolve_group(file_meta) {
-                            left_spans.push(Span::styled(g.to_string(), info_theme.group_style()));
-                        }
+                        let group = file_meta.group();
+                        left_spans.push(Span::styled(group, info_theme.group_style()));
                     }
                 },
             }
@@ -563,11 +560,10 @@ pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
     accent_style: Style,
-    meta_cache: &FileMetadata,
+    meta_cache: &FileMetadataCache,
 ) {
     let theme = app.config().theme();
     let info_cfg = &app.config().display().info();
-    let date_format = info_cfg.date_format();
 
     let label_style = theme.widget().label_style_or_theme();
     let value_style = theme.widget().value_style_or_theme();
@@ -577,50 +573,45 @@ pub(crate) fn draw_show_info_dialog(
 
     let mut lines: Vec<Line> = Vec::with_capacity(9);
 
-    let mut add_line = |label: &str, value: std::borrow::Cow<'_, str>| {
+    let mut add_line = |label: &str, value: &str| {
         if !value.is_empty() {
-            let owned_value: String = value.into_owned();
             lines.push(Line::from(vec![
                 Span::styled(format!("{:<11}", label), label_style),
-                Span::styled(owned_value, value_style),
+                Span::styled(value.to_string(), value_style),
             ]));
         }
     };
 
     if info_cfg.name() {
-        add_line("Name:", Cow::Borrowed(meta_cache.name()));
+        add_line("Name:", meta_cache.name());
     }
     if info_cfg.file_type() {
-        add_line("Type:", Cow::Borrowed(meta_cache.file_type()));
+        add_line("Type:", meta_cache.file_type());
     }
     if info_cfg.size() {
-        add_line("Size:", Cow::Owned(meta_cache.size()));
+        add_line("Size:", meta_cache.size());
     }
     if info_cfg.modified() {
-        add_line("Modified:", Cow::Owned(meta_cache.modified(date_format)));
+        add_line("Modified:", meta_cache.modified());
     }
     if info_cfg.created() {
-        add_line("Created", Cow::Owned(meta_cache.created(date_format)));
+        add_line("Created", meta_cache.created());
     }
     if info_cfg.accessed() {
-        add_line("Accessed", Cow::Owned(meta_cache.accessed(date_format)));
+        add_line("Accessed", meta_cache.accessed());
     }
     if info_cfg.perms() {
-        add_line("Perms:", Cow::Owned(meta_cache.perms()));
+        add_line("Perms:", meta_cache.perms());
     }
 
     #[cfg(unix)]
     {
-        if info_cfg.owner()
-            && let Some(o) = app.meta().resolve_owner(meta_cache)
-        {
-            add_line("Owner:", Cow::Owned(o.to_string()));
+        if info_cfg.owner() {
+            add_line("Owner:", meta_cache.owner());
         }
 
-        if info_cfg.group()
-            && let Some(g) = app.meta().resolve_group(meta_cache)
-        {
-            add_line("Group:", Cow::Owned(g.to_string()));
+        if info_cfg.group() {
+            add_line("Group:", meta_cache.group());
         }
     }
 

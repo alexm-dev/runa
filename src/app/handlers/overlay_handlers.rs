@@ -4,7 +4,7 @@
 //! [app::state::handle_keypress] function.
 
 use crate::app::state::{AppState, KeypressResult};
-use crate::core::metadata::FileMetadata;
+use crate::core::metadata::FileMetadataCache;
 use crate::ui::overlays::{Overlay, OverlayKind};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -98,7 +98,7 @@ impl<'a> AppState<'a> {
         self.overlays_mut().push(Overlay::Message { text });
     }
 
-    fn selected_metadata_clone(&self) -> Option<Arc<FileMetadata>> {
+    fn selected_metadata_clone(&self) -> Option<Arc<FileMetadataCache>> {
         self.metadata.selected_arc().map(Arc::clone)
     }
 }

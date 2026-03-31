@@ -15,6 +15,7 @@ use crate::core::formatter::{
 use std::fs::symlink_metadata;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 #[cfg(windows)]
@@ -54,8 +55,8 @@ impl FileMetadata {
     /// Main file info getter used by the ShowInfo overlay functions
     /// # Returns
     /// A FileMetadata struct populated with the file's information.
-    pub(crate) fn new(path: PathBuf) -> io::Result<FileMetadata> {
-        let metadata = symlink_metadata(&path)?;
+    pub(crate) fn new(path: &Path) -> io::Result<FileMetadata> {
+        let metadata = symlink_metadata(path)?;
 
         let file_type = if metadata.is_file() {
             FileType::File
@@ -77,7 +78,7 @@ impl FileMetadata {
         };
 
         Ok(FileMetadata {
-            path,
+            path: path.to_path_buf(),
             size: if metadata.is_file() {
                 Some(metadata.len())
             } else {
@@ -91,11 +92,6 @@ impl FileMetadata {
             #[cfg(unix)]
             unix_meta,
         })
-    }
-
-    #[inline]
-    pub(crate) fn path(&self) -> &Path {
-        &self.path
     }
 
     #[inline]
@@ -144,6 +140,57 @@ impl FileMetadata {
     #[cfg(unix)]
     pub(crate) fn gid(&self) -> u32 {
         self.unix_meta.as_ref().map(|m| m.gid).unwrap_or(0)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct FileMetadataCache {
+    name: Arc<str>,
+    perms: Arc<str>,
+    size: Arc<str>,
+    modified: Arc<str>,
+    created: Arc<str>,
+    accessed: Arc<str>,
+    file_type: Arc<str>,
+    #[cfg(unix)]
+    owner: Arc<str>,
+    #[cfg(unix)]
+    group: Arc<str>,
+}
+
+impl FileMetadataCache {
+    pub(crate) fn from(
+        meta: &FileMetadata,
+        date_format: &str,
+        #[cfg(unix)] ug_cache: &mut unix_meta::UserGroupCache,
+    ) -> Self {
+        Self {
+            name: Arc::from(meta.name()),
+            perms: Arc::from(meta.perms()),
+            size: Arc::from(meta.size()),
+            modified: Arc::from(meta.modified(date_format)),
+            created: Arc::from(meta.created(date_format)),
+            accessed: Arc::from(meta.accessed(date_format)),
+            file_type: Arc::from(meta.file_type()),
+            #[cfg(unix)]
+            owner: ug_cache.resolve_user(meta.uid()),
+            #[cfg(unix)]
+            group: ug_cache.resolve_group(meta.gid()),
+        }
+    }
+
+    crate::getters! {
+        name: &str,
+        perms: &str,
+        size: &str,
+        modified: &str,
+        created: &str,
+        accessed: &str,
+        file_type: &str,
+        #[cfg(unix)]
+        owner: &str,
+        #[cfg(unix)]
+        group: &str,
     }
 }
 
@@ -217,7 +264,7 @@ mod tests {
         let mut file = File::create(&file_path)?;
         writeln!(file, "abc123")?;
 
-        let info = FileMetadata::new(file_path)?;
+        let info = FileMetadata::new(&file_path)?;
         assert_eq!(&info.file_type, &FileType::File);
         assert_eq!(info.name(), "hello.txt");
         assert!(info.size.is_some());
@@ -230,7 +277,7 @@ mod tests {
         let dir_path = tmp.path().join("emptydir");
         fs::create_dir(&dir_path)?;
 
-        let info = FileMetadata::new(dir_path)?;
+        let info = FileMetadata::new(&dir_path)?;
         assert_eq!(&info.file_type, &FileType::Directory);
         assert_eq!(&info.size, &None);
         Ok(())
@@ -331,7 +378,7 @@ mod tests {
         let link_path = tmp.path().join("link.txt");
         std::os::unix::fs::symlink(&target_path, &link_path)?;
 
-        let info = FileMetadata::new(link_path)?;
+        let info = FileMetadata::new(&link_path)?;
         assert_eq!(info.file_type, FileType::Symlink);
         assert_eq!(info.name(), "link.txt");
         Ok(())
@@ -343,7 +390,7 @@ mod tests {
         let tmp = TempDir::new()?;
         let file_path = tmp.path().join("unix_test.txt");
         File::create(&file_path)?;
-        let info = FileMetadata::new(file_path)?;
+        let info = FileMetadata::new(&file_path)?;
 
         assert!(info.unix_meta.is_some());
         assert!(info.uid() > 0 || info.uid() == 0);

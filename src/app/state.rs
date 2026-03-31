@@ -21,7 +21,7 @@ use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::metadata::MetadataState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::metadata::FileMetadata;
+use crate::core::metadata::FileMetadataCache;
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -156,9 +156,6 @@ impl<'a> AppState<'a> {
         is_loading: bool,
         worker_time: &Option<Instant>,
         overlays: &OverlayStack,
-
-        #[cfg(unix)]
-        meta => metadata: &MetadataState,
     }
 
     #[inline]
@@ -177,7 +174,7 @@ impl<'a> AppState<'a> {
     }
 
     #[inline]
-    pub(crate) fn selected_metadata(&self) -> Option<&FileMetadata> {
+    pub(crate) fn selected_metadata(&self) -> Option<&FileMetadataCache> {
         self.metadata.selected()
     }
 
@@ -230,8 +227,9 @@ impl<'a> AppState<'a> {
 
         let path = self.nav.current_dir().join(entry.name());
 
-        if let Some(cached) = self.metadata.selected()
-            && cached.path() == path
+        if let Some(selected_cache) = self.metadata.selected_arc()
+            && let Some(sel) = self.nav.selected_entry()
+            && sel.name() == selected_cache.name()
         {
             return;
         }
@@ -241,11 +239,13 @@ impl<'a> AppState<'a> {
         }
 
         let req_id = self.metadata.prepare_new_request();
+        let date_format = self.config.display().info().date_format().to_string();
 
         if workers
             .metadata_tx()
             .try_send(WorkerTask::GetFileMetadata {
                 path: path.clone(),
+                date_format,
                 request_id: req_id,
             })
             .is_ok()
@@ -384,13 +384,13 @@ impl<'a> AppState<'a> {
 
             WorkerResponse::FileMetadataLoaded {
                 metadata,
+                path,
                 request_id,
             } => {
-                let metadata_path = metadata.path();
-                if self.metadata.matches_pending(request_id, metadata_path) {
-                    if metadata_path.parent() == Some(self.nav.current_dir())
+                if self.metadata.matches_pending(request_id, &path) {
+                    if path.parent() == Some(self.nav.current_dir())
                         && let Some(sel) = self.nav.selected_entry()
-                        && metadata_path.file_name() == Some(sel.name())
+                        && path.file_name() == Some(sel.name())
                     {
                         self.metadata.set_selected(Some(metadata));
                         self.refresh_show_info_if_open();

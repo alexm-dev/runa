@@ -3,10 +3,7 @@
 //! [MetadataState] struct to wrap the [FileMetadata] and manage the state of worker requests,
 //! pending paths, and selected file metadata.
 
-use crate::core::metadata::FileMetadata;
-
-#[cfg(unix)]
-use {crate::core::metadata::unix_meta::UserGroupCache, std::cell::RefCell};
+use crate::core::metadata::FileMetadataCache;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -16,10 +13,8 @@ use std::time::{Duration, Instant};
 pub(crate) struct MetadataState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
-    selected: Option<Arc<FileMetadata>>,
+    selected: Option<Arc<FileMetadataCache>>,
     last_request_time: Instant,
-    #[cfg(unix)]
-    cache: RefCell<UserGroupCache>,
 }
 
 impl MetadataState {
@@ -29,19 +24,7 @@ impl MetadataState {
             pending: None,
             selected: None,
             last_request_time: Instant::now() - Duration::from_secs(1),
-            #[cfg(unix)]
-            cache: RefCell::new(UserGroupCache::new()),
         }
-    }
-
-    #[cfg(unix)]
-    pub(crate) fn resolve_owner(&self, info: &FileMetadata) -> Option<Arc<str>> {
-        Some(self.cache.borrow_mut().resolve_user(info.uid()))
-    }
-
-    #[cfg(unix)]
-    pub(crate) fn resolve_group(&self, info: &FileMetadata) -> Option<Arc<str>> {
-        Some(self.cache.borrow_mut().resolve_group(info.gid()))
     }
 
     pub(crate) fn prepare_new_request(&mut self) -> u64 {
@@ -67,15 +50,15 @@ impl MetadataState {
         matches!(&self.pending, Some((pid, p)) if *pid == id && p == path )
     }
 
-    pub(crate) fn selected(&self) -> Option<&FileMetadata> {
+    pub(crate) fn selected(&self) -> Option<&FileMetadataCache> {
         self.selected.as_deref()
     }
 
-    pub(crate) fn selected_arc(&self) -> Option<&Arc<FileMetadata>> {
+    pub(crate) fn selected_arc(&self) -> Option<&Arc<FileMetadataCache>> {
         self.selected.as_ref()
     }
 
-    pub(crate) fn set_selected(&mut self, meta: Option<Arc<FileMetadata>>) {
+    pub(crate) fn set_selected(&mut self, meta: Option<Arc<FileMetadataCache>>) {
         self.selected = meta;
     }
 
