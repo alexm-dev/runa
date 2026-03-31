@@ -596,10 +596,10 @@ fn start_fileop_worker(
 
 /// Starts the file metadatarmation worker thread.
 fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
-    #[cfg(unix)]
-    let mut ug_cache = crate::core::metadata::unix_meta::UserGroupCache::new();
-
     thread::spawn(move || {
+        #[cfg(unix)]
+        let mut ug_cache = crate::core::metadata::unix_meta::UserGroupCache::new();
+
         while let Ok(task) = task_rx.recv() {
             if let WorkerTask::GetFileMetadata {
                 path,

@@ -595,10 +595,10 @@ pub(crate) fn draw_show_info_dialog(
         add_line("Modified:", meta_cache.modified());
     }
     if info_cfg.created() {
-        add_line("Created", meta_cache.created());
+        add_line("Created:", meta_cache.created());
     }
     if info_cfg.accessed() {
-        add_line("Accessed", meta_cache.accessed());
+        add_line("Accessed:", meta_cache.accessed());
     }
     if info_cfg.perms() {
         add_line("Perms:", meta_cache.perms());
