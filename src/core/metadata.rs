@@ -163,6 +163,7 @@ impl FileMetadataCache {
         meta: &FileMetadata,
         date_format: &str,
         #[cfg(unix)] ug_cache: &mut unix_meta::UserGroupCache,
+        #[cfg(unix)] needs: &unix_meta::MetadataNeeds,
     ) -> Self {
         Self {
             name: Arc::from(meta.name()),
@@ -173,9 +174,17 @@ impl FileMetadataCache {
             accessed: Arc::from(meta.accessed(date_format)),
             file_type: Arc::from(meta.file_type()),
             #[cfg(unix)]
-            owner: ug_cache.resolve_user(meta.uid()),
+            owner: if needs.owner {
+                ug_cache.resolve_user(meta.uid())
+            } else {
+                Arc::from("")
+            },
             #[cfg(unix)]
-            group: ug_cache.resolve_group(meta.gid()),
+            group: if needs.group {
+                ug_cache.resolve_group(meta.gid())
+            } else {
+                Arc::from("")
+            },
         }
     }
 
@@ -205,6 +214,13 @@ pub(crate) struct UnixMetadata {
 pub(crate) mod unix_meta {
     use std::collections::HashMap;
     use std::sync::Arc;
+
+    #[cfg(unix)]
+    #[derive(Debug, Clone, Copy)]
+    pub(crate) struct MetadataNeeds {
+        pub(crate) owner: bool,
+        pub(crate) group: bool,
+    }
 
     #[derive(Debug, Clone)]
     pub(crate) struct UserGroupCache {

@@ -23,6 +23,9 @@ use crate::utils::{
     rename_with_fallback,
 };
 
+#[cfg(unix)]
+use crate::core::metadata::unix_meta::MetadataNeeds;
+
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
 use std::collections::HashSet;
@@ -160,6 +163,9 @@ pub(crate) enum WorkerTask {
         path: PathBuf,
         date_format: String,
         request_id: u64,
+
+        #[cfg(unix)]
+        needs: MetadataNeeds,
     },
 }
 
@@ -605,6 +611,9 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                 path,
                 request_id,
                 date_format,
+
+                #[cfg(unix)]
+                needs,
             } = task
             {
                 match FileMetadata::new(&path) {
@@ -614,6 +623,8 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                             &date_format,
                             #[cfg(unix)]
                             &mut ug_cache,
+                            #[cfg(unix)]
+                            &needs,
                         );
                         let _ = res_tx.send(WorkerResponse::FileMetadataLoaded {
                             metadata: Arc::new(cache),

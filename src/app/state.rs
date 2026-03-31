@@ -241,12 +241,20 @@ impl<'a> AppState<'a> {
         let req_id = self.metadata.prepare_new_request();
         let date_format = self.config.display().info().date_format().to_string();
 
+        #[cfg(unix)]
+        let needs = crate::core::metadata::unix_meta::MetadataNeeds {
+            owner: self.config.display().info().owner(),
+            group: self.config.display().info().group(),
+        };
+
         if workers
             .metadata_tx()
             .try_send(WorkerTask::GetFileMetadata {
                 path: path.clone(),
                 date_format,
                 request_id: req_id,
+                #[cfg(unix)]
+                needs,
             })
             .is_ok()
         {
