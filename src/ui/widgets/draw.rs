@@ -359,13 +359,13 @@ pub(crate) fn draw_status_bar(
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
-                        if let Some(o) = app.metadata().resolve_owner(file_meta) {
+                        if let Some(o) = app.meta().resolve_owner(file_meta) {
                             left_spans.push(Span::styled(o.to_string(), info_theme.owner_style()));
                         }
                     }
                     #[cfg(unix)]
                     StatusTag::Group => {
-                        if let Some(g) = app.metadata().resolve_group(file_meta) {
+                        if let Some(g) = app.meta().resolve_group(file_meta) {
                             left_spans.push(Span::styled(g.to_string(), info_theme.group_style()));
                         }
                     }
@@ -612,13 +612,13 @@ pub(crate) fn draw_show_info_dialog(
     #[cfg(unix)]
     {
         if info_cfg.owner()
-            && let Some(o) = app.metadata().resolve_owner(meta_cache)
+            && let Some(o) = app.meta().resolve_owner(meta_cache)
         {
             add_line("Owner:", Cow::Owned(o.to_string()));
         }
 
         if info_cfg.group()
-            && let Some(g) = app.metadata().resolve_group(meta_cache)
+            && let Some(g) = app.meta().resolve_group(meta_cache)
         {
             add_line("Group:", Cow::Owned(g.to_string()));
         }

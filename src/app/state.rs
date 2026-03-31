@@ -176,7 +176,7 @@ impl<'a> AppState<'a> {
 
     #[cfg(unix)]
     #[inline]
-    pub(crate) fn metadata(&self) -> &MetadataState {
+    pub(crate) fn meta(&self) -> &MetadataState {
         &self.metadata
     }
 
