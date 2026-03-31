@@ -433,7 +433,7 @@ impl FindState {
     crate::getters! {
         request_id: u64,
         selected: usize,
-        results => cache: &Vec<FindResult>,
+        results => cache: &[FindResult],
     }
 
     /// Cancels the current ongoing find operation, if any.
