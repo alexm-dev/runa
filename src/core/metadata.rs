@@ -12,6 +12,8 @@ use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
 
+use crate::config::display::ShowInfoOptions;
+
 use std::fs::symlink_metadata;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -145,13 +147,13 @@ impl FileMetadata {
 
 #[derive(Debug, Clone)]
 pub(crate) struct FileMetadataCache {
-    name: Arc<str>,
-    perms: Arc<str>,
-    size: Arc<str>,
-    modified: Arc<str>,
-    created: Arc<str>,
-    accessed: Arc<str>,
-    file_type: Arc<str>,
+    name: Option<Arc<str>>,
+    perms: Option<Arc<str>>,
+    size: Option<Arc<str>>,
+    modified: Option<Arc<str>>,
+    created: Option<Arc<str>>,
+    accessed: Option<Arc<str>>,
+    file_type: Option<Arc<str>>,
     #[cfg(unix)]
     owner: Option<Arc<str>>,
     #[cfg(unix)]
@@ -159,43 +161,36 @@ pub(crate) struct FileMetadataCache {
 }
 
 impl FileMetadataCache {
+    #[rustfmt::skip]
     pub(crate) fn from(
         meta: &FileMetadata,
         date_format: &str,
+        needs: &MetadataNeeds,
         #[cfg(unix)] ug_cache: &mut unix_meta::UserGroupCache,
-        #[cfg(unix)] needs: &unix_meta::MetadataNeeds,
     ) -> Self {
         Self {
-            name: Arc::from(meta.name()),
-            perms: Arc::from(meta.perms()),
-            size: Arc::from(meta.size()),
-            modified: Arc::from(meta.modified(date_format)),
-            created: Arc::from(meta.created(date_format)),
-            accessed: Arc::from(meta.accessed(date_format)),
-            file_type: Arc::from(meta.file_type()),
+            name:       if needs.name { Some(Arc::from(meta.name())) } else { None },
+            perms:      if needs.perms { Some(Arc::from(meta.perms())) } else { None },
+            size:       if needs.size { Some(Arc::from(meta.size())) } else { None },
+            modified:   if needs.modified { Some(Arc::from(meta.modified(date_format))) } else { None },
+            created:    if needs.created { Some(Arc::from(meta.created(date_format))) } else { None },
+            accessed:   if needs.accessed { Some(Arc::from(meta.accessed(date_format))) } else { None },
+            file_type:  if needs.file_type { Some(Arc::from(meta.file_type())) } else { None },
             #[cfg(unix)]
-            owner: if needs.owner {
-                Some(ug_cache.resolve_user(meta.uid()))
-            } else {
-                None
-            },
+            owner:      if needs.owner { Some(ug_cache.resolve_user(meta.uid())) } else { None },
             #[cfg(unix)]
-            group: if needs.group {
-                Some(ug_cache.resolve_group(meta.gid()))
-            } else {
-                None
-            },
+            group:      if needs.group { Some(ug_cache.resolve_group(meta.gid())) } else { None },
         }
     }
 
-    crate::getters! {
-        name: &str,
-        perms: &str,
-        size: &str,
-        modified: &str,
-        created: &str,
-        accessed: &str,
-        file_type: &str,
+    crate::option_arc_str_getters! {
+        name,
+        perms,
+        size,
+        modified,
+        created,
+        accessed,
+        file_type,
     }
 
     #[cfg(unix)]
@@ -209,6 +204,39 @@ impl FileMetadataCache {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct MetadataNeeds {
+    name: bool,
+    file_type: bool,
+    size: bool,
+    modified: bool,
+    created: bool,
+    accessed: bool,
+    perms: bool,
+    #[cfg(unix)]
+    owner: bool,
+    #[cfg(unix)]
+    group: bool,
+}
+
+impl MetadataNeeds {
+    pub(crate) fn from_show_info(info: &ShowInfoOptions) -> Self {
+        Self {
+            name: info.name(),
+            file_type: info.file_type(),
+            size: info.size(),
+            modified: info.modified(),
+            created: info.created(),
+            accessed: info.accessed(),
+            perms: info.perms(),
+            #[cfg(unix)]
+            owner: info.owner(),
+            #[cfg(unix)]
+            group: info.group(),
+        }
+    }
+}
+
 #[cfg(unix)]
 pub(crate) mod unix_meta {
     use std::collections::HashMap;
@@ -218,12 +246,6 @@ pub(crate) mod unix_meta {
     pub(crate) struct UnixMetadata {
         pub(crate) uid: u32,
         pub(crate) gid: u32,
-    }
-
-    #[derive(Debug, Clone, Copy)]
-    pub(crate) struct MetadataNeeds {
-        pub(crate) owner: bool,
-        pub(crate) group: bool,
     }
 
     #[derive(Debug, Clone)]

@@ -82,3 +82,15 @@ macro_rules! key_accessor {
         }
     };
 }
+
+#[macro_export]
+macro_rules! option_arc_str_getters {
+    ($($field:ident),* $(,)?) => {
+        $(
+            #[inline]
+            pub(crate) fn $field(&self) -> &str {
+                self.$field.as_deref().unwrap_or_default()
+            }
+        )*
+    };
+}

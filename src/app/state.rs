@@ -21,7 +21,7 @@ use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::metadata::MetadataState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::metadata::FileMetadataCache;
+use crate::core::metadata::{FileMetadataCache, MetadataNeeds};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -241,11 +241,7 @@ impl<'a> AppState<'a> {
         let req_id = self.metadata.prepare_new_request();
         let date_format = self.config.display().info().date_format().to_string();
 
-        #[cfg(unix)]
-        let needs = crate::core::metadata::unix_meta::MetadataNeeds {
-            owner: self.config.display().info().owner(),
-            group: self.config.display().info().group(),
-        };
+        let needs = MetadataNeeds::from_show_info(self.config.display().info());
 
         if workers
             .metadata_tx()
@@ -253,7 +249,6 @@ impl<'a> AppState<'a> {
                 path: path.clone(),
                 date_format,
                 request_id: req_id,
-                #[cfg(unix)]
                 needs,
             })
             .is_ok()

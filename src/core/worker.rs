@@ -14,7 +14,7 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use crate::config::display::PreviewMethod;
-use crate::core::metadata::{FileMetadata, FileMetadataCache};
+use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds};
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
 };
@@ -22,9 +22,6 @@ use crate::utils::{
     copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
     rename_with_fallback,
 };
-
-#[cfg(unix)]
-use crate::core::metadata::unix_meta::MetadataNeeds;
 
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
@@ -163,8 +160,6 @@ pub(crate) enum WorkerTask {
         path: PathBuf,
         date_format: String,
         request_id: u64,
-
-        #[cfg(unix)]
         needs: MetadataNeeds,
     },
 }
@@ -611,7 +606,6 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                 path,
                 request_id,
                 date_format,
-                #[cfg(unix)]
                 needs,
             } = task
             {
@@ -620,10 +614,9 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                         let cache = FileMetadataCache::from(
                             &meta,
                             &date_format,
+                            &needs,
                             #[cfg(unix)]
                             &mut ug_cache,
-                            #[cfg(unix)]
-                            &needs,
                         );
                         let _ = res_tx.send(WorkerResponse::FileMetadataLoaded {
                             metadata: Arc::new(cache),
