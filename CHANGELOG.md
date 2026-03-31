@@ -11,7 +11,7 @@ All the changes made to runa are documented here.
 
 ### Changed
 - **FileInfo Renamed**: `FileInfo`, its `file_info.rs` module, and all its references have been to renamed to `FileMetadata` and `metadata` to accurately reflect its purpose better.
-- **PropertyState**: Added a new `property.rs` app sub-module to hold the file metadata handling for `AppState` synchronization.
+- **MetadataState**: Added a new `app/metadata.rs` sub-module to hold the file metadata handling for `AppState` synchronization.
 - **Archive Attestation**: All release archives are now attested via the release workflow.
 
 It is now possible to verify the integrity and origin of all downloaded assets:
