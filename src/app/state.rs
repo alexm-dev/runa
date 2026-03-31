@@ -18,7 +18,7 @@
 
 use crate::app::actions::{ActionContext, ActionMode, InputMode};
 use crate::app::keymap::{Action, Keymap, TabAction};
-use crate::app::property::PropertyState;
+use crate::app::metadata::MetadataState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::metadata::FileMetadata;
@@ -92,7 +92,7 @@ pub(crate) struct AppState<'a> {
     pub(super) preview: PreviewState,
     pub(super) parent: ParentState,
 
-    pub(super) properties: PropertyState,
+    pub(super) metadata: MetadataState,
 
     pub(super) is_loading: bool,
 
@@ -129,7 +129,7 @@ impl<'a> AppState<'a> {
             actions: ActionContext::default(),
             preview: PreviewState::default(),
             parent: ParentState::default(),
-            properties: PropertyState::new(),
+            metadata: MetadataState::new(),
             is_loading: false,
             notification_time: None,
             worker_time: None,
@@ -177,7 +177,7 @@ impl<'a> AppState<'a> {
     #[cfg(unix)]
     #[inline]
     pub(crate) fn properties(&self) -> &PropertyState {
-        &self.properties
+        &self.metadata
     }
 
     #[inline]
@@ -212,7 +212,7 @@ impl<'a> AppState<'a> {
 
     #[inline]
     pub(crate) fn current_file_metadata(&self) -> Option<&FileMetadata> {
-        self.properties.selected()
+        self.metadata.selected()
     }
 
     // Entry functions
@@ -246,7 +246,7 @@ impl<'a> AppState<'a> {
 
     pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
         const FILE_INFO_DEBOUNCE: u64 = 25;
-        if !self.properties.can_request(FILE_INFO_DEBOUNCE) {
+        if !self.metadata.can_request(FILE_INFO_DEBOUNCE) {
             return;
         }
 
@@ -258,23 +258,23 @@ impl<'a> AppState<'a> {
         }
 
         let Some(entry) = self.nav.selected_entry() else {
-            self.properties.clear();
+            self.metadata.clear();
             return;
         };
 
         let path = self.nav.current_dir().join(entry.name());
 
-        if let Some(cached) = self.properties.selected()
+        if let Some(cached) = self.metadata.selected()
             && cached.path() == path
         {
             return;
         }
 
-        if self.properties.is_pending_path(&path) {
+        if self.metadata.is_pending_path(&path) {
             return;
         }
 
-        let req_id = self.properties.prepare_new_request();
+        let req_id = self.metadata.prepare_new_request();
 
         if workers
             .metadata_tx()
@@ -284,7 +284,7 @@ impl<'a> AppState<'a> {
             })
             .is_ok()
         {
-            self.properties.set_pending(req_id, path);
+            self.metadata.set_pending(req_id, path);
         }
     }
 
@@ -421,15 +421,15 @@ impl<'a> AppState<'a> {
                 request_id,
             } => {
                 let metadata_path = metadata.path();
-                if self.properties.matches_pending(request_id, metadata_path) {
+                if self.metadata.matches_pending(request_id, metadata_path) {
                     if metadata_path.parent() == Some(self.nav.current_dir())
                         && let Some(sel) = self.nav.selected_entry()
                         && metadata_path.file_name() == Some(sel.name())
                     {
-                        self.properties.set_selected(Some(metadata));
+                        self.metadata.set_selected(Some(metadata));
                         self.refresh_show_info_if_open();
                     }
-                    self.properties.clear_pending();
+                    self.metadata.clear_pending();
                 }
             }
 

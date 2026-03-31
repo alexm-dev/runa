@@ -1,6 +1,6 @@
-//! File property module for AppState usage.
+//! File metadata module for AppState usage.
 //!
-//! [PropertyState] struct to wrap the [FileMetadata] and manage the state of worker requests,
+//! [MetadataState] struct to wrap the [FileMetadata] and manage the state of worker requests,
 //! pending paths, and selected file metadata.
 
 use crate::core::metadata::FileMetadata;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
-pub(crate) struct PropertyState {
+pub(crate) struct MetadataState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
     selected: Option<Arc<FileMetadata>>,
@@ -22,7 +22,7 @@ pub(crate) struct PropertyState {
     cache: RefCell<UserGroupCache>,
 }
 
-impl PropertyState {
+impl MetadataState {
     pub(crate) fn new() -> Self {
         Self {
             request_id: 0,
@@ -64,11 +64,7 @@ impl PropertyState {
     }
 
     pub(crate) fn matches_pending(&self, id: u64, path: &Path) -> bool {
-        if let Some((pid, p)) = &self.pending {
-            *pid == id && p == path
-        } else {
-            false
-        }
+        matches!(&self.pending, Some((pid, p)) if *pid == id && p == path )
     }
 
     pub(crate) fn selected(&self) -> Option<&FileMetadata> {

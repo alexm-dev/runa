@@ -99,6 +99,6 @@ impl<'a> AppState<'a> {
     }
 
     fn selected_metadata_clone(&self) -> Option<Arc<FileMetadata>> {
-        self.properties.selected_arc().map(Arc::clone)
+        self.metadata.selected_arc().map(Arc::clone)
     }
 }
