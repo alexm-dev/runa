@@ -4,6 +4,7 @@
 //! for all navigation, file and actions used by runa.
 
 use crate::Config;
+use crate::app::nav::SortMode;
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
@@ -75,6 +76,7 @@ pub(crate) enum SystemAction {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum PrefixCommand {
     Nav(NavAction),
+    Sort(SortMode),
 }
 
 /// Key + modifiers as used in keybind/keymap
@@ -88,6 +90,7 @@ pub(crate) struct Key {
 pub(crate) struct Keymap {
     map: HashMap<Key, Action>,
     gmap: HashMap<KeyCode, PrefixCommand>,
+    sortmap: HashMap<KeyCode, PrefixCommand>,
 }
 
 impl Keymap {
@@ -96,6 +99,7 @@ impl Keymap {
     pub(crate) fn from_config(config: &Config) -> Self {
         let mut map = HashMap::new();
         let mut gmap = HashMap::new();
+        let mut sortmap = HashMap::new();
         let keys = config.keys();
 
         macro_rules! bind {
@@ -159,7 +163,15 @@ impl Keymap {
         bind_prefix!(keys.go_to_home(), Action::Nav(N::GoToHome), PrefixCommand::Nav(N::GoToHome));
         bind_prefix!(keys.go_to_path(), Action::Nav(N::GoToPath), PrefixCommand::Nav(N::GoToPath));
 
-        Keymap { map, gmap }
+        sortmap.insert(KeyCode::Char('n'), PrefixCommand::Sort(SortMode::Name));
+        sortmap.insert(KeyCode::Char('m'), PrefixCommand::Sort(SortMode::Modified));
+        sortmap.insert(KeyCode::Char('c'), PrefixCommand::Sort(SortMode::Created));
+        sortmap.insert(KeyCode::Char('a'), PrefixCommand::Sort(SortMode::Accessed));
+        sortmap.insert(KeyCode::Char('s'), PrefixCommand::Sort(SortMode::Size));
+        sortmap.insert(KeyCode::Char('e'), PrefixCommand::Sort(SortMode::Extension));
+        sortmap.insert(KeyCode::Char('z'), PrefixCommand::Sort(SortMode::Natural));
+
+        Keymap { map, gmap, sortmap }
     }
 
     /// Looks up the action for a given key event
@@ -194,6 +206,10 @@ impl Keymap {
     pub(crate) fn gmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
         &self.gmap
     }
+
+    pub(crate) fn sortmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
+        &self.sortmap
+    }
 }
 
 pub(crate) struct KeyPrefix {
@@ -208,6 +224,7 @@ pub(crate) struct KeyPrefix {
 enum PrefixState {
     None,
     G,
+    Sort,
 }
 
 impl KeyPrefix {
@@ -225,6 +242,7 @@ impl KeyPrefix {
         &mut self,
         key: &KeyEvent,
         gmap: &HashMap<KeyCode, PrefixCommand>,
+        sortmap: &HashMap<KeyCode, PrefixCommand>,
     ) -> Option<PrefixCommand> {
         self.started = false;
         self.exited = false;
@@ -233,6 +251,13 @@ impl KeyPrefix {
             PrefixState::None => {
                 if key.code == KeyCode::Char('g') && key.modifiers.is_empty() {
                     self.state = PrefixState::G;
+                    self.last_time = Some(now);
+                    self.started = true;
+                    None
+                } else if key.code == KeyCode::Char('v')
+                    && (key.modifiers.contains(KeyModifiers::CONTROL) || key.modifiers.is_empty())
+                {
+                    self.state = PrefixState::Sort;
                     self.last_time = Some(now);
                     self.started = true;
                     None
@@ -249,6 +274,19 @@ impl KeyPrefix {
                 self.exited = true;
                 if elapsed <= self.timeout {
                     gmap.get(&key.code).copied()
+                } else {
+                    None
+                }
+            }
+            PrefixState::Sort => {
+                let elapsed = self
+                    .last_time
+                    .map_or(Duration::MAX, |t| now.duration_since(t));
+                self.state = PrefixState::None;
+                self.last_time = None;
+                self.exited = true;
+                if elapsed <= self.timeout {
+                    sortmap.get(&key.code).copied()
                 } else {
                     None
                 }
@@ -270,8 +308,12 @@ impl KeyPrefix {
         self.state == PrefixState::G
     }
 
+    pub(crate) fn is_sort_state(&self) -> bool {
+        self.state == PrefixState::Sort
+    }
+
     pub(crate) fn expired(&self) -> bool {
-        self.state == PrefixState::G
+        (self.state == PrefixState::G || self.state == PrefixState::Sort)
             && self
                 .last_time
                 .is_some_and(|time| time.elapsed() >= self.timeout)

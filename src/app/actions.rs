@@ -80,6 +80,7 @@ impl ActionContext {
         input_buffer: &str,
         input_cursor_pos: usize,
         scroll: &ScrollState,
+        prefix_recognizer: &KeyPrefix,
     }
 
     pub(crate) fn prefix_recognizer_mut(&mut self) -> &mut KeyPrefix {

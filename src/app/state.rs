@@ -470,6 +470,7 @@ impl<'a> AppState<'a> {
     pub(crate) fn request_dir_load(&mut self, workers: &Workers, focus: Option<OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
+        let sort_config = self.nav.sort_config();
         let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
@@ -478,6 +479,7 @@ impl<'a> AppState<'a> {
             show_symlink: self.config.general().show_symlink(),
             show_system: self.config.general().show_system(),
             case_insensitive: self.config.general().case_insensitive(),
+            sort_config,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id,
             tab_id: self.tab_id(),
@@ -489,6 +491,7 @@ impl<'a> AppState<'a> {
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
+            let sort_config = self.nav.sort_config();
 
             if entry.is_dir() || entry.is_symlink() {
                 let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
@@ -499,6 +502,7 @@ impl<'a> AppState<'a> {
                     show_symlink: self.config.general().show_symlink(),
                     show_system: self.config.general().show_system(),
                     case_insensitive: self.config.general().case_insensitive(),
+                    sort_config,
                     always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
                     tab_id: self.tab_id(),
@@ -540,6 +544,7 @@ impl<'a> AppState<'a> {
 
         let parent_path_buf = parent_path.to_path_buf();
         let req_id = self.parent.prepare_new_request(&parent_path_buf);
+        let sort_config = self.nav.sort_config();
         let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,
@@ -548,6 +553,7 @@ impl<'a> AppState<'a> {
             show_symlink: self.config.general().show_symlink(),
             show_system: self.config.general().show_system(),
             case_insensitive: self.config.general().case_insensitive(),
+            sort_config,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id: req_id,
             tab_id: self.tab_id(),

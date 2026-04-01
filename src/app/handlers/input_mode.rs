@@ -190,12 +190,13 @@ impl<'a> AppState<'a> {
         key: &KeyEvent,
     ) -> Option<KeypressResult> {
         let gmap = self.keymap.gmap();
+        let sort_map = self.keymap.sortmap();
 
         let (started, exited, result, consumed) = {
             let prefix = self.actions.prefix_recognizer_mut();
-            let was_g = prefix.is_g_state();
+            let was_g = prefix.is_g_state() || prefix.is_sort_state();
 
-            let result = prefix.feed(key, gmap);
+            let result = prefix.feed(key, gmap, sort_map);
 
             let consumed = was_g && key.code == Esc;
 
@@ -240,6 +241,31 @@ impl<'a> AppState<'a> {
             PrefixCommand::Nav(NavAction::GoToPath) => {
                 self.prompt_go_to_path();
                 self.refresh_show_info_if_open();
+            }
+            PrefixCommand::Sort(sort_mode) => {
+                use crate::app::nav::{SortConfig, SortOrder};
+
+                let mut sort_config: SortConfig = self.nav.sort_config();
+
+                if sort_config.mode == sort_mode {
+                    sort_config.order = sort_config.order.toggle();
+                } else {
+                    sort_config.mode = sort_mode;
+                    sort_config.order = SortOrder::Ascending;
+                }
+
+                self.nav.set_sort_config(sort_config);
+
+                let focus = self
+                    .nav
+                    .selected_entry()
+                    .map(|file_entry| file_entry.name().to_os_string());
+
+                self.request_dir_load(workers, focus);
+                self.refresh_show_info_if_open();
+                self.parent.clear();
+                self.request_parent_content(workers);
+                self.request_preview(workers);
             }
             _ => return false,
         }

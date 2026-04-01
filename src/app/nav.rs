@@ -20,6 +20,7 @@ pub(crate) struct NavState {
     markers: HashSet<PathBuf>,
     filter: String,
     filters: HashMap<PathBuf, String>,
+    sort_config: SortConfig,
     display_path: String,
     request_id: u64,
 }
@@ -36,6 +37,7 @@ impl NavState {
             markers: HashSet::new(),
             filter: String::new(),
             filters: HashMap::new(),
+            sort_config: SortConfig::default(),
             display_path,
             request_id: 0,
         }
@@ -328,6 +330,59 @@ impl NavState {
         let len = self.shown_indices.len();
         if self.selected >= len {
             self.selected = len.saturating_sub(1);
+        }
+    }
+
+    pub(crate) fn sort_config(&self) -> SortConfig {
+        self.sort_config
+    }
+
+    pub(crate) fn set_sort_config(&mut self, sort_config: SortConfig) {
+        self.sort_config = sort_config;
+    }
+
+    // pub(crate) fn reset_sort_config(&mut self) {
+    //     self.sort_config = SortConfig::default();
+    // }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum SortMode {
+    Name,
+    Modified,
+    Created,
+    Accessed,
+    Size,
+    Extension,
+    Natural,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SortOrder {
+    Ascending,
+    Descending,
+}
+
+impl SortOrder {
+    pub(crate) fn toggle(self) -> Self {
+        match self {
+            SortOrder::Ascending => SortOrder::Descending,
+            SortOrder::Descending => SortOrder::Ascending,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct SortConfig {
+    pub(crate) mode: SortMode,
+    pub(crate) order: SortOrder,
+}
+
+impl Default for SortConfig {
+    fn default() -> Self {
+        Self {
+            mode: SortMode::Natural,
+            order: SortOrder::Ascending,
         }
     }
 }
