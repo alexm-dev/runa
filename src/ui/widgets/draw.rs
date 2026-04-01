@@ -777,45 +777,55 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
 
     let is_sort_prefix = app.actions().prefix_recognizer().is_sort_state();
     if is_sort_prefix {
-        let mut spans = Vec::with_capacity(7 * 4);
+        fn mk_line(items: &[(&str, &str)], accent_style: Style) -> Line<'static> {
+            let mut spans: Vec<Span<'static>> = Vec::with_capacity(items.len() * 4);
+            for (i, (key, desc)) in items.iter().enumerate() {
+                if i > 0 {
+                    spans.push(Span::raw("    "));
+                }
+                spans.push(Span::styled(format!("[{}]", key), accent_style));
+                spans.push(Span::raw(" "));
+                spans.push(Span::raw((*desc).to_string()));
+            }
+            Line::from(spans)
+        }
 
-        let items: [(&str, &str); 7] = [
+        let row1: [(&str, &str); 4] = [
             ("n", "Name"),
             ("m", "Modified"),
             ("c", "Created"),
             ("a", "Accessed"),
-            ("s", "Size"),
-            ("e", "Ext"),
-            ("z", "Natural"),
         ];
+        let row2: [(&str, &str); 3] = [("s", "Size"), ("e", "Ext"), ("z", "Natural")];
 
-        for (index, (key, desc)) in items.iter().enumerate() {
-            if index > 0 {
-                spans.push(Span::raw("    "));
-            }
-            spans.push(Span::styled(format!("[{}]", key), accent_style));
-            spans.push(Span::raw(" "));
-            spans.push(Span::raw(*desc));
-        }
+        let lines: Vec<Line<'static>> =
+            vec![mk_line(&row1, accent_style), mk_line(&row2, accent_style)];
 
-        spans.push(Span::raw("    "));
-        spans.push(Span::raw("(press same key again to reverse)"));
+        let area = frame.area();
+        let border_pad = 2usize;
+        let inner_pad = 2usize;
 
-        let line = Line::from(spans);
+        let max_line_w = lines.iter().map(|l| l.width()).max().unwrap_or(0);
 
-        let size = widget.go_to_help_size();
-        let position = widget.go_to_help_position();
+        let min_width = 24usize;
+        let max_width = (area.width as usize).saturating_sub(2).max(min_width);
+
+        let width = (max_line_w + inner_pad + border_pad)
+            .max(min_width)
+            .min(max_width) as u16;
+
+        let height = (lines.len() + border_pad).min(area.height as usize) as u16;
 
         draw_dialog(
             frame,
             DialogLayout {
                 area,
-                position,
-                size,
+                position: widget.go_to_help_position(),
+                size: DialogSize::Custom(width, height),
             },
             border_type,
             &get_dialog_style(app, accent_style, "Sort", None),
-            line,
+            Text::from(lines),
             Some(Alignment::Center),
             None,
         );

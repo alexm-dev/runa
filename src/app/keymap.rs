@@ -91,6 +91,8 @@ pub(crate) struct Keymap {
     map: HashMap<Key, Action>,
     gmap: HashMap<KeyCode, PrefixCommand>,
     sortmap: HashMap<KeyCode, PrefixCommand>,
+    g_prefix: Vec<Key>,
+    sort_prefix: Vec<Key>,
 }
 
 impl Keymap {
@@ -101,6 +103,16 @@ impl Keymap {
         let mut gmap = HashMap::new();
         let mut sortmap = HashMap::new();
         let keys = config.keys();
+        let sort_prefix: Vec<Key> = keys
+            .sort().iter()
+            .filter_map(|k| parse_key(k))
+            .collect();
+
+        let g_prefix: Vec<Key> = keys
+            .prefix_go_to()
+            .iter()
+            .filter_map(|k| parse_key(k))
+            .collect();
 
         macro_rules! bind {
             ($keys:expr, $action:expr) => {
@@ -171,7 +183,7 @@ impl Keymap {
         sortmap.insert(KeyCode::Char('e'), PrefixCommand::Sort(SortMode::Extension));
         sortmap.insert(KeyCode::Char('z'), PrefixCommand::Sort(SortMode::Natural));
 
-        Keymap { map, gmap, sortmap }
+        Keymap { map, gmap, sortmap, g_prefix, sort_prefix }
     }
 
     /// Looks up the action for a given key event
@@ -210,6 +222,11 @@ impl Keymap {
     pub(crate) fn sortmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
         &self.sortmap
     }
+
+    crate::getters! {
+        sort_prefix: &[Key],
+        g_prefix: &[Key],
+    }
 }
 
 pub(crate) struct KeyPrefix {
@@ -243,20 +260,25 @@ impl KeyPrefix {
         key: &KeyEvent,
         gmap: &HashMap<KeyCode, PrefixCommand>,
         sortmap: &HashMap<KeyCode, PrefixCommand>,
+        sort_prefix: &[Key],
+        g_prefix: &[Key],
     ) -> Option<PrefixCommand> {
         self.started = false;
         self.exited = false;
         let now = Instant::now();
         match self.state {
             PrefixState::None => {
-                if key.code == KeyCode::Char('g') && key.modifiers.is_empty() {
+                let k = Key {
+                    code: key.code,
+                    modifiers: key.modifiers,
+                };
+
+                if g_prefix.contains(&k) {
                     self.state = PrefixState::G;
                     self.last_time = Some(now);
                     self.started = true;
                     None
-                } else if key.code == KeyCode::Char('v')
-                    && (key.modifiers.contains(KeyModifiers::CONTROL) || key.modifiers.is_empty())
-                {
+                } else if sort_prefix.contains(&k) {
                     self.state = PrefixState::Sort;
                     self.last_time = Some(now);
                     self.started = true;

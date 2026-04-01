@@ -17,7 +17,8 @@ use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
 use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds};
 use crate::core::{
-    FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
+    FileEntry, FindResult, Formatter, browse_dir, find, formatter::DirListOptions,
+    formatter::safe_read_preview, preview_bat,
 };
 use crate::utils::{
     copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
@@ -127,11 +128,7 @@ pub(crate) enum WorkerTask {
     LoadDirectory {
         path: PathBuf,
         focus: Option<OsString>,
-        dirs_first: bool,
-        show_hidden: bool,
-        show_symlink: bool,
-        show_system: bool,
-        case_insensitive: bool,
+        list: DirListOptions,
         sort_config: SortConfig,
         list_date_format: Arc<str>,
         always_show: Arc<HashSet<OsString>>,
@@ -242,11 +239,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
             let WorkerTask::LoadDirectory {
                 path,
                 focus,
-                dirs_first,
-                show_hidden,
-                show_symlink,
-                show_system,
-                case_insensitive,
+                list,
                 sort_config,
                 list_date_format,
                 always_show,
@@ -258,15 +251,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
             };
             match browse_dir(&path) {
                 Ok(mut entries) => {
-                    let formatter = Formatter::new(
-                        dirs_first,
-                        show_hidden,
-                        show_symlink,
-                        show_system,
-                        case_insensitive,
-                        sort_config,
-                        always_show,
-                    );
+                    let formatter = Formatter::new(list, sort_config, always_show);
                     formatter.filter_entries(&mut entries);
                     let sort_column =
                         formatter.sort_entries(&path, &mut entries, &list_date_format);
@@ -671,226 +656,237 @@ mod tests {
         which::which("bat").is_ok()
     }
 
-    // #[test]
-    // fn worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
-    //     let workers = Workers::spawn();
-    //     let temp = tempdir()?;
-    //     let test_file = temp.path().join("pool_test.txt");
-    //     fs::write(&test_file, "Hello Pool")?;
-    //
-    //     let find_cancel = Arc::new(AtomicBool::new(false));
-    //     workers.find_tx().send(WorkerTask::FindRecursive {
-    //         base_dir: temp.path().to_path_buf(),
-    //         query: "pool".to_string(),
-    //         max_results: 1,
-    //         cancel: find_cancel,
-    //         show_hidden: false,
-    //         request_id: 10,
-    //         tab_id: TEST_TAB_ID,
-    //     })?;
-    //
-    //     workers.preview_file_tx().send(WorkerTask::LoadPreview {
-    //         path: test_file.clone(),
-    //         max_lines: 1,
-    //         pane_width: 10,
-    //         preview_method: PreviewMethod::Internal,
-    //         args: vec![],
-    //         request_id: 20,
-    //         tab_id: TEST_TAB_ID,
-    //     })?;
-    //
-    //     workers.nav_io_tx().send(WorkerTask::LoadDirectory {
-    //         path: temp.path().to_path_buf(),
-    //         focus: None,
-    //         dirs_first: true,
-    //         show_hidden: false,
-    //         show_symlink: false,
-    //         show_system: false,
-    //         case_insensitive: true,
-    //         always_show: Arc::new(HashSet::new()),
-    //         request_id: 30,
-    //         tab_id: TEST_TAB_ID,
-    //     })?;
-    //
-    //     workers.fileop_tx().send(WorkerTask::FileOp {
-    //         op: FileOperation::Create {
-    //             path: temp.path().join("new_file.txt"),
-    //             is_dir: false,
-    //             overwrite: false,
-    //         },
-    //     })?;
-    //
-    //     let mut responses_collected = 0;
-    //     let mut results_found = false;
-    //     let mut preview_found = false;
-    //     let mut dir_found = false;
-    //     let mut op_found = false;
-    //
-    //     let timeout = Instant::now() + TEST_TIMEOUT;
-    //
-    //     while responses_collected < 4 && Instant::now() < timeout {
-    //         if let Ok(resp) = workers
-    //             .response_rx()
-    //             .recv_timeout(Duration::from_millis(500))
-    //         {
-    //             match resp {
-    //                 WorkerResponse::FindResults { request_id, .. } => {
-    //                     assert_eq!(request_id, 10);
-    //                     results_found = true;
-    //                 }
-    //                 WorkerResponse::PreviewLoaded { request_id, .. } => {
-    //                     assert_eq!(request_id, 20);
-    //                     preview_found = true;
-    //                 }
-    //                 WorkerResponse::DirectoryLoaded { request_id, .. } => {
-    //                     assert_eq!(request_id, 30);
-    //                     dir_found = true;
-    //                 }
-    //                 WorkerResponse::OperationComplete { .. } => {
-    //                     op_found = true;
-    //                 }
-    //                 _ => {}
-    //             }
-    //             responses_collected += 1;
-    //         }
-    //     }
-    //
-    //     assert!(results_found, "Find worker failed");
-    //     assert!(preview_found, "Preview worker failed");
-    //     assert!(dir_found, "Nav IO worker failed");
-    //     assert!(op_found, "FileOp worker failed");
-    //     assert_eq!(responses_collected, 4);
-    //
-    //     Ok(())
-    // }
+    fn test_list_opts() -> DirListOptions {
+        DirListOptions {
+            dirs_first: true,
+            show_hidden: false,
+            show_symlink: false,
+            show_system: false,
+            case_insensitive: true,
+        }
+    }
 
-    // #[test]
-    // fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
-    //     let workers = Workers::spawn();
-    //     let temp = tempdir()?;
-    //     let task_tx = workers.nav_io_tx();
-    //     let res_rx = workers.response_rx();
-    //
-    //     let temp_path = temp.path().join("test_dir");
-    //     fs::create_dir(&temp_path)?;
-    //     fs::File::create(temp_path.join("crab.txt"))?;
-    //
-    //     task_tx.send(WorkerTask::LoadDirectory {
-    //         path: temp_path,
-    //         focus: None,
-    //         dirs_first: true,
-    //         show_hidden: false,
-    //         show_symlink: false,
-    //         show_system: false,
-    //         case_insensitive: true,
-    //         always_show: Arc::new(HashSet::new()),
-    //         request_id: 1,
-    //         tab_id: TEST_TAB_ID,
-    //     })?;
-    //
-    //     match res_rx.recv()? {
-    //         WorkerResponse::DirectoryLoaded { entries, .. } => {
-    //             assert!(!entries.is_empty(), "Current dir should not be empty");
-    //
-    //             // Check display name width
-    //             for entry in entries {
-    //                 assert!(!entry.name_str().is_empty());
-    //             }
-    //         }
-    //         WorkerResponse::Error(e, None) => panic!("Worker error: {}", e),
-    //         _ => panic!("Unexpected worker response"),
-    //     }
-    //     Ok(())
-    // }
-    //
-    // #[test]
-    // fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Error>> {
-    //     let temp_root = tempdir()?;
-    //
-    //     let dir_a = temp_root.path().join("dir_a");
-    //     let dir_b = temp_root.path().join("dir_b");
-    //     fs::create_dir(&dir_a)?;
-    //     fs::create_dir(&dir_b)?;
-    //     fs::write(dir_a.join("file.txt"), "content")?;
-    //
-    //     let dirs = vec![temp_root.path().to_path_buf(), dir_a, dir_b];
-    //
-    //     let thread_count = 2;
-    //     let requests_per_thread = 25;
-    //
-    //     let workers = Workers::spawn();
-    //     let task_tx = workers.nav_io_tx();
-    //     let res_rx = workers.response_rx();
-    //
-    //     // Spawn threads to send requests in parallel
-    //     let mut handles = Vec::new();
-    //     for t in 0..thread_count {
-    //         let task_tx = task_tx.clone();
-    //         let dirs = dirs.clone();
-    //         handles.push(thread::spawn(move || {
-    //             let mut rng = rng();
-    //             for i in 0..requests_per_thread {
-    //                 let dir = &dirs[rng.random_range(0..dirs.len())];
-    //                 task_tx
-    //                     .send(WorkerTask::LoadDirectory {
-    //                         path: dir.clone(),
-    //                         focus: None,
-    //                         dirs_first: rng.random_bool(0.5),
-    //                         show_hidden: rng.random_bool(0.5),
-    //                         show_symlink: rng.random_bool(0.5),
-    //                         show_system: rng.random_bool(0.5),
-    //                         case_insensitive: rng.random_bool(0.5),
-    //                         always_show: Arc::new(HashSet::new()),
-    //                         request_id: (t * requests_per_thread + i) as u64,
-    //                         tab_id: TEST_TAB_ID,
-    //                     })
-    //                     .expect("Couldn't send task to worker");
-    //                 if i % 50 == 0 {
-    //                     thread::sleep(Duration::from_millis(rng.random_range(0..10)));
-    //                 }
-    //             }
-    //         }));
-    //     }
-    //
-    //     // Wait for all senders to finish
-    //     for h in handles {
-    //         if let Err(err) = h.join() {
-    //             panic!("Thread panicked during stress test: {:?}", err);
-    //         }
-    //     }
-    //
-    //     // Read responses
-    //     let total_requests = thread_count * requests_per_thread;
-    //     let mut valid_responses = 0;
-    //     let timeout = Instant::now() + TEST_TIMEOUT;
-    //
-    //     for _ in 0..total_requests {
-    //         let remaining = timeout.saturating_duration_since(Instant::now());
-    //         match res_rx.recv_timeout(remaining.min(Duration::from_millis(500))) {
-    //             Ok(WorkerResponse::DirectoryLoaded { entries, .. }) => {
-    //                 valid_responses += 1;
-    //                 for entry in &entries {
-    //                     let name = entry.name_str();
-    //
-    //                     assert!(!name.is_empty(), "Entry name_str must not be empty.");
-    //                     assert!(
-    //                         !name.contains('\0'),
-    //                         "Entry name_str must not contain null."
-    //                     );
-    //                 }
-    //             }
-    //             Ok(WorkerResponse::Error(e, None)) => panic!("Worker error: {}", e),
-    //             Ok(_) => {}
-    //             Err(_) => break,
-    //         }
-    //     }
-    //
-    //     assert_eq!(
-    //         valid_responses, total_requests,
-    //         "Not all worker requests returned results!"
-    //     );
-    //     Ok(())
-    // }
+    #[test]
+    fn worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = Workers::spawn();
+        let temp = tempdir()?;
+        let test_file = temp.path().join("pool_test.txt");
+        fs::write(&test_file, "Hello Pool")?;
+
+        let find_cancel = Arc::new(AtomicBool::new(false));
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp.path().to_path_buf(),
+            query: "pool".to_string(),
+            max_results: 1,
+            cancel: find_cancel,
+            show_hidden: false,
+            request_id: 10,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+            path: test_file.clone(),
+            max_lines: 1,
+            pane_width: 10,
+            preview_method: PreviewMethod::Internal,
+            args: vec![],
+            request_id: 20,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        workers.nav_io_tx().send(WorkerTask::LoadDirectory {
+            path: temp.path().to_path_buf(),
+            focus: None,
+            list: test_list_opts(),
+            list_date_format: Arc::<str>::from(""),
+            sort_config: SortConfig::default(),
+            always_show: Arc::new(HashSet::new()),
+            request_id: 30,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        workers.fileop_tx().send(WorkerTask::FileOp {
+            op: FileOperation::Create {
+                path: temp.path().join("new_file.txt"),
+                is_dir: false,
+                overwrite: false,
+            },
+        })?;
+
+        let mut responses_collected = 0;
+        let mut results_found = false;
+        let mut preview_found = false;
+        let mut dir_found = false;
+        let mut op_found = false;
+
+        let timeout = Instant::now() + TEST_TIMEOUT;
+
+        while responses_collected < 4 && Instant::now() < timeout {
+            if let Ok(resp) = workers
+                .response_rx()
+                .recv_timeout(Duration::from_millis(500))
+            {
+                match resp {
+                    WorkerResponse::FindResults { request_id, .. } => {
+                        assert_eq!(request_id, 10);
+                        results_found = true;
+                    }
+                    WorkerResponse::PreviewLoaded { request_id, .. } => {
+                        assert_eq!(request_id, 20);
+                        preview_found = true;
+                    }
+                    WorkerResponse::DirectoryLoaded { request_id, .. } => {
+                        assert_eq!(request_id, 30);
+                        dir_found = true;
+                    }
+                    WorkerResponse::OperationComplete { .. } => {
+                        op_found = true;
+                    }
+                    _ => {}
+                }
+                responses_collected += 1;
+            }
+        }
+
+        assert!(results_found, "Find worker failed");
+        assert!(preview_found, "Preview worker failed");
+        assert!(dir_found, "Nav IO worker failed");
+        assert!(op_found, "FileOp worker failed");
+        assert_eq!(responses_collected, 4);
+
+        Ok(())
+    }
+
+    #[test]
+    fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = Workers::spawn();
+        let temp = tempdir()?;
+        let task_tx = workers.nav_io_tx();
+        let res_rx = workers.response_rx();
+
+        let temp_path = temp.path().join("test_dir");
+        fs::create_dir(&temp_path)?;
+        fs::File::create(temp_path.join("crab.txt"))?;
+
+        task_tx.send(WorkerTask::LoadDirectory {
+            path: temp_path,
+            focus: None,
+            list: test_list_opts(),
+            list_date_format: Arc::<str>::from(""),
+            sort_config: SortConfig::default(),
+            always_show: Arc::new(HashSet::new()),
+            request_id: 1,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        match res_rx.recv()? {
+            WorkerResponse::DirectoryLoaded { entries, .. } => {
+                assert!(!entries.is_empty(), "Current dir should not be empty");
+
+                // Check display name width
+                for entry in entries {
+                    assert!(!entry.name_str().is_empty());
+                }
+            }
+            WorkerResponse::Error(e, None) => panic!("Worker error: {}", e),
+            _ => panic!("Unexpected worker response"),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_root = tempdir()?;
+
+        let dir_a = temp_root.path().join("dir_a");
+        let dir_b = temp_root.path().join("dir_b");
+        fs::create_dir(&dir_a)?;
+        fs::create_dir(&dir_b)?;
+        fs::write(dir_a.join("file.txt"), "content")?;
+
+        let dirs = vec![temp_root.path().to_path_buf(), dir_a, dir_b];
+
+        let thread_count = 2;
+        let requests_per_thread = 25;
+
+        let workers = Workers::spawn();
+        let task_tx = workers.nav_io_tx();
+        let res_rx = workers.response_rx();
+
+        // Spawn threads to send requests in parallel
+        let mut handles = Vec::new();
+        for t in 0..thread_count {
+            let task_tx = task_tx.clone();
+            let dirs = dirs.clone();
+            handles.push(thread::spawn(move || {
+                let mut rng = rng();
+                for i in 0..requests_per_thread {
+                    let dir = &dirs[rng.random_range(0..dirs.len())];
+                    let list = DirListOptions {
+                        dirs_first: rng.random_bool(0.5),
+                        show_hidden: rng.random_bool(0.5),
+                        show_symlink: rng.random_bool(0.5),
+                        show_system: rng.random_bool(0.5),
+                        case_insensitive: rng.random_bool(0.5),
+                    };
+                    task_tx
+                        .send(WorkerTask::LoadDirectory {
+                            path: dir.clone(),
+                            focus: None,
+                            list,
+                            sort_config: SortConfig::default(),
+                            list_date_format: Arc::<str>::from(""),
+                            always_show: Arc::new(HashSet::new()),
+                            request_id: (t * requests_per_thread + i) as u64,
+                            tab_id: TEST_TAB_ID,
+                        })
+                        .expect("Couldn't send task to worker");
+                    if i % 50 == 0 {
+                        thread::sleep(Duration::from_millis(rng.random_range(0..10)));
+                    }
+                }
+            }));
+        }
+
+        // Wait for all senders to finish
+        for h in handles {
+            if let Err(err) = h.join() {
+                panic!("Thread panicked during stress test: {:?}", err);
+            }
+        }
+
+        // Read responses
+        let total_requests = thread_count * requests_per_thread;
+        let mut valid_responses = 0;
+        let timeout = Instant::now() + TEST_TIMEOUT;
+
+        for _ in 0..total_requests {
+            let remaining = timeout.saturating_duration_since(Instant::now());
+            match res_rx.recv_timeout(remaining.min(Duration::from_millis(500))) {
+                Ok(WorkerResponse::DirectoryLoaded { entries, .. }) => {
+                    valid_responses += 1;
+                    for entry in &entries {
+                        let name = entry.name_str();
+
+                        assert!(!name.is_empty(), "Entry name_str must not be empty.");
+                        assert!(
+                            !name.contains('\0'),
+                            "Entry name_str must not contain null."
+                        );
+                    }
+                }
+                Ok(WorkerResponse::Error(e, None)) => panic!("Worker error: {}", e),
+                Ok(_) => {}
+                Err(_) => break,
+            }
+        }
+
+        assert_eq!(
+            valid_responses, total_requests,
+            "Not all worker requests returned results!"
+        );
+        Ok(())
+    }
 
     #[test]
     fn worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {

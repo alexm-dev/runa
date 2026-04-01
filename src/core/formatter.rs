@@ -33,14 +33,27 @@ const HEADER_PEEK_BYTES: usize = 8;
 // Bytes to peek for null bytes in binary detections
 const BINARY_PEEK_BYTES: usize = 1024;
 
+#[derive(Clone)]
+pub(crate) struct DirListOptions {
+    pub(crate) dirs_first: bool,
+    pub(crate) show_hidden: bool,
+    pub(crate) show_symlink: bool,
+    pub(crate) show_system: bool,
+    pub(crate) case_insensitive: bool,
+}
+
+#[derive(Clone, Copy)]
+enum MetadataSortField {
+    Size,
+    Modified,
+    Created,
+    Accessed,
+}
+
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.
 pub(crate) struct Formatter {
-    dirs_first: bool,
-    show_hidden: bool,
-    show_symlink: bool,
-    show_system: bool,
-    case_insensitive: bool,
+    list: DirListOptions,
     sort_config: SortConfig,
     always_show: Option<Arc<HashSet<OsString>>>,
     always_show_lowercase: Option<Arc<HashSet<String>>>,
@@ -51,17 +64,13 @@ impl Formatter {
     const PRIO_FILE: u8 = 1;
 
     pub(crate) fn new(
-        dirs_first: bool,
-        show_hidden: bool,
-        show_symlink: bool,
-        show_system: bool,
-        case_insensitive: bool,
+        list: DirListOptions,
         sort_config: SortConfig,
         always_show: Arc<HashSet<OsString>>,
     ) -> Self {
         let (always_show, always_show_lowercase) = if always_show.is_empty() {
             (None, None)
-        } else if case_insensitive {
+        } else if list.case_insensitive {
             let lower = Arc::new(
                 always_show
                     .iter()
@@ -74,11 +83,7 @@ impl Formatter {
         };
 
         Self {
-            dirs_first,
-            show_hidden,
-            show_symlink,
-            show_system,
-            case_insensitive,
+            list,
             sort_config,
             always_show,
             always_show_lowercase,
@@ -87,7 +92,7 @@ impl Formatter {
 
     #[inline]
     fn prio_for_entry(&self, entry: &FileEntry) -> u8 {
-        if self.dirs_first && (entry.flags() & FileEntry::IS_DIR) != 0 {
+        if self.list.dirs_first && (entry.flags() & FileEntry::IS_DIR) != 0 {
             Self::PRIO_DIR
         } else {
             Self::PRIO_FILE
@@ -137,10 +142,10 @@ impl Formatter {
         }
     }
 
-    fn sort_by_name(&self, entries: &mut Vec<FileEntry>) {
+    fn sort_by_name(&self, entries: &mut [FileEntry]) {
         let sort_order = self.sort_config.order;
 
-        if !self.case_insensitive {
+        if !self.list.case_insensitive {
             entries.sort_by(|left_entry, right_entry| {
                 let left_priority = self.prio_for_entry(left_entry);
                 let right_priority = self.prio_for_entry(right_entry);
@@ -180,7 +185,7 @@ impl Formatter {
     fn sort_by_extension(&self, entries: &mut Vec<FileEntry>) {
         let sort_order = self.sort_config.order;
 
-        if !self.case_insensitive {
+        if !self.list.case_insensitive {
             let mut sort_keys: Vec<(u8, Option<&OsStr>, &OsStr, usize)> =
                 Vec::with_capacity(entries.len());
 
@@ -196,8 +201,8 @@ impl Formatter {
                 }
 
                 match sort_order {
-                    SortOrder::Ascending => left.1.cmp(&right.1).then(left.2.cmp(&right.2)),
-                    SortOrder::Descending => right.1.cmp(&left.1).then(right.2.cmp(&left.2)),
+                    SortOrder::Ascending => left.1.cmp(&right.1).then(left.2.cmp(right.2)),
+                    SortOrder::Descending => right.1.cmp(&left.1).then(right.2.cmp(left.2)),
                 }
             });
 
@@ -334,7 +339,7 @@ impl Formatter {
                 return primary;
             }
 
-            if !self.case_insensitive {
+            if !self.list.case_insensitive {
                 return entries[left.2].name().cmp(entries[right.2].name());
             }
 
@@ -365,20 +370,20 @@ impl Formatter {
 
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         let mut hide = 0u8;
-        if !self.show_hidden {
+        if !self.list.show_hidden {
             hide |= FileEntry::IS_HIDDEN;
         }
-        if !self.show_system {
+        if !self.list.show_system {
             hide |= FileEntry::IS_SYSTEM;
         }
-        if !self.show_symlink {
+        if !self.list.show_symlink {
             hide |= FileEntry::IS_SYMLINK;
         }
         entries.retain(|e| {
             let flags = e.flags();
 
             if (flags & hide) != 0 {
-                if self.case_insensitive {
+                if self.list.case_insensitive {
                     if let Some(set) = &self.always_show_lowercase {
                         return with_lowered_stack(e.name_str().as_ref(), |lowered| {
                             set.contains(lowered)
@@ -646,14 +651,6 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
     }
 }
 
-#[derive(Clone, Copy)]
-enum MetadataSortField {
-    Size,
-    Modified,
-    Created,
-    Accessed,
-}
-
 #[inline]
 fn system_time_to_key(system_time: Option<SystemTime>) -> u128 {
     system_time
@@ -700,46 +697,55 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn formatter_filters_entries_by_flags() {
-    //     let normal = FileEntry::new(OsString::from("normal.txt"), 0, None);
-    //     let hidden = FileEntry::new(OsString::from(".hidden"), FileEntry::IS_HIDDEN, None);
-    //     let system = FileEntry::new(OsString::from("system.sys"), FileEntry::IS_SYSTEM, None);
-    //     let symlink = FileEntry::new(
-    //         OsString::from("symlink"),
-    //         FileEntry::IS_SYMLINK,
-    //         Some(Path::new("target").to_path_buf()),
-    //     );
-    //
-    //     let mut entries = vec![
-    //         normal.clone(),
-    //         hidden.clone(),
-    //         system.clone(),
-    //         symlink.clone(),
-    //     ];
-    //
-    //     let fmt = Formatter::new(true, false, false, false, false, Arc::new(HashSet::new()));
-    //     fmt.filter_entries(&mut entries);
-    //
-    //     assert_eq!(entries.len(), 1);
-    //     assert_eq!(entries[0].name_str(), "normal.txt");
-    //
-    //     let mut entries = vec![
-    //         normal.clone(),
-    //         hidden.clone(),
-    //         system.clone(),
-    //         symlink.clone(),
-    //     ];
-    //
-    //     let fmt = Formatter::new(true, true, true, true, false, Arc::new(HashSet::new()));
-    //     fmt.filter_entries(&mut entries);
-    //     assert_eq!(entries.len(), 4);
-    //     assert!(entries.iter().any(|e| e.name_str() == ".hidden"));
-    //     assert!(entries.iter().any(|e| e.name_str() == "system.sys"));
-    //     assert!(entries.iter().any(|e| e.name_str() == "symlink"));
-    //     assert!(entries.iter().any(|e| e.name_str() == "normal.txt"));
-    // }
-    //
+    #[test]
+    fn formatter_filters_entries_by_flags() {
+        let normal = FileEntry::new(OsString::from("normal.txt"), 0, None);
+        let hidden = FileEntry::new(OsString::from(".hidden"), FileEntry::IS_HIDDEN, None);
+        let system = FileEntry::new(OsString::from("system.sys"), FileEntry::IS_SYSTEM, None);
+        let symlink = FileEntry::new(
+            OsString::from("symlink"),
+            FileEntry::IS_SYMLINK,
+            Some(Path::new("target").to_path_buf()),
+        );
+
+        let mut entries = vec![
+            normal.clone(),
+            hidden.clone(),
+            system.clone(),
+            symlink.clone(),
+        ];
+
+        let list = DirListOptions {
+            dirs_first: true,
+            show_hidden: false,
+            show_system: false,
+            show_symlink: false,
+            case_insensitive: true,
+        };
+        let short_config = SortConfig::default();
+
+        let fmt = Formatter::new(list.to_owned(), short_config, Arc::new(HashSet::new()));
+        fmt.filter_entries(&mut entries);
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name_str(), "normal.txt");
+
+        let mut entries = vec![
+            normal.clone(),
+            hidden.clone(),
+            system.clone(),
+            symlink.clone(),
+        ];
+
+        let fmt = Formatter::new(list, short_config, Arc::new(HashSet::new()));
+        fmt.filter_entries(&mut entries);
+        assert_eq!(entries.len(), 4);
+        assert!(entries.iter().any(|e| e.name_str() == ".hidden"));
+        assert!(entries.iter().any(|e| e.name_str() == "system.sys"));
+        assert!(entries.iter().any(|e| e.name_str() == "symlink"));
+        assert!(entries.iter().any(|e| e.name_str() == "normal.txt"));
+    }
+
     #[test]
     fn core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempdir()?;

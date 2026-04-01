@@ -21,6 +21,7 @@ use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::metadata::MetadataState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
+use crate::core::formatter::DirListOptions;
 use crate::core::metadata::{FileMetadataCache, MetadataNeeds};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
@@ -484,11 +485,7 @@ impl<'a> AppState<'a> {
         let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
-            dirs_first: self.config.general().dirs_first(),
-            show_hidden: self.config.general().show_hidden(),
-            show_symlink: self.config.general().show_symlink(),
-            show_system: self.config.general().show_system(),
-            case_insensitive: self.config.general().case_insensitive(),
+            list: self.dir_list_options(),
             sort_config,
             list_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
@@ -509,11 +506,7 @@ impl<'a> AppState<'a> {
                 let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
                     path,
                     focus: None,
-                    dirs_first: self.config.general().dirs_first(),
-                    show_hidden: self.config.general().show_hidden(),
-                    show_symlink: self.config.general().show_symlink(),
-                    show_system: self.config.general().show_system(),
-                    case_insensitive: self.config.general().case_insensitive(),
+                    list: self.dir_list_options(),
                     sort_config,
                     list_date_format,
                     always_show: Arc::clone(self.config.general().always_show()),
@@ -565,11 +558,7 @@ impl<'a> AppState<'a> {
         let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,
-            dirs_first: self.config.general().dirs_first(),
-            show_hidden: self.config.general().show_hidden(),
-            show_symlink: self.config.general().show_symlink(),
-            show_system: self.config.general().show_system(),
-            case_insensitive: self.config.general().case_insensitive(),
+            list: self.dir_list_options(),
             sort_config,
             list_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
@@ -599,6 +588,16 @@ impl<'a> AppState<'a> {
             cancel: cancel_token,
             tab_id: self.tab_id(),
         });
+    }
+
+    fn dir_list_options(&self) -> DirListOptions {
+        DirListOptions {
+            dirs_first: self.config.general().dirs_first(),
+            show_hidden: self.config.general().show_hidden(),
+            show_symlink: self.config.general().show_symlink(),
+            show_system: self.config.general().show_system(),
+            case_insensitive: self.config.general().case_insensitive(),
+        }
     }
 }
 
@@ -730,6 +729,7 @@ mod tests {
             .to_path_buf();
 
         let prev_request_id = app.parent.request_id();
+        let sort_config = app.nav.sort_config();
 
         let file_entry = FileEntry::new(OsString::from("test_file"), 0, None);
         let dir_entry = FileEntry::new(OsString::from("test_dir"), 1, None);
@@ -739,6 +739,8 @@ mod tests {
             "irrelevant",
             prev_request_id,
             &parent_path,
+            sort_config,
+            None,
         );
 
         app.request_parent_content(&workers);

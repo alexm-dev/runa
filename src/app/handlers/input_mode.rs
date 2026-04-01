@@ -195,8 +195,10 @@ impl<'a> AppState<'a> {
         let (started, exited, result, consumed) = {
             let prefix = self.actions.prefix_recognizer_mut();
             let was_g = prefix.is_g_state() || prefix.is_sort_state();
+            let g_prefix = self.keymap.g_prefix();
+            let sort_prefix = self.keymap.sort_prefix();
 
-            let result = prefix.feed(key, gmap, sort_map);
+            let result = prefix.feed(key, gmap, sort_map, sort_prefix, g_prefix);
 
             let consumed = was_g && key.code == Esc;
 

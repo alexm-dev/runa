@@ -34,6 +34,7 @@ pub(crate) struct Keys {
     clear_all: Vec<String>,
     alternate_delete: Vec<String>,
     select_all: Vec<String>,
+    prefix_go_to: Vec<String>,
     go_to_top: Vec<String>,
     go_to_home: Vec<String>,
     go_to_path: Vec<String>,
@@ -45,6 +46,7 @@ pub(crate) struct Keys {
     keybind_help: Vec<String>,
     scroll_up: Vec<String>,
     scroll_down: Vec<String>,
+    sort: Vec<String>,
 }
 
 crate::key_accessor!(
@@ -71,6 +73,7 @@ crate::key_accessor!(
     clear_all,
     alternate_delete,
     select_all,
+    prefix_go_to,
     go_to_top,
     go_to_home,
     go_to_path,
@@ -82,6 +85,7 @@ crate::key_accessor!(
     keybind_help,
     scroll_up,
     scroll_down,
+    sort,
 );
 
 /// Default input configuration options
@@ -116,6 +120,8 @@ impl Default for Keys {
 
             alternate_delete: vec!["<m-d>".into()],
 
+            prefix_go_to: vec!["g".into()],
+
             go_to_top: vec!["g".into()],
             go_to_home: vec!["h".into()],
             go_to_path: vec!["p".into()],
@@ -130,6 +136,8 @@ impl Default for Keys {
 
             scroll_up: vec!["<c-d>".into()],
             scroll_down: vec!["<c-u>".into()],
+
+            sort: vec!["o".into()],
         }
     }
 }
