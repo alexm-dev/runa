@@ -580,7 +580,7 @@ fn make_entry_row<'a>(
         spans.push(Span::styled(name, row_style));
     }
 
-    if entry.is_dir() && context.show_marker {
+    if entry.is_dir() && context.show_marker && left_remaining(total_w, used_w, reserve) >= 1 {
         used_w += 1;
         let slash_style = if entry.is_symlink() {
             row_style.fg(symlink_fg)
@@ -591,35 +591,50 @@ fn make_entry_row<'a>(
     }
 
     if entry.is_symlink() {
-        if let Some(target) = entry.symlink() {
-            let target_str = target.to_string_lossy();
-            let mut sym_text = String::with_capacity(target_str.len() + 20);
-            sym_text.push_str(" -> ");
-            sym_text.push_str(&target_str);
+        let rem = left_remaining(total_w, used_w, reserve);
+        if rem > 0 {
+            if let Some(target) = entry.symlink() {
+                let target_str = target.to_string_lossy();
+                let mut sym_text = String::with_capacity(target_str.len() + 24);
+                sym_text.push_str(" -> ");
+                sym_text.push_str(&target_str);
 
-            let target_style = if entry.is_broken_sym() {
-                sym_text.push_str(" [broken]");
-                row_style.fg(symlink_fg)
-            } else {
-                row_style.fg(context.styles.symlink_target)
-            };
+                if entry.is_broken_sym() {
+                    sym_text.push_str(" [broken]");
+                }
 
-            used_w += UnicodeWidthStr::width(sym_text.as_str());
-            spans.push(Span::styled(sym_text, target_style));
-        } else if entry.is_broken_sym() {
-            let s = " -> [broken]";
-            used_w += UnicodeWidthStr::width(s);
-            spans.push(Span::styled(s, row_style.fg(Color::Red)));
+                let sym_text = truncate_owned(sym_text.as_str(), rem);
+                used_w += UnicodeWidthStr::width(sym_text.as_str());
+
+                let target_style = if entry.is_broken_sym() {
+                    row_style.fg(symlink_fg)
+                } else {
+                    row_style.fg(context.styles.symlink_target)
+                };
+
+                spans.push(Span::styled(sym_text, target_style));
+            } else if entry.is_broken_sym() {
+                let s = truncate_owned(" -> [broken]", rem);
+                used_w += UnicodeWidthStr::width(s.as_str());
+                spans.push(Span::styled(s, row_style.fg(Color::Red)));
+            }
         }
     }
 
     if let Some(col) = right_col {
         let total_w = context.area.width.saturating_sub(2) as usize;
-        let col_w = UnicodeWidthStr::width(col);
-        let pad_spaces = total_w.saturating_sub(used_w + col_w + 1);
+        let col_area_w = right_width as usize;
 
+        let pad_spaces = total_w.saturating_sub(used_w + 1 + col_area_w);
         spans.push(Span::raw(" ".repeat(pad_spaces)));
         spans.push(Span::raw(" "));
+
+        let col_w = UnicodeWidthStr::width(col).min(col_area_w);
+        let inner_pad = col_area_w.saturating_sub(col_w);
+        if inner_pad > 0 {
+            spans.push(Span::raw(" ".repeat(inner_pad)));
+        }
+
         spans.push(Span::styled(col, row_style.add_modifier(Modifier::DIM)));
     }
 
@@ -668,4 +683,9 @@ fn truncate_owned(s: &str, max_w: usize) -> String {
     }
     out.push('…');
     out
+}
+
+#[inline]
+fn left_remaining(total_w: usize, used_w: usize, reserve: usize) -> usize {
+    total_w.saturating_sub(reserve).saturating_sub(used_w)
 }
