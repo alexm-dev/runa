@@ -21,6 +21,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
 const MIN_LEFT_WIDTH: u16 = 12;
@@ -91,6 +92,31 @@ pub(crate) struct PaneMarkers<'a> {
     pub(crate) clipboard_style: Style,
 }
 
+#[derive(Clone, Copy)]
+struct RightCol<'a> {
+    text: Option<&'a str>,
+    width: u16,
+}
+
+impl<'a> RightCol<'a> {
+    #[inline]
+    fn none() -> Self {
+        Self {
+            text: None,
+            width: 0,
+        }
+    }
+
+    #[inline]
+    fn reserve(self) -> usize {
+        if self.text.is_some() {
+            self.width as usize + 1
+        } else {
+            0
+        }
+    }
+}
+
 /// Draws the main file list pane in the UI
 ///
 /// Highlights selection, markers and directories and handles styling for items.
@@ -133,7 +159,7 @@ pub(crate) fn draw_main(
 
     let sort_column = app.nav().sort_column();
     let right_w = right_col_width(sort_column.as_ref());
-    let inner_w = context.area.width.saturating_sub(2);
+    let inner_w = context.block.inner(context.area).width;
     let show_col = pane_show_col(inner_w, right_w);
 
     let mut items = Vec::with_capacity(shown_len);
@@ -146,8 +172,18 @@ pub(crate) fn draw_main(
                 .as_ref()
                 .and_then(|c| c.get(abs_idx))
                 .map(|s| s.as_ref())
+                .filter(|s| !s.is_empty())
         } else {
             None
+        };
+
+        let right = if show_col {
+            RightCol {
+                text: right_col,
+                width: right_w,
+            }
+        } else {
+            RightCol::none()
         };
 
         items.push(make_entry_row(
@@ -157,8 +193,7 @@ pub(crate) fn draw_main(
             &context,
             &markers,
             None,
-            right_col,
-            right_w,
+            right,
         ));
     }
 
@@ -248,7 +283,7 @@ pub(crate) fn draw_preview(
             }
 
             let right_w = right_col_width(sort_column.as_ref());
-            let inner_w = context.area.width.saturating_sub(2);
+            let inner_w = context.block.inner(context.area).width;
             let show_col = pane_show_col(inner_w, right_w);
 
             let mut items = Vec::with_capacity(entries.len());
@@ -261,8 +296,18 @@ pub(crate) fn draw_preview(
                         .as_ref()
                         .and_then(|c| c.get(idx))
                         .map(|s| s.as_ref())
+                        .filter(|s| !s.is_empty())
                 } else {
                     None
+                };
+
+                let right = if show_col {
+                    RightCol {
+                        text: right_col,
+                        width: right_w,
+                    }
+                } else {
+                    RightCol::none()
                 };
 
                 items.push(make_entry_row(
@@ -272,8 +317,7 @@ pub(crate) fn draw_preview(
                     &context,
                     markers,
                     Some(&opts),
-                    right_col,
-                    right_w,
+                    right,
                 ));
             }
 
@@ -321,7 +365,7 @@ pub(crate) fn draw_parent(
 
     let sort_column = app.parent().sort_column();
     let right_w = right_col_width(sort_column.as_ref());
-    let inner_w = context.area.width.saturating_sub(2);
+    let inner_w = context.block.inner(context.area).width;
     let show_col = pane_show_col(inner_w, right_w);
 
     let mut items = Vec::with_capacity(entries.len());
@@ -333,9 +377,20 @@ pub(crate) fn draw_parent(
                 .as_ref()
                 .and_then(|c| c.get(idx))
                 .map(|s| s.as_ref())
+                .filter(|s| !s.is_empty())
         } else {
             None
         };
+
+        let right = if show_col {
+            RightCol {
+                text: right_col,
+                width: right_w,
+            }
+        } else {
+            RightCol::none()
+        };
+
         items.push(make_entry_row(
             entry,
             is_selected,
@@ -343,8 +398,7 @@ pub(crate) fn draw_parent(
             &context,
             markers,
             None,
-            right_col,
-            right_w,
+            right,
         ));
     }
 
@@ -464,8 +518,7 @@ fn make_entry_row<'a>(
     context: &PaneContext,
     markers: &PaneMarkers,
     opts: Option<&PreviewOptions>,
-    right_col: Option<&'a str>,
-    right_width: u16,
+    right: RightCol<'a>,
 ) -> ListItem<'a> {
     let mut used_w: usize = 0;
 
@@ -558,12 +611,8 @@ fn make_entry_row<'a>(
         spans.push(Span::styled(icon_col, icon_render_style));
     }
 
-    let total_w = context.area.width.saturating_sub(2) as usize;
-    let reserve = if right_col.is_some() {
-        (right_width as usize) + 1
-    } else {
-        0
-    };
+    let total_w = context.block.inner(context.area).width as usize;
+    let reserve = right.reserve();
 
     let name_raw = entry.name_str();
     let name_budget = total_w
@@ -621,21 +670,19 @@ fn make_entry_row<'a>(
         }
     }
 
-    if let Some(col) = right_col {
-        let total_w = context.area.width.saturating_sub(2) as usize;
-        let col_area_w = right_width as usize;
+    if let Some(col) = right.text {
+        let col_area_w = right.width as usize;
+        let right_text = if UnicodeWidthStr::width(col) <= col_area_w {
+            build_right_field(col, total_w, used_w, col_area_w)
+        } else {
+            let col = truncate_owned(col, col_area_w);
+            build_right_field(&col, total_w, used_w, col_area_w)
+        };
 
-        let pad_spaces = total_w.saturating_sub(used_w + 1 + col_area_w);
-        spans.push(Span::raw(" ".repeat(pad_spaces)));
-        spans.push(Span::raw(" "));
-
-        let col_w = UnicodeWidthStr::width(col).min(col_area_w);
-        let inner_pad = col_area_w.saturating_sub(col_w);
-        if inner_pad > 0 {
-            spans.push(Span::raw(" ".repeat(inner_pad)));
-        }
-
-        spans.push(Span::styled(col, row_style.add_modifier(Modifier::DIM)));
+        spans.push(Span::styled(
+            right_text,
+            row_style.add_modifier(Modifier::DIM),
+        ));
     }
 
     ListItem::new(Line::from(spans)).style(row_style)
@@ -688,4 +735,51 @@ fn truncate_owned(s: &str, max_w: usize) -> String {
 #[inline]
 fn left_remaining(total_w: usize, used_w: usize, reserve: usize) -> usize {
     total_w.saturating_sub(reserve).saturating_sub(used_w)
+}
+
+#[inline]
+fn build_right_field(col: &str, total_w: usize, used_w: usize, col_area_w: usize) -> String {
+    let pad_spaces = total_w.saturating_sub(used_w + 1 + col_area_w);
+
+    let col_w = UnicodeWidthStr::width(col).min(col_area_w);
+    let inner_pad = col_area_w.saturating_sub(col_w);
+
+    let mut out = String::with_capacity(pad_spaces + 1 + inner_pad + col.len());
+    out.extend(std::iter::repeat_n(' ', pad_spaces));
+    out.push(' ');
+    out.extend(std::iter::repeat_n(' ', inner_pad));
+    out.push_str(col);
+    out
+}
+
+fn pane_inner_width(context: &PaneContext) -> u16 {
+    context.block.inner(context.area).width
+}
+
+fn right_col_config<'a>(inner_w: u16, sort_column: Option<&Vec<Arc<str>>>) -> (bool, u16) {
+    let right_w = right_col_width(sort_column);
+    let show_col = pane_show_col(inner_w, right_w);
+    (show_col, right_w)
+}
+
+fn right_col_at<'a>(sort_column: Option<&'a Vec<Arc<str>>>, idx: usize) -> Option<&'a str> {
+    sort_column
+        .and_then(|c| c.get(idx))
+        .map(|s| s.as_ref())
+        .filter(|s| !s.is_empty())
+}
+
+fn right_col_for<'a>(
+    show_col: bool,
+    right_w: u16,
+    sort_column: Option<&'a Vec<Arc<str>>>,
+    idx: usize,
+) -> RightCol<'a> {
+    if !show_col {
+        return RightCol::none();
+    }
+    RightCol {
+        text: right_col_at(sort_column, idx),
+        width: right_w,
+    }
 }
