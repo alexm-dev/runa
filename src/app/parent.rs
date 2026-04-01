@@ -3,6 +3,7 @@
 //! Tracks entries, selection, worker requests for the parent pane view above the current working
 //! directory
 
+use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
 use std::path::{Path, PathBuf};
 
@@ -15,6 +16,7 @@ pub(crate) struct ParentState {
     entries: Vec<FileEntry>,
     selected_idx: Option<usize>,
     last_path: Option<PathBuf>,
+    last_sort: Option<SortConfig>,
     request_id: u64,
 }
 
@@ -30,13 +32,18 @@ impl ParentState {
     }
 
     #[inline]
-    pub(super) fn is_cached(&self, parent_path: &Path) -> bool {
-        matches!(self.last_path(), Some(last) if last == parent_path && !self.entries().is_empty())
+    pub(super) fn is_cached(&self, parent_path: &Path, sort: SortConfig) -> bool {
+        matches!(
+            self.last_path(),
+            Some(last) if last == parent_path
+        ) && self.last_sort == Some(sort)
+            && !self.entries.is_empty()
     }
 
-    pub(super) fn prepare_new_request(&mut self, path: &Path) -> u64 {
+    pub(super) fn prepare_new_request(&mut self, path: &Path, sort: SortConfig) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.last_path = Some(path.to_path_buf());
+        self.last_sort = Some(sort);
         self.request_id
     }
 
@@ -49,6 +56,7 @@ impl ParentState {
         current_name: &str,
         req_id: u64,
         parent_path: &Path,
+        sort: SortConfig,
     ) {
         if req_id < self.request_id {
             return;
@@ -57,6 +65,7 @@ impl ParentState {
         self.selected_idx = entries.iter().position(|e| e.name_str() == current_name);
         self.entries = entries;
         self.last_path = Some(parent_path.to_path_buf());
+        self.last_sort = Some(sort);
         self.request_id = req_id;
     }
 
@@ -66,6 +75,7 @@ impl ParentState {
         self.entries.clear();
         self.selected_idx = None;
         self.last_path = None;
+        self.last_sort = None;
         self.request_id = self.request_id.wrapping_add(1);
     }
 }

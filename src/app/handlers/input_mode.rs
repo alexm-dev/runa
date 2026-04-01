@@ -262,8 +262,6 @@ impl<'a> AppState<'a> {
                     .map(|file_entry| file_entry.name().to_os_string());
 
                 self.request_dir_load(workers, focus);
-                self.refresh_show_info_if_open();
-                self.parent.clear();
                 self.request_parent_content(workers);
                 self.request_preview(workers);
             }

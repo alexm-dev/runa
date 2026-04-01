@@ -361,9 +361,14 @@ impl<'a> AppState<'a> {
                             .file_name()
                             .map(|n| n.to_string_lossy().to_string())
                             .unwrap_or_default();
-
-                        self.parent
-                            .update_from_entries(entries, &current_name, request_id, &path);
+                        let sort_config = self.nav.sort_config();
+                        self.parent.update_from_entries(
+                            entries,
+                            &current_name,
+                            request_id,
+                            &path,
+                            sort_config,
+                        );
                     }
                 }
             }
@@ -538,13 +543,16 @@ impl<'a> AppState<'a> {
             return;
         };
 
-        if self.parent.is_cached(parent_path) {
+        let sort_config = self.nav.sort_config();
+        if self.parent.is_cached(parent_path, sort_config) {
             return;
         }
 
         let parent_path_buf = parent_path.to_path_buf();
-        let req_id = self.parent.prepare_new_request(&parent_path_buf);
         let sort_config = self.nav.sort_config();
+        let req_id = self
+            .parent
+            .prepare_new_request(&parent_path_buf, sort_config);
         let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,

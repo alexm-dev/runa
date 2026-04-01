@@ -372,7 +372,7 @@ impl SortOrder {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct SortConfig {
     pub(crate) mode: SortMode,
     pub(crate) order: SortOrder,
