@@ -158,33 +158,15 @@ pub(crate) fn draw_main(
     let shown_len = app.nav().shown_entries_len();
 
     let sort_column = app.nav().sort_column();
-    let right_w = right_col_width(sort_column.as_ref());
-    let inner_w = context.block.inner(context.area).width;
-    let show_col = pane_show_col(inner_w, right_w);
+    let inner_w = pane_inner_width(&context);
+    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
 
     let mut items = Vec::with_capacity(shown_len);
     for (vis_idx, &abs_idx) in app.nav().shown_indices().iter().enumerate() {
         let entry = &app.nav().entries()[abs_idx];
         let is_selected = Some(vis_idx) == selected_idx;
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-        let right_col = if show_col {
-            sort_column
-                .as_ref()
-                .and_then(|c| c.get(abs_idx))
-                .map(|s| s.as_ref())
-                .filter(|s| !s.is_empty())
-        } else {
-            None
-        };
-
-        let right = if show_col {
-            RightCol {
-                text: right_col,
-                width: right_w,
-            }
-        } else {
-            RightCol::none()
-        };
+        let right = right_col_for(show_col, right_w, sort_column.as_ref(), abs_idx);
 
         items.push(make_entry_row(
             entry,
@@ -282,33 +264,14 @@ pub(crate) fn draw_preview(
                 return;
             }
 
-            let right_w = right_col_width(sort_column.as_ref());
-            let inner_w = context.block.inner(context.area).width;
-            let show_col = pane_show_col(inner_w, right_w);
+            let inner_w = pane_inner_width(&context);
+            let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
 
             let mut items = Vec::with_capacity(entries.len());
             for (idx, entry) in entries.iter().enumerate() {
                 let is_selected = Some(idx) == selected_idx;
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
-
-                let right_col = if show_col {
-                    sort_column
-                        .as_ref()
-                        .and_then(|c| c.get(idx))
-                        .map(|s| s.as_ref())
-                        .filter(|s| !s.is_empty())
-                } else {
-                    None
-                };
-
-                let right = if show_col {
-                    RightCol {
-                        text: right_col,
-                        width: right_w,
-                    }
-                } else {
-                    RightCol::none()
-                };
+                let right = right_col_for(show_col, right_w, sort_column.as_ref(), idx);
 
                 items.push(make_entry_row(
                     entry,
@@ -364,32 +327,14 @@ pub(crate) fn draw_parent(
     }
 
     let sort_column = app.parent().sort_column();
-    let right_w = right_col_width(sort_column.as_ref());
-    let inner_w = context.block.inner(context.area).width;
-    let show_col = pane_show_col(inner_w, right_w);
+    let inner_w = pane_inner_width(&context);
+    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
 
     let mut items = Vec::with_capacity(entries.len());
     for (idx, entry) in entries.iter().enumerate() {
         let is_selected = Some(idx) == selected_idx;
         let style = context.styles.get_style(entry.is_dir(), is_selected);
-        let right_col = if show_col {
-            sort_column
-                .as_ref()
-                .and_then(|c| c.get(idx))
-                .map(|s| s.as_ref())
-                .filter(|s| !s.is_empty())
-        } else {
-            None
-        };
-
-        let right = if show_col {
-            RightCol {
-                text: right_col,
-                width: right_w,
-            }
-        } else {
-            RightCol::none()
-        };
+        let right = right_col_for(show_col, right_w, sort_column.as_ref(), idx);
 
         items.push(make_entry_row(
             entry,
@@ -689,21 +634,6 @@ fn make_entry_row<'a>(
 }
 
 #[inline]
-fn right_col_width(sort_column: Option<&Vec<std::sync::Arc<str>>>) -> u16 {
-    let Some(col) = sort_column else {
-        return 0;
-    };
-    let mut max_w: usize = 0;
-    for s in col.iter() {
-        let w = UnicodeWidthStr::width(s.as_ref());
-        if w > max_w {
-            max_w = w;
-        }
-    }
-    (max_w as u16).min(MAX_RIGHT_COLUMN_WIDTH)
-}
-
-#[inline]
 fn pane_show_col(inner_w: u16, right_w: u16) -> bool {
     right_w > 0 && inner_w >= right_w + 1 + MIN_LEFT_WIDTH
 }
@@ -752,29 +682,48 @@ fn build_right_field(col: &str, total_w: usize, used_w: usize, col_area_w: usize
     out
 }
 
+#[inline]
 fn pane_inner_width(context: &PaneContext) -> u16 {
     context.block.inner(context.area).width
 }
 
-fn right_col_config<'a>(inner_w: u16, sort_column: Option<&Vec<Arc<str>>>) -> (bool, u16) {
+#[inline]
+fn right_col_width(sort_column: Option<&Vec<Arc<str>>>) -> u16 {
+    let Some(col) = sort_column else {
+        return 0;
+    };
+    let mut max_w: usize = 0;
+    for s in col.iter() {
+        let w = UnicodeWidthStr::width(s.as_ref());
+        if w > max_w {
+            max_w = w;
+        }
+    }
+    (max_w as u16).min(MAX_RIGHT_COLUMN_WIDTH)
+}
+
+#[inline]
+fn right_col_config(inner_w: u16, sort_column: Option<&Vec<Arc<str>>>) -> (bool, u16) {
     let right_w = right_col_width(sort_column);
     let show_col = pane_show_col(inner_w, right_w);
     (show_col, right_w)
 }
 
-fn right_col_at<'a>(sort_column: Option<&'a Vec<Arc<str>>>, idx: usize) -> Option<&'a str> {
+#[inline]
+fn right_col_at(sort_column: Option<&Vec<Arc<str>>>, idx: usize) -> Option<&str> {
     sort_column
         .and_then(|c| c.get(idx))
         .map(|s| s.as_ref())
         .filter(|s| !s.is_empty())
 }
 
-fn right_col_for<'a>(
+#[inline]
+fn right_col_for(
     show_col: bool,
     right_w: u16,
-    sort_column: Option<&'a Vec<Arc<str>>>,
+    sort_column: Option<&Vec<Arc<str>>>,
     idx: usize,
-) -> RightCol<'a> {
+) -> RightCol<'_> {
     if !show_col {
         return RightCol::none();
     }
