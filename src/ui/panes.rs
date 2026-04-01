@@ -16,6 +16,8 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
+use unicode_width::UnicodeWidthStr;
+
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -126,9 +128,17 @@ pub(crate) fn draw_main(
 
     let shown_len = app.nav().shown_entries_len();
     let mut items = Vec::with_capacity(shown_len);
-    for (idx, entry) in app.nav().shown_entries().enumerate() {
-        let is_selected = Some(idx) == selected_idx;
+    for (vis_idx, &abs_idx) in app.nav().shown_indices().iter().enumerate() {
+        let entry = &app.nav().entries()[abs_idx];
+        let is_selected = Some(vis_idx) == selected_idx;
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
+        let right_col = app
+            .nav()
+            .sort_column()
+            .as_ref()
+            .and_then(|c| c.get(abs_idx))
+            .map(|s| s.as_ref());
+
         items.push(make_entry_row(
             entry,
             is_selected,
@@ -136,6 +146,7 @@ pub(crate) fn draw_main(
             &context,
             &markers,
             None,
+            right_col,
         ));
     }
 
@@ -165,12 +176,19 @@ pub(crate) fn draw_main(
 /// Also applies underline/selection styles and manages cursor position
 pub(crate) fn draw_preview(
     frame: &mut Frame,
+    app: &AppState,
     context: PaneContext,
-    preview: &PreviewData,
-    selected_idx: Option<usize>,
-    opts: PreviewOptions,
     markers: &PaneMarkers,
 ) {
+    let preview = app.preview().data();
+    let selected_idx = Some(app.preview().selected_idx());
+
+    let opts = PreviewOptions {
+        use_underline: app.config().display().preview_underline(),
+        underline_match_text: app.config().display().preview_underline_color(),
+        underline_style: app.config().theme().underline_style(),
+    };
+
     match preview {
         PreviewData::Empty => {
             frame.render_widget(
@@ -196,7 +214,10 @@ pub(crate) fn draw_preview(
             );
         }
 
-        PreviewData::Directory(entries) => {
+        PreviewData::Directory {
+            entries,
+            sort_column,
+        } => {
             if entries.is_empty() {
                 let style = context.styles.item;
                 let line = Line::from(vec![Span::raw(context.padding_str), Span::raw("[Empty]")]);
@@ -218,6 +239,12 @@ pub(crate) fn draw_preview(
             for (idx, entry) in entries.iter().enumerate() {
                 let is_selected = Some(idx) == selected_idx;
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
+
+                let right_col = sort_column
+                    .as_ref()
+                    .and_then(|c| c.get(idx))
+                    .map(|s| s.as_ref());
+
                 items.push(make_entry_row(
                     entry,
                     is_selected,
@@ -225,6 +252,7 @@ pub(crate) fn draw_preview(
                     &context,
                     markers,
                     Some(&opts),
+                    right_col,
                 ));
             }
 
@@ -251,11 +279,13 @@ pub(crate) fn draw_preview(
 /// Draws the parent directory of the current working directory.
 pub(crate) fn draw_parent(
     frame: &mut Frame,
+    app: &AppState,
     context: PaneContext,
-    entries: &[FileEntry],
-    selected_idx: Option<usize>,
     markers: &PaneMarkers,
 ) {
+    let entries = app.parent().entries();
+    let selected_idx = app.parent().selected_idx();
+    let sort_column = app.parent().sort_column();
     if entries.is_empty() {
         frame.render_widget(
             Paragraph::new("").block(
@@ -273,6 +303,10 @@ pub(crate) fn draw_parent(
     for (idx, entry) in entries.iter().enumerate() {
         let is_selected = Some(idx) == selected_idx;
         let style = context.styles.get_style(entry.is_dir(), is_selected);
+        let right_col = sort_column
+            .as_ref()
+            .and_then(|c| c.get(idx))
+            .map(|s| s.as_ref());
         items.push(make_entry_row(
             entry,
             is_selected,
@@ -280,6 +314,7 @@ pub(crate) fn draw_parent(
             &context,
             markers,
             None,
+            right_col,
         ));
     }
 
@@ -399,7 +434,10 @@ fn make_entry_row<'a>(
     context: &PaneContext,
     markers: &PaneMarkers,
     opts: Option<&PreviewOptions>,
+    right_col: Option<&'a str>,
 ) -> ListItem<'a> {
+    let mut used_w: usize = 0;
+
     let is_marked = markers
         .markers
         .as_ref()
@@ -440,7 +478,9 @@ fn make_entry_row<'a>(
         }
     }
 
-    let pad = if (is_marked || is_copied) && !context.padding_str.is_empty() {
+    let mut spans = Vec::with_capacity(10);
+
+    if (is_marked || is_copied) && !context.padding_str.is_empty() {
         let first_char_len = context
             .padding_str
             .chars()
@@ -451,13 +491,12 @@ fn make_entry_row<'a>(
         s.push_str(markers.marker_icon);
         s.push_str(&context.padding_str[first_char_len..]);
 
-        Span::styled(s, icon_style)
+        used_w += UnicodeWidthStr::width(s.as_str());
+        spans.push(Span::styled(s, icon_style));
     } else {
-        Span::raw(context.padding_str)
-    };
-
-    let mut spans = Vec::with_capacity(8);
-    spans.push(pad);
+        used_w += UnicodeWidthStr::width(context.padding_str);
+        spans.push(Span::raw(context.padding_str));
+    }
 
     let symlink_fg = if entry.is_broken_sym() {
         Color::Red
@@ -477,6 +516,8 @@ fn make_entry_row<'a>(
         icon_col.push_str(icon);
         icon_col.push(' ');
 
+        used_w += UnicodeWidthStr::width(icon_col.as_str());
+
         let icon_render_style = if entry.is_symlink() {
             row_style.fg(symlink_fg).add_modifier(Modifier::BOLD)
         } else {
@@ -486,13 +527,17 @@ fn make_entry_row<'a>(
         spans.push(Span::styled(icon_col, icon_render_style));
     }
 
+    let name = entry.name_str();
+    used_w += UnicodeWidthStr::width(name.as_ref());
+
     if entry.is_symlink() {
-        spans.push(Span::styled(entry.name_str(), row_style.fg(symlink_fg)));
+        spans.push(Span::styled(name, row_style.fg(symlink_fg)));
     } else {
-        spans.push(Span::styled(entry.name_str(), row_style));
+        spans.push(Span::styled(name, row_style));
     }
 
     if entry.is_dir() && context.show_marker {
+        used_w += 1;
         let slash_style = if entry.is_symlink() {
             row_style.fg(symlink_fg)
         } else {
@@ -515,9 +560,23 @@ fn make_entry_row<'a>(
                 row_style.fg(context.styles.symlink_target)
             };
 
+            used_w += UnicodeWidthStr::width(sym_text.as_str());
             spans.push(Span::styled(sym_text, target_style));
         } else if entry.is_broken_sym() {
-            spans.push(Span::styled(" -> [broken]", row_style.fg(Color::Red)));
+            let s = " -> [broken]";
+            used_w += UnicodeWidthStr::width(s);
+            spans.push(Span::styled(s, row_style.fg(Color::Red)));
+        }
+    }
+
+    if let Some(col) = right_col {
+        let total_w = context.area.width as usize;
+        let col_w = UnicodeWidthStr::width(col);
+
+        if total_w > used_w + col_w + 1 {
+            let pad_spaces = total_w - used_w - col_w;
+            spans.push(Span::raw(" ".repeat(pad_spaces)));
+            spans.push(Span::styled(col, row_style.add_modifier(Modifier::DIM)));
         }
     }
 

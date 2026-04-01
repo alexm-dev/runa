@@ -7,6 +7,7 @@ use crate::core::FileEntry;
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Instant;
 
 /// Preview content for the preview pane
@@ -14,7 +15,10 @@ use std::time::Instant;
 /// Holds loaded lines for file preview, directory entries for folder preview or empty if nothing.
 /// Used to display or render file/folder content in the preview pane
 pub(crate) enum PreviewData {
-    Directory(Vec<FileEntry>),
+    Directory {
+        entries: Vec<FileEntry>,
+        sort_column: Option<Vec<Arc<str>>>,
+    },
     File(Text<'static>),
     Empty,
 }
@@ -54,7 +58,7 @@ impl PreviewState {
     /// Sets the selected index, clamped to the length of the current data
     pub(crate) fn set_selected_idx(&mut self, idx: usize) {
         let len = match &self.data {
-            PreviewData::Directory(entries) => entries.len(),
+            PreviewData::Directory { entries, .. } => entries.len(),
             PreviewData::File(_) => 1,
             PreviewData::Empty => 0,
         };
@@ -93,9 +97,17 @@ impl PreviewState {
 
     /// Updates the preview content with new directory entries
     /// Only applies the update if the request ID matches the latest
-    pub(crate) fn update_from_entries(&mut self, entries: Vec<FileEntry>, request_id: u64) {
+    pub(crate) fn update_from_entries(
+        &mut self,
+        entries: Vec<FileEntry>,
+        sort_column: Option<Vec<Arc<str>>>,
+        request_id: u64,
+    ) {
         if request_id == self.request_id {
-            self.data = PreviewData::Directory(entries);
+            self.data = PreviewData::Directory {
+                entries,
+                sort_column,
+            };
             self.selected_idx = 0;
         }
     }
@@ -119,7 +131,7 @@ impl PreviewData {
     #[inline]
     pub(crate) fn is_empty(&self) -> bool {
         match self {
-            PreviewData::Directory(v) => v.is_empty(),
+            PreviewData::Directory { entries, .. } => entries.is_empty(),
             PreviewData::File(text) => text.lines.is_empty(),
             PreviewData::Empty => true,
         }

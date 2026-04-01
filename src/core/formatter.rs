@@ -95,38 +95,45 @@ impl Formatter {
     }
 
     /// Sorts the given file entries in place according to the formatter's settings.
-    pub(crate) fn sort_entries(&self, directory_path: &Path, entries: &mut Vec<FileEntry>) {
+    pub(crate) fn sort_entries(
+        &self,
+        directory_path: &Path,
+        entries: &mut Vec<FileEntry>,
+        list_date_format: &str,
+    ) -> Option<Vec<Arc<str>>> {
         match self.sort_config.mode {
             SortMode::Natural | SortMode::Name => {
                 self.sort_by_name(entries);
+                None
             }
             SortMode::Extension => {
                 self.sort_by_extension(entries);
+                None
             }
-            SortMode::Size => {
-                self.sort_by_filesystem_metadata(directory_path, entries, MetadataSortField::Size);
-            }
-            SortMode::Modified => {
-                self.sort_by_filesystem_metadata(
-                    directory_path,
-                    entries,
-                    MetadataSortField::Modified,
-                );
-            }
-            SortMode::Created => {
-                self.sort_by_filesystem_metadata(
-                    directory_path,
-                    entries,
-                    MetadataSortField::Created,
-                );
-            }
-            SortMode::Accessed => {
-                self.sort_by_filesystem_metadata(
-                    directory_path,
-                    entries,
-                    MetadataSortField::Accessed,
-                );
-            }
+            SortMode::Size => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Size,
+                list_date_format,
+            )),
+            SortMode::Modified => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Modified,
+                list_date_format,
+            )),
+            SortMode::Created => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Created,
+                list_date_format,
+            )),
+            SortMode::Accessed => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Accessed,
+                list_date_format,
+            )),
         }
     }
 
@@ -263,8 +270,12 @@ impl Formatter {
         directory_path: &Path,
         entries: &mut Vec<FileEntry>,
         metadata_sort_field: MetadataSortField,
-    ) {
+        list_date_format: &str,
+    ) -> Vec<Arc<str>> {
+        use crate::core::formatter::{format_file_size, format_file_time};
+
         let mut keys: Vec<(u8, u128, usize)> = Vec::with_capacity(entries.len());
+        let mut column: Vec<Arc<str>> = Vec::with_capacity(entries.len());
 
         for (index, file_entry) in entries.iter().enumerate() {
             let priority = self.prio_for_entry(file_entry);
@@ -272,24 +283,39 @@ impl Formatter {
             let full_path = directory_path.join(file_entry.name());
             let metadata = std::fs::symlink_metadata(&full_path).ok();
 
-            let metadata_key_value: u128 = match metadata_sort_field {
-                MetadataSortField::Size => metadata
-                    .as_ref()
-                    .map(|m| if m.is_file() { m.len() as u128 } else { 0 })
-                    .unwrap_or(0),
+            let (metadata_key_value, display): (u128, Arc<str>) = match metadata_sort_field {
+                MetadataSortField::Size => {
+                    let size = metadata.as_ref().filter(|m| m.is_file()).map(|m| m.len());
+                    let key = size.unwrap_or(0) as u128;
+                    let s = format_file_size(size, file_entry.is_dir());
+                    (key, Arc::from(s))
+                }
 
                 MetadataSortField::Modified => {
-                    system_time_to_key(metadata.as_ref().and_then(|m| m.modified().ok()))
+                    let t = metadata.as_ref().and_then(|m| m.modified().ok());
+                    (
+                        system_time_to_key(t),
+                        Arc::from(format_file_time(t, list_date_format)),
+                    )
                 }
                 MetadataSortField::Created => {
-                    system_time_to_key(metadata.as_ref().and_then(|m| m.created().ok()))
+                    let t = metadata.as_ref().and_then(|m| m.created().ok());
+                    (
+                        system_time_to_key(t),
+                        Arc::from(format_file_time(t, list_date_format)),
+                    )
                 }
                 MetadataSortField::Accessed => {
-                    system_time_to_key(metadata.as_ref().and_then(|m| m.accessed().ok()))
+                    let t = metadata.as_ref().and_then(|m| m.accessed().ok());
+                    (
+                        system_time_to_key(t),
+                        Arc::from(format_file_time(t, list_date_format)),
+                    )
                 }
             };
 
             keys.push((priority, metadata_key_value, index));
+            column.push(display);
         }
 
         let sort_order = self.sort_config.order;
@@ -323,11 +349,18 @@ impl Formatter {
             })
         });
 
+        // Reorder entries and column with the same permutation (no extra work)
         let old_entries = std::mem::take(entries);
+        let old_column = column;
+
         *entries = keys
-            .into_iter()
-            .map(|(_, _, index)| old_entries[index].clone())
+            .iter()
+            .map(|(_, _, idx)| old_entries[*idx].clone())
             .collect();
+
+        keys.into_iter()
+            .map(|(_, _, idx)| old_column[idx].clone())
+            .collect()
     }
 
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {

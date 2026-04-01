@@ -323,12 +323,14 @@ impl<'a> AppState<'a> {
                 path,
                 entries,
                 focus,
+                sort_column,
                 request_id,
                 tab_id: _tab_id,
             } => {
                 // only update nav if BOTH the ID and path match.
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                    self.nav.update_from_worker(path, entries, focus);
+                    self.nav
+                        .update_from_worker(path, entries, sort_column, focus);
                     self.is_loading = false;
 
                     self.request_parent_content(workers);
@@ -343,7 +345,8 @@ impl<'a> AppState<'a> {
                     && path.parent() == Some(self.nav.current_dir())
                     && path.file_name() == Some(entry.name())
                 {
-                    self.preview.update_from_entries(entries, request_id);
+                    self.preview
+                        .update_from_entries(entries, sort_column, request_id);
 
                     let sel_path = self.nav.current_dir().join(entry.name());
                     let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
@@ -368,6 +371,7 @@ impl<'a> AppState<'a> {
                             request_id,
                             &path,
                             sort_config,
+                            sort_column,
                         );
                     }
                 }
@@ -476,6 +480,7 @@ impl<'a> AppState<'a> {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
         let sort_config = self.nav.sort_config();
+        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
         let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
@@ -485,6 +490,7 @@ impl<'a> AppState<'a> {
             show_system: self.config.general().show_system(),
             case_insensitive: self.config.general().case_insensitive(),
             sort_config,
+            list_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id,
             tab_id: self.tab_id(),
@@ -498,6 +504,7 @@ impl<'a> AppState<'a> {
             let req_id = self.preview.prepare_new_request(path.clone());
             let sort_config = self.nav.sort_config();
 
+            let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
             if entry.is_dir() || entry.is_symlink() {
                 let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
                     path,
@@ -508,6 +515,7 @@ impl<'a> AppState<'a> {
                     show_system: self.config.general().show_system(),
                     case_insensitive: self.config.general().case_insensitive(),
                     sort_config,
+                    list_date_format,
                     always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
                     tab_id: self.tab_id(),
@@ -550,6 +558,7 @@ impl<'a> AppState<'a> {
 
         let parent_path_buf = parent_path.to_path_buf();
         let sort_config = self.nav.sort_config();
+        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
         let req_id = self
             .parent
             .prepare_new_request(&parent_path_buf, sort_config);
@@ -562,6 +571,7 @@ impl<'a> AppState<'a> {
             show_system: self.config.general().show_system(),
             case_insensitive: self.config.general().case_insensitive(),
             sort_config,
+            list_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id: req_id,
             tab_id: self.tab_id(),

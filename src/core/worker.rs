@@ -133,6 +133,7 @@ pub(crate) enum WorkerTask {
         show_system: bool,
         case_insensitive: bool,
         sort_config: SortConfig,
+        list_date_format: Arc<str>,
         always_show: Arc<HashSet<OsString>>,
         request_id: u64,
         tab_id: Option<usize>,
@@ -196,6 +197,7 @@ pub(crate) enum WorkerResponse {
         path: PathBuf,
         entries: Vec<FileEntry>,
         focus: Option<OsString>,
+        sort_column: Option<Vec<Arc<str>>>,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -246,6 +248,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                 show_system,
                 case_insensitive,
                 sort_config,
+                list_date_format,
                 always_show,
                 request_id,
                 tab_id,
@@ -265,11 +268,13 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                         always_show,
                     );
                     formatter.filter_entries(&mut entries);
-                    formatter.sort_entries(&path, &mut entries);
+                    let sort_column =
+                        formatter.sort_entries(&path, &mut entries, &list_date_format);
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                         path,
                         entries,
                         focus,
+                        sort_column,
                         request_id,
                         tab_id,
                     });
