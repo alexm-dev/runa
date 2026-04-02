@@ -39,6 +39,7 @@ pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
     parent_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
+    sort_io_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
@@ -63,6 +64,8 @@ impl Workers {
         let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
+        let (sort_io_tx, sort_io_rx) = bounded::<WorkerTask>(1);
+
         let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
         let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
@@ -75,6 +78,8 @@ impl Workers {
         start_io_worker(nav_io_rx, res_tx.clone());
         start_io_worker(parent_io_rx, res_tx.clone());
         start_io_worker(preview_io_rx, res_tx.clone());
+        start_sort_worker(sort_io_rx, res_tx.clone());
+
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
@@ -84,6 +89,7 @@ impl Workers {
             nav_io_tx,
             parent_io_tx,
             preview_io_tx,
+            sort_io_tx,
             preview_file_tx,
             metadata_tx,
             find_tx,
@@ -97,6 +103,7 @@ impl Workers {
         nav_io_tx: &Sender<WorkerTask>,
         parent_io_tx: &Sender<WorkerTask>,
         preview_io_tx: &Sender<WorkerTask>,
+        sort_io_tx: &Sender<WorkerTask>,
         preview_file_tx: &Sender<WorkerTask>,
         metadata_tx: &Sender<WorkerTask>,
         find_tx: &Sender<WorkerTask>,
@@ -127,6 +134,17 @@ impl Drop for ActiveOpGuard {
 pub(crate) enum WorkerTask {
     LoadDirectory {
         path: PathBuf,
+        focus: Option<OsString>,
+        list: DirListOptions,
+        sort_config: SortConfig,
+        list_date_format: Arc<str>,
+        always_show: Arc<HashSet<OsString>>,
+        request_id: u64,
+        tab_id: Option<usize>,
+    },
+    ResortDirectory {
+        path: PathBuf,
+        entries: Vec<FileEntry>,
         focus: Option<OsString>,
         list: DirListOptions,
         sort_config: SortConfig,
@@ -255,6 +273,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     formatter.filter_entries(&mut entries);
                     let sort_column =
                         formatter.sort_entries(&path, &mut entries, &list_date_format);
+
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                         path,
                         entries,
@@ -271,6 +290,40 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     ));
                 }
             }
+        }
+    });
+}
+
+fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(task) = task_rx.recv() {
+            let WorkerTask::ResortDirectory {
+                path,
+                focus,
+                list,
+                sort_config,
+                list_date_format,
+                always_show,
+                request_id,
+                tab_id,
+                mut entries,
+            } = task
+            else {
+                continue;
+            };
+
+            let formatter = Formatter::new(list, sort_config, always_show);
+            formatter.filter_entries(&mut entries);
+            let sort_column = formatter.sort_entries(&path, &mut entries, &list_date_format);
+
+            let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
+                path,
+                entries,
+                focus,
+                sort_column,
+                request_id,
+                tab_id,
+            });
         }
     });
 }
@@ -628,6 +681,13 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             }
         }
     });
+}
+
+fn _assert_send_sync<T: Send + Sync>() {}
+fn _assert_thread_safety() {
+    _assert_send_sync::<DirListOptions>();
+    _assert_send_sync::<SortConfig>();
+    _assert_send_sync::<crate::core::formatter::Formatter>();
 }
 
 /// Worker threads integration tests.

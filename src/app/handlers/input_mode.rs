@@ -13,6 +13,7 @@
 use crate::app::Workers;
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{Action, NavAction, PrefixCommand, SystemAction};
+use crate::app::nav::{SortConfig, SortOrder};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::OverlayKind;
@@ -245,8 +246,6 @@ impl<'a> AppState<'a> {
                 self.refresh_show_info_if_open();
             }
             PrefixCommand::Sort(sort_mode) => {
-                use crate::app::nav::{SortConfig, SortOrder};
-
                 let mut sort_config: SortConfig = self.nav.sort_config();
 
                 if sort_config.mode == sort_mode {
@@ -263,7 +262,7 @@ impl<'a> AppState<'a> {
                     .selected_entry()
                     .map(|file_entry| file_entry.name().to_os_string());
 
-                self.request_dir_load(workers, focus);
+                self.request_dir_resort(workers, focus);
                 self.request_parent_content(workers);
                 self.request_preview(workers);
             }

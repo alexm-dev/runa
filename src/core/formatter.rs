@@ -107,8 +107,12 @@ impl Formatter {
         list_date_format: &str,
     ) -> Option<Vec<Arc<str>>> {
         match self.sort_config.mode {
-            SortMode::Natural | SortMode::Name => {
+            SortMode::Name => {
                 self.sort_by_name(entries);
+                None
+            }
+            SortMode::Natural => {
+                self.sort_by_natural(entries);
                 None
             }
             SortMode::Extension => {
@@ -179,6 +183,34 @@ impl Formatter {
                     SortOrder::Descending => right_lower.cmp(left_lower),
                 })
             })
+        });
+    }
+
+    fn sort_by_natural(&self, entries: &mut [FileEntry]) {
+        let sort_order = self.sort_config.order;
+        let case_insensitive = self.list.case_insensitive;
+
+        entries.sort_by(|left_entry, right_entry| {
+            let left_priority = self.prio_for_entry(left_entry);
+            let right_priority = self.prio_for_entry(right_entry);
+
+            if left_priority != right_priority {
+                return left_priority.cmp(&right_priority);
+            }
+
+            let left = left_entry.name_str();
+            let right = right_entry.name_str();
+
+            let ord = if case_insensitive {
+                natural_cmp_ascii_ci(left.as_ref(), right.as_ref())
+            } else {
+                natural_cmp_ascii(left.as_ref(), right.as_ref())
+            };
+
+            match sort_order {
+                SortOrder::Ascending => ord,
+                SortOrder::Descending => ord.reverse(),
+            }
         });
     }
 
@@ -657,6 +689,84 @@ fn system_time_to_key(system_time: Option<SystemTime>) -> u128 {
         .and_then(|st| st.duration_since(UNIX_EPOCH).ok())
         .map(|duration| duration.as_nanos())
         .unwrap_or(0)
+}
+
+fn natural_cmp_ascii(a: &str, b: &str) -> Ordering {
+    natural_cmp_bytes(a.as_bytes(), b.as_bytes(), false)
+}
+
+fn natural_cmp_ascii_ci(a: &str, b: &str) -> Ordering {
+    natural_cmp_bytes(a.as_bytes(), b.as_bytes(), true)
+}
+
+fn natural_cmp_bytes(a: &[u8], b: &[u8], fold_case: bool) -> Ordering {
+    let mut i = 0usize;
+    let mut j = 0usize;
+
+    while i < a.len() && j < b.len() {
+        let ad = a[i].is_ascii_digit();
+        let bd = b[j].is_ascii_digit();
+
+        if ad && bd {
+            let ia0 = i;
+            while i < a.len() && a[i].is_ascii_digit() {
+                i += 1;
+            }
+            let jb0 = j;
+            while j < b.len() && b[j].is_ascii_digit() {
+                j += 1;
+            }
+
+            let mut ia = ia0;
+            while ia < i && a[ia] == b'0' {
+                ia += 1;
+            }
+            let mut jb = jb0;
+            while jb < j && b[jb] == b'0' {
+                jb += 1;
+            }
+
+            let lena = i - ia;
+            let lenb = j - jb;
+
+            if lena != lenb {
+                return lena.cmp(&lenb);
+            }
+
+            for k in 0..lena {
+                let ca = a[ia + k];
+                let cb = b[jb + k];
+                if ca != cb {
+                    return ca.cmp(&cb);
+                }
+            }
+
+            let za = ia - ia0;
+            let zb = jb - jb0;
+            if za != zb {
+                return za.cmp(&zb);
+            }
+
+            continue;
+        }
+
+        let mut ca = a[i];
+        let mut cb = b[j];
+
+        if fold_case && (ca.is_ascii_uppercase() || cb.is_ascii_uppercase()) {
+            ca = ca.to_ascii_lowercase();
+            cb = cb.to_ascii_lowercase();
+        }
+
+        if ca != cb {
+            return ca.cmp(&cb);
+        }
+
+        i += 1;
+        j += 1;
+    }
+
+    a.len().cmp(&b.len())
 }
 
 /// Formatter integration tests
