@@ -16,14 +16,19 @@
 //!
 //! This is the primary context/state object passed to most UI/Terminal event logic.
 
-use crate::app::actions::{ActionContext, ActionMode, InputMode};
-use crate::app::keymap::{Action, Keymap, TabAction};
-use crate::app::metadata::MetadataState;
-use crate::app::{Clipboard, NavState, ParentState, PreviewState};
+use crate::app::{
+    Clipboard, NavState, ParentState, PreviewState,
+    actions::{ActionContext, ActionMode, InputMode},
+    keymap::{Action, Keymap, TabAction},
+    metadata::MetadataState,
+    nav::SortConfig,
+};
 use crate::config::Config;
-use crate::core::formatter::DirListOptions;
-use crate::core::metadata::{FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
-use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
+use crate::core::{
+    formatter::DirListOptions,
+    metadata::{FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch},
+    worker::{WorkerResponse, WorkerTask, Workers},
+};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
 use crossterm::event::KeyEvent;
@@ -45,6 +50,7 @@ pub(crate) enum KeypressResult {
     OpenedEditor,
     Recovered,
     Tab(TabAction),
+    Sort(SortConfig),
 }
 
 /// Enumeration which holds the metrics of the layout of the TUI
@@ -112,7 +118,9 @@ impl<'a> AppState<'a> {
     }
 
     pub(crate) fn new_current_dir(&self) -> std::io::Result<Self> {
-        Self::from_dir(self.config, self.nav.current_dir())
+        let mut app = Self::from_dir(self.config, self.nav.current_dir())?;
+        app.nav.set_sort_config(self.nav.sort_config());
+        Ok(app)
     }
 
     pub(crate) fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
@@ -256,6 +264,10 @@ impl<'a> AppState<'a> {
         {
             self.metadata.set_pending(req_id, path);
         }
+    }
+
+    pub(crate) fn apply_sort_config(&mut self, config: SortConfig) {
+        self.nav.set_sort_config(config);
     }
 
     /// The heart of the app: updates state and handles worker messages

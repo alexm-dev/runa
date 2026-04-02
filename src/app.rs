@@ -18,7 +18,7 @@ pub(crate) use nav::NavState;
 pub(crate) use parent::ParentState;
 pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
-pub(crate) use tab::handle_tab_action;
+pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
 use crate::{app::tab::TabManager, core::worker::Workers};
 use std::{collections::HashSet, path::PathBuf};

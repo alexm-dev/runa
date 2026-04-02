@@ -224,27 +224,33 @@ impl<'a> AppState<'a> {
         }
 
         if let Some(cmd) = result {
-            let _ = self.handle_prefix_action(workers, cmd);
-            return Some(KeypressResult::Consumed);
+            return self.handle_prefix_action(workers, cmd);
         }
 
         None
     }
 
-    fn handle_prefix_action(&mut self, workers: &Workers, prefix: PrefixCommand) -> bool {
+    fn handle_prefix_action(
+        &mut self,
+        workers: &Workers,
+        prefix: PrefixCommand,
+    ) -> Option<KeypressResult> {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => {
                 self.handle_go_to_top(workers);
                 self.update_file_info_cache(workers);
                 self.refresh_show_info_if_open();
+                Some(KeypressResult::Consumed)
             }
             PrefixCommand::Nav(NavAction::GoToHome) => {
                 self.handle_go_to_home(workers);
                 self.refresh_show_info_if_open();
+                Some(KeypressResult::Consumed)
             }
             PrefixCommand::Nav(NavAction::GoToPath) => {
                 self.prompt_go_to_path();
                 self.refresh_show_info_if_open();
+                Some(KeypressResult::Consumed)
             }
             PrefixCommand::Sort(sort_mode) => {
                 let mut sort_config: SortConfig = self.nav.sort_config();
@@ -266,10 +272,10 @@ impl<'a> AppState<'a> {
                 self.request_dir_sort(workers, focus);
                 self.request_parent_content(workers);
                 self.request_preview(workers);
+                Some(KeypressResult::Sort(sort_config))
             }
-            _ => return false,
+            _ => None,
         }
-        true
     }
 
     /// Enters an input mode with the given parameters.

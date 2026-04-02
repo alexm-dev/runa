@@ -5,9 +5,7 @@
 //!
 //! It also includes the [handle_tab_action] function, which processes tab actions related to tab management.
 
-use crate::app::KeypressResult;
-use crate::app::keymap::TabAction;
-use crate::app::{AppContainer, AppState};
+use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction, nav::SortConfig};
 use crate::core::worker::Workers;
 use crate::utils::shorten_home_path;
 
@@ -254,6 +252,14 @@ pub(crate) fn handle_tab_action<'a>(
                 active.request_parent_content(workers);
             }
             KeypressResult::Consumed
+        }
+    }
+}
+
+pub(crate) fn handle_sort_action(container: &mut AppContainer, config: SortConfig) {
+    if let AppContainer::Tabs(mgr) = container {
+        for tab in &mut mgr.tabs {
+            tab.apply_sort_config(config);
         }
     }
 }

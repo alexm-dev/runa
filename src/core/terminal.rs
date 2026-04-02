@@ -3,7 +3,7 @@
 //! Handles setup/teardown of raw mode, alternate screen, redraws,
 //! and events (keypress, resize) to app logic.
 
-use crate::app::{AppContainer, KeypressResult, RunaRoot, handle_tab_action};
+use crate::app::{AppContainer, KeypressResult, RunaRoot, handle_sort_action, handle_tab_action};
 use crate::ui;
 use crossterm::{
     cursor::{Hide, Show},
@@ -95,6 +95,9 @@ where
                             {
                                 break;
                             }
+                        }
+                        KeypressResult::Sort(config) => {
+                            handle_sort_action(&mut root.container, config);
                         }
                         _ => {}
                     }
