@@ -383,7 +383,7 @@ pub(crate) struct SortConfig {
 impl Default for SortConfig {
     fn default() -> Self {
         Self {
-            mode: SortMode::Name,
+            mode: SortMode::Natural,
             order: SortOrder::Ascending,
         }
     }
