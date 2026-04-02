@@ -18,6 +18,7 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub(crate) struct FileEntry {
     name: Box<OsStr>,
+    name_str: String,
     lowered: String,
     flags: u8,
     symlink: Option<PathBuf>,
@@ -39,12 +40,14 @@ impl FileEntry {
     pub(super) const EXEC_FLAG: u32 = 0o111;
 
     pub(crate) fn new(name: OsString, flags: u8, symlink: Option<PathBuf>) -> Self {
+        let name_str = name.to_string_lossy().into_owned();
         let lowered = {
             let str = name.to_string_lossy();
             str.to_lowercase()
         };
         FileEntry {
             name: name.into_boxed_os_str(),
+            name_str,
             lowered,
             flags,
             symlink,
@@ -53,13 +56,14 @@ impl FileEntry {
 
     crate::getters! {
         name: &OsStr,
+        name_str: &str,
         lowered: &str,
         flags: u8,
     }
 
-    pub(crate) fn name_str(&self) -> Cow<'_, str> {
-        self.name.to_string_lossy()
-    }
+    // pub(crate) fn name_str(&self) -> Cow<'_, str> {
+    //     self.name.to_string_lossy()
+    // }
 
     #[inline]
     pub(crate) fn symlink(&self) -> Option<&PathBuf> {

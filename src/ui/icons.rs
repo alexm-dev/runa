@@ -169,8 +169,7 @@ pub(super) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = p
 /// the entry is a directory or a file, and uses the special
 /// filename and extension mappings to find the correct icon.
 pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
-    let name_str = entry.name_str();
-    let name = name_str.as_ref();
+    let name = entry.name_str();
 
     if entry.is_symlink() {
         return if entry.is_dir() { "" } else { "" };
