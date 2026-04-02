@@ -37,10 +37,10 @@ pub(crate) struct Display {
     toggle_marker_jump: bool,
     instant_preview: bool,
     #[serde(
-        default = "Display::default_list_date_format",
-        deserialize_with = "deserialize_list_date_format"
+        default = "Display::default_sort_date_format",
+        deserialize_with = "deserialize_sort_date_format"
     )]
-    list_date_format: String,
+    sort_date_format: String,
     preview_options: PreviewOptions,
     layout: LayoutConfig,
     info: ShowInfoOptions,
@@ -63,6 +63,7 @@ impl Display {
         scroll_padding: usize,
         toggle_marker_jump: bool,
         instant_preview: bool,
+        sort_date_format: &str,
         preview_options: &PreviewOptions,
         info: &ShowInfoOptions,
         status: &StatusElements,
@@ -98,13 +99,8 @@ impl Display {
         self.layout.preview_ratio()
     }
 
-    fn default_list_date_format() -> String {
+    fn default_sort_date_format() -> String {
         "%b %e %H:%M".to_string()
-    }
-
-    #[inline]
-    pub(crate) fn list_date_format(&self) -> &str {
-        &self.list_date_format
     }
 
     /// Get padding string based on entry_padding
@@ -139,7 +135,7 @@ impl Default for Display {
             scroll_padding: 5,
             toggle_marker_jump: false,
             instant_preview: true,
-            list_date_format: Display::default_list_date_format(),
+            sort_date_format: Display::default_sort_date_format(),
             layout: LayoutConfig::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
@@ -613,7 +609,7 @@ fn validate_strftime_format(fmt: Option<String>, default_fmt: &str, max_len: usi
     }
 }
 
-fn deserialize_list_date_format<'de, D>(deserializer: D) -> Result<String, D::Error>
+fn deserialize_sort_date_format<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {

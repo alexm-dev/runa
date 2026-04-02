@@ -104,7 +104,7 @@ impl Formatter {
         &self,
         directory_path: &Path,
         entries: &mut Vec<FileEntry>,
-        list_date_format: &str,
+        sort_date_format: &str,
     ) -> Option<Vec<Arc<str>>> {
         match self.sort_config.mode {
             SortMode::Name => {
@@ -123,25 +123,25 @@ impl Formatter {
                 directory_path,
                 entries,
                 MetadataSortField::Size,
-                list_date_format,
+                sort_date_format,
             )),
             SortMode::Modified => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Modified,
-                list_date_format,
+                sort_date_format,
             )),
             SortMode::Created => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Created,
-                list_date_format,
+                sort_date_format,
             )),
             SortMode::Accessed => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Accessed,
-                list_date_format,
+                sort_date_format,
             )),
         }
     }
@@ -254,7 +254,7 @@ impl Formatter {
         directory_path: &Path,
         entries: &mut Vec<FileEntry>,
         metadata_sort_field: MetadataSortField,
-        list_date_format: &str,
+        sort_date_format: &str,
     ) -> Vec<Arc<str>> {
         use crate::core::formatter::{format_file_size, format_file_time};
 
@@ -279,15 +279,15 @@ impl Formatter {
                     }
                     MetadataSortField::Modified => (
                         system_time_to_key(cached.modified),
-                        format_file_time(cached.modified, list_date_format),
+                        format_file_time(cached.modified, sort_date_format),
                     ),
                     MetadataSortField::Created => (
                         system_time_to_key(cached.created),
-                        format_file_time(cached.created, list_date_format),
+                        format_file_time(cached.created, sort_date_format),
                     ),
                     MetadataSortField::Accessed => (
                         system_time_to_key(cached.accessed),
-                        format_file_time(cached.accessed, list_date_format),
+                        format_file_time(cached.accessed, sort_date_format),
                     ),
                 };
 

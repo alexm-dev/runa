@@ -494,13 +494,13 @@ impl<'a> AppState<'a> {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
         let sort_config = self.nav.sort_config();
-        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
+        let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
             list: self.dir_list_options(),
             sort_config,
-            list_date_format,
+            sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id,
             tab_id: self.tab_id(),
@@ -514,14 +514,14 @@ impl<'a> AppState<'a> {
             let req_id = self.preview.prepare_new_request(path.clone());
             let sort_config = self.nav.sort_config();
 
-            let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
+            let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
             if entry.is_dir() || entry.is_symlink() {
                 let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
                     path,
                     focus: None,
                     list: self.dir_list_options(),
                     sort_config,
-                    list_date_format,
+                    sort_date_format,
                     always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
                     tab_id: self.tab_id(),
@@ -564,7 +564,7 @@ impl<'a> AppState<'a> {
 
         let parent_path_buf = parent_path.to_path_buf();
         let sort_config = self.nav.sort_config();
-        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
+        let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let req_id = self
             .parent
             .prepare_new_request(&parent_path_buf, sort_config);
@@ -573,7 +573,7 @@ impl<'a> AppState<'a> {
             focus: None,
             list: self.dir_list_options(),
             sort_config,
-            list_date_format,
+            sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id: req_id,
             tab_id: self.tab_id(),
@@ -607,7 +607,7 @@ impl<'a> AppState<'a> {
         self.is_loading = true;
         let request_id = self.nav.request_id();
         let sort_config = self.nav.sort_config();
-        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
+        let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let entries = self.nav.entries().to_vec();
 
         let _ = workers.sort_io_tx().try_send(WorkerTask::SortDirectory {
@@ -616,7 +616,7 @@ impl<'a> AppState<'a> {
             focus,
             list: self.dir_list_options(),
             sort_config,
-            list_date_format,
+            sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id,
             tab_id: self.tab_id(),

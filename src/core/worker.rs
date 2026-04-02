@@ -137,7 +137,7 @@ pub(crate) enum WorkerTask {
         focus: Option<OsString>,
         list: DirListOptions,
         sort_config: SortConfig,
-        list_date_format: Arc<str>,
+        sort_date_format: Arc<str>,
         always_show: Arc<HashSet<OsString>>,
         request_id: u64,
         tab_id: Option<usize>,
@@ -148,7 +148,7 @@ pub(crate) enum WorkerTask {
         focus: Option<OsString>,
         list: DirListOptions,
         sort_config: SortConfig,
-        list_date_format: Arc<str>,
+        sort_date_format: Arc<str>,
         always_show: Arc<HashSet<OsString>>,
         request_id: u64,
         tab_id: Option<usize>,
@@ -259,7 +259,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                 focus,
                 list,
                 sort_config,
-                list_date_format,
+                sort_date_format,
                 always_show,
                 request_id,
                 tab_id,
@@ -272,7 +272,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     let formatter = Formatter::new(list, sort_config, always_show);
                     formatter.filter_entries(&mut entries);
                     let sort_column =
-                        formatter.sort_entries(&path, &mut entries, &list_date_format);
+                        formatter.sort_entries(&path, &mut entries, &sort_date_format);
 
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                         path,
@@ -302,7 +302,7 @@ fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                 focus,
                 list,
                 sort_config,
-                list_date_format,
+                sort_date_format,
                 always_show,
                 request_id,
                 tab_id,
@@ -314,7 +314,7 @@ fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
 
             let formatter = Formatter::new(list, sort_config, always_show);
             formatter.filter_entries(&mut entries);
-            let sort_column = formatter.sort_entries(&path, &mut entries, &list_date_format);
+            let sort_column = formatter.sort_entries(&path, &mut entries, &sort_date_format);
 
             let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                 path,
@@ -752,7 +752,7 @@ mod tests {
             path: temp.path().to_path_buf(),
             focus: None,
             list: test_list_opts(),
-            list_date_format: Arc::<str>::from(""),
+            sort_date_format: Arc::<str>::from(""),
             sort_config: SortConfig::default(),
             always_show: Arc::new(HashSet::new()),
             request_id: 30,
@@ -826,7 +826,7 @@ mod tests {
             path: temp_path,
             focus: None,
             list: test_list_opts(),
-            list_date_format: Arc::<str>::from(""),
+            sort_date_format: Arc::<str>::from(""),
             sort_config: SortConfig::default(),
             always_show: Arc::new(HashSet::new()),
             request_id: 1,
@@ -889,7 +889,7 @@ mod tests {
                             focus: None,
                             list,
                             sort_config: SortConfig::default(),
-                            list_date_format: Arc::<str>::from(""),
+                            sort_date_format: Arc::<str>::from(""),
                             always_show: Arc::new(HashSet::new()),
                             request_id: (t * requests_per_thread + i) as u64,
                             tab_id: TEST_TAB_ID,
