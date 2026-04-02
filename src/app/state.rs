@@ -22,7 +22,7 @@ use crate::app::metadata::MetadataState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
 use crate::core::formatter::DirListOptions;
-use crate::core::metadata::{FileMetadataCache, MetadataNeeds};
+use crate::core::metadata::{FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -390,6 +390,7 @@ impl<'a> AppState<'a> {
 
             WorkerResponse::OperationComplete { need_reload, focus } => {
                 if need_reload {
+                    bump_meta_sort_epoch();
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }
