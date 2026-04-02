@@ -271,82 +271,85 @@ impl Formatter {
         let mut keys: Vec<(u8, u128, usize)> = Vec::with_capacity(entries.len());
         let mut column: Vec<Arc<str>> = Vec::with_capacity(entries.len());
 
+        let mut path_buffer = directory_path.to_path_buf();
+
         for (index, file_entry) in entries.iter().enumerate() {
             let priority = self.prio_for_entry(file_entry);
-            let full_path = directory_path.join(file_entry.name());
 
-            if let Some(cached) = get_or_update_cached_meta(&full_path) {
-                let (metadata_key_value, display): (u128, Arc<str>) = match metadata_sort_field {
+            path_buffer.push(file_entry.name());
+
+            if let Some(cached) = get_or_update_cached_meta(&path_buffer) {
+                let (key, display) = match metadata_sort_field {
                     MetadataSortField::Size => {
-                        let key = cached.size.unwrap_or(0) as u128;
-                        let s = format_file_size(cached.size, file_entry.is_dir());
-                        (key, Arc::from(s))
+                        let val = cached.size.unwrap_or(0);
+                        (
+                            val as u128,
+                            format_file_size(cached.size, file_entry.is_dir()),
+                        )
                     }
                     MetadataSortField::Modified => (
                         system_time_to_key(cached.modified),
-                        Arc::from(format_file_time(cached.modified, list_date_format)),
+                        format_file_time(cached.modified, list_date_format),
                     ),
                     MetadataSortField::Created => (
                         system_time_to_key(cached.created),
-                        Arc::from(format_file_time(cached.created, list_date_format)),
+                        format_file_time(cached.created, list_date_format),
                     ),
                     MetadataSortField::Accessed => (
                         system_time_to_key(cached.accessed),
-                        Arc::from(format_file_time(cached.accessed, list_date_format)),
+                        format_file_time(cached.accessed, list_date_format),
                     ),
                 };
 
-                keys.push((priority, metadata_key_value, index));
-                column.push(display);
+                keys.push((priority, key, index));
+                column.push(Arc::from(display));
             } else {
-                let display = Arc::from("-");
                 keys.push((priority, 0, index));
-                column.push(display);
+                column.push(Arc::from("-"));
             }
+
+            path_buffer.pop();
         }
 
         let sort_order = self.sort_config.order;
 
-        keys.sort_by(|left, right| {
-            if left.0 != right.0 {
-                return left.0.cmp(&right.0);
+        keys.sort_unstable_by(|left, right| {
+            let p_ord = left.0.cmp(&right.0);
+            if p_ord != Ordering::Equal {
+                return p_ord;
             }
 
-            let primary = match sort_order {
-                SortOrder::Ascending => left.1.cmp(&right.1),
-                SortOrder::Descending => right.1.cmp(&left.1),
+            let mut m_ord = if sort_order == SortOrder::Ascending {
+                left.1.cmp(&right.1)
+            } else {
+                right.1.cmp(&left.1)
             };
 
-            if primary != Ordering::Equal {
-                return primary;
+            if m_ord == Ordering::Equal {
+                let a = &entries[left.2];
+                let b = &entries[right.2];
+                m_ord = if self.list.case_insensitive {
+                    with_lowered_stack(&a.name_str(), |la| {
+                        with_lowered_stack(&b.name_str(), |lb| la.cmp(lb))
+                    })
+                } else {
+                    a.name().cmp(b.name())
+                };
             }
-
-            if !self.list.case_insensitive {
-                return entries[left.2].name().cmp(entries[right.2].name());
-            }
-
-            let left_name = entries[left.2].name_str();
-            let right_name = entries[right.2].name_str();
-
-            with_lowered_stack(left_name.as_ref(), |left_lower| {
-                with_lowered_stack(right_name.as_ref(), |right_lower| match sort_order {
-                    SortOrder::Ascending => left_lower.cmp(right_lower),
-                    SortOrder::Descending => right_lower.cmp(left_lower),
-                })
-            })
+            m_ord
         });
 
         let old_entries = std::mem::take(entries);
         let old_column = column;
 
-        *entries = keys
-            .iter()
-            .map(|(_, _, idx)| old_entries[*idx].clone())
-            .collect();
+        let mut new_column = Vec::with_capacity(entries.len());
 
-        keys.into_iter()
-            .map(|(_, _, idx)| old_column[idx].clone())
-            .collect()
+        for (_, _, idx) in &keys {
+            entries.push(old_entries[*idx].clone());
+            new_column.push(old_column[*idx].clone());
+        }
+
+        new_column
     }
 
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
