@@ -154,6 +154,7 @@ impl<'a> AppState<'a> {
                 InputMode::Filter => {
                     self.actions.action_insert_at_cursor(c);
                     self.apply_filter(workers);
+                    self.update_file_info_cache(workers);
                     KeypressResult::Consumed
                 }
                 InputMode::Rename

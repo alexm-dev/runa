@@ -59,12 +59,14 @@ impl<'a> AppState<'a> {
             }
             NavAction::ClearFilter => {
                 self.nav.clear_filters();
+                self.update_file_info_cache(workers);
                 self.request_preview(workers);
             }
             NavAction::ClearAll => {
                 self.nav.clear_markers();
                 self.nav.clear_filters();
                 clipboard.clear();
+                self.update_file_info_cache(workers);
                 self.request_preview(workers);
             }
             NavAction::GoToBottom => {
