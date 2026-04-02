@@ -8,7 +8,7 @@ pub(crate) mod actions;
 pub(crate) mod handlers;
 pub(crate) mod keymap;
 pub(crate) mod metadata;
-mod nav;
+pub(crate) mod nav;
 mod parent;
 pub(crate) mod preview;
 mod state;

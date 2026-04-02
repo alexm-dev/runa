@@ -6,21 +6,23 @@
 //!
 //! Also formatts FileTypes to be used by FileMetadata and ShowInfo overlay widget.
 
+use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::FileEntry;
-use crate::core::metadata::FileType;
+use crate::core::metadata::{FileType, get_or_update_cached_meta};
 use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
 use unicode_width::UnicodeWidthChar;
 
+use std::cmp::Ordering;
 use std::collections::HashSet;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::{File, Metadata};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::path::Path;
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // Minimum number of lines shown in any preview
 const MIN_PREVIEW_LINES: usize = 3;
@@ -31,14 +33,28 @@ const HEADER_PEEK_BYTES: usize = 8;
 // Bytes to peek for null bytes in binary detections
 const BINARY_PEEK_BYTES: usize = 1024;
 
+#[derive(Clone)]
+pub(crate) struct DirListOptions {
+    pub(crate) dirs_first: bool,
+    pub(crate) show_hidden: bool,
+    pub(crate) show_symlink: bool,
+    pub(crate) show_system: bool,
+    pub(crate) case_insensitive: bool,
+}
+
+#[derive(Clone, Copy)]
+enum MetadataSortField {
+    Size,
+    Modified,
+    Created,
+    Accessed,
+}
+
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.
 pub(crate) struct Formatter {
-    dirs_first: bool,
-    show_hidden: bool,
-    show_symlink: bool,
-    show_system: bool,
-    case_insensitive: bool,
+    list: DirListOptions,
+    sort_config: SortConfig,
     always_show: Option<Arc<HashSet<OsString>>>,
     always_show_lowercase: Option<Arc<HashSet<String>>>,
 }
@@ -48,16 +64,13 @@ impl Formatter {
     const PRIO_FILE: u8 = 1;
 
     pub(crate) fn new(
-        dirs_first: bool,
-        show_hidden: bool,
-        show_symlink: bool,
-        show_system: bool,
-        case_insensitive: bool,
+        list: DirListOptions,
+        sort_config: SortConfig,
         always_show: Arc<HashSet<OsString>>,
     ) -> Self {
         let (always_show, always_show_lowercase) = if always_show.is_empty() {
             (None, None)
-        } else if case_insensitive {
+        } else if list.case_insensitive {
             let lower = Arc::new(
                 always_show
                     .iter()
@@ -70,19 +83,16 @@ impl Formatter {
         };
 
         Self {
-            dirs_first,
-            show_hidden,
-            show_symlink,
-            show_system,
-            case_insensitive,
+            list,
+            sort_config,
             always_show,
             always_show_lowercase,
         }
     }
 
     #[inline]
-    fn get_prio(&self, entry: &FileEntry) -> u8 {
-        if self.dirs_first && (entry.flags() & FileEntry::IS_DIR) != 0 {
+    fn prio_for_entry(&self, entry: &FileEntry) -> u8 {
+        if self.list.dirs_first && (entry.flags() & FileEntry::IS_DIR) != 0 {
             Self::PRIO_DIR
         } else {
             Self::PRIO_FILE
@@ -90,39 +100,315 @@ impl Formatter {
     }
 
     /// Sorts the given file entries in place according to the formatter's settings.
-    pub(crate) fn sort_entries(&self, entries: &mut [FileEntry]) {
-        if self.case_insensitive {
-            entries.sort_by_cached_key(|e| (self.get_prio(e), e.name_str().to_lowercase()));
-        } else {
-            entries.sort_by(|a, b| {
-                if self.dirs_first {
-                    let prio_a = self.get_prio(a);
-                    let prio_b = self.get_prio(b);
-                    if prio_a != prio_b {
-                        return prio_a.cmp(&prio_b);
-                    }
-                }
-                a.name().cmp(b.name())
-            });
+    pub(crate) fn sort_entries(
+        &self,
+        directory_path: &Path,
+        entries: &mut Vec<FileEntry>,
+        list_date_format: &str,
+    ) -> Option<Vec<Arc<str>>> {
+        match self.sort_config.mode {
+            SortMode::Name => {
+                self.sort_by_name(entries);
+                None
+            }
+            SortMode::Natural => {
+                self.sort_by_natural(entries);
+                None
+            }
+            SortMode::Extension => {
+                self.sort_by_extension(entries);
+                None
+            }
+            SortMode::Size => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Size,
+                list_date_format,
+            )),
+            SortMode::Modified => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Modified,
+                list_date_format,
+            )),
+            SortMode::Created => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Created,
+                list_date_format,
+            )),
+            SortMode::Accessed => Some(self.sort_by_filesystem_metadata(
+                directory_path,
+                entries,
+                MetadataSortField::Accessed,
+                list_date_format,
+            )),
         }
+    }
+
+    fn sort_by_name(&self, entries: &mut [FileEntry]) {
+        let sort_order = self.sort_config.order;
+
+        if !self.list.case_insensitive {
+            entries.sort_by(|left_entry, right_entry| {
+                let left_priority = self.prio_for_entry(left_entry);
+                let right_priority = self.prio_for_entry(right_entry);
+
+                if left_priority != right_priority {
+                    return left_priority.cmp(&right_priority);
+                }
+
+                match sort_order {
+                    SortOrder::Ascending => left_entry.name().cmp(right_entry.name()),
+                    SortOrder::Descending => right_entry.name().cmp(left_entry.name()),
+                }
+            });
+            return;
+        }
+
+        entries.sort_by(|left_entry, right_entry| {
+            let left_priority = self.prio_for_entry(left_entry);
+            let right_priority = self.prio_for_entry(right_entry);
+
+            if left_priority != right_priority {
+                return left_priority.cmp(&right_priority);
+            }
+
+            let left_name = left_entry.name_str();
+            let right_name = right_entry.name_str();
+
+            with_lowered_stack(left_name.as_ref(), |left_lower| {
+                with_lowered_stack(right_name.as_ref(), |right_lower| match sort_order {
+                    SortOrder::Ascending => left_lower.cmp(right_lower),
+                    SortOrder::Descending => right_lower.cmp(left_lower),
+                })
+            })
+        });
+    }
+
+    fn sort_by_natural(&self, entries: &mut [FileEntry]) {
+        let sort_order = self.sort_config.order;
+        let case_insensitive = self.list.case_insensitive;
+
+        entries.sort_by(|left_entry, right_entry| {
+            let left_priority = self.prio_for_entry(left_entry);
+            let right_priority = self.prio_for_entry(right_entry);
+
+            if left_priority != right_priority {
+                return left_priority.cmp(&right_priority);
+            }
+
+            let left = left_entry.name_str();
+            let right = right_entry.name_str();
+
+            let ord = if case_insensitive {
+                natural_cmp_ascii_ci(left.as_ref(), right.as_ref())
+            } else {
+                natural_cmp_ascii(left.as_ref(), right.as_ref())
+            };
+
+            match sort_order {
+                SortOrder::Ascending => ord,
+                SortOrder::Descending => ord.reverse(),
+            }
+        });
+    }
+
+    fn sort_by_extension(&self, entries: &mut Vec<FileEntry>) {
+        let sort_order = self.sort_config.order;
+
+        if !self.list.case_insensitive {
+            let mut sort_keys: Vec<(u8, Option<&OsStr>, &OsStr, usize)> =
+                Vec::with_capacity(entries.len());
+
+            for (original_index, file_entry) in entries.iter().enumerate() {
+                let priority = self.prio_for_entry(file_entry);
+                let extension = Path::new(file_entry.name()).extension();
+                sort_keys.push((priority, extension, file_entry.name(), original_index));
+            }
+
+            sort_keys.sort_by(|left, right| {
+                if left.0 != right.0 {
+                    return left.0.cmp(&right.0);
+                }
+
+                match sort_order {
+                    SortOrder::Ascending => left.1.cmp(&right.1).then(left.2.cmp(right.2)),
+                    SortOrder::Descending => right.1.cmp(&left.1).then(right.2.cmp(left.2)),
+                }
+            });
+
+            let mut reordered_entries: Vec<FileEntry> = Vec::with_capacity(entries.len());
+            for (_, _, _, original_index) in sort_keys {
+                reordered_entries.push(entries[original_index].clone());
+            }
+
+            *entries = reordered_entries;
+            return;
+        }
+
+        // Case-insensitive: cache lowered extension + lowered name (no closure borrow of `entries`)
+        let mut sort_keys: Vec<(u8, String, String, usize)> = Vec::with_capacity(entries.len());
+
+        for (original_index, file_entry) in entries.iter().enumerate() {
+            let priority = self.prio_for_entry(file_entry);
+
+            let extension_lossy = Path::new(file_entry.name())
+                .extension()
+                .map(|extension| extension.to_string_lossy())
+                .unwrap_or_default();
+
+            let lowered_extension = if extension_lossy.len() <= 64 {
+                with_lowered_stack(extension_lossy.as_ref(), |lowered| lowered.to_string())
+            } else {
+                extension_lossy.to_lowercase()
+            };
+
+            let name_lossy = file_entry.name_str();
+            let lowered_name = if name_lossy.len() <= 64 {
+                with_lowered_stack(name_lossy.as_ref(), |lowered| lowered.to_string())
+            } else {
+                name_lossy.to_lowercase()
+            };
+
+            sort_keys.push((priority, lowered_extension, lowered_name, original_index));
+        }
+
+        sort_keys.sort_by(|left, right| {
+            if left.0 != right.0 {
+                return left.0.cmp(&right.0);
+            }
+
+            let extension_ordering = match sort_order {
+                SortOrder::Ascending => left.1.cmp(&right.1),
+                SortOrder::Descending => right.1.cmp(&left.1),
+            };
+
+            if extension_ordering != Ordering::Equal {
+                return extension_ordering;
+            }
+
+            match sort_order {
+                SortOrder::Ascending => left.2.cmp(&right.2),
+                SortOrder::Descending => right.2.cmp(&left.2),
+            }
+        });
+
+        let mut reordered_entries: Vec<FileEntry> = Vec::with_capacity(entries.len());
+        for (_, _, _, original_index) in sort_keys {
+            reordered_entries.push(entries[original_index].clone());
+        }
+
+        *entries = reordered_entries;
+    }
+
+    fn sort_by_filesystem_metadata(
+        &self,
+        directory_path: &Path,
+        entries: &mut Vec<FileEntry>,
+        metadata_sort_field: MetadataSortField,
+        list_date_format: &str,
+    ) -> Vec<Arc<str>> {
+        use crate::core::formatter::{format_file_size, format_file_time};
+
+        let mut keys: Vec<(u8, u128, usize)> = Vec::with_capacity(entries.len());
+        let mut column: Vec<Arc<str>> = Vec::with_capacity(entries.len());
+
+        for (index, file_entry) in entries.iter().enumerate() {
+            let priority = self.prio_for_entry(file_entry);
+            let full_path = directory_path.join(file_entry.name());
+
+            if let Some(cached) = get_or_update_cached_meta(&full_path) {
+                let (metadata_key_value, display): (u128, Arc<str>) = match metadata_sort_field {
+                    MetadataSortField::Size => {
+                        let key = cached.size.unwrap_or(0) as u128;
+                        let s = format_file_size(cached.size, file_entry.is_dir());
+                        (key, Arc::from(s))
+                    }
+                    MetadataSortField::Modified => (
+                        system_time_to_key(cached.modified),
+                        Arc::from(format_file_time(cached.modified, list_date_format)),
+                    ),
+                    MetadataSortField::Created => (
+                        system_time_to_key(cached.created),
+                        Arc::from(format_file_time(cached.created, list_date_format)),
+                    ),
+                    MetadataSortField::Accessed => (
+                        system_time_to_key(cached.accessed),
+                        Arc::from(format_file_time(cached.accessed, list_date_format)),
+                    ),
+                };
+
+                keys.push((priority, metadata_key_value, index));
+                column.push(display);
+            } else {
+                let display = Arc::from("-");
+                keys.push((priority, 0, index));
+                column.push(display);
+            }
+        }
+
+        let sort_order = self.sort_config.order;
+
+        keys.sort_by(|left, right| {
+            if left.0 != right.0 {
+                return left.0.cmp(&right.0);
+            }
+
+            let primary = match sort_order {
+                SortOrder::Ascending => left.1.cmp(&right.1),
+                SortOrder::Descending => right.1.cmp(&left.1),
+            };
+
+            if primary != Ordering::Equal {
+                return primary;
+            }
+
+            if !self.list.case_insensitive {
+                return entries[left.2].name().cmp(entries[right.2].name());
+            }
+
+            let left_name = entries[left.2].name_str();
+            let right_name = entries[right.2].name_str();
+
+            with_lowered_stack(left_name.as_ref(), |left_lower| {
+                with_lowered_stack(right_name.as_ref(), |right_lower| match sort_order {
+                    SortOrder::Ascending => left_lower.cmp(right_lower),
+                    SortOrder::Descending => right_lower.cmp(left_lower),
+                })
+            })
+        });
+
+        // Reorder entries and column with the same permutation (no extra work)
+        let old_entries = std::mem::take(entries);
+        let old_column = column;
+
+        *entries = keys
+            .iter()
+            .map(|(_, _, idx)| old_entries[*idx].clone())
+            .collect();
+
+        keys.into_iter()
+            .map(|(_, _, idx)| old_column[idx].clone())
+            .collect()
     }
 
     pub(crate) fn filter_entries(&self, entries: &mut Vec<FileEntry>) {
         let mut hide = 0u8;
-        if !self.show_hidden {
+        if !self.list.show_hidden {
             hide |= FileEntry::IS_HIDDEN;
         }
-        if !self.show_system {
+        if !self.list.show_system {
             hide |= FileEntry::IS_SYSTEM;
         }
-        if !self.show_symlink {
+        if !self.list.show_symlink {
             hide |= FileEntry::IS_SYMLINK;
         }
         entries.retain(|e| {
             let flags = e.flags();
 
             if (flags & hide) != 0 {
-                if self.case_insensitive {
+                if self.list.case_insensitive {
                     if let Some(set) = &self.always_show_lowercase {
                         return with_lowered_stack(e.name_str().as_ref(), |lowered| {
                             set.contains(lowered)
@@ -390,6 +676,92 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
     }
 }
 
+#[inline]
+fn system_time_to_key(system_time: Option<SystemTime>) -> u128 {
+    system_time
+        .and_then(|st| st.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0)
+}
+
+fn natural_cmp_ascii(a: &str, b: &str) -> Ordering {
+    natural_cmp_bytes(a.as_bytes(), b.as_bytes(), false)
+}
+
+fn natural_cmp_ascii_ci(a: &str, b: &str) -> Ordering {
+    natural_cmp_bytes(a.as_bytes(), b.as_bytes(), true)
+}
+
+fn natural_cmp_bytes(a: &[u8], b: &[u8], fold_case: bool) -> Ordering {
+    let mut i = 0usize;
+    let mut j = 0usize;
+
+    while i < a.len() && j < b.len() {
+        let a_is_digit = a[i].is_ascii_digit();
+        let b_is_digit = b[j].is_ascii_digit();
+
+        if a_is_digit && b_is_digit {
+            let start_i = i;
+            while i < a.len() && a[i].is_ascii_digit() {
+                i += 1;
+            }
+            let start_j = j;
+            while j < b.len() && b[j].is_ascii_digit() {
+                j += 1;
+            }
+
+            let mut nonzero_i = start_i;
+            while nonzero_i < i && a[nonzero_i] == b'0' {
+                nonzero_i += 1;
+            }
+            let mut nonzero_j = start_j;
+            while nonzero_j < j && b[nonzero_j] == b'0' {
+                nonzero_j += 1;
+            }
+
+            let len_i = i - nonzero_i;
+            let len_j = j - nonzero_j;
+
+            if len_i != len_j {
+                return len_i.cmp(&len_j);
+            }
+
+            for digit_offset in 0..len_i {
+                let digit_i = a[nonzero_i + digit_offset];
+                let digit_j = b[nonzero_j + digit_offset];
+                if digit_i != digit_j {
+                    return digit_i.cmp(&digit_j);
+                }
+            }
+
+            let leading_zeros_i = nonzero_i - start_i;
+            let leading_zeros_j = nonzero_j - start_j;
+            if leading_zeros_i != leading_zeros_j {
+                return leading_zeros_i.cmp(&leading_zeros_j);
+            }
+
+            continue;
+        }
+
+        let mut byte_i = a[i];
+        let mut byte_j = b[j];
+
+        if fold_case && (byte_i.is_ascii_uppercase() || byte_j.is_ascii_uppercase()) {
+            byte_i = byte_i.to_ascii_lowercase();
+            byte_j = byte_j.to_ascii_lowercase();
+        }
+
+        if byte_i != byte_j {
+            return byte_i.cmp(&byte_j);
+        }
+
+        i += 1;
+        j += 1;
+    }
+
+    a.len().cmp(&b.len())
+}
+
 /// Formatter integration tests
 #[cfg(test)]
 mod tests {
@@ -446,7 +818,16 @@ mod tests {
             symlink.clone(),
         ];
 
-        let fmt = Formatter::new(true, false, false, false, false, Arc::new(HashSet::new()));
+        let list = DirListOptions {
+            dirs_first: true,
+            show_hidden: false,
+            show_system: false,
+            show_symlink: false,
+            case_insensitive: true,
+        };
+        let short_config = SortConfig::default();
+
+        let fmt = Formatter::new(list.to_owned(), short_config, Arc::new(HashSet::new()));
         fmt.filter_entries(&mut entries);
 
         assert_eq!(entries.len(), 1);
@@ -459,7 +840,7 @@ mod tests {
             symlink.clone(),
         ];
 
-        let fmt = Formatter::new(true, true, true, true, false, Arc::new(HashSet::new()));
+        let fmt = Formatter::new(list, short_config, Arc::new(HashSet::new()));
         fmt.filter_entries(&mut entries);
         assert_eq!(entries.len(), 4);
         assert!(entries.iter().any(|e| e.name_str() == ".hidden"));

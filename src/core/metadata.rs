@@ -14,16 +14,74 @@ use crate::core::formatter::{
 
 use crate::config::display::ShowInfoOptions;
 
+use std::collections::HashMap;
 use std::fs::symlink_metadata;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex, OnceLock};
 use std::time::SystemTime;
 
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
 #[cfg(unix)]
 pub(crate) const PERMS_WIDTH: usize = 10;
+
+/// Cached metadata for sorting.
+/// Holds system calls required info only.
+#[derive(Clone, Copy)]
+pub(crate) struct CachedMetaKey {
+    pub(crate) epoch: u64,
+    pub(crate) size: Option<u64>,
+    pub(crate) modified: Option<SystemTime>,
+    pub(crate) created: Option<SystemTime>,
+    pub(crate) accessed: Option<SystemTime>,
+}
+
+static META_SORT_EPOCH: OnceLock<AtomicU64> = OnceLock::new();
+static META_SORT_CACHE: OnceLock<Mutex<HashMap<PathBuf, CachedMetaKey>>> = OnceLock::new();
+
+#[inline]
+fn epoch_atomic() -> &'static AtomicU64 {
+    META_SORT_EPOCH.get_or_init(|| AtomicU64::new(1))
+}
+
+#[inline]
+fn meta_sort_epoch() -> u64 {
+    epoch_atomic().load(Ordering::Relaxed)
+}
+
+pub(crate) fn bump_meta_sort_epoch() {
+    epoch_atomic().fetch_add(1, Ordering::Relaxed);
+}
+
+#[inline]
+fn meta_cache() -> &'static Mutex<HashMap<PathBuf, CachedMetaKey>> {
+    META_SORT_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+pub(crate) fn get_or_update_cached_meta(path: &Path) -> Option<CachedMetaKey> {
+    let epoch = meta_sort_epoch();
+    let m = meta_cache();
+    let mut cache = m.lock().ok()?;
+
+    match cache.get(path).copied() {
+        Some(c) if c.epoch == epoch => Some(c),
+        _ => {
+            let md = std::fs::symlink_metadata(path).ok();
+            let c = CachedMetaKey {
+                epoch,
+                size: md.as_ref().filter(|m| m.is_file()).map(|m| m.len()),
+                modified: md.as_ref().and_then(|m| m.modified().ok()),
+                created: md.as_ref().and_then(|m| m.created().ok()),
+                accessed: md.as_ref().and_then(|m| m.accessed().ok()),
+            };
+            cache.insert(path.to_path_buf(), c);
+            Some(c)
+        }
+    }
+}
 
 /// Enumerator for the filye types which are then shown inside [FileMetadata]
 ///

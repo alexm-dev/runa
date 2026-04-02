@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.9.2] - UNRELEASED
+## [0.10.0] - UNRELEASED
 
 #### Performance improvement patch. Improves efficiency of file information for the status line and the widget.
 

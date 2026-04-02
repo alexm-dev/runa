@@ -767,10 +767,70 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
 }
 
 pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    let widget = app.config().theme().widget();
+    let area = frame.area();
+    let border_type = app.config().display().border_shape().as_border_type();
     let keys = app.config().keys();
     let go_to_top_keys = keys.go_to_top();
     let go_to_home_keys = keys.go_to_home();
     let go_to_path_keys = keys.go_to_path();
+
+    let is_sort_prefix = app.actions().prefix_recognizer().is_sort_state();
+    if is_sort_prefix {
+        fn mk_line(items: &[(&str, &str)], accent_style: Style) -> Line<'static> {
+            let mut spans: Vec<Span<'static>> = Vec::with_capacity(items.len() * 4);
+            for (i, (key, desc)) in items.iter().enumerate() {
+                if i > 0 {
+                    spans.push(Span::raw("    "));
+                }
+                spans.push(Span::styled(format!("[{}]", key), accent_style));
+                spans.push(Span::raw(" "));
+                spans.push(Span::raw((*desc).to_string()));
+            }
+            Line::from(spans)
+        }
+
+        let row1: [(&str, &str); 4] = [
+            ("n", "Name"),
+            ("m", "Modified"),
+            ("c", "Created"),
+            ("a", "Accessed"),
+        ];
+        let row2: [(&str, &str); 3] = [("s", "Size"), ("e", "Ext"), ("z", "Natural")];
+
+        let lines: Vec<Line<'static>> =
+            vec![mk_line(&row1, accent_style), mk_line(&row2, accent_style)];
+
+        let area = frame.area();
+        let border_pad = 2usize;
+        let inner_pad = 2usize;
+
+        let max_line_w = lines.iter().map(|l| l.width()).max().unwrap_or(0);
+
+        let min_width = 24usize;
+        let max_width = (area.width as usize).saturating_sub(2).max(min_width);
+
+        let width = (max_line_w + inner_pad + border_pad)
+            .max(min_width)
+            .min(max_width) as u16;
+
+        let height = (lines.len() + border_pad).min(area.height as usize) as u16;
+
+        draw_dialog(
+            frame,
+            DialogLayout {
+                area,
+                position: widget.go_to_help_position(),
+                size: DialogSize::Custom(width, height),
+            },
+            border_type,
+            &get_dialog_style(app, accent_style, "Sort", None),
+            Text::from(lines),
+            Some(Alignment::Center),
+            None,
+        );
+        return;
+    }
 
     let mut g_prefixes: Vec<(String, &'static str)> =
         Vec::with_capacity(go_to_top_keys.len() + go_to_path_keys.len());
@@ -797,13 +857,8 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
     spans.push(Span::raw(" "));
     let line = Line::from(spans);
 
-    let widget = app.config().theme().widget();
-    let area = frame.area();
-
     let size = widget.go_to_help_size();
     let position = widget.go_to_help_position();
-
-    let border_type = app.config().display().border_shape().as_border_type();
 
     draw_dialog(
         frame,

@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "runa-tui"
-version = "0.9.2-beta.1"
+version = "0.10.0-alpha.1"
 dependencies = [
  "ansi-to-tui",
  "chrono",

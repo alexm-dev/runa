@@ -13,6 +13,7 @@
 use crate::app::Workers;
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{Action, NavAction, PrefixCommand, SystemAction};
+use crate::app::nav::{SortConfig, SortOrder};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::proc::{complete_dirs_with_fd, fd_binary};
 use crate::ui::overlays::OverlayKind;
@@ -190,12 +191,15 @@ impl<'a> AppState<'a> {
         key: &KeyEvent,
     ) -> Option<KeypressResult> {
         let gmap = self.keymap.gmap();
+        let sort_map = self.keymap.sortmap();
 
         let (started, exited, result, consumed) = {
             let prefix = self.actions.prefix_recognizer_mut();
-            let was_g = prefix.is_g_state();
+            let was_g = prefix.is_g_state() || prefix.is_sort_state();
+            let g_prefix = self.keymap.g_prefix();
+            let sort_prefix = self.keymap.sort_prefix();
 
-            let result = prefix.feed(key, gmap);
+            let result = prefix.feed(key, gmap, sort_map, sort_prefix, g_prefix);
 
             let consumed = was_g && key.code == Esc;
 
@@ -240,6 +244,27 @@ impl<'a> AppState<'a> {
             PrefixCommand::Nav(NavAction::GoToPath) => {
                 self.prompt_go_to_path();
                 self.refresh_show_info_if_open();
+            }
+            PrefixCommand::Sort(sort_mode) => {
+                let mut sort_config: SortConfig = self.nav.sort_config();
+
+                if sort_config.mode == sort_mode {
+                    sort_config.order = sort_config.order.toggle();
+                } else {
+                    sort_config.mode = sort_mode;
+                    sort_config.order = SortOrder::Ascending;
+                }
+
+                self.nav.set_sort_config(sort_config);
+
+                let focus = self
+                    .nav
+                    .selected_entry()
+                    .map(|file_entry| file_entry.name().to_os_string());
+
+                self.request_dir_resort(workers, focus);
+                self.request_parent_content(workers);
+                self.request_preview(workers);
             }
             _ => return false,
         }

@@ -13,10 +13,12 @@
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
 //! may require corresponding changes throughout state, response-handling code and UI.
 
+use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
-use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds};
+use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
 use crate::core::{
-    FileEntry, FindResult, Formatter, browse_dir, find, formatter::safe_read_preview, preview_bat,
+    FileEntry, FindResult, Formatter, browse_dir, find, formatter::DirListOptions,
+    formatter::safe_read_preview, preview_bat,
 };
 use crate::utils::{
     copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
@@ -37,6 +39,7 @@ pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
     parent_io_tx: Sender<WorkerTask>,
     preview_io_tx: Sender<WorkerTask>,
+    sort_io_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
@@ -61,6 +64,8 @@ impl Workers {
         let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
+        let (sort_io_tx, sort_io_rx) = bounded::<WorkerTask>(1);
+
         let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
         let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
@@ -73,6 +78,8 @@ impl Workers {
         start_io_worker(nav_io_rx, res_tx.clone());
         start_io_worker(parent_io_rx, res_tx.clone());
         start_io_worker(preview_io_rx, res_tx.clone());
+        start_sort_worker(sort_io_rx, res_tx.clone());
+
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
@@ -82,6 +89,7 @@ impl Workers {
             nav_io_tx,
             parent_io_tx,
             preview_io_tx,
+            sort_io_tx,
             preview_file_tx,
             metadata_tx,
             find_tx,
@@ -95,6 +103,7 @@ impl Workers {
         nav_io_tx: &Sender<WorkerTask>,
         parent_io_tx: &Sender<WorkerTask>,
         preview_io_tx: &Sender<WorkerTask>,
+        sort_io_tx: &Sender<WorkerTask>,
         preview_file_tx: &Sender<WorkerTask>,
         metadata_tx: &Sender<WorkerTask>,
         find_tx: &Sender<WorkerTask>,
@@ -126,11 +135,20 @@ pub(crate) enum WorkerTask {
     LoadDirectory {
         path: PathBuf,
         focus: Option<OsString>,
-        dirs_first: bool,
-        show_hidden: bool,
-        show_symlink: bool,
-        show_system: bool,
-        case_insensitive: bool,
+        list: DirListOptions,
+        sort_config: SortConfig,
+        list_date_format: Arc<str>,
+        always_show: Arc<HashSet<OsString>>,
+        request_id: u64,
+        tab_id: Option<usize>,
+    },
+    ResortDirectory {
+        path: PathBuf,
+        entries: Vec<FileEntry>,
+        focus: Option<OsString>,
+        list: DirListOptions,
+        sort_config: SortConfig,
+        list_date_format: Arc<str>,
         always_show: Arc<HashSet<OsString>>,
         request_id: u64,
         tab_id: Option<usize>,
@@ -194,6 +212,7 @@ pub(crate) enum WorkerResponse {
         path: PathBuf,
         entries: Vec<FileEntry>,
         focus: Option<OsString>,
+        sort_column: Option<Vec<Arc<str>>>,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -238,11 +257,9 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
             let WorkerTask::LoadDirectory {
                 path,
                 focus,
-                dirs_first,
-                show_hidden,
-                show_symlink,
-                show_system,
-                case_insensitive,
+                list,
+                sort_config,
+                list_date_format,
                 always_show,
                 request_id,
                 tab_id,
@@ -252,20 +269,16 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
             };
             match browse_dir(&path) {
                 Ok(mut entries) => {
-                    let formatter = Formatter::new(
-                        dirs_first,
-                        show_hidden,
-                        show_symlink,
-                        show_system,
-                        case_insensitive,
-                        always_show,
-                    );
+                    let formatter = Formatter::new(list, sort_config, always_show);
                     formatter.filter_entries(&mut entries);
-                    formatter.sort_entries(&mut entries);
+                    let sort_column =
+                        formatter.sort_entries(&path, &mut entries, &list_date_format);
+
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                         path,
                         entries,
                         focus,
+                        sort_column,
                         request_id,
                         tab_id,
                     });
@@ -277,6 +290,40 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
                     ));
                 }
             }
+        }
+    });
+}
+
+fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        while let Ok(task) = task_rx.recv() {
+            let WorkerTask::ResortDirectory {
+                path,
+                focus,
+                list,
+                sort_config,
+                list_date_format,
+                always_show,
+                request_id,
+                tab_id,
+                mut entries,
+            } = task
+            else {
+                continue;
+            };
+
+            let formatter = Formatter::new(list, sort_config, always_show);
+            formatter.filter_entries(&mut entries);
+            let sort_column = formatter.sort_entries(&path, &mut entries, &list_date_format);
+
+            let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
+                path,
+                entries,
+                focus,
+                sort_column,
+                request_id,
+                tab_id,
+            });
         }
     });
 }
@@ -582,6 +629,7 @@ fn start_fileop_worker(
 
             match result {
                 Ok(_) => {
+                    bump_meta_sort_epoch();
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
                         need_reload: true,
                         focus: focus_target,
@@ -662,6 +710,16 @@ mod tests {
         which::which("bat").is_ok()
     }
 
+    fn test_list_opts() -> DirListOptions {
+        DirListOptions {
+            dirs_first: true,
+            show_hidden: false,
+            show_symlink: false,
+            show_system: false,
+            case_insensitive: true,
+        }
+    }
+
     #[test]
     fn worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
@@ -693,11 +751,9 @@ mod tests {
         workers.nav_io_tx().send(WorkerTask::LoadDirectory {
             path: temp.path().to_path_buf(),
             focus: None,
-            dirs_first: true,
-            show_hidden: false,
-            show_symlink: false,
-            show_system: false,
-            case_insensitive: true,
+            list: test_list_opts(),
+            list_date_format: Arc::<str>::from(""),
+            sort_config: SortConfig::default(),
             always_show: Arc::new(HashSet::new()),
             request_id: 30,
             tab_id: TEST_TAB_ID,
@@ -769,11 +825,9 @@ mod tests {
         task_tx.send(WorkerTask::LoadDirectory {
             path: temp_path,
             focus: None,
-            dirs_first: true,
-            show_hidden: false,
-            show_symlink: false,
-            show_system: false,
-            case_insensitive: true,
+            list: test_list_opts(),
+            list_date_format: Arc::<str>::from(""),
+            sort_config: SortConfig::default(),
             always_show: Arc::new(HashSet::new()),
             request_id: 1,
             tab_id: TEST_TAB_ID,
@@ -822,15 +876,20 @@ mod tests {
                 let mut rng = rng();
                 for i in 0..requests_per_thread {
                     let dir = &dirs[rng.random_range(0..dirs.len())];
+                    let list = DirListOptions {
+                        dirs_first: rng.random_bool(0.5),
+                        show_hidden: rng.random_bool(0.5),
+                        show_symlink: rng.random_bool(0.5),
+                        show_system: rng.random_bool(0.5),
+                        case_insensitive: rng.random_bool(0.5),
+                    };
                     task_tx
                         .send(WorkerTask::LoadDirectory {
                             path: dir.clone(),
                             focus: None,
-                            dirs_first: rng.random_bool(0.5),
-                            show_hidden: rng.random_bool(0.5),
-                            show_symlink: rng.random_bool(0.5),
-                            show_system: rng.random_bool(0.5),
-                            case_insensitive: rng.random_bool(0.5),
+                            list,
+                            sort_config: SortConfig::default(),
+                            list_date_format: Arc::<str>::from(""),
                             always_show: Arc::new(HashSet::new()),
                             request_id: (t * requests_per_thread + i) as u64,
                             tab_id: TEST_TAB_ID,

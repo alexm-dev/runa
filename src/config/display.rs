@@ -36,6 +36,11 @@ pub(crate) struct Display {
     scroll_padding: usize,
     toggle_marker_jump: bool,
     instant_preview: bool,
+    #[serde(
+        default = "Display::default_list_date_format",
+        deserialize_with = "deserialize_list_date_format"
+    )]
+    list_date_format: String,
     preview_options: PreviewOptions,
     layout: LayoutConfig,
     info: ShowInfoOptions,
@@ -93,6 +98,15 @@ impl Display {
         self.layout.preview_ratio()
     }
 
+    fn default_list_date_format() -> String {
+        "%b %e %H:%M".to_string()
+    }
+
+    #[inline]
+    pub(crate) fn list_date_format(&self) -> &str {
+        &self.list_date_format
+    }
+
     /// Get padding string based on entry_padding
     pub(crate) fn padding_str(&self) -> &'static str {
         // ASCII whitespaces
@@ -125,6 +139,7 @@ impl Default for Display {
             scroll_padding: 5,
             toggle_marker_jump: false,
             instant_preview: true,
+            list_date_format: Display::default_list_date_format(),
             layout: LayoutConfig::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
@@ -216,31 +231,7 @@ impl ShowInfoOptions {
     }
 
     fn validate_date_format(fmt: Option<String>) -> String {
-        let default_fmt = "%Y-%m-%d %H:%M".to_string();
-
-        let Some(user_str) = fmt else {
-            return default_fmt;
-        };
-
-        if user_str.is_empty() || user_str.len() > 64 {
-            return default_fmt;
-        }
-
-        let mut has_date_specifier = false;
-
-        for item in StrftimeItems::new(&user_str) {
-            match item {
-                Item::Error => return default_fmt,
-                Item::Space(_) | Item::Literal(_) => continue,
-                _ => has_date_specifier = true,
-            }
-        }
-
-        if has_date_specifier {
-            user_str
-        } else {
-            default_fmt
-        }
+        validate_strftime_format(fmt, "%Y-%m-%d %H:%M", 64)
     }
 }
 
@@ -594,4 +585,38 @@ fn parse_status_format(fmt: &str) -> Vec<StatusSegment> {
         segments.push(StatusSegment::Literal(fmt[cursor..].to_string()));
     }
     segments
+}
+
+fn validate_strftime_format(fmt: Option<String>, default_fmt: &str, max_len: usize) -> String {
+    let Some(user_str) = fmt else {
+        return default_fmt.to_string();
+    };
+
+    if user_str.is_empty() || user_str.len() > max_len {
+        return default_fmt.to_string();
+    }
+
+    let mut has_date_specifier = false;
+
+    for item in StrftimeItems::new(&user_str) {
+        match item {
+            Item::Error => return default_fmt.to_string(),
+            Item::Space(_) | Item::Literal(_) => continue,
+            _ => has_date_specifier = true,
+        }
+    }
+
+    if has_date_specifier {
+        user_str
+    } else {
+        default_fmt.to_string()
+    }
+}
+
+fn deserialize_list_date_format<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw: Option<String> = Option::<String>::deserialize(deserializer)?;
+    Ok(validate_strftime_format(raw, "%b %e %H:%M", 32))
 }

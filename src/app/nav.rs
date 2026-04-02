@@ -9,6 +9,7 @@ use crate::core::formatter::format_display_path;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
@@ -20,6 +21,8 @@ pub(crate) struct NavState {
     markers: HashSet<PathBuf>,
     filter: String,
     filters: HashMap<PathBuf, String>,
+    sort_config: SortConfig,
+    sort_column: Option<Vec<Arc<str>>>,
     display_path: String,
     request_id: u64,
 }
@@ -36,6 +39,8 @@ impl NavState {
             markers: HashSet::new(),
             filter: String::new(),
             filters: HashMap::new(),
+            sort_config: SortConfig::default(),
+            sort_column: None,
             display_path,
             request_id: 0,
         }
@@ -45,6 +50,9 @@ impl NavState {
         current_dir: &Path,
         entries: &[FileEntry],
         selected_idx => selected: usize,
+        shown_indices: &[usize],
+        sort_config: SortConfig,
+        sort_column: &Option<Vec<Arc<str>>>,
         markers: &HashSet<PathBuf>,
         filter: &str,
         display_path: &str,
@@ -141,11 +149,13 @@ impl NavState {
         &mut self,
         path: PathBuf,
         entries: Vec<FileEntry>,
+        sort_column: Option<Vec<Arc<str>>>,
         focus: Option<OsString>,
     ) {
         self.current_dir = path;
         self.display_path = format_display_path(&self.current_dir);
         self.entries = entries;
+        self.sort_column = sort_column;
 
         self.restore_filter_for_current_dir();
         self.rebuild_shown_cache();
@@ -330,9 +340,53 @@ impl NavState {
             self.selected = len.saturating_sub(1);
         }
     }
+
+    pub(crate) fn set_sort_config(&mut self, sort_config: SortConfig) {
+        self.sort_config = sort_config;
+    }
 }
 
-/// Integration tests for navigation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) enum SortMode {
+    Name,
+    Modified,
+    Created,
+    Accessed,
+    Size,
+    Extension,
+    Natural,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SortOrder {
+    Ascending,
+    Descending,
+}
+
+impl SortOrder {
+    pub(crate) fn toggle(self) -> Self {
+        match self {
+            SortOrder::Ascending => SortOrder::Descending,
+            SortOrder::Descending => SortOrder::Ascending,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct SortConfig {
+    pub(crate) mode: SortMode,
+    pub(crate) order: SortOrder,
+}
+
+impl Default for SortConfig {
+    fn default() -> Self {
+        Self {
+            mode: SortMode::Natural,
+            order: SortOrder::Ascending,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,7 +416,7 @@ mod tests {
         assert!(!entries.is_empty(), "sandbox should not be empty");
 
         let mut nav = NavState::new(dir.path().to_path_buf());
-        nav.update_from_worker(dir.path().to_path_buf(), entries.clone(), None);
+        nav.update_from_worker(dir.path().to_path_buf(), entries.clone(), None, None);
 
         assert_eq!(
             nav.entries().len(),
@@ -434,7 +488,7 @@ mod tests {
 
         for i in 0..repetitions {
             nav.set_path(subdir_path.clone());
-            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None);
+            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
 
             assert_eq!(nav.current_dir(), &subdir_path);
             assert!(
@@ -446,17 +500,17 @@ mod tests {
             assert_eq!(parent_path, base_path, "Iter {i} parent mismatch");
 
             nav.set_path(subsubdir_path.clone());
-            nav.update_from_worker(subsubdir_path.clone(), subsub_entries.clone(), None);
+            nav.update_from_worker(subsubdir_path.clone(), subsub_entries.clone(), None, None);
 
             assert_eq!(nav.current_dir(), &subsubdir_path);
             assert!(nav.entries().iter().any(|e| e.name() == "file_subsub.txt"));
 
             nav.set_path(subdir_path.clone());
-            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None);
+            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
             assert_eq!(nav.current_dir(), &subdir_path);
 
             nav.set_path(base_path.clone());
-            nav.update_from_worker(base_path.clone(), base_entries.clone(), None);
+            nav.update_from_worker(base_path.clone(), base_entries.clone(), None, None);
 
             assert_eq!(nav.current_dir(), &base_path);
             assert!(nav.entries().iter().any(|e| e.name() == "subdir"));
@@ -482,7 +536,7 @@ mod tests {
         let repetitions = 200;
 
         nav.set_path(subdir_path.clone());
-        nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None);
+        nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
 
         for _ in 0..5 {
             nav.move_down();
@@ -491,13 +545,13 @@ mod tests {
 
         for i in 0..repetitions {
             nav.set_path(base_path.clone());
-            nav.update_from_worker(base_path.clone(), base_entries.clone(), None);
+            nav.update_from_worker(base_path.clone(), base_entries.clone(), None, None);
 
             nav.move_down();
 
             // Return to Subdir
             nav.set_path(subdir_path.clone());
-            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None);
+            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
 
             assert_eq!(
                 nav.selected_idx(),
@@ -533,7 +587,7 @@ mod tests {
         entries.shuffle(&mut rng());
 
         let mut nav = NavState::new(base_path.clone());
-        nav.update_from_worker(base_path.clone(), entries, None);
+        nav.update_from_worker(base_path.clone(), entries, None, None);
 
         let target_name = "file_manager.rs";
 
@@ -578,7 +632,7 @@ mod tests {
         entries.shuffle(&mut rng());
 
         let mut nav = NavState::new(base_path.clone());
-        nav.update_from_worker(base_path.clone(), entries, None);
+        nav.update_from_worker(base_path.clone(), entries, None, None);
 
         let mut clipboard: Option<HashSet<PathBuf>> = None;
 

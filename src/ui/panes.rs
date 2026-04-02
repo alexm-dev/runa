@@ -16,9 +16,15 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
+const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
+const MIN_LEFT_WIDTH: u16 = 12;
 
 /// Styles used for rendering items in a pane
 /// Includes styles for regular items, directories and selected items
@@ -86,6 +92,31 @@ pub(crate) struct PaneMarkers<'a> {
     pub(crate) clipboard_style: Style,
 }
 
+#[derive(Clone, Copy)]
+struct RightCol<'a> {
+    text: Option<&'a str>,
+    width: u16,
+}
+
+impl<'a> RightCol<'a> {
+    #[inline]
+    fn none() -> Self {
+        Self {
+            text: None,
+            width: 0,
+        }
+    }
+
+    #[inline]
+    fn reserve(self) -> usize {
+        if self.text.is_some() {
+            self.width as usize + 1
+        } else {
+            0
+        }
+    }
+}
+
 /// Draws the main file list pane in the UI
 ///
 /// Highlights selection, markers and directories and handles styling for items.
@@ -125,10 +156,18 @@ pub(crate) fn draw_main(
     let markers = make_main_pane_markers(app, current_dir, clipboard);
 
     let shown_len = app.nav().shown_entries_len();
+
+    let sort_column = app.nav().sort_column();
+    let inner_w = pane_inner_width(&context);
+    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
+
     let mut items = Vec::with_capacity(shown_len);
-    for (idx, entry) in app.nav().shown_entries().enumerate() {
-        let is_selected = Some(idx) == selected_idx;
+    for (vis_idx, &abs_idx) in app.nav().shown_indices().iter().enumerate() {
+        let entry = &app.nav().entries()[abs_idx];
+        let is_selected = Some(vis_idx) == selected_idx;
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
+        let right = right_col_for(show_col, right_w, sort_column.as_ref(), abs_idx);
+
         items.push(make_entry_row(
             entry,
             is_selected,
@@ -136,6 +175,7 @@ pub(crate) fn draw_main(
             &context,
             &markers,
             None,
+            right,
         ));
     }
 
@@ -165,12 +205,19 @@ pub(crate) fn draw_main(
 /// Also applies underline/selection styles and manages cursor position
 pub(crate) fn draw_preview(
     frame: &mut Frame,
+    app: &AppState,
     context: PaneContext,
-    preview: &PreviewData,
-    selected_idx: Option<usize>,
-    opts: PreviewOptions,
     markers: &PaneMarkers,
 ) {
+    let preview = app.preview().data();
+    let selected_idx = Some(app.preview().selected_idx());
+
+    let opts = PreviewOptions {
+        use_underline: app.config().display().preview_underline(),
+        underline_match_text: app.config().display().preview_underline_color(),
+        underline_style: app.config().theme().underline_style(),
+    };
+
     match preview {
         PreviewData::Empty => {
             frame.render_widget(
@@ -196,7 +243,10 @@ pub(crate) fn draw_preview(
             );
         }
 
-        PreviewData::Directory(entries) => {
+        PreviewData::Directory {
+            entries,
+            sort_column,
+        } => {
             if entries.is_empty() {
                 let style = context.styles.item;
                 let line = Line::from(vec![Span::raw(context.padding_str), Span::raw("[Empty]")]);
@@ -214,10 +264,15 @@ pub(crate) fn draw_preview(
                 return;
             }
 
+            let inner_w = pane_inner_width(&context);
+            let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
+
             let mut items = Vec::with_capacity(entries.len());
             for (idx, entry) in entries.iter().enumerate() {
                 let is_selected = Some(idx) == selected_idx;
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
+                let right = right_col_for(show_col, right_w, sort_column.as_ref(), idx);
+
                 items.push(make_entry_row(
                     entry,
                     is_selected,
@@ -225,6 +280,7 @@ pub(crate) fn draw_preview(
                     &context,
                     markers,
                     Some(&opts),
+                    right,
                 ));
             }
 
@@ -251,11 +307,12 @@ pub(crate) fn draw_preview(
 /// Draws the parent directory of the current working directory.
 pub(crate) fn draw_parent(
     frame: &mut Frame,
+    app: &AppState,
     context: PaneContext,
-    entries: &[FileEntry],
-    selected_idx: Option<usize>,
     markers: &PaneMarkers,
 ) {
+    let entries = app.parent().entries();
+    let selected_idx = app.parent().selected_idx();
     if entries.is_empty() {
         frame.render_widget(
             Paragraph::new("").block(
@@ -269,10 +326,16 @@ pub(crate) fn draw_parent(
         return;
     }
 
+    let sort_column = app.parent().sort_column();
+    let inner_w = pane_inner_width(&context);
+    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
+
     let mut items = Vec::with_capacity(entries.len());
     for (idx, entry) in entries.iter().enumerate() {
         let is_selected = Some(idx) == selected_idx;
         let style = context.styles.get_style(entry.is_dir(), is_selected);
+        let right = right_col_for(show_col, right_w, sort_column.as_ref(), idx);
+
         items.push(make_entry_row(
             entry,
             is_selected,
@@ -280,6 +343,7 @@ pub(crate) fn draw_parent(
             &context,
             markers,
             None,
+            right,
         ));
     }
 
@@ -399,7 +463,10 @@ fn make_entry_row<'a>(
     context: &PaneContext,
     markers: &PaneMarkers,
     opts: Option<&PreviewOptions>,
+    right: RightCol<'a>,
 ) -> ListItem<'a> {
+    let mut used_w: usize = 0;
+
     let is_marked = markers
         .markers
         .as_ref()
@@ -440,7 +507,9 @@ fn make_entry_row<'a>(
         }
     }
 
-    let pad = if (is_marked || is_copied) && !context.padding_str.is_empty() {
+    let mut spans = Vec::with_capacity(10);
+
+    if (is_marked || is_copied) && !context.padding_str.is_empty() {
         let first_char_len = context
             .padding_str
             .chars()
@@ -451,13 +520,12 @@ fn make_entry_row<'a>(
         s.push_str(markers.marker_icon);
         s.push_str(&context.padding_str[first_char_len..]);
 
-        Span::styled(s, icon_style)
+        used_w += UnicodeWidthStr::width(s.as_str());
+        spans.push(Span::styled(s, icon_style));
     } else {
-        Span::raw(context.padding_str)
-    };
-
-    let mut spans = Vec::with_capacity(8);
-    spans.push(pad);
+        used_w += UnicodeWidthStr::width(context.padding_str);
+        spans.push(Span::raw(context.padding_str));
+    }
 
     let symlink_fg = if entry.is_broken_sym() {
         Color::Red
@@ -477,6 +545,8 @@ fn make_entry_row<'a>(
         icon_col.push_str(icon);
         icon_col.push(' ');
 
+        used_w += UnicodeWidthStr::width(icon_col.as_str());
+
         let icon_render_style = if entry.is_symlink() {
             row_style.fg(symlink_fg).add_modifier(Modifier::BOLD)
         } else {
@@ -486,13 +556,26 @@ fn make_entry_row<'a>(
         spans.push(Span::styled(icon_col, icon_render_style));
     }
 
+    let total_w = context.block.inner(context.area).width as usize;
+    let reserve = right.reserve();
+
+    let name_raw = entry.name_str();
+    let name_budget = total_w
+        .saturating_sub(reserve)
+        .saturating_sub(used_w)
+        .max(1);
+    let name = truncate_owned(name_raw.as_ref(), name_budget);
+
+    used_w += UnicodeWidthStr::width(name.as_str());
+
     if entry.is_symlink() {
-        spans.push(Span::styled(entry.name_str(), row_style.fg(symlink_fg)));
+        spans.push(Span::styled(name, row_style.fg(symlink_fg)));
     } else {
-        spans.push(Span::styled(entry.name_str(), row_style));
+        spans.push(Span::styled(name, row_style));
     }
 
-    if entry.is_dir() && context.show_marker {
+    if entry.is_dir() && context.show_marker && left_remaining(total_w, used_w, reserve) >= 1 {
+        used_w += 1;
         let slash_style = if entry.is_symlink() {
             row_style.fg(symlink_fg)
         } else {
@@ -502,24 +585,150 @@ fn make_entry_row<'a>(
     }
 
     if entry.is_symlink() {
-        if let Some(target) = entry.symlink() {
-            let target_str = target.to_string_lossy();
-            let mut sym_text = String::with_capacity(target_str.len() + 20);
-            sym_text.push_str(" -> ");
-            sym_text.push_str(&target_str);
+        let rem = left_remaining(total_w, used_w, reserve);
+        if rem > 0 {
+            if let Some(target) = entry.symlink() {
+                let target_str = target.to_string_lossy();
+                let mut sym_text = String::with_capacity(target_str.len() + 24);
+                sym_text.push_str(" -> ");
+                sym_text.push_str(&target_str);
 
-            let target_style = if entry.is_broken_sym() {
-                sym_text.push_str(" [broken]");
-                row_style.fg(symlink_fg)
-            } else {
-                row_style.fg(context.styles.symlink_target)
-            };
+                if entry.is_broken_sym() {
+                    sym_text.push_str(" [broken]");
+                }
 
-            spans.push(Span::styled(sym_text, target_style));
-        } else if entry.is_broken_sym() {
-            spans.push(Span::styled(" -> [broken]", row_style.fg(Color::Red)));
+                let sym_text = truncate_owned(sym_text.as_str(), rem);
+                used_w += UnicodeWidthStr::width(sym_text.as_str());
+
+                let target_style = if entry.is_broken_sym() {
+                    row_style.fg(symlink_fg)
+                } else {
+                    row_style.fg(context.styles.symlink_target)
+                };
+
+                spans.push(Span::styled(sym_text, target_style));
+            } else if entry.is_broken_sym() {
+                let s = truncate_owned(" -> [broken]", rem);
+                used_w += UnicodeWidthStr::width(s.as_str());
+                spans.push(Span::styled(s, row_style.fg(Color::Red)));
+            }
         }
     }
 
+    if let Some(col) = right.text {
+        let col_area_w = right.width as usize;
+        let right_text = if UnicodeWidthStr::width(col) <= col_area_w {
+            build_right_field(col, total_w, used_w, col_area_w)
+        } else {
+            let col = truncate_owned(col, col_area_w);
+            build_right_field(&col, total_w, used_w, col_area_w)
+        };
+
+        spans.push(Span::styled(
+            right_text,
+            row_style.add_modifier(Modifier::DIM),
+        ));
+    }
+
     ListItem::new(Line::from(spans)).style(row_style)
+}
+
+#[inline]
+fn pane_show_col(inner_w: u16, right_w: u16) -> bool {
+    right_w > 0 && inner_w >= right_w + 1 + MIN_LEFT_WIDTH
+}
+
+fn truncate_owned(s: &str, max_w: usize) -> String {
+    if UnicodeWidthStr::width(s) <= max_w {
+        return s.to_string();
+    }
+    if max_w <= 1 {
+        return "…".to_string();
+    }
+    let mut out = String::with_capacity(max_w);
+    let mut w = 0usize;
+    for ch in s.chars() {
+        let cw = UnicodeWidthChar::width(ch).unwrap_or(0);
+        if w + cw >= max_w {
+            break;
+        }
+        out.push(ch);
+        w += cw;
+    }
+    if !out.is_empty() {
+        out.pop();
+    }
+    out.push('…');
+    out
+}
+
+#[inline]
+fn left_remaining(total_w: usize, used_w: usize, reserve: usize) -> usize {
+    total_w.saturating_sub(reserve).saturating_sub(used_w)
+}
+
+#[inline]
+fn build_right_field(col: &str, total_w: usize, used_w: usize, col_area_w: usize) -> String {
+    let pad_spaces = total_w.saturating_sub(used_w + 1 + col_area_w);
+
+    let col_w = UnicodeWidthStr::width(col).min(col_area_w);
+    let inner_pad = col_area_w.saturating_sub(col_w);
+
+    let mut out = String::with_capacity(pad_spaces + 1 + inner_pad + col.len());
+    out.extend(std::iter::repeat_n(' ', pad_spaces));
+    out.push(' ');
+    out.extend(std::iter::repeat_n(' ', inner_pad));
+    out.push_str(col);
+    out
+}
+
+#[inline]
+fn pane_inner_width(context: &PaneContext) -> u16 {
+    context.block.inner(context.area).width
+}
+
+#[inline]
+fn right_col_width(sort_column: Option<&Vec<Arc<str>>>) -> u16 {
+    let Some(col) = sort_column else {
+        return 0;
+    };
+    let mut max_w: usize = 0;
+    for s in col.iter() {
+        let w = UnicodeWidthStr::width(s.as_ref());
+        if w > max_w {
+            max_w = w;
+        }
+    }
+    (max_w as u16).min(MAX_RIGHT_COLUMN_WIDTH)
+}
+
+#[inline]
+fn right_col_config(inner_w: u16, sort_column: Option<&Vec<Arc<str>>>) -> (bool, u16) {
+    let right_w = right_col_width(sort_column);
+    let show_col = pane_show_col(inner_w, right_w);
+    (show_col, right_w)
+}
+
+#[inline]
+fn right_col_at(sort_column: Option<&Vec<Arc<str>>>, idx: usize) -> Option<&str> {
+    sort_column
+        .and_then(|c| c.get(idx))
+        .map(|s| s.as_ref())
+        .filter(|s| !s.is_empty())
+}
+
+#[inline]
+fn right_col_for(
+    show_col: bool,
+    right_w: u16,
+    sort_column: Option<&Vec<Arc<str>>>,
+    idx: usize,
+) -> RightCol<'_> {
+    if !show_col {
+        return RightCol::none();
+    }
+    RightCol {
+        text: right_col_at(sort_column, idx),
+        width: right_w,
+    }
 }

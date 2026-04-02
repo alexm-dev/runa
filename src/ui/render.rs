@@ -8,13 +8,13 @@
 
 use crate::{
     app::{
-        AppState, Clipboard, LayoutMetrics, PreviewData,
+        AppState, Clipboard, LayoutMetrics,
         actions::{ActionMode, InputMode},
     },
     core::worker::Workers,
     ui::{
         overlays::Overlay,
-        panes::{self, PaneContext, PaneStyles, PreviewOptions},
+        panes::{self, PaneContext, PaneStyles},
         widgets,
     },
 };
@@ -95,6 +95,7 @@ pub(crate) fn render(
 
         panes::draw_parent(
             frame,
+            app,
             PaneContext {
                 area: chunks[pane_idx],
                 block: widgets::get_pane_block("Parent", app),
@@ -106,8 +107,6 @@ pub(crate) fn render(
                 show_icons: display_cfg.icons(),
                 show_marker: display_cfg.dir_marker(),
             },
-            app.parent().entries(),
-            app.parent().selected_idx(),
             &parent_markers,
         );
         pane_idx += 1;
@@ -194,16 +193,9 @@ pub(crate) fn render(
             executable_fg: theme_cfg.exe_color(),
         };
 
-        let (preview_data, selected_idx) = {
-            let preview = app.preview();
-            match preview.data() {
-                PreviewData::Directory(_) => (preview.data(), Some(preview.selected_idx())),
-                _ => (preview.data(), None),
-            }
-        };
-
         panes::draw_preview(
             frame,
+            app,
             PaneContext {
                 area: chunks[pane_idx],
                 block: widgets::get_pane_block("Preview", app),
@@ -214,13 +206,6 @@ pub(crate) fn render(
                 padding_str,
                 show_icons: display_cfg.icons(),
                 show_marker: display_cfg.dir_marker(),
-            },
-            preview_data,
-            selected_idx,
-            PreviewOptions {
-                use_underline: display_cfg.preview_underline(),
-                underline_match_text: display_cfg.preview_underline_color(),
-                underline_style: theme_cfg.underline_style(),
             },
             &preview_markers,
         );

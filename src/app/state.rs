@@ -21,7 +21,8 @@ use crate::app::keymap::{Action, Keymap, TabAction};
 use crate::app::metadata::MetadataState;
 use crate::app::{Clipboard, NavState, ParentState, PreviewState};
 use crate::config::Config;
-use crate::core::metadata::{FileMetadataCache, MetadataNeeds};
+use crate::core::formatter::DirListOptions;
+use crate::core::metadata::{FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
 use crate::core::worker::{WorkerResponse, WorkerTask, Workers};
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 
@@ -323,12 +324,14 @@ impl<'a> AppState<'a> {
                 path,
                 entries,
                 focus,
+                sort_column,
                 request_id,
                 tab_id: _tab_id,
             } => {
                 // only update nav if BOTH the ID and path match.
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                    self.nav.update_from_worker(path, entries, focus);
+                    self.nav
+                        .update_from_worker(path, entries, sort_column, focus);
                     self.is_loading = false;
 
                     self.request_parent_content(workers);
@@ -343,7 +346,8 @@ impl<'a> AppState<'a> {
                     && path.parent() == Some(self.nav.current_dir())
                     && path.file_name() == Some(entry.name())
                 {
-                    self.preview.update_from_entries(entries, request_id);
+                    self.preview
+                        .update_from_entries(entries, sort_column, request_id);
 
                     let sel_path = self.nav.current_dir().join(entry.name());
                     let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
@@ -361,9 +365,15 @@ impl<'a> AppState<'a> {
                             .file_name()
                             .map(|n| n.to_string_lossy().to_string())
                             .unwrap_or_default();
-
-                        self.parent
-                            .update_from_entries(entries, &current_name, request_id, &path);
+                        let sort_config = self.nav.sort_config();
+                        self.parent.update_from_entries(
+                            entries,
+                            &current_name,
+                            request_id,
+                            &path,
+                            sort_config,
+                            sort_column,
+                        );
                     }
                 }
             }
@@ -380,6 +390,7 @@ impl<'a> AppState<'a> {
 
             WorkerResponse::OperationComplete { need_reload, focus } => {
                 if need_reload {
+                    bump_meta_sort_epoch();
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }
@@ -470,14 +481,14 @@ impl<'a> AppState<'a> {
     pub(crate) fn request_dir_load(&mut self, workers: &Workers, focus: Option<OsString>) {
         self.is_loading = true;
         let request_id = self.nav.prepare_new_request();
+        let sort_config = self.nav.sort_config();
+        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
         let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
-            dirs_first: self.config.general().dirs_first(),
-            show_hidden: self.config.general().show_hidden(),
-            show_symlink: self.config.general().show_symlink(),
-            show_system: self.config.general().show_system(),
-            case_insensitive: self.config.general().case_insensitive(),
+            list: self.dir_list_options(),
+            sort_config,
+            list_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id,
             tab_id: self.tab_id(),
@@ -489,16 +500,16 @@ impl<'a> AppState<'a> {
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
+            let sort_config = self.nav.sort_config();
 
+            let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
             if entry.is_dir() || entry.is_symlink() {
                 let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
                     path,
                     focus: None,
-                    dirs_first: self.config.general().dirs_first(),
-                    show_hidden: self.config.general().show_hidden(),
-                    show_symlink: self.config.general().show_symlink(),
-                    show_system: self.config.general().show_system(),
-                    case_insensitive: self.config.general().case_insensitive(),
+                    list: self.dir_list_options(),
+                    sort_config,
+                    list_date_format,
                     always_show: Arc::clone(self.config.general().always_show()),
                     request_id: req_id,
                     tab_id: self.tab_id(),
@@ -534,20 +545,23 @@ impl<'a> AppState<'a> {
             return;
         };
 
-        if self.parent.is_cached(parent_path) {
+        let sort_config = self.nav.sort_config();
+        if self.parent.is_cached(parent_path, sort_config) {
             return;
         }
 
         let parent_path_buf = parent_path.to_path_buf();
-        let req_id = self.parent.prepare_new_request(&parent_path_buf);
+        let sort_config = self.nav.sort_config();
+        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
+        let req_id = self
+            .parent
+            .prepare_new_request(&parent_path_buf, sort_config);
         let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,
-            dirs_first: self.config.general().dirs_first(),
-            show_hidden: self.config.general().show_hidden(),
-            show_symlink: self.config.general().show_symlink(),
-            show_system: self.config.general().show_system(),
-            case_insensitive: self.config.general().case_insensitive(),
+            list: self.dir_list_options(),
+            sort_config,
+            list_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
             request_id: req_id,
             tab_id: self.tab_id(),
@@ -575,6 +589,36 @@ impl<'a> AppState<'a> {
             cancel: cancel_token,
             tab_id: self.tab_id(),
         });
+    }
+
+    pub(crate) fn request_dir_resort(&mut self, workers: &Workers, focus: Option<OsString>) {
+        self.is_loading = true;
+        let request_id = self.nav.request_id();
+        let sort_config = self.nav.sort_config();
+        let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
+        let entries = self.nav.entries().to_vec();
+
+        let _ = workers.sort_io_tx().try_send(WorkerTask::ResortDirectory {
+            path: self.nav.current_dir().to_path_buf(),
+            entries,
+            focus,
+            list: self.dir_list_options(),
+            sort_config,
+            list_date_format,
+            always_show: Arc::clone(self.config.general().always_show()),
+            request_id,
+            tab_id: self.tab_id(),
+        });
+    }
+
+    fn dir_list_options(&self) -> DirListOptions {
+        DirListOptions {
+            dirs_first: self.config.general().dirs_first(),
+            show_hidden: self.config.general().show_hidden(),
+            show_symlink: self.config.general().show_symlink(),
+            show_system: self.config.general().show_system(),
+            case_insensitive: self.config.general().case_insensitive(),
+        }
     }
 }
 
@@ -706,6 +750,7 @@ mod tests {
             .to_path_buf();
 
         let prev_request_id = app.parent.request_id();
+        let sort_config = app.nav.sort_config();
 
         let file_entry = FileEntry::new(OsString::from("test_file"), 0, None);
         let dir_entry = FileEntry::new(OsString::from("test_dir"), 1, None);
@@ -715,6 +760,8 @@ mod tests {
             "irrelevant",
             prev_request_id,
             &parent_path,
+            sort_config,
+            None,
         );
 
         app.request_parent_content(&workers);

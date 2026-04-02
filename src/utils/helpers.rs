@@ -12,6 +12,7 @@
 //! These helpers are used throughout runa.
 
 use crate::config::Editor;
+use crate::core::metadata::bump_meta_sort_epoch;
 use ratatui::style::Color;
 use std::borrow::Cow;
 use std::ffi::OsStr;
@@ -115,6 +116,7 @@ pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Resu
     let mut stdout = io::stdout();
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
+    bump_meta_sort_epoch();
 
     let status = std::process::Command::new(editor_path)
         .arg(file_path)
