@@ -142,7 +142,7 @@ pub(crate) enum WorkerTask {
         request_id: u64,
         tab_id: Option<usize>,
     },
-    ResortDirectory {
+    SortDirectory {
         path: PathBuf,
         entries: Vec<FileEntry>,
         focus: Option<OsString>,
@@ -297,7 +297,7 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
 fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
-            let WorkerTask::ResortDirectory {
+            let WorkerTask::SortDirectory {
                 path,
                 focus,
                 list,
@@ -643,7 +643,7 @@ fn start_fileop_worker(
     });
 }
 
-/// Starts the file metadatarmation worker thread.
+/// Starts the file metadata worker thread.
 fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         #[cfg(unix)]

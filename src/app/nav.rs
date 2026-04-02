@@ -22,9 +22,11 @@ pub(crate) struct NavState {
     filter: String,
     filters: HashMap<PathBuf, String>,
     sort_config: SortConfig,
+    request_id: u64,
+
+    // UI releted fields
     sort_column: Option<Vec<Arc<str>>>,
     display_path: String,
-    request_id: u64,
 }
 
 impl NavState {
@@ -381,7 +383,7 @@ pub(crate) struct SortConfig {
 impl Default for SortConfig {
     fn default() -> Self {
         Self {
-            mode: SortMode::Natural,
+            mode: SortMode::Name,
             order: SortOrder::Ascending,
         }
     }

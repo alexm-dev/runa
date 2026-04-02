@@ -17,7 +17,7 @@ use unicode_width::UnicodeWidthChar;
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::fs::{File, Metadata};
 use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 use std::path::Path;
@@ -119,25 +119,25 @@ impl Formatter {
                 self.sort_by_extension(entries);
                 None
             }
-            SortMode::Size => Some(self.sort_by_filesystem_metadata(
+            SortMode::Size => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Size,
                 list_date_format,
             )),
-            SortMode::Modified => Some(self.sort_by_filesystem_metadata(
+            SortMode::Modified => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Modified,
                 list_date_format,
             )),
-            SortMode::Created => Some(self.sort_by_filesystem_metadata(
+            SortMode::Created => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Created,
                 list_date_format,
             )),
-            SortMode::Accessed => Some(self.sort_by_filesystem_metadata(
+            SortMode::Accessed => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Accessed,
@@ -150,7 +150,7 @@ impl Formatter {
         let sort_order = self.sort_config.order;
 
         if !self.list.case_insensitive {
-            entries.sort_by(|left_entry, right_entry| {
+            entries.sort_unstable_by(|left_entry, right_entry| {
                 let left_priority = self.prio_for_entry(left_entry);
                 let right_priority = self.prio_for_entry(right_entry);
 
@@ -158,31 +158,34 @@ impl Formatter {
                     return left_priority.cmp(&right_priority);
                 }
 
-                match sort_order {
-                    SortOrder::Ascending => left_entry.name().cmp(right_entry.name()),
-                    SortOrder::Descending => right_entry.name().cmp(left_entry.name()),
+                let result = left_entry.name().cmp(right_entry.name());
+                if sort_order == SortOrder::Ascending {
+                    result
+                } else {
+                    result.reverse()
                 }
             });
             return;
         }
 
-        entries.sort_by(|left_entry, right_entry| {
-            let left_priority = self.prio_for_entry(left_entry);
-            let right_priority = self.prio_for_entry(right_entry);
-
-            if left_priority != right_priority {
-                return left_priority.cmp(&right_priority);
+        entries.sort_unstable_by(|a, b| {
+            let ord = self.prio_for_entry(a).cmp(&self.prio_for_entry(b));
+            if ord != std::cmp::Ordering::Equal {
+                return ord;
             }
 
-            let left_name = left_entry.name_str();
-            let right_name = right_entry.name_str();
+            let a_name = a.name_str();
+            let b_name = b.name_str();
 
-            with_lowered_stack(left_name.as_ref(), |left_lower| {
-                with_lowered_stack(right_name.as_ref(), |right_lower| match sort_order {
-                    SortOrder::Ascending => left_lower.cmp(right_lower),
-                    SortOrder::Descending => right_lower.cmp(left_lower),
-                })
-            })
+            let result = with_lowered_stack(&a_name, |a_lower| {
+                with_lowered_stack(&b_name, |b_lower| a_lower.cmp(b_lower))
+            });
+
+            if sort_order == SortOrder::Ascending {
+                result
+            } else {
+                result.reverse()
+            }
         });
     }
 
@@ -190,119 +193,73 @@ impl Formatter {
         let sort_order = self.sort_config.order;
         let case_insensitive = self.list.case_insensitive;
 
-        entries.sort_by(|left_entry, right_entry| {
-            let left_priority = self.prio_for_entry(left_entry);
-            let right_priority = self.prio_for_entry(right_entry);
-
-            if left_priority != right_priority {
-                return left_priority.cmp(&right_priority);
+        entries.sort_unstable_by(|a, b| {
+            let ord = self.prio_for_entry(a).cmp(&self.prio_for_entry(b));
+            if ord != std::cmp::Ordering::Equal {
+                return ord;
             }
 
-            let left = left_entry.name_str();
-            let right = right_entry.name_str();
+            let a_name = a.name_str();
+            let b_name = b.name_str();
 
-            let ord = if case_insensitive {
-                natural_cmp_ascii_ci(left.as_ref(), right.as_ref())
+            let result = if case_insensitive {
+                natural_cmp_ascii_ci(&a_name, &b_name)
             } else {
-                natural_cmp_ascii(left.as_ref(), right.as_ref())
+                natural_cmp_ascii(&a_name, &b_name)
             };
 
-            match sort_order {
-                SortOrder::Ascending => ord,
-                SortOrder::Descending => ord.reverse(),
+            if sort_order == SortOrder::Ascending {
+                result
+            } else {
+                result.reverse()
             }
         });
     }
 
-    fn sort_by_extension(&self, entries: &mut Vec<FileEntry>) {
+    fn sort_by_extension(&self, entries: &mut [FileEntry]) {
         let sort_order = self.sort_config.order;
+        let case_insensitive = self.list.case_insensitive;
 
-        if !self.list.case_insensitive {
-            let mut sort_keys: Vec<(u8, Option<&OsStr>, &OsStr, usize)> =
-                Vec::with_capacity(entries.len());
-
-            for (original_index, file_entry) in entries.iter().enumerate() {
-                let priority = self.prio_for_entry(file_entry);
-                let extension = Path::new(file_entry.name()).extension();
-                sort_keys.push((priority, extension, file_entry.name(), original_index));
+        entries.sort_unstable_by(|a, b| {
+            let ord = self.prio_for_entry(a).cmp(&self.prio_for_entry(b));
+            if ord != std::cmp::Ordering::Equal {
+                return ord;
             }
 
-            sort_keys.sort_by(|left, right| {
-                if left.0 != right.0 {
-                    return left.0.cmp(&right.0);
-                }
+            let a_ext = Path::new(a.name()).extension();
+            let b_ext = Path::new(b.name()).extension();
 
-                match sort_order {
-                    SortOrder::Ascending => left.1.cmp(&right.1).then(left.2.cmp(right.2)),
-                    SortOrder::Descending => right.1.cmp(&left.1).then(right.2.cmp(left.2)),
-                }
-            });
-
-            let mut reordered_entries: Vec<FileEntry> = Vec::with_capacity(entries.len());
-            for (_, _, _, original_index) in sort_keys {
-                reordered_entries.push(entries[original_index].clone());
-            }
-
-            *entries = reordered_entries;
-            return;
-        }
-
-        // Case-insensitive: cache lowered extension + lowered name (no closure borrow of `entries`)
-        let mut sort_keys: Vec<(u8, String, String, usize)> = Vec::with_capacity(entries.len());
-
-        for (original_index, file_entry) in entries.iter().enumerate() {
-            let priority = self.prio_for_entry(file_entry);
-
-            let extension_lossy = Path::new(file_entry.name())
-                .extension()
-                .map(|extension| extension.to_string_lossy())
-                .unwrap_or_default();
-
-            let lowered_extension = if extension_lossy.len() <= 64 {
-                with_lowered_stack(extension_lossy.as_ref(), |lowered| lowered.to_string())
+            let mut result = if case_insensitive {
+                let a_ext_str = a_ext.and_then(|s| s.to_str()).unwrap_or_default();
+                with_lowered_stack(a_ext_str, |a_low| {
+                    with_lowered_stack(
+                        &b_ext.map(|s| s.to_string_lossy()).unwrap_or_default(),
+                        |b_low| a_low.cmp(b_low),
+                    )
+                })
             } else {
-                extension_lossy.to_lowercase()
+                a_ext.cmp(&b_ext)
             };
 
-            let name_lossy = file_entry.name_str();
-            let lowered_name = if name_lossy.len() <= 64 {
-                with_lowered_stack(name_lossy.as_ref(), |lowered| lowered.to_string())
+            if result == std::cmp::Ordering::Equal {
+                result = if case_insensitive {
+                    with_lowered_stack(&a.name_str(), |a_low| {
+                        with_lowered_stack(&b.name_str(), |b_low| a_low.cmp(b_low))
+                    })
+                } else {
+                    a.name().cmp(b.name())
+                };
+            }
+
+            if sort_order == SortOrder::Ascending {
+                result
             } else {
-                name_lossy.to_lowercase()
-            };
-
-            sort_keys.push((priority, lowered_extension, lowered_name, original_index));
-        }
-
-        sort_keys.sort_by(|left, right| {
-            if left.0 != right.0 {
-                return left.0.cmp(&right.0);
-            }
-
-            let extension_ordering = match sort_order {
-                SortOrder::Ascending => left.1.cmp(&right.1),
-                SortOrder::Descending => right.1.cmp(&left.1),
-            };
-
-            if extension_ordering != Ordering::Equal {
-                return extension_ordering;
-            }
-
-            match sort_order {
-                SortOrder::Ascending => left.2.cmp(&right.2),
-                SortOrder::Descending => right.2.cmp(&left.2),
+                result.reverse()
             }
         });
-
-        let mut reordered_entries: Vec<FileEntry> = Vec::with_capacity(entries.len());
-        for (_, _, _, original_index) in sort_keys {
-            reordered_entries.push(entries[original_index].clone());
-        }
-
-        *entries = reordered_entries;
     }
 
-    fn sort_by_filesystem_metadata(
+    fn sort_by_metadata(
         &self,
         directory_path: &Path,
         entries: &mut Vec<FileEntry>,
@@ -379,7 +336,6 @@ impl Formatter {
             })
         });
 
-        // Reorder entries and column with the same permutation (no extra work)
         let old_entries = std::mem::take(entries);
         let old_column = column;
 

@@ -262,7 +262,7 @@ impl<'a> AppState<'a> {
                     .selected_entry()
                     .map(|file_entry| file_entry.name().to_os_string());
 
-                self.request_dir_resort(workers, focus);
+                self.request_dir_sort(workers, focus);
                 self.request_parent_content(workers);
                 self.request_preview(workers);
             }

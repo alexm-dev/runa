@@ -591,14 +591,14 @@ impl<'a> AppState<'a> {
         });
     }
 
-    pub(crate) fn request_dir_resort(&mut self, workers: &Workers, focus: Option<OsString>) {
+    pub(crate) fn request_dir_sort(&mut self, workers: &Workers, focus: Option<OsString>) {
         self.is_loading = true;
         let request_id = self.nav.request_id();
         let sort_config = self.nav.sort_config();
         let list_date_format: Arc<str> = Arc::from(self.config.display().list_date_format());
         let entries = self.nav.entries().to_vec();
 
-        let _ = workers.sort_io_tx().try_send(WorkerTask::ResortDirectory {
+        let _ = workers.sort_io_tx().try_send(WorkerTask::SortDirectory {
             path: self.nav.current_dir().to_path_buf(),
             entries,
             focus,
