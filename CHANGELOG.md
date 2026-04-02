@@ -7,7 +7,9 @@ All the changes made to runa are documented here.
 #### Performance improvement patch. Improves efficiency of file information for the status line and the widget.
 
 ### Added
-- **Thread**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+- **Sorting**: Added entry soring. Can be triggered via the `sort_prefix = ["o"]` keybind.
+- **SortingData**: Added muliple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
+- **MetaData**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
 - **Owner/Group Toggle**: The `[display.info] owner/group` configuration options now determine if the `FileMetadata` populates the owner and group fields.  
     - When disabled, no owner/group file resolution is performed, reducing memory.  
 
