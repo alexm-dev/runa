@@ -174,12 +174,7 @@ impl Formatter {
                 return ord;
             }
 
-            let a_name = a.name_str();
-            let b_name = b.name_str();
-
-            let result = with_lowered_stack(&a_name, |a_lower| {
-                with_lowered_stack(&b_name, |b_lower| a_lower.cmp(b_lower))
-            });
+            let result = a.lowered().cmp(b.lowered());
 
             if sort_order == SortOrder::Ascending {
                 result
@@ -199,13 +194,10 @@ impl Formatter {
                 return ord;
             }
 
-            let a_name = a.name_str();
-            let b_name = b.name_str();
-
             let result = if case_insensitive {
-                natural_cmp_ascii_ci(&a_name, &b_name)
+                natural_cmp_ascii_ci(a.lowered(), b.lowered())
             } else {
-                natural_cmp_ascii(&a_name, &b_name)
+                natural_cmp_ascii(a.lowered(), b.lowered())
             };
 
             if sort_order == SortOrder::Ascending {
@@ -243,9 +235,7 @@ impl Formatter {
 
             if result == std::cmp::Ordering::Equal {
                 result = if case_insensitive {
-                    with_lowered_stack(&a.name_str(), |a_low| {
-                        with_lowered_stack(&b.name_str(), |b_low| a_low.cmp(b_low))
-                    })
+                    a.lowered().cmp(b.lowered())
                 } else {
                     a.name().cmp(b.name())
                 };
@@ -329,9 +319,7 @@ impl Formatter {
                 let a = &entries[left.2];
                 let b = &entries[right.2];
                 m_ord = if self.list.case_insensitive {
-                    with_lowered_stack(&a.name_str(), |la| {
-                        with_lowered_stack(&b.name_str(), |lb| la.cmp(lb))
-                    })
+                    a.lowered().cmp(b.lowered())
                 } else {
                     a.name().cmp(b.name())
                 };
@@ -369,9 +357,7 @@ impl Formatter {
             if (flags & hide) != 0 {
                 if self.list.case_insensitive {
                     if let Some(set) = &self.always_show_lowercase {
-                        return with_lowered_stack(e.name_str().as_ref(), |lowered| {
-                            set.contains(lowered)
-                        });
+                        return set.contains(e.lowered());
                     }
                 } else if let Some(set) = &self.always_show {
                     return set.contains(e.name());
