@@ -818,7 +818,7 @@ mod tests {
             symlink.clone(),
         ];
 
-        let list = DirListOptions {
+        let list_hide = DirListOptions {
             dirs_first: true,
             show_hidden: false,
             show_system: false,
@@ -827,7 +827,7 @@ mod tests {
         };
         let short_config = SortConfig::default();
 
-        let fmt = Formatter::new(list.to_owned(), short_config, Arc::new(HashSet::new()));
+        let fmt = Formatter::new(list_hide, short_config, Arc::new(HashSet::new()));
         fmt.filter_entries(&mut entries);
 
         assert_eq!(entries.len(), 1);
@@ -840,7 +840,15 @@ mod tests {
             symlink.clone(),
         ];
 
-        let fmt = Formatter::new(list, short_config, Arc::new(HashSet::new()));
+        let list_show = DirListOptions {
+            dirs_first: true,
+            show_hidden: true,
+            show_system: true,
+            show_symlink: true,
+            case_insensitive: true,
+        };
+
+        let fmt = Formatter::new(list_show, short_config, Arc::new(HashSet::new()));
         fmt.filter_entries(&mut entries);
         assert_eq!(entries.len(), 4);
         assert!(entries.iter().any(|e| e.name_str() == ".hidden"));
