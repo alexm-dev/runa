@@ -54,6 +54,9 @@ fn meta_sort_epoch() -> u64 {
 
 pub(crate) fn bump_meta_sort_epoch() {
     epoch_atomic().fetch_add(1, Ordering::Relaxed);
+    if let Ok(mut cache) = meta_cache().lock() {
+        cache.clear();
+    }
 }
 
 #[inline]
