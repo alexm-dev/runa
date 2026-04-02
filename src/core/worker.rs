@@ -15,7 +15,7 @@
 
 use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
-use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds};
+use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
 use crate::core::{
     FileEntry, FindResult, Formatter, browse_dir, find, formatter::DirListOptions,
     formatter::safe_read_preview, preview_bat,
@@ -629,6 +629,7 @@ fn start_fileop_worker(
 
             match result {
                 Ok(_) => {
+                    bump_meta_sort_epoch();
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
                         need_reload: true,
                         focus: focus_target,
@@ -681,13 +682,6 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             }
         }
     });
-}
-
-fn _assert_send_sync<T: Send + Sync>() {}
-fn _assert_thread_safety() {
-    _assert_send_sync::<DirListOptions>();
-    _assert_send_sync::<SortConfig>();
-    _assert_send_sync::<crate::core::formatter::Formatter>();
 }
 
 /// Worker threads integration tests.

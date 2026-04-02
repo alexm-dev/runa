@@ -51,6 +51,7 @@ impl NavState {
         entries: &[FileEntry],
         selected_idx => selected: usize,
         shown_indices: &[usize],
+        sort_config: SortConfig,
         sort_column: &Option<Vec<Arc<str>>>,
         markers: &HashSet<PathBuf>,
         filter: &str,
@@ -340,17 +341,9 @@ impl NavState {
         }
     }
 
-    pub(crate) fn sort_config(&self) -> SortConfig {
-        self.sort_config
-    }
-
     pub(crate) fn set_sort_config(&mut self, sort_config: SortConfig) {
         self.sort_config = sort_config;
     }
-
-    // pub(crate) fn reset_sort_config(&mut self) {
-    //     self.sort_config = SortConfig::default();
-    // }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

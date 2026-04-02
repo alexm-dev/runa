@@ -8,7 +8,7 @@
 
 use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::FileEntry;
-use crate::core::metadata::FileType;
+use crate::core::metadata::{FileType, get_or_update_cached_meta};
 use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
 
 use chrono::{DateTime, Local};
@@ -316,43 +316,36 @@ impl Formatter {
 
         for (index, file_entry) in entries.iter().enumerate() {
             let priority = self.prio_for_entry(file_entry);
-
             let full_path = directory_path.join(file_entry.name());
-            let metadata = std::fs::symlink_metadata(&full_path).ok();
 
-            let (metadata_key_value, display): (u128, Arc<str>) = match metadata_sort_field {
-                MetadataSortField::Size => {
-                    let size = metadata.as_ref().filter(|m| m.is_file()).map(|m| m.len());
-                    let key = size.unwrap_or(0) as u128;
-                    let s = format_file_size(size, file_entry.is_dir());
-                    (key, Arc::from(s))
-                }
+            if let Some(cached) = get_or_update_cached_meta(&full_path) {
+                let (metadata_key_value, display): (u128, Arc<str>) = match metadata_sort_field {
+                    MetadataSortField::Size => {
+                        let key = cached.size.unwrap_or(0) as u128;
+                        let s = format_file_size(cached.size, file_entry.is_dir());
+                        (key, Arc::from(s))
+                    }
+                    MetadataSortField::Modified => (
+                        system_time_to_key(cached.modified),
+                        Arc::from(format_file_time(cached.modified, list_date_format)),
+                    ),
+                    MetadataSortField::Created => (
+                        system_time_to_key(cached.created),
+                        Arc::from(format_file_time(cached.created, list_date_format)),
+                    ),
+                    MetadataSortField::Accessed => (
+                        system_time_to_key(cached.accessed),
+                        Arc::from(format_file_time(cached.accessed, list_date_format)),
+                    ),
+                };
 
-                MetadataSortField::Modified => {
-                    let t = metadata.as_ref().and_then(|m| m.modified().ok());
-                    (
-                        system_time_to_key(t),
-                        Arc::from(format_file_time(t, list_date_format)),
-                    )
-                }
-                MetadataSortField::Created => {
-                    let t = metadata.as_ref().and_then(|m| m.created().ok());
-                    (
-                        system_time_to_key(t),
-                        Arc::from(format_file_time(t, list_date_format)),
-                    )
-                }
-                MetadataSortField::Accessed => {
-                    let t = metadata.as_ref().and_then(|m| m.accessed().ok());
-                    (
-                        system_time_to_key(t),
-                        Arc::from(format_file_time(t, list_date_format)),
-                    )
-                }
-            };
-
-            keys.push((priority, metadata_key_value, index));
-            column.push(display);
+                keys.push((priority, metadata_key_value, index));
+                column.push(display);
+            } else {
+                let display = Arc::from("-");
+                keys.push((priority, 0, index));
+                column.push(display);
+            }
         }
 
         let sort_order = self.sort_config.order;
@@ -704,62 +697,62 @@ fn natural_cmp_bytes(a: &[u8], b: &[u8], fold_case: bool) -> Ordering {
     let mut j = 0usize;
 
     while i < a.len() && j < b.len() {
-        let ad = a[i].is_ascii_digit();
-        let bd = b[j].is_ascii_digit();
+        let a_is_digit = a[i].is_ascii_digit();
+        let b_is_digit = b[j].is_ascii_digit();
 
-        if ad && bd {
-            let ia0 = i;
+        if a_is_digit && b_is_digit {
+            let start_i = i;
             while i < a.len() && a[i].is_ascii_digit() {
                 i += 1;
             }
-            let jb0 = j;
+            let start_j = j;
             while j < b.len() && b[j].is_ascii_digit() {
                 j += 1;
             }
 
-            let mut ia = ia0;
-            while ia < i && a[ia] == b'0' {
-                ia += 1;
+            let mut nonzero_i = start_i;
+            while nonzero_i < i && a[nonzero_i] == b'0' {
+                nonzero_i += 1;
             }
-            let mut jb = jb0;
-            while jb < j && b[jb] == b'0' {
-                jb += 1;
-            }
-
-            let lena = i - ia;
-            let lenb = j - jb;
-
-            if lena != lenb {
-                return lena.cmp(&lenb);
+            let mut nonzero_j = start_j;
+            while nonzero_j < j && b[nonzero_j] == b'0' {
+                nonzero_j += 1;
             }
 
-            for k in 0..lena {
-                let ca = a[ia + k];
-                let cb = b[jb + k];
-                if ca != cb {
-                    return ca.cmp(&cb);
+            let len_i = i - nonzero_i;
+            let len_j = j - nonzero_j;
+
+            if len_i != len_j {
+                return len_i.cmp(&len_j);
+            }
+
+            for digit_offset in 0..len_i {
+                let digit_i = a[nonzero_i + digit_offset];
+                let digit_j = b[nonzero_j + digit_offset];
+                if digit_i != digit_j {
+                    return digit_i.cmp(&digit_j);
                 }
             }
 
-            let za = ia - ia0;
-            let zb = jb - jb0;
-            if za != zb {
-                return za.cmp(&zb);
+            let leading_zeros_i = nonzero_i - start_i;
+            let leading_zeros_j = nonzero_j - start_j;
+            if leading_zeros_i != leading_zeros_j {
+                return leading_zeros_i.cmp(&leading_zeros_j);
             }
 
             continue;
         }
 
-        let mut ca = a[i];
-        let mut cb = b[j];
+        let mut byte_i = a[i];
+        let mut byte_j = b[j];
 
-        if fold_case && (ca.is_ascii_uppercase() || cb.is_ascii_uppercase()) {
-            ca = ca.to_ascii_lowercase();
-            cb = cb.to_ascii_lowercase();
+        if fold_case && (byte_i.is_ascii_uppercase() || byte_j.is_ascii_uppercase()) {
+            byte_i = byte_i.to_ascii_lowercase();
+            byte_j = byte_j.to_ascii_lowercase();
         }
 
-        if ca != cb {
-            return ca.cmp(&cb);
+        if byte_i != byte_j {
+            return byte_i.cmp(&byte_j);
         }
 
         i += 1;
