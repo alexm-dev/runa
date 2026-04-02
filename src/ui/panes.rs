@@ -564,7 +564,7 @@ fn make_entry_row<'a>(
         .saturating_sub(reserve)
         .saturating_sub(used_w)
         .max(1);
-    let name = truncate_owned(name_raw, name_budget);
+    let name = truncate_owned(name_raw.as_ref(), name_budget);
 
     used_w += UnicodeWidthStr::width(name.as_str());
 
