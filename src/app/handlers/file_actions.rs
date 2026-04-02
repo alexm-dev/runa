@@ -79,6 +79,7 @@ impl<'a> AppState<'a> {
             let path = self.nav.current_dir().join(entry.name());
             match open_in_editor(self.config.editor(), &path) {
                 Ok(_) => {
+                    self.request_dir_load(workers, Some(entry.name().to_os_string()));
                     self.request_preview(workers);
                     KeypressResult::OpenedEditor
                 }
