@@ -257,6 +257,7 @@ impl Formatter {
         sort_date_format: &str,
     ) -> Vec<Arc<str>> {
         use crate::core::formatter::{format_file_size, format_file_time};
+        let now = Local::now();
 
         let mut keys: Vec<(u8, u128, usize)> = Vec::with_capacity(entries.len());
         let mut column: Vec<Arc<str>> = Vec::with_capacity(entries.len());
@@ -279,15 +280,15 @@ impl Formatter {
                     }
                     MetadataSortField::Modified => (
                         system_time_to_key(cached.modified),
-                        format_file_time(cached.modified, sort_date_format),
+                        format_file_time(cached.modified, sort_date_format, now),
                     ),
                     MetadataSortField::Created => (
                         system_time_to_key(cached.created),
-                        format_file_time(cached.created, sort_date_format),
+                        format_file_time(cached.created, sort_date_format, now),
                     ),
                     MetadataSortField::Accessed => (
                         system_time_to_key(cached.accessed),
-                        format_file_time(cached.accessed, sort_date_format),
+                        format_file_time(cached.accessed, sort_date_format, now),
                     ),
                 };
 
@@ -454,13 +455,27 @@ pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
 }
 
 /// Formats the file modification time into a human-readable string.
-pub(crate) fn format_file_time(time: Option<SystemTime>, format: &str) -> String {
+pub(crate) fn format_file_time(
+    time: Option<SystemTime>,
+    format: &str,
+    now: DateTime<Local>,
+) -> String {
     let Some(t) = time else {
         return "-".to_string();
     };
     let dt: DateTime<Local> = DateTime::from(t);
 
-    let formatted = dt.format(format).to_string();
+    let six_months = chrono::Duration::try_days(182).unwrap_or_default();
+    let is_old = (now - dt).abs() > six_months;
+    let format_has_year = format.contains("%Y") || format.contains("%y");
+
+    let final_format = if is_old && !format_has_year {
+        "%b %e  %Y"
+    } else {
+        format
+    };
+
+    let formatted = dt.format(final_format).to_string();
     if formatted.is_empty() {
         return dt.format("%Y-%m-%d %H:%M").to_string();
     }

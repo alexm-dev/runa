@@ -8,19 +8,22 @@
 //! The main entry point is [FileMetadata::new], which takes a
 //! file path and returns a populated [FileMetadata] instance.
 
+use crate::config::display::ShowInfoOptions;
 use crate::core::formatter::{
     format_attributes, format_file_size, format_file_time, format_file_type,
 };
 
-use crate::config::display::ShowInfoOptions;
+use chrono::{DateTime, Local};
 
 use std::collections::HashMap;
 use std::fs::symlink_metadata;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{
+    Mutex, OnceLock,
+    atomic::{AtomicU64, Ordering},
+};
 use std::time::SystemTime;
 
 #[cfg(windows)]
@@ -48,6 +51,11 @@ fn epoch_atomic() -> &'static AtomicU64 {
 }
 
 #[inline]
+fn meta_cache() -> &'static Mutex<HashMap<PathBuf, CachedMetaKey>> {
+    META_SORT_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+#[inline]
 fn meta_sort_epoch() -> u64 {
     epoch_atomic().load(Ordering::Relaxed)
 }
@@ -57,11 +65,6 @@ pub(crate) fn bump_meta_sort_epoch() {
     if let Ok(mut cache) = meta_cache().lock() {
         cache.clear();
     }
-}
-
-#[inline]
-fn meta_cache() -> &'static Mutex<HashMap<PathBuf, CachedMetaKey>> {
-    META_SORT_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 pub(crate) fn get_or_update_cached_meta(path: &Path) -> Option<CachedMetaKey> {
@@ -176,18 +179,18 @@ impl FileMetadata {
     }
 
     #[inline]
-    pub(crate) fn modified(&self, fmt: &str) -> String {
-        format_file_time(self.modified, fmt)
+    pub(crate) fn modified(&self, fmt: &str, now: DateTime<Local>) -> String {
+        format_file_time(self.modified, fmt, now)
     }
 
     #[inline]
-    pub(crate) fn created(&self, fmt: &str) -> String {
-        format_file_time(self.created, fmt)
+    pub(crate) fn created(&self, fmt: &str, now: DateTime<Local>) -> String {
+        format_file_time(self.created, fmt, now)
     }
 
     #[inline]
-    pub(crate) fn accessed(&self, fmt: &str) -> String {
-        format_file_time(self.accessed, fmt)
+    pub(crate) fn accessed(&self, fmt: &str, now: DateTime<Local>) -> String {
+        format_file_time(self.accessed, fmt, now)
     }
 
     #[inline]
@@ -229,13 +232,14 @@ impl FileMetadataCache {
         needs: &MetadataNeeds,
         #[cfg(unix)] ug_cache: &mut unix_meta::UserGroupCache,
     ) -> Self {
+        let now = Local::now();
         Self {
             name:       if needs.name { Some(Arc::from(meta.name())) } else { None },
             perms:      if needs.perms { Some(Arc::from(meta.perms())) } else { None },
             size:       if needs.size { Some(Arc::from(meta.size())) } else { None },
-            modified:   if needs.modified { Some(Arc::from(meta.modified(date_format))) } else { None },
-            created:    if needs.created { Some(Arc::from(meta.created(date_format))) } else { None },
-            accessed:   if needs.accessed { Some(Arc::from(meta.accessed(date_format))) } else { None },
+            modified:   if needs.modified { Some(Arc::from(meta.modified(date_format, now))) } else { None },
+            created:    if needs.created { Some(Arc::from(meta.created(date_format, now))) } else { None },
+            accessed:   if needs.accessed { Some(Arc::from(meta.accessed(date_format, now))) } else { None },
             file_type:  if needs.file_type { Some(Arc::from(meta.file_type())) } else { None },
             #[cfg(unix)]
             owner:      if needs.owner { Some(ug_cache.resolve_user(meta.uid())) } else { None },
@@ -415,6 +419,7 @@ mod tests {
 
     #[test]
     fn file_metada_time_formatting_none() {
+        let now = Local::now();
         let info = FileMetadata {
             path: PathBuf::from("dummy"),
             size: None,
@@ -428,9 +433,9 @@ mod tests {
         };
 
         let fmt = "%Y-%m-%d %H:%M";
-        assert_eq!(info.modified(fmt), format_file_time(None, fmt));
-        assert_eq!(info.created(fmt), format_file_time(None, fmt));
-        assert_eq!(info.accessed(fmt), format_file_time(None, fmt));
+        assert_eq!(info.modified(fmt, now), format_file_time(None, fmt, now));
+        assert_eq!(info.created(fmt, now), format_file_time(None, fmt, now));
+        assert_eq!(info.accessed(fmt, now), format_file_time(None, fmt, now));
     }
 
     #[test]
