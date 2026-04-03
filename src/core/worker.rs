@@ -25,6 +25,7 @@ use crate::utils::{
     rename_with_fallback,
 };
 
+use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 
 use std::collections::HashSet;
@@ -650,6 +651,7 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
         let mut ug_cache = crate::core::metadata::unix_meta::UserGroupCache::new();
 
         while let Ok(task) = task_rx.recv() {
+            let now = Local::now();
             if let WorkerTask::GetFileMetadata {
                 path,
                 request_id,
@@ -663,6 +665,7 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                             &meta,
                             &date_format,
                             &needs,
+                            now,
                             #[cfg(unix)]
                             &mut ug_cache,
                         );

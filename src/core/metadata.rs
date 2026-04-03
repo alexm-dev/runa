@@ -10,7 +10,7 @@
 
 use crate::config::display::ShowInfoOptions;
 use crate::core::formatter::{
-    format_attributes, format_file_size, format_file_time, format_file_type,
+    TimeFormatCtx, format_attributes, format_file_size, format_file_time, format_file_type,
 };
 
 use chrono::{DateTime, Local};
@@ -179,18 +179,18 @@ impl FileMetadata {
     }
 
     #[inline]
-    pub(crate) fn modified(&self, fmt: &str, now: DateTime<Local>) -> String {
-        format_file_time(self.modified, fmt, now)
+    pub(crate) fn modified(&self, ctx: &TimeFormatCtx) -> String {
+        format_file_time(self.modified, ctx)
     }
 
     #[inline]
-    pub(crate) fn created(&self, fmt: &str, now: DateTime<Local>) -> String {
-        format_file_time(self.created, fmt, now)
+    pub(crate) fn created(&self, ctx: &TimeFormatCtx) -> String {
+        format_file_time(self.created, ctx)
     }
 
     #[inline]
-    pub(crate) fn accessed(&self, fmt: &str, now: DateTime<Local>) -> String {
-        format_file_time(self.accessed, fmt, now)
+    pub(crate) fn accessed(&self, ctx: &TimeFormatCtx) -> String {
+        format_file_time(self.accessed, ctx)
     }
 
     #[inline]
@@ -230,16 +230,18 @@ impl FileMetadataCache {
         meta: &FileMetadata,
         date_format: &str,
         needs: &MetadataNeeds,
+        now: DateTime<Local>,
         #[cfg(unix)] ug_cache: &mut unix_meta::UserGroupCache,
     ) -> Self {
-        let now = Local::now();
+        let ctx = TimeFormatCtx::new(date_format, now);
+
         Self {
             name:       if needs.name { Some(Arc::from(meta.name())) } else { None },
             perms:      if needs.perms { Some(Arc::from(meta.perms())) } else { None },
             size:       if needs.size { Some(Arc::from(meta.size())) } else { None },
-            modified:   if needs.modified { Some(Arc::from(meta.modified(date_format, now))) } else { None },
-            created:    if needs.created { Some(Arc::from(meta.created(date_format, now))) } else { None },
-            accessed:   if needs.accessed { Some(Arc::from(meta.accessed(date_format, now))) } else { None },
+            modified:   if needs.modified { Some(Arc::from(meta.modified(&ctx))) } else { None },
+            created:    if needs.created { Some(Arc::from(meta.created(&ctx))) } else { None },
+            accessed:   if needs.accessed { Some(Arc::from(meta.accessed(&ctx))) } else { None },
             file_type:  if needs.file_type { Some(Arc::from(meta.file_type())) } else { None },
             #[cfg(unix)]
             owner:      if needs.owner { Some(ug_cache.resolve_user(meta.uid())) } else { None },
@@ -420,6 +422,8 @@ mod tests {
     #[test]
     fn file_metada_time_formatting_none() {
         let now = Local::now();
+        let fmt = "%Y-%m-%d %H:%M";
+        let ctx = TimeFormatCtx::new(fmt, now);
         let info = FileMetadata {
             path: PathBuf::from("dummy"),
             size: None,
@@ -432,10 +436,9 @@ mod tests {
             unix_meta: None,
         };
 
-        let fmt = "%Y-%m-%d %H:%M";
-        assert_eq!(info.modified(fmt, now), format_file_time(None, fmt, now));
-        assert_eq!(info.created(fmt, now), format_file_time(None, fmt, now));
-        assert_eq!(info.accessed(fmt, now), format_file_time(None, fmt, now));
+        assert_eq!(info.modified(&ctx), format_file_time(None, &ctx));
+        assert_eq!(info.created(&ctx), format_file_time(None, &ctx),);
+        assert_eq!(info.accessed(&ctx), format_file_time(None, &ctx));
     }
 
     #[test]

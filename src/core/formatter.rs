@@ -258,6 +258,7 @@ impl Formatter {
     ) -> Vec<Arc<str>> {
         use crate::core::formatter::{format_file_size, format_file_time};
         let now = Local::now();
+        let ctx = TimeFormatCtx::new(sort_date_format, now);
 
         let mut keys: Vec<(u8, u128, usize)> = Vec::with_capacity(entries.len());
         let mut column: Vec<Arc<str>> = Vec::with_capacity(entries.len());
@@ -280,15 +281,15 @@ impl Formatter {
                     }
                     MetadataSortField::Modified => (
                         system_time_to_key(cached.modified),
-                        format_file_time(cached.modified, sort_date_format, now),
+                        format_file_time(cached.modified, &ctx),
                     ),
                     MetadataSortField::Created => (
                         system_time_to_key(cached.created),
-                        format_file_time(cached.created, sort_date_format, now),
+                        format_file_time(cached.created, &ctx),
                     ),
                     MetadataSortField::Accessed => (
                         system_time_to_key(cached.accessed),
-                        format_file_time(cached.accessed, sort_date_format, now),
+                        format_file_time(cached.accessed, &ctx),
                     ),
                 };
 
@@ -367,6 +368,30 @@ impl Formatter {
             }
             true
         });
+    }
+}
+
+/// Context for time formatting, holding the format string, current time,
+/// and precomputed values for determining how to format timestamps based on their age.
+pub(crate) struct TimeFormatCtx<'a> {
+    fmt: &'a str,
+    now: DateTime<Local>,
+    six_months: chrono::Duration,
+    has_year: bool,
+}
+
+impl<'a> TimeFormatCtx<'a> {
+    #[inline]
+    pub(crate) fn new(fmt: &'a str, now: DateTime<Local>) -> Self {
+        Self {
+            fmt,
+            now,
+            six_months: chrono::Duration::try_days(182).unwrap_or_default(),
+            has_year: fmt
+                .as_bytes()
+                .windows(2)
+                .any(|w| matches!(w, b"%Y" | b"%y")),
+        }
     }
 }
 
@@ -454,25 +479,20 @@ pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
     }
 }
 
-/// Formats the file modification time into a human-readable string.
-pub(crate) fn format_file_time(
-    time: Option<SystemTime>,
-    format: &str,
-    now: DateTime<Local>,
-) -> String {
+/// Formats the file time (modified, created, or accessed) into a human-readable string based on the
+/// provided format and context.
+/// The context allows for dynamic formatting based on how old the timestamp is compared to the
+/// current time.
+pub(crate) fn format_file_time(time: Option<SystemTime>, ctx: &TimeFormatCtx) -> String {
     let Some(t) = time else {
         return "-".to_string();
     };
+
     let dt: DateTime<Local> = DateTime::from(t);
-
-    let six_months = chrono::Duration::try_days(182).unwrap_or_default();
-    let is_old = (now - dt).abs() > six_months;
-    let format_has_year = format.contains("%Y") || format.contains("%y");
-
-    let final_format = if is_old && !format_has_year {
+    let final_format = if !ctx.has_year && (ctx.now - dt).abs() > ctx.six_months {
         "%b %e  %Y"
     } else {
-        format
+        ctx.fmt
     };
 
     let formatted = dt.format(final_format).to_string();
