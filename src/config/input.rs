@@ -47,6 +47,13 @@ pub(crate) struct Keys {
     scroll_up: Vec<String>,
     scroll_down: Vec<String>,
     sort: Vec<String>,
+    sort_by_name: Vec<String>,
+    sort_by_natural: Vec<String>,
+    sort_by_extension: Vec<String>,
+    sort_by_size: Vec<String>,
+    sort_by_modified: Vec<String>,
+    sort_by_accessed: Vec<String>,
+    sort_by_created: Vec<String>,
 }
 
 crate::key_accessor!(
@@ -86,6 +93,13 @@ crate::key_accessor!(
     scroll_up,
     scroll_down,
     sort,
+    sort_by_name,
+    sort_by_natural,
+    sort_by_extension,
+    sort_by_size,
+    sort_by_modified,
+    sort_by_accessed,
+    sort_by_created,
 );
 
 /// Default input configuration options
@@ -138,6 +152,13 @@ impl Default for Keys {
             scroll_down: vec!["<c-u>".into()],
 
             sort: vec!["o".into()],
+            sort_by_name: vec!["n".into()],
+            sort_by_natural: vec!["N".into()],
+            sort_by_extension: vec!["e".into()],
+            sort_by_size: vec!["s".into()],
+            sort_by_modified: vec!["m".into()],
+            sort_by_accessed: vec!["a".into()],
+            sort_by_created: vec!["c".into()],
         }
     }
 }

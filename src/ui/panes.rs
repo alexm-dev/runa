@@ -624,10 +624,7 @@ fn make_entry_row<'a>(
             build_right_field(&col, total_w, used_w, col_area_w)
         };
 
-        spans.push(Span::styled(
-            right_text,
-            row_style.add_modifier(Modifier::DIM),
-        ));
+        spans.push(Span::styled(right_text, row_style));
     }
 
     ListItem::new(Line::from(spans)).style(row_style)

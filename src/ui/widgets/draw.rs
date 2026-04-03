@@ -777,26 +777,31 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
 
     let is_sort_prefix = app.actions().prefix_recognizer().is_sort_state();
     if is_sort_prefix {
-        fn mk_line(items: &[(&str, &str)], accent_style: Style) -> Line<'static> {
+        fn mk_line(items: &[(&[String], &str)], accent_style: Style) -> Line<'static> {
             let mut spans: Vec<Span<'static>> = Vec::with_capacity(items.len() * 4);
-            for (i, (key, desc)) in items.iter().enumerate() {
+            for (i, (keys, desc)) in items.iter().enumerate() {
                 if i > 0 {
                     spans.push(Span::raw("    "));
                 }
-                spans.push(Span::styled(format!("[{}]", key), accent_style));
+                let primary_key = keys.first().map(|s| s.as_str()).unwrap_or("?");
+                spans.push(Span::styled(format!("[{}]", primary_key), accent_style));
                 spans.push(Span::raw(" "));
                 spans.push(Span::raw((*desc).to_string()));
             }
             Line::from(spans)
         }
 
-        let row1: [(&str, &str); 4] = [
-            ("n", "Name"),
-            ("m", "Modified"),
-            ("c", "Created"),
-            ("a", "Accessed"),
+        let row1: [(&[String], &str); 4] = [
+            (keys.sort_by_name(), "Name"),
+            (keys.sort_by_modified(), "Modified"),
+            (keys.sort_by_created(), "Created"),
+            (keys.sort_by_accessed(), "Accessed"),
         ];
-        let row2: [(&str, &str); 3] = [("s", "Size"), ("e", "Ext"), ("z", "Natural")];
+        let row2: [(&[String], &str); 3] = [
+            (keys.sort_by_size(), "Size"),
+            (keys.sort_by_extension(), "Ext"),
+            (keys.sort_by_natural(), "Natural"),
+        ];
 
         let lines: Vec<Line<'static>> =
             vec![mk_line(&row1, accent_style), mk_line(&row2, accent_style)];
@@ -964,6 +969,11 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         out.join(", ")
     };
 
+    let go_to_prefix = keys.prefix_go_to();
+    let sort_prefix = keys.sort();
+    let go_leader = go_to_prefix.first().map(|s| s.as_str()).unwrap_or("g");
+    let sort_leader = sort_prefix.first().map(|s| s.as_str()).unwrap_or("o");
+
     let fmt_prefix =
         |leader: &str, list: &[String]| -> String { format!("{leader} + {}", fmt_keys(list)) };
 
@@ -1022,13 +1032,27 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
             ],
         ),
         (
-            "Prefix",
+            "Go To",
             vec![
-                (fmt_prefix("g", keys.go_to_top()), "Go to top"),
-                (fmt_prefix("g", keys.go_to_home()), "Go to home"),
-                (fmt_prefix("g", keys.go_to_path()), "Go to path"),
+                (fmt_keys(go_to_prefix), "Go to prefix"),
+                (fmt_prefix(go_leader, keys.go_to_top()), "Go to top"),
+                (fmt_prefix(go_leader, keys.go_to_home()), "Go to home"),
+                (fmt_prefix(go_leader, keys.go_to_path()), "Go to path"),
             ],
         ),
+        (
+            "Sort",
+            vec![
+                (fmt_keys(sort_prefix), "Sort prefix"),
+                (fmt_prefix(sort_leader, keys.sort_by_name()), "Sort by name"),
+                (fmt_prefix(sort_leader, keys.sort_by_natural()), "Sort by natural order"),
+                (fmt_prefix(sort_leader, keys.sort_by_extension()), "Sort by extension"),
+                (fmt_prefix(sort_leader, keys.sort_by_size()), "Sort by size"),
+                (fmt_prefix(sort_leader, keys.sort_by_modified()), "Sort by modified time"),
+                (fmt_prefix(sort_leader, keys.sort_by_created()), "Sort by created time"),
+                (fmt_prefix(sort_leader, keys.sort_by_accessed()), "Sort by accessed time"),
+            ]
+        )
     ];
 
     let key_w: usize = sections

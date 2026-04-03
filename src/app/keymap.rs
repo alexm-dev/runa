@@ -126,6 +126,12 @@ impl Keymap {
             };
         }
 
+        macro_rules! bind_sort {
+            ($keys:expr, $mode:expr) => {
+                bind_prefix($keys, PrefixCommand::Sort($mode), &mut sortmap);
+            };
+        }
+
         use NavAction as N;
         use FileAction as F;
         use SystemAction as S;
@@ -175,13 +181,13 @@ impl Keymap {
         bind_prefix!(keys.go_to_home(), Action::Nav(N::GoToHome), PrefixCommand::Nav(N::GoToHome));
         bind_prefix!(keys.go_to_path(), Action::Nav(N::GoToPath), PrefixCommand::Nav(N::GoToPath));
 
-        sortmap.insert(KeyCode::Char('n'), PrefixCommand::Sort(SortMode::Name));
-        sortmap.insert(KeyCode::Char('m'), PrefixCommand::Sort(SortMode::Modified));
-        sortmap.insert(KeyCode::Char('c'), PrefixCommand::Sort(SortMode::Created));
-        sortmap.insert(KeyCode::Char('a'), PrefixCommand::Sort(SortMode::Accessed));
-        sortmap.insert(KeyCode::Char('s'), PrefixCommand::Sort(SortMode::Size));
-        sortmap.insert(KeyCode::Char('e'), PrefixCommand::Sort(SortMode::Extension));
-        sortmap.insert(KeyCode::Char('z'), PrefixCommand::Sort(SortMode::Natural));
+        bind_sort!(keys.sort_by_name(),         SortMode::Name);
+        bind_sort!(keys.sort_by_natural(),      SortMode::Natural);
+        bind_sort!(keys.sort_by_modified(),     SortMode::Modified);
+        bind_sort!(keys.sort_by_created(),      SortMode::Created);
+        bind_sort!(keys.sort_by_accessed(),     SortMode::Accessed);
+        bind_sort!(keys.sort_by_size(),         SortMode::Size);
+        bind_sort!(keys.sort_by_extension(),    SortMode::Extension);
 
         Keymap { map, gmap, sortmap, g_prefix, sort_prefix }
     }
@@ -426,14 +432,14 @@ fn bind(key_list: &[String], action: Action, map: &mut HashMap<Key, Action>) {
 fn bind_prefix(
     key_list: &[String],
     prefix: PrefixCommand,
-    gmap: &mut HashMap<KeyCode, PrefixCommand>,
+    map: &mut HashMap<KeyCode, PrefixCommand>,
 ) {
     for k in key_list {
         if let Some(key) = parse_key(k)
             && key.modifiers.is_empty()
             && let KeyCode::Char(c) = key.code
         {
-            gmap.insert(KeyCode::Char(c), prefix);
+            map.insert(KeyCode::Char(c), prefix);
         }
     }
 }
