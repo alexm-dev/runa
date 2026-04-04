@@ -353,7 +353,7 @@ position = "center"
 #   - List:             [width, height]    # **cells (columns x rows)**, e.g., [60, 12]
 #   - Table/object:     { w = 60, h = 12 } # **cells**
 # size arrays/tables are now always **cell-based** (not percent-based!)
-size = "medium"
+size = "small"
 
 # Confirmation dialog size (for confirmations like deleting files):
 #   - Preset string, list, or table, just like "size" above.

@@ -32,24 +32,21 @@ pub(crate) fn handle_args() -> CliAction {
     if first_arg.starts_with("-") {
         return match first_arg.as_str() {
             "--version" | "-v" => {
-                if args.len() > 2 {
-                    eprintln!("[runa] Error: --version does not take arguments.");
+                if check_no_extra_args(first_arg, &args) {
                     return CliAction::Exit;
                 }
                 print_version();
                 CliAction::Exit
             }
             "-h" | "--help" => {
-                if args.len() > 2 {
-                    eprintln!("[runa] Error: --help does not take arguments.");
+                if check_no_extra_args(first_arg, &args) {
                     return CliAction::Exit;
                 }
                 print_help();
                 CliAction::Exit
             }
             "--init" => {
-                if args.len() > 2 {
-                    eprintln!("[runa] Error: --init does not take arguments.");
+                if check_no_extra_args(first_arg, &args) {
                     return CliAction::Exit;
                 }
                 if let Err(e) = Config::generate_default(&config_path, true) {
@@ -58,8 +55,7 @@ pub(crate) fn handle_args() -> CliAction {
                 CliAction::Exit
             }
             "--init-full" => {
-                if args.len() > 2 {
-                    eprintln!("[runa] Error: --init-full does not take arguments.");
+                if check_no_extra_args(first_arg, &args) {
                     return CliAction::Exit;
                 }
                 if let Err(e) = Config::generate_default(&config_path, false) {
@@ -155,7 +151,7 @@ ENVIRONMENT:
     );
 }
 
-pub(crate) fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
+fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
     let config = CONFIG_HELP;
     let indent = "    ";
 
@@ -246,4 +242,13 @@ TIP:
     handle.flush()?;
 
     Ok(())
+}
+
+fn check_no_extra_args(flag: &str, args: &[String]) -> bool {
+    if args.len() > 2 {
+        eprintln!("[runa] Error: {} does not take arguments.", flag);
+        true
+    } else {
+        false
+    }
 }
