@@ -7,18 +7,21 @@ All the changes made to runa are documented here.
 #### Sorting feature update and performance improvements.
 
 ### Added
-- **Sorting**: Added directory entry soring. Can be triggered via the `sort = ["o"]` keybind. 
-    - Added a new sort worker thread to handle resorts reducing load of the inital `nav_io` worker by a lot.
-    - Added muliple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
-- **Metadata**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+- **Sorting**: Added directory entry sorting. Can be triggered via the `sort = ["o"]` key-bind. 
+    - Added a new sort worker thread to handle resorts reducing load of the initial `nav_io` worker by a lot.
+    - Added multiple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
+- **Metadata worker**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
 - **Cli config help** Added a new way of handling the Cli documentation helper by enabling section based key prints as well as the full documentation.
-- **Owner/Group Toggle**: The `[display.info] owner/group` configuration options now determine if the `FileMetadata` populates the owner and group fields.  
-    - When disabled, no owner/group file resolution is performed, reducing memory.  
+- **FileInfo Toggles**: The `[display.info]` configuration options now determine if the file metadata is computed, not just drawn to UI.  
+    - When disabled, no metadata is resolved for this field, reducing memory.
+
+### Fixed
+- **Default configuration**: Fixed the `[theme.selection]` defaults being apply to the wrong color-pair. Now correctly applies to the `bg` of the selection.
 
 ### Changed
 - **Default configuration**: `rn --init-full` will now generate the full documented runa configuration toml.
-This helps reducing maintainance of adjusting each configuration file after changes.
-- **Widget size**: The default widget size is not set to `small`.
+This helps reducing maintenance of adjusting each configuration file after changes.
+- **Widget size**: The default widget size is now set to `small`.
 - **Initial start**: Removed the initial start notification suggesting to run `rn --init` if no `runa.toml` was generated or created before.
 - **FileInfo Renamed**: `FileInfo`, its `file_info.rs` module, and all its references have been to renamed to `FileMetadata` and `metadata` to accurately reflect its purpose better.
 - **MetadataState**: Added a new `app/metadata.rs` sub-module to hold the file metadata handling for `AppState` synchronization.
@@ -32,11 +35,12 @@ gh attestation verify --repo alexm-dev/runa <file_name>
 
 ### Internal
 - **Debloat**: Reworked the `config::load::default_path` and `config::load::load` functions to safe on system calls.
-- **Tests**: Added new formatting tests to `core/formatter.rs`.
-- **Tests**: Added new tests to `core/metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
+- **Tests**: 
+    - Added new formatting tests to `core/formatter.rs`.
+    - Added new tests to `core/metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
     - `FileEntry` now stores the `lowered` data of a entry name to cache it and not recompute it on every sort.
-    - Added `dashmap` to `CachedMetaKey` for faster and concurrent lookups without mutex locks resulting in faster sorting.
+    - Added `DashMap` to `CachedMetaKey` for faster and concurrent lookups without mutex locks resulting in faster sorting.
     - Removed `CachedFileInfo` to avoid duplication of file data. Replaced with `FileMetadataCache` that caches an file metadata as `Arc<str>` for efficient shared access and lazy loading.
     - Added `selected_indices` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
