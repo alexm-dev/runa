@@ -108,31 +108,12 @@ impl Config {
             })
     }
 
-    // Getters
-
-    #[inline]
-    pub(crate) fn general(&self) -> &InternalGeneral {
-        &self.general
-    }
-
-    #[inline]
-    pub(crate) fn display(&self) -> &Display {
-        &self.display
-    }
-
-    #[inline]
-    pub(crate) fn theme(&self) -> &Theme {
-        &self.theme
-    }
-
-    #[inline]
-    pub(crate) fn editor(&self) -> &Editor {
-        &self.editor
-    }
-
-    #[inline]
-    pub(crate) fn keys(&self) -> &Keys {
-        &self.keys
+    crate::getters! {
+        general: &InternalGeneral,
+        display: &Display,
+        theme: &Theme,
+        editor: &Editor,
+        keys: &Keys,
     }
 
     pub(crate) fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
