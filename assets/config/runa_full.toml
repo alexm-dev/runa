@@ -6,6 +6,7 @@
 # ===========================
 #      GENERAL SETTINGS
 # ===========================
+
 [general]
 # Sort directories before files
 dirs_first = true
@@ -42,6 +43,7 @@ move_to_trash = true
 # Tab placments are determined by the index of the vector. Meaning ['tab0', 'tab1', 'tab2'].
 # Note: Use single quotes (' ') for paths to avoid backslash escaping issues on Windows.
 # If you use double quotes (" "), remember to escape your backslashes (e.g. "C:\\Path\\") on Windows.
+#
 # tabs = ['cwd', '/path/', '/path/', '..']
 
 [display]
@@ -198,6 +200,7 @@ tabs = "header"
 # ===========================
 #           THEME
 # ===========================
+
 [theme]
 # The name of the preset themes included in runa.
 # Choose a preset, or leave as "default" or omit.
@@ -458,8 +461,8 @@ group.bg = "default"
 #           EDITOR
 # ===========================
 
-# [editor]
-# cmd = "nvim"
+[editor]
+cmd = "nvim"
 
 # ===========================
 #          KEYBINDS
