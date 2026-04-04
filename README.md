@@ -110,7 +110,7 @@ After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to yo
 > All releases starting with v0.5.11 are **immutable**.  
 > Each release includes a `Release Attestation` json file that verifies that the release is immutable.
 > 
-> You can verify the integrity of the release archives using the attestation verification with GitHub CLI:
+> You can verify the integrity of the release archives using the attestation verification with the GitHub CLI:
 >
 > ```bash
 > gh attestation verify --repo alexm-dev/runa <file_name>
