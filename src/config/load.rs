@@ -88,12 +88,6 @@ impl Config {
         let path = Self::default_path();
         let content = match fs::read_to_string(&path) {
             Ok(c) => c,
-            Err(e) if e.kind() == io::ErrorKind::NotFound => {
-                eprintln!(
-                    "No runa.toml config file found. Using internal defaults. (Tip: run 'rn --init')"
-                );
-                return Self::default();
-            }
             Err(_) => return Self::default(),
         };
 

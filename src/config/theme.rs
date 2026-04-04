@@ -17,16 +17,6 @@ use std::sync::LazyLock;
 /// Theme configuration options
 /// Holds all color and style options for the application.
 /// Also holds the internal themes and the logic to apply user overrides on top of them.
-/// # Examples
-/// ```toml
-/// [theme]
-/// name = "gruvbox-dark"
-/// [theme.entry]
-/// fg = "white"
-/// bg = "black"
-/// [theme.selection]
-/// bg = "grey"
-/// ```
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub(crate) struct Theme {
