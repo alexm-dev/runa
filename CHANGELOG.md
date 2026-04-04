@@ -28,7 +28,7 @@ This helps reducing maintainance of adjusting each configuration file after chan
 It is now possible to verify the integrity and origin of all downloaded assets:
 
 ```bash
-gh attestation verify --repo alexm-dev/runa <archive_file_name>
+gh attestation verify --repo alexm-dev/runa <file_name>
 ```
 
 ### Internal
