@@ -4,16 +4,23 @@ All the changes made to runa are documented here.
 
 ## [0.10.0] - UNRELEASED
 
-#### Performance improvement patch. Improves efficiency of file information for the status line and the widget.
+#### Sorting feature update as well as performance improvements.
 
 ### Added
-- **Sorting**: Added entry soring. Can be triggered via the `sort_prefix = ["o"]` keybind.
+- **Sorting**: Added directory entry soring. Can be triggered via the `sort = ["o"]` keybind. 
+Added a new sort worker thread to handle resorts reducing load of the inital `nav_io` worker by a lot.
+Re-sorts or more specific, inital sorts, are much quicker this way.
 - **SortingData**: Added muliple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
 - **MetaData**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+- **Cli config help** Added a new way of handling the Cli documentation helper by enabling section based key prints as well as the full documentation.
 - **Owner/Group Toggle**: The `[display.info] owner/group` configuration options now determine if the `FileMetadata` populates the owner and group fields.  
     - When disabled, no owner/group file resolution is performed, reducing memory.  
 
 ### Changed
+- **Default**: `runa.toml`: `rn --init-full` will now generate the full documented runa configuration toml.
+This helps reducing maintainance of adjusting each configuration file after changes.
+- **Widget size**: The default widget size is not set to `small`.
+- **Initial start**: Removed the initial start notification suggesting to run `rn --init` if no `runa.toml` was generated or created before.
 - **FileInfo Renamed**: `FileInfo`, its `file_info.rs` module, and all its references have been to renamed to `FileMetadata` and `metadata` to accurately reflect its purpose better.
 - **MetadataState**: Added a new `app/metadata.rs` sub-module to hold the file metadata handling for `AppState` synchronization.
 - **Archive Attestation**: All release archives are now attested via the release workflow.
@@ -21,12 +28,15 @@ All the changes made to runa are documented here.
 It is now possible to verify the integrity and origin of all downloaded assets:
 
 ```bash
-gh attestation verify --repo alexm-dev/runa <file_name>
+gh attestation verify --repo alexm-dev/runa <archive_file_name>
 ```
 
 ### Internal
-- **Tests**: Added new tests to `metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
+- **Debloat**: Reworked the `config::load::default_path` and `config::load::load`
+- **Tests**: Added new formatting tests to `core/formatter.rs`.
+- **Tests**: Added new tests to `core/metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
+    - Added `dashmap` to `CachedMetaKey` for faster and concurrent lookups without mutex locks resulting in faster sorting.
     - Removed `CachedFileInfo` to avoid duplication of file data. Replaced with `FileMetadataCache` that caches an file metadata as `Arc<str>` for efficient shared access and lazy loading.
     - Added `selected_indices` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
