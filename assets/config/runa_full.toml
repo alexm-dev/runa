@@ -42,7 +42,7 @@ move_to_trash = true
 # Tab placments are determined by the index of the vector. Meaning ['tab0', 'tab1', 'tab2'].
 # Note: Use single quotes (' ') for paths to avoid backslash escaping issues on Windows.
 # If you use double quotes (" "), remember to escape your backslashes (e.g. "C:\\Path\\") on Windows.
-tabs = ['cwd', '/path/', '/path/', '..']
+# tabs = ['cwd', '/path/', '/path/', '..']
 
 [display]
 # Show the selection icon next to the file/directory name
