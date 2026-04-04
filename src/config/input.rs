@@ -10,7 +10,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
-pub(super) enum InputKeys {
+pub(crate) enum InputKeys {
     OpenFile,
     GoUp,
     GoDown,

@@ -8,6 +8,7 @@
 use crate::app::actions::{ActionMode, InputMode};
 use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
+use crate::config::input::InputKeys;
 use crate::core::{metadata::FileMetadataCache, worker::Workers};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
@@ -930,6 +931,93 @@ pub(crate) fn draw_message_overlay(
     );
 }
 
+struct HelpEntry {
+    key: InputKeys,
+    desc: &'static str,
+}
+
+struct HelpSection {
+    name: &'static str,
+    entries: &'static [HelpEntry],
+}
+
+#[rustfmt::skip]
+const HELP_DATA: &[HelpSection] = &[
+    HelpSection {
+        name: "Navigation",
+        entries: &[
+            HelpEntry { key: InputKeys::GoUp, desc: "Move selection up" },
+            HelpEntry { key: InputKeys::GoDown, desc: "Move selection down" },
+            HelpEntry { key: InputKeys::GoParent, desc: "Go to parent directory" },
+            HelpEntry { key: InputKeys::GoIntoDir, desc: "Enter directory" },
+            HelpEntry { key: InputKeys::ToggleMarker, desc: "Toggle marker" },
+            HelpEntry { key: InputKeys::ClearMarkers, desc: "Clear markers" },
+            HelpEntry { key: InputKeys::ClearFilter, desc: "Clear filter" },
+            HelpEntry { key: InputKeys::ClearAll, desc: "Clear all markers and filters" },
+            HelpEntry { key: InputKeys::SelectAll, desc: "Select all entries in directory" },
+            HelpEntry { key: InputKeys::GoToBottom, desc: "Go to bottom" },
+            HelpEntry { key: InputKeys::ScrollUp, desc: "Scroll widget up" },
+            HelpEntry { key: InputKeys::ScrollDown, desc: "Scroll widget down" },
+        ],
+    },
+    HelpSection {
+        name: "Tabs",
+        entries: &[
+            HelpEntry { key: InputKeys::TabNew, desc: "Create a new tab" },
+            HelpEntry { key: InputKeys::TabClose, desc: "Close the selected tab" },
+            HelpEntry { key: InputKeys::TabNext, desc: "Switch to next tab" },
+            HelpEntry { key: InputKeys::TabPrev, desc: "Switch to previous tab" },
+        ],
+    },
+    HelpSection {
+        name: "File",
+        entries: &[
+            HelpEntry { key: InputKeys::OpenFile, desc: "Open file in editor" },
+            HelpEntry { key: InputKeys::Copy, desc: "Copy/Yank selection" },
+            HelpEntry { key: InputKeys::Paste, desc: "Paste" },
+            HelpEntry { key: InputKeys::Rename, desc: "Rename" },
+            HelpEntry { key: InputKeys::Create, desc: "Create file" },
+            HelpEntry { key: InputKeys::CreateDirectory, desc: "Create directory" },
+            HelpEntry { key: InputKeys::Delete, desc: "Delete / move to trash" },
+            HelpEntry { key: InputKeys::AlternateDelete, desc: "Alternate delete mode" },
+            HelpEntry { key: InputKeys::Filter, desc: "Filter entries" },
+            HelpEntry { key: InputKeys::Find, desc: "Find (fuzzy)" },
+            HelpEntry { key: InputKeys::MoveFile, desc: "Move file(s)" },
+            HelpEntry { key: InputKeys::ShowInfo, desc: "Toggle file info" },
+            HelpEntry { key: InputKeys::ClearClipboard, desc: "Clear copied entries" },
+        ],
+    },
+    HelpSection {
+        name: "Go To",
+        entries: &[
+            HelpEntry { key: InputKeys::PrefixGoTo, desc: "Go to prefix" },
+            HelpEntry { key: InputKeys::GoToTop, desc: "Go to top" },
+            HelpEntry { key: InputKeys::GoToHome, desc: "Go to home" },
+            HelpEntry { key: InputKeys::GoToPath, desc: "Go to path" },
+        ],
+    },
+    HelpSection {
+        name: "Sort",
+        entries: &[
+            HelpEntry { key: InputKeys::Sort, desc: "Sort prefix" },
+            HelpEntry { key: InputKeys::SortByName, desc: "Sort by name" },
+            HelpEntry { key: InputKeys::SortByNatural, desc: "Sort by natural order" },
+            HelpEntry { key: InputKeys::SortByExtension, desc: "Sort by extension" },
+            HelpEntry { key: InputKeys::SortBySize, desc: "Sort by size" },
+            HelpEntry { key: InputKeys::SortByModified, desc: "Sort by modified time" },
+            HelpEntry { key: InputKeys::SortByCreated, desc: "Sort by created time" },
+            HelpEntry { key: InputKeys::SortByAccessed, desc: "Sort by accessed time" },
+        ],
+    },
+    HelpSection {
+        name: "System",
+        entries: &[
+            HelpEntry { key: InputKeys::Quit, desc: "Quit" },
+            HelpEntry { key: InputKeys::KeybindHelp, desc: "Toggle keybind help" },
+        ],
+    },
+];
+
 pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let keys = app.config().keys();
     let widget = app.config().theme().widget();
@@ -977,83 +1065,80 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
     let fmt_prefix =
         |leader: &str, list: &[String]| -> String { format!("{leader} + {}", fmt_keys(list)) };
 
-    #[rustfmt::skip]
-    let sections: Vec<(&str, Vec<(String, &'static str)>)> = vec![
-        (
-            "Navigation",
-            vec![
-                (fmt_keys(keys.go_up()), "Move selection up"),
-                (fmt_keys(keys.go_down()), "Move selection down"),
-                (fmt_keys(keys.go_parent()), "Go to parent directory"),
-                (fmt_keys(keys.go_into_dir()), "Enter directory"),
-                (fmt_keys(keys.toggle_marker()), "Toggle marker"),
-                (fmt_keys(keys.clear_markers()), "Clear markers"),
-                (fmt_keys(keys.clear_filter()), "Clear filter"),
-                (fmt_keys(keys.clear_all()), "Clear all markers and filters"),
-                (fmt_keys(keys.select_all()), "Select all entries in the current directory"),
-                (fmt_keys(keys.go_to_bottom()), "Go to bottom"),
-                (fmt_keys(keys.scroll_up()), "Scroll widget up"),
-                (fmt_keys(keys.scroll_down()), "Scroll widget down"),
-            ],
-        ),
-        (
-            "Tabs",
-            vec![
-                (fmt_keys(keys.tab_new()), "Create a new tab"),
-                (fmt_keys(keys.tab_close()), "Close the selected tab"),
-                (fmt_keys(keys.tab_next()), "Switch to the next tab"),
-                (fmt_keys(keys.tab_prev()), "Switch to the previous tab"),
-                ("[0-9]".into(), "Switch to tab by index"),
-            ],
-        ),
-        (
-            "File",
-            vec![
-                (fmt_keys(keys.open_file()), "Open file in editor"),
-                (fmt_keys(keys.copy()), "Copy/Yank selection"),
-                (fmt_keys(keys.paste()), "Paste"),
-                (fmt_keys(keys.rename()), "Rename"),
-                (fmt_keys(keys.create()), "Create file"),
-                (fmt_keys(keys.create_directory()), "Create directory"),
-                (fmt_keys(keys.delete()), "Delete / move to trash"),
-                (fmt_keys(keys.alternate_delete()), "Alternate delete mode"),
-                (fmt_keys(keys.filter()), "Filter entries"),
-                (fmt_keys(keys.find()), "Find (fuzzy)"),
-                (fmt_keys(keys.move_file()), "Move file(s)"),
-                (fmt_keys(keys.show_info()), "Toggle file info"),
-                (fmt_keys(keys.clear_clipboard()), "Clear copied entries"),
-            ],
-        ),
-        (
-            "System",
-            vec![
-                (fmt_keys(keys.quit()), "Quit"),
-                (fmt_keys(keys.keybind_help()), "Toggle keybind help"),
-            ],
-        ),
-        (
-            "Go To",
-            vec![
-                (fmt_keys(go_to_prefix), "Go to prefix"),
-                (fmt_prefix(go_leader, keys.go_to_top()), "Go to top"),
-                (fmt_prefix(go_leader, keys.go_to_home()), "Go to home"),
-                (fmt_prefix(go_leader, keys.go_to_path()), "Go to path"),
-            ],
-        ),
-        (
-            "Sort",
-            vec![
-                (fmt_keys(sort_prefix), "Sort prefix"),
-                (fmt_prefix(sort_leader, keys.sort_by_name()), "Sort by name"),
-                (fmt_prefix(sort_leader, keys.sort_by_natural()), "Sort by natural order"),
-                (fmt_prefix(sort_leader, keys.sort_by_extension()), "Sort by extension"),
-                (fmt_prefix(sort_leader, keys.sort_by_size()), "Sort by size"),
-                (fmt_prefix(sort_leader, keys.sort_by_modified()), "Sort by modified time"),
-                (fmt_prefix(sort_leader, keys.sort_by_created()), "Sort by created time"),
-                (fmt_prefix(sort_leader, keys.sort_by_accessed()), "Sort by accessed time"),
-            ]
-        )
-    ];
+    let get_keys = |k: &InputKeys| -> &[String] {
+        match k {
+            InputKeys::GoUp => keys.go_up(),
+            InputKeys::GoDown => keys.go_down(),
+            InputKeys::GoParent => keys.go_parent(),
+            InputKeys::GoIntoDir => keys.go_into_dir(),
+            InputKeys::ToggleMarker => keys.toggle_marker(),
+            InputKeys::ClearMarkers => keys.clear_markers(),
+            InputKeys::ClearFilter => keys.clear_filter(),
+            InputKeys::ClearAll => keys.clear_all(),
+            InputKeys::SelectAll => keys.select_all(),
+            InputKeys::GoToBottom => keys.go_to_bottom(),
+            InputKeys::ScrollUp => keys.scroll_up(),
+            InputKeys::ScrollDown => keys.scroll_down(),
+            InputKeys::TabNew => keys.tab_new(),
+            InputKeys::TabClose => keys.tab_close(),
+            InputKeys::TabNext => keys.tab_next(),
+            InputKeys::TabPrev => keys.tab_prev(),
+            InputKeys::OpenFile => keys.open_file(),
+            InputKeys::Copy => keys.copy(),
+            InputKeys::Paste => keys.paste(),
+            InputKeys::Rename => keys.rename(),
+            InputKeys::Create => keys.create(),
+            InputKeys::CreateDirectory => keys.create_directory(),
+            InputKeys::Delete => keys.delete(),
+            InputKeys::AlternateDelete => keys.alternate_delete(),
+            InputKeys::Filter => keys.filter(),
+            InputKeys::Find => keys.find(),
+            InputKeys::MoveFile => keys.move_file(),
+            InputKeys::ShowInfo => keys.show_info(),
+            InputKeys::ClearClipboard => keys.clear_clipboard(),
+            InputKeys::PrefixGoTo => keys.prefix_go_to(),
+            InputKeys::GoToTop => keys.go_to_top(),
+            InputKeys::GoToHome => keys.go_to_home(),
+            InputKeys::GoToPath => keys.go_to_path(),
+            InputKeys::Sort => keys.sort(),
+            InputKeys::SortByName => keys.sort_by_name(),
+            InputKeys::SortByNatural => keys.sort_by_natural(),
+            InputKeys::SortByExtension => keys.sort_by_extension(),
+            InputKeys::SortBySize => keys.sort_by_size(),
+            InputKeys::SortByModified => keys.sort_by_modified(),
+            InputKeys::SortByCreated => keys.sort_by_created(),
+            InputKeys::SortByAccessed => keys.sort_by_accessed(),
+            InputKeys::Quit => keys.quit(),
+            InputKeys::KeybindHelp => keys.keybind_help(),
+        }
+    };
+
+    let sections: Vec<(&str, Vec<(String, &'static str)>)> = HELP_DATA
+        .iter()
+        .map(|section| {
+            let mut rows: Vec<(String, &'static str)> = section
+                .entries
+                .iter()
+                .map(|entry| {
+                    let key_text = match section.name {
+                        "Go To" if entry.key != InputKeys::PrefixGoTo => {
+                            fmt_prefix(go_leader, get_keys(&entry.key))
+                        }
+                        "Sort" if entry.key != InputKeys::Sort => {
+                            fmt_prefix(sort_leader, get_keys(&entry.key))
+                        }
+                        _ => fmt_keys(get_keys(&entry.key)),
+                    };
+                    (key_text, entry.desc)
+                })
+                .collect();
+
+            if section.name == "Tabs" {
+                rows.push(("[0-9]".into(), "Switch to tab by index"));
+            }
+            (section.name, rows)
+        })
+        .collect();
 
     let key_w: usize = sections
         .iter()
@@ -1090,25 +1175,23 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         }
         lines.push(Line::raw(""));
     }
+
     while matches!(lines.last(), Some(l) if l.width() == 0) {
         lines.pop();
     }
-
     lines.push(Line::raw(""));
 
     let content_height = lines.len() as u16;
     let dynamic_width = (area.width * 60 / 100).clamp(45, 80);
-
     let max_allowed_height = (area.height * 80 / 100).max(12);
     let dynamic_height = (content_height + 1).min(max_allowed_height);
-    let size = DialogSize::Custom(dynamic_width, dynamic_height);
 
     draw_dialog(
         frame,
         DialogLayout {
             area,
             position,
-            size,
+            size: DialogSize::Custom(dynamic_width, dynamic_height),
         },
         border_type,
         &get_dialog_style(app, accent_style, "Keybinds", None),
