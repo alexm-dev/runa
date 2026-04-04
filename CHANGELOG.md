@@ -8,16 +8,15 @@ All the changes made to runa are documented here.
 
 ### Added
 - **Sorting**: Added directory entry soring. Can be triggered via the `sort = ["o"]` keybind. 
-Added a new sort worker thread to handle resorts reducing load of the inital `nav_io` worker by a lot.
-Re-sorts or more specific, inital sorts, are much quicker this way.
-- **SortingData**: Added muliple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
-- **MetaData**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+    - Added a new sort worker thread to handle resorts reducing load of the inital `nav_io` worker by a lot.
+    - Added muliple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
+- **Metadata**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
 - **Cli config help** Added a new way of handling the Cli documentation helper by enabling section based key prints as well as the full documentation.
 - **Owner/Group Toggle**: The `[display.info] owner/group` configuration options now determine if the `FileMetadata` populates the owner and group fields.  
     - When disabled, no owner/group file resolution is performed, reducing memory.  
 
 ### Changed
-- **Default**: `runa.toml`: `rn --init-full` will now generate the full documented runa configuration toml.
+- **Default configuration**: `rn --init-full` will now generate the full documented runa configuration toml.
 This helps reducing maintainance of adjusting each configuration file after changes.
 - **Widget size**: The default widget size is not set to `small`.
 - **Initial start**: Removed the initial start notification suggesting to run `rn --init` if no `runa.toml` was generated or created before.
