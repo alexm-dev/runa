@@ -86,27 +86,26 @@ impl Config {
     /// Called by entry point to load config at startup.
     pub(crate) fn load() -> Self {
         let path = Self::default_path();
+        let content = match fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                eprintln!(
+                    "No runa.toml config file found. Using internal defaults. (Tip: run 'rn --init')"
+                );
+                return Self::default();
+            }
+            Err(_) => return Self::default(),
+        };
 
-        if !path.exists() {
-            eprintln!(
-                "No runa.toml config file found. Using internal defaults. (Tip: run 'rn --init' to generate a config file.)"
-            );
-            return Self::default();
-        }
-
-        match fs::read_to_string(&path) {
-            Ok(content) => match toml::from_str::<RawConfig>(&content) {
-                Ok(mut raw) => {
-                    raw.theme = raw.theme.with_overrides();
-                    raw.into()
-                }
-                Err(e) => {
-                    eprintln!("Error parsing config: {}", e);
-                    Self::default()
-                }
-            },
-            Err(_) => Self::default(),
-        }
+        toml::from_str::<RawConfig>(&content)
+            .map(|mut raw| {
+                raw.theme = raw.theme.with_overrides();
+                raw.into()
+            })
+            .unwrap_or_else(|e| {
+                eprintln!("Error parsing config: {}", e);
+                Self::default()
+            })
     }
 
     // Getters
@@ -147,18 +146,13 @@ impl Config {
     /// Checks for XDG_CONFIG_HOME after,
     /// then defaults to ~/.config/runa/runa.toml,
     pub(crate) fn default_path() -> PathBuf {
-        if let Ok(path) = std::env::var("RUNA_CONFIG") {
-            return PathBuf::from(path);
-        }
-
-        if let Ok(xdg_config) = std::env::var("XDG_CONFIG_HOME") {
-            return PathBuf::from(xdg_config).join("runa/runa.toml");
-        }
-
-        if let Some(home) = get_home() {
-            return home.join(".config/runa/runa.toml");
-        }
-        PathBuf::from("runa.toml")
+        std::env::var_os("RUNA_CONFIG")
+            .map(PathBuf::from)
+            .or_else(|| {
+                std::env::var_os("XDG_CONFIG_HOME").map(|s| PathBuf::from(s).join("runa/runa.toml"))
+            })
+            .or_else(|| get_home().map(|h| h.join(".config/runa/runa.toml")))
+            .unwrap_or_else(|| PathBuf::from("runa.toml"))
     }
 
     /// Generate a default configuration file at the specified path.
