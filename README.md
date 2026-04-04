@@ -12,7 +12,7 @@
 </div>
 <div align="center">
 
-> **A fast, ultra-lightweight, and extremely customizable terminal file manager carved in Rust.**
+> **A fast, lightweight, and extremely customizable terminal file manager carved in Rust.**
 
 </div>
 <div align="center">
@@ -41,11 +41,11 @@
 
 <summary><strong>What makes runa fast?</strong></summary>
 
-- **Multi-threaded engine:** Spawns 7 lightweight dedicated worker threads (with `crossbeam_channel`) for I/O, preview, find, and file operations, so UI is never blocked.
+- **Multi-threaded engine:** Spawns 9 lightweight dedicated worker threads (with `crossbeam_channel`) for I/O, preview, find, and file operations, so UI is never blocked.
 - **Essential-only Rust crates:** No external TUI frameworks or bloat.
 - **Direct terminal rendering:** Uses [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
-- **Blazingly lightweight:** The `rn` binary is compact (typically 1.4-2 MB, depending on operating system and architecture).
+- **Blazingly lightweight:** The `rn` binary is compact (typically 1.6-2 MB, depending on operating system and architecture).
 - **Minimal memory footprint**: Optimized for low RAM usage.
 
 </details>
