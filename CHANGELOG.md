@@ -4,13 +4,14 @@ All the changes made to runa are documented here.
 
 ## [0.10.0] - 2026-04-04
 
-#### Sorting feature update and performance improvements.
+#### Sorting feature, performance improvements and more.
 
 ### Added
 - **Sorting**: Added directory entry sorting. Can be triggered via the `sort = ["o"]` key-bind. 
     - Added a new sort worker thread to handle resorts reducing load of the initial `nav_io` worker by a lot.
     - Added multiple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
 - **Metadata worker**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
+    - Increases performance for the `File Info` widget as well as for the file information on the status line.
 - **Cli config help** Added a new way of handling the Cli documentation helper by enabling section based key prints as well as the full documentation.
 - **FileInfo Toggles**: The `[display.info]` configuration options now determine if the file metadata is computed, not just drawn to UI.  
     - When disabled, no metadata is resolved for this field, reducing memory.
@@ -20,7 +21,7 @@ All the changes made to runa are documented here.
 
 ### Changed
 - **Default configuration**: `rn --init-full` will now generate the full documented runa configuration toml.
-This helps reducing maintenance of adjusting each configuration file after changes.
+    - This helps reducing maintenance of adjusting each configuration file after changes.
 - **Widget size**: The default widget size is now set to `small`.
 - **Initial start**: Removed the initial start notification suggesting to run `rn --init` if no `runa.toml` was generated or created before.
 - **FileInfo Renamed**: `FileInfo`, its `file_info.rs` module, and all its references have been to renamed to `FileMetadata` and `metadata` to accurately reflect its purpose better.
@@ -34,14 +35,14 @@ gh attestation verify --repo alexm-dev/runa <file_name>
 ```
 
 ### Internal
-- **Debloat**: Reworked the `config::load::default_path` and `config::load::load` functions to safe on system calls.
-- **Tests**: 
+- **Debloat**: Reworked the `config::load::default_path` and `config::load::load` functions to safe on system calls resulting in a smaller binary size.
+- **Tests**:
     - Added new formatting tests to `core/formatter.rs`.
-    - Added new tests to `core/metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
+    - Added new tests to `core/metadata.rs`.
 - **Performance:**
     - `FileEntry` now stores the `lowered` data of a entry name to cache it and not recompute it on every sort.
     - Added `DashMap` to `CachedMetaKey` for faster and concurrent lookups without mutex locks resulting in faster sorting.
-    - Removed `CachedFileInfo` to avoid duplication of file data. Replaced with `FileMetadataCache` that caches an file metadata as `Arc<str>` for efficient shared access and lazy loading.
+    - Removed `CachedFileInfo` to avoid duplication of file data. Replaced with `FileMetadataCache` that caches an file metadata as `Arc<str>` for efficient lazy loading.
     - Added `selected_indices` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
 
 
