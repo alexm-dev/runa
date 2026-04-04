@@ -26,7 +26,7 @@ use crate::app::{
 use crate::config::Config;
 use crate::core::{
     formatter::DirListOptions,
-    metadata::{FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch},
+    metadata::{FileMetadataCache, MetadataNeeds},
     worker::{WorkerResponse, WorkerTask, Workers},
 };
 use crate::ui::overlays::{OverlayKind, OverlayStack};
@@ -402,7 +402,6 @@ impl<'a> AppState<'a> {
 
             WorkerResponse::OperationComplete { need_reload, focus } => {
                 if need_reload {
-                    bump_meta_sort_epoch();
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }

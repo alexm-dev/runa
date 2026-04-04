@@ -14,14 +14,14 @@ use crate::core::formatter::{
 };
 
 use chrono::{DateTime, Local};
+use dashmap::DashMap;
 
-use std::collections::HashMap;
 use std::fs::symlink_metadata;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::{
-    Mutex, OnceLock,
+    OnceLock,
     atomic::{AtomicU64, Ordering},
 };
 use std::time::SystemTime;
@@ -43,7 +43,7 @@ pub(crate) struct CachedMetaKey {
 }
 
 static META_SORT_EPOCH: OnceLock<AtomicU64> = OnceLock::new();
-static META_SORT_CACHE: OnceLock<Mutex<HashMap<PathBuf, CachedMetaKey>>> = OnceLock::new();
+static META_SORT_CACHE: OnceLock<DashMap<PathBuf, CachedMetaKey>> = OnceLock::new();
 
 #[inline]
 fn epoch_atomic() -> &'static AtomicU64 {
@@ -51,8 +51,8 @@ fn epoch_atomic() -> &'static AtomicU64 {
 }
 
 #[inline]
-pub(crate) fn meta_cache() -> &'static Mutex<HashMap<PathBuf, CachedMetaKey>> {
-    META_SORT_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+pub(crate) fn meta_cache() -> &'static DashMap<PathBuf, CachedMetaKey> {
+    META_SORT_CACHE.get_or_init(DashMap::new)
 }
 
 #[inline]
@@ -66,24 +66,24 @@ pub(crate) fn bump_meta_sort_epoch() {
 
 pub(crate) fn get_or_update_cached_meta(path: &Path) -> Option<CachedMetaKey> {
     let epoch = meta_sort_epoch();
-    let m = meta_cache();
-    let mut cache = m.lock().ok()?;
+    let cache = meta_cache();
 
-    match cache.get(path).copied() {
-        Some(c) if c.epoch == epoch => Some(c),
-        _ => {
-            let md = std::fs::symlink_metadata(path).ok();
-            let c = CachedMetaKey {
-                epoch,
-                size: md.as_ref().filter(|m| m.is_file()).map(|m| m.len()),
-                modified: md.as_ref().and_then(|m| m.modified().ok()),
-                created: md.as_ref().and_then(|m| m.created().ok()),
-                accessed: md.as_ref().and_then(|m| m.accessed().ok()),
-            };
-            cache.insert(path.to_path_buf(), c);
-            Some(c)
-        }
+    if let Some(c) = cache.get(path)
+        && c.epoch == epoch
+    {
+        return Some(*c);
     }
+
+    let md = symlink_metadata(path).ok();
+    let c = CachedMetaKey {
+        epoch,
+        size: md.as_ref().filter(|m| m.is_file()).map(|m| m.len()),
+        modified: md.as_ref().and_then(|m| m.modified().ok()),
+        created: md.as_ref().and_then(|m| m.created().ok()),
+        accessed: md.as_ref().and_then(|m| m.accessed().ok()),
+    };
+    cache.insert(path.to_path_buf(), c);
+    Some(c)
 }
 
 /// Enumerator for the filye types which are then shown inside [FileMetadata]

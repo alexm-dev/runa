@@ -32,6 +32,8 @@ const MAX_PREVIEW_SIZE: u64 = 5_000 * 1024 * 1024;
 const HEADER_PEEK_BYTES: usize = 8;
 // Bytes to peek for null bytes in binary detections
 const BINARY_PEEK_BYTES: usize = 1024;
+// CachedMetaKey limit to prevent memory growth during sorting by metadata.
+const HARD_SORT_CACHE_LIMIT: usize = 40_000;
 
 #[derive(Clone)]
 pub(crate) struct DirListOptions {
@@ -265,11 +267,8 @@ impl Formatter {
         let mut path_buffer = directory_path.to_path_buf();
 
         let cache = meta_cache();
-        if let Ok(mut c) = cache.lock() {
-            const HARD_LIMIT: usize = 40_000;
-            if c.len() >= HARD_LIMIT {
-                c.clear();
-            }
+        if cache.len() > HARD_SORT_CACHE_LIMIT {
+            cache.clear();
         }
 
         for (index, file_entry) in entries.iter().enumerate() {
