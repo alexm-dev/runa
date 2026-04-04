@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.10.0] - UNRELEASED
+## [0.10.0] - 2026-04-04
 
 #### Sorting feature update and performance improvements.
 
