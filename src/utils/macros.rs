@@ -71,12 +71,15 @@ macro_rules! getters {
 /// Returns `&[String]` by default
 #[macro_export]
 macro_rules! key_accessor {
-    ($($name:ident),+ $(,)?) => {
+    ($($name:ident => $variant:ident),+ $(,)?) => {
         impl Keys {
             $(
                 #[inline]
                 pub(crate) fn $name(&self) -> &[String] {
-                    &self.$name
+                    self.bindings
+                        .get(&InputKeys::$variant)
+                        .map(|v| v.as_slice())
+                        .unwrap_or(&[])
                 }
             )+
         }
