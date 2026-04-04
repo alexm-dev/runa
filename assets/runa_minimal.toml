@@ -1,0 +1,17 @@
+# runa.toml - minimal configuration
+# Only a few basic options. The rest uses internal defaults.
+# For advanced options, see runa documentation or rn --config-help.
+
+[general]
+dirs_first = true
+show_hidden = true
+
+[display]
+borders = "unified"
+icons = false
+parent = true
+preview = true
+
+[theme]
+name = "default"
+accent.fg = "default"

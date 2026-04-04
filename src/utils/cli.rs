@@ -8,6 +8,12 @@ use std::path::PathBuf;
 
 use crate::config::Config;
 
+const CONFIG_HELP: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/config_help.txt"
+));
+const KEYBINDS: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/keybinds.txt"));
+
 pub(crate) enum CliAction {
     RunApp,
     RunAppAtPath(Vec<PathBuf>),
@@ -121,200 +127,10 @@ ENVIRONMENT:
     );
 }
 
-const KEYBINDS_TEXT: &str = r##"
-=========================
- Key Bindings
-=========================
-[keys]
-  open_file                 ["enter"]
-  go_up                     ["k", "up"]
-  go_down                   ["j", "down"]
-  go_parent                 ["h", "left", "Backspace"]
-  go_into_dir               ["l", "right"]
-  quit                      ["q", "esc"]
-  delete                    ["d"]
-  copy                      ["y"]
-  paste                     ["p"]
-  rename                    ["r"]
-  create                    ["n"]
-  create_directory          ["N"]
-  move_file                 ["m"]
-  filter                    ["f"]
-  toggle_marker             ["space"]
-  info                      ["i"]
-  find                      ["s"]
-  clear_markers             ["<c-c>"]
-  clear_filter              ["<c-f>"]
-  clear_clipboard           ["<f2>"]
-  clear_all                 ["<c-l>"]
-  select_all                ["<c-a>"]
-  alternate_delete          ["<m-d>"]
-  go_to_bottom              ["G"]
-  keybind_help              ["?"]
-
-  go_to_top                 ["g"]     (press "g" then "g" again)
-  go_to_home                ["h"]     (press "g" then "h")
-  go_to_path                ["p"]     (press "g" then "p")
-
-  tab_new                   ["<c-t>"]
-  tab_close                 ["<c-w>"]
-  tab_cycle                 ["<c-n>"]
-  tab_next                  ["<c-n>"]
-  tab_prev                  ["<c-p>"]
-
-  scroll_up                 ["<c-d>"]   (Widget scrolling)
-  scroll_down               ["<c-u>"]
-
-  Syntax Reference:
-    Modifiers: <c-x> (Ctrl), <m-x>/<a-x> (Alt/Meta), <s-x> (Shift)
-    Standard:  ctrl+x, alt+x, shift+x, meta+x
-    Special:   " ", "space", "back", "enter", "esc", "tab"
-
-  Note:
-    - Shorthand (c-, m-, s-) only works inside brackets <>.
-    - The 'g' key is a prefix; it waits for the next key to trigger an action.
-"##;
-
 fn print_keybinds() {
-    println!("{}", KEYBINDS_TEXT);
+    println!("{}", KEYBINDS);
 }
 
 fn print_config_help() {
-    let help_text = r##"
-runa - Full Configuration Guide (runa.toml)
-
-=========================
- General Settings
-=========================
-[general]
-  dirs_first                 Sort directories before files [default: true]
-  show_hidden                Show hidden files (dotfiles)
-  show_symlink               Show symlinks
-  show_system                Show system/protected files (mainly Windows)
-  case_insensitive           Ignore case sensitivity in search/sort [default: true]
-  always_show                Hidden entries always shown, e.g. [".config", "Downloads"]
-  max_find_results           Max results for find (default: 2000, min: 15, max: 1_000_000)
-  move_to_trash              Move files to trash bin instead of permanent deletion
-
-[general.startup]
-  tabs                       Configuration of startup paths as tabs
-
-=========================
- Display Settings
-=========================
-[display]
-  selection_marker           Show selection/cursor marker [default: true]
-  dir_marker                 Show '/' or marker for directories [default: true]
-  borders                    "none", "unified", or "split"
-  border_shape               "square", "rounded", or "double"
-  titles                     Show pane titles at the top
-  icons                      Show Nerd Font icons
-  separators                 Show vertical lines between panes
-  parent                     Show parent (left) pane [default: true]
-  preview                    Show preview (right) pane [default: true]
-  preview_underline          Underline preview selection instead of highlight
-  preview_underline_color    Distinct color for preview underline
-  entry_padding              Padding (# chars) left/right (0–4)
-  scroll_padding             Reserved rows when scrolling
-  toggle_marker_jump         Toggle marker jumping to first entry
-  instant_preview            Toggle instant previews on every selection change
-
-[display.preview_option]
-  method                     Set the preview method ("bat" or "internal")
-  theme                      Set the bat method theme. (only works if method = "bat")
-  style                      Set the bat style. (only works if method = "bat")
-  wrap                       Toggle line wrapping in the preview pane (only works if method = "bat")
-  tab_width                  Set the tab indentation of bat previews
-
-[display.layout]
-  parent                     Width % for parent pane
-  main                       Width % for main pane
-  preview                    Width % for preview pane
-
-[display.info]               Toggle display file info attributes
-  name
-  file_type
-  size
-  modified
-  created
-  accessed
-  perms
-  status_bar
-  format                     Configuration of the status line format string
-  date_format                Configuration of the file information timestamps
-
-[display.status]             Toggle the status line options ("footer", "header, or "none" to disable)
-  entry_count
-  filter
-  markers
-  clipboard
-  tasks
-  tabs
-
-=========================
- Theme Configuration
-=========================
-[theme]
-  name                       Theme name, e.g. "gruvbox-dark"
-  selection_icon             Symbol for selection (">" or " ")
-  exe_color                  Coloring for executables
-
-Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"):
-
-[theme.entry]                Normal entries (fg, bg)
-[theme.accent]               Borders/titles (fg, bg)
-[theme.selection]            Selection bar (fg, bg)
-[theme.directory]            Directory entries (fg, bg)
-[theme.separator]            Vertical separators (fg, bg)
-[theme.parent]               Parent pane text (fg, bg, selection_fg, selection_bg)
-[theme.preview]              Preview pane text (fg, bg, selection_fg, selection_bg)
-[theme.underline]            Preview underline (fg, bg)
-[theme.path]                 Path bar at the top (fg, bg)
-[theme.symlink]              Symlink coloring (directory, file, target)
-[theme.marker]               Multi-select marker (icon, fg, bg, clipboard)
-
-[theme.status_line]          Status line color bar
-  fg                         Foreground color for the status line
-  bg                         Background color for the status line
-
-[theme.widget]               Dialog/widgets config (see docs):
-  position                   "center", [x, y], {x = 38, y = 32}
-  size                       "small", [w, h], {w = 33, h = 15}
-  confirm_size               Override size for confirmation widget
-  move_size                  Override size for the move file widget
-  find_size                  Override size for the find widget
-  color.fg/bg                Text/background color
-  border.fg/bg               Widget Border colors
-  title.fg/bg                Widget Title colors
-  label.fg/bg                Label colors for widgets like File Info
-  value.fg/bg                Value colors for widgets like File Info
-  go_to_help.size            Size of the go_to dialog when pressing the "g" prefix
-  go_to_help.position        Position of the go_to dialog when pressing the "g" prefix
-
-[theme.tab]                  Customization of the tab line
-  marker                     String to set the marker. marker = ""
-  separator                  String to set the separators between tabs. separator = ""
-  active.fg/bg               Coloring for the active tab
-  inactive.fg/bg             Coloring for the inactive tab
-  line_format                Customization of the whole tab line. line_format = ["{idx}{marker}"]
-
-[theme.info]                 File Info status line customization
-  perms.fg/bg
-  size.fg/bg
-  date.fg/bg
-  modified.fg/bg
-  created.fg/bg
-  accessed.fg/bg
-  file_type.fg/bg
-  owner.fg/bg
-  group.fg/bg
-
-=========================
- Editor
-=========================
-[editor]
-  cmd                       Command to open files (e.g., "nvim", "code")
-"##;
-
-    println!("{}{}", help_text, KEYBINDS_TEXT);
+    println!("{}{}", CONFIG_HELP, KEYBINDS);
 }
