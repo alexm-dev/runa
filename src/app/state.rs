@@ -3,9 +3,9 @@
 //! This module defines the overall [AppState] struct, which holds all major application
 //! information and passes it to relevant UI/Terminal functions
 //! - Configuration (loaded from config files)
-//! - Pane view models for navigation, preview and parent states.
+//! - Preview and parent pane states.
 //! - File property state for the currently selected file, used for the info overlay and status bar.
-//! - Action context for relevant inputs
+//! - Action context for inputs
 //! - Current layout metrics
 //! - Communication with worker threads via crossbeam_channel
 //! - Notification and message handling

@@ -4,7 +4,7 @@ All the changes made to runa are documented here.
 
 ## [0.10.0] - UNRELEASED
 
-#### Sorting feature update as well as performance improvements.
+#### Sorting feature update and performance improvements.
 
 ### Added
 - **Sorting**: Added directory entry soring. Can be triggered via the `sort = ["o"]` keybind. 
@@ -32,10 +32,11 @@ gh attestation verify --repo alexm-dev/runa <archive_file_name>
 ```
 
 ### Internal
-- **Debloat**: Reworked the `config::load::default_path` and `config::load::load`
+- **Debloat**: Reworked the `config::load::default_path` and `config::load::load` functions to safe on system calls.
 - **Tests**: Added new formatting tests to `core/formatter.rs`.
 - **Tests**: Added new tests to `core/metadata.rs` to test metadata retrieval and formatting of the `FileInfo` struct.
 - **Performance:**
+    - `FileEntry` now stores the `lowered` data of a entry name to cache it and not recompute it on every sort.
     - Added `dashmap` to `CachedMetaKey` for faster and concurrent lookups without mutex locks resulting in faster sorting.
     - Removed `CachedFileInfo` to avoid duplication of file data. Replaced with `FileMetadataCache` that caches an file metadata as `Arc<str>` for efficient shared access and lazy loading.
     - Added `selected_indices` to store the indices of a FileEntry in a vector instead of recalculating resulting in navigation changes more efficient.
