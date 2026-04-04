@@ -38,6 +38,7 @@ uzers = "0.12.2"
 [dev-dependencies]
 rand = "0.10.0"
 tempfile = "3.24.0"
+filetime = "0.2.27"
 
 [profile.dev]
 opt-level = 0

@@ -754,6 +754,7 @@ mod tests {
 
     use super::*;
     use crate::core;
+    use std::io::Write;
     use tempfile::tempdir;
 
     #[test]
@@ -849,6 +850,267 @@ mod tests {
         let entries = core::browse_dir(temp_dir.path())?;
 
         assert!(entries.is_empty(), "Directory should be empty");
+        Ok(())
+    }
+
+    #[test]
+    fn formatter_sort_by_name() -> Result<(), Box<dyn std::error::Error>> {
+        let entry1 = FileEntry::new(OsString::from("fileB.txt"), 0, None);
+        let entry2 = FileEntry::new(OsString::from("fileA.txt"), 0, None);
+        let entry3 = FileEntry::new(OsString::from("FileC.txt"), 0, None);
+        let mut entries = vec![entry1.clone(), entry2.clone(), entry3.clone()];
+
+        let fmt = Formatter::new(
+            DirListOptions {
+                dirs_first: false,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: false,
+            },
+            SortConfig {
+                mode: SortMode::Name,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names, vec!["FileC.txt", "fileA.txt", "fileB.txt"]);
+
+        let mut entries = vec![entry1, entry2, entry3];
+        let fmt_ci = Formatter::new(
+            DirListOptions {
+                dirs_first: false,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: true,
+            },
+            SortConfig {
+                mode: SortMode::Name,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names_ci, vec!["fileA.txt", "fileB.txt", "FileC.txt"]);
+        Ok(())
+    }
+
+    #[test]
+    fn formatter_sort_by_extension() -> Result<(), Box<dyn std::error::Error>> {
+        let entry1 = FileEntry::new(OsString::from("fileB.txt"), 0, None);
+        let entry2 = FileEntry::new(OsString::from("fileA.md"), 0, None);
+        let entry3 = FileEntry::new(OsString::from("FileC.txt"), 0, None);
+        let entry4 = FileEntry::new(OsString::from("FileD.toml"), 0, None);
+        let mut entries = vec![
+            entry1.clone(),
+            entry2.clone(),
+            entry3.clone(),
+            entry4.clone(),
+        ];
+
+        let fmt = Formatter::new(
+            DirListOptions {
+                dirs_first: false,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: false,
+            },
+            SortConfig {
+                mode: SortMode::Extension,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(
+            names,
+            vec!["fileA.md", "FileD.toml", "FileC.txt", "fileB.txt"]
+        );
+
+        let mut entries = vec![entry1, entry2, entry3, entry4];
+        let fmt_ci = Formatter::new(
+            DirListOptions {
+                dirs_first: false,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: true,
+            },
+            SortConfig {
+                mode: SortMode::Extension,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(
+            names_ci,
+            vec!["fileA.md", "FileD.toml", "fileB.txt", "FileC.txt"]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn formatter_sort_by_natural() -> Result<(), Box<dyn std::error::Error>> {
+        let entry1 = FileEntry::new(OsString::from("file10.txt"), 0, None);
+        let entry2 = FileEntry::new(OsString::from("file2.txt"), 0, None);
+        let entry3 = FileEntry::new(OsString::from("File1.txt"), 0, None);
+        let mut entries = vec![entry1.clone(), entry2.clone(), entry3.clone()];
+
+        let fmt = Formatter::new(
+            DirListOptions {
+                dirs_first: false,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: false,
+            },
+            SortConfig {
+                mode: SortMode::Natural,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names, vec!["File1.txt", "file2.txt", "file10.txt"]);
+
+        let mut entries = vec![entry1, entry2, entry3];
+        let fmt_ci = Formatter::new(
+            DirListOptions {
+                dirs_first: false,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: true,
+            },
+            SortConfig {
+                mode: SortMode::Natural,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names_ci, vec!["File1.txt", "file2.txt", "file10.txt"]);
+        Ok(())
+    }
+
+    #[test]
+    fn formatter_sort_by_size() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let path1 = temp_dir.path().join("small.txt");
+        let path2 = temp_dir.path().join("medium.txt");
+        let path3 = temp_dir.path().join("large.txt");
+
+        File::create(&path1)?.write_all(b"small")?;
+        File::create(&path2)?.write_all(b"medium content")?;
+        File::create(&path3)?.write_all(b"large content that is bigger")?;
+
+        let mut entries = core::browse_dir(temp_dir.path())?;
+        let fmt = Formatter::new(
+            DirListOptions {
+                dirs_first: true,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: true,
+            },
+            SortConfig {
+                mode: SortMode::Size,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
+        let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names, vec!["small.txt", "medium.txt", "large.txt"]);
+        Ok(())
+    }
+
+    #[test]
+    fn formatter_sort_by_modified() -> Result<(), Box<dyn std::error::Error>> {
+        let temp_dir = tempdir()?;
+        let path1 = temp_dir.path().join("old.txt");
+        let path2 = temp_dir.path().join("newer.txt");
+        let path3 = temp_dir.path().join("newest.txt");
+
+        File::create(&path1)?.write_all(b"old")?;
+        filetime::set_file_mtime(&path1, filetime::FileTime::from_unix_time(1000, 0))?;
+        File::create(&path2)?.write_all(b"newer")?;
+        filetime::set_file_mtime(&path2, filetime::FileTime::from_unix_time(2000, 0))?;
+        File::create(&path3)?.write_all(b"newest")?;
+        filetime::set_file_mtime(&path3, filetime::FileTime::from_unix_time(3000, 0))?;
+
+        let mut entries = core::browse_dir(temp_dir.path())?;
+        let fmt = Formatter::new(
+            DirListOptions {
+                dirs_first: true,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: true,
+            },
+            SortConfig {
+                mode: SortMode::Modified,
+                order: SortOrder::Ascending,
+            },
+            Arc::new(HashSet::new()),
+        );
+        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
+        let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names, vec!["old.txt", "newer.txt", "newest.txt"]);
+        Ok(())
+    }
+
+    #[test]
+    fn formatter_sort_modified_with_dirs_first() -> Result<(), Box<dyn std::error::Error>> {
+        meta_cache().clear();
+        let temp_dir = tempdir()?;
+        let dir_path = temp_dir.path().join("aaa_old_dir");
+        let file_path = temp_dir.path().join("bbb_new_file.txt");
+
+        std::fs::create_dir(&dir_path)?;
+        filetime::set_file_mtime(&dir_path, filetime::FileTime::from_unix_time(1000, 0))?;
+
+        File::create(&file_path)?.write_all(b"new")?;
+        filetime::set_file_mtime(&file_path, filetime::FileTime::from_unix_time(5000, 0))?;
+
+        let mut entries = core::browse_dir(temp_dir.path())?;
+
+        let fmt = Formatter::new(
+            DirListOptions {
+                dirs_first: true,
+                show_hidden: true,
+                show_symlink: true,
+                show_system: true,
+                case_insensitive: true,
+            },
+            SortConfig {
+                mode: SortMode::Modified,
+                order: SortOrder::Descending,
+            },
+            Arc::new(HashSet::new()),
+        );
+
+        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
+
+        let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
+        assert_eq!(names, vec!["aaa_old_dir", "bbb_new_file.txt"]);
+
+        let cache = meta_cache();
+        assert!(
+            !cache.is_empty(),
+            "Metadata cache should not be empty after sorting"
+        );
+
         Ok(())
     }
 }
