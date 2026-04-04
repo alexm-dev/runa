@@ -8,7 +8,7 @@ All the changes made to runa are documented here.
 
 ### Added
 - **Sorting**: Added directory entry sorting. Can be triggered via the `sort = ["o"]` key-bind. 
-    - Added a new sort worker thread to handle resorts reducing load of the initial `nav_io` worker by a lot.
+    - Added a new sort worker thread to handle re-sorts reducing load of the initial `nav_io` worker by a lot.
     - Added multiple sorting methods: `Natural (default)`, `Name`, `Size`, `Created`, `Modified`, `Accessed`.
 - **Metadata worker**: Added a new `metadata` worker task to handle all relevant `FileMetadata` calls in a `bounded(1)` thread.
     - Increases performance for the `File Info` widget as well as for the file information on the status line.
