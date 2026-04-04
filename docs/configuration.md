@@ -66,11 +66,11 @@ If you don't have a config file yet, you can generate one automatically:
 ### Configuration Setup
 - `rn --init`: Generates the configuration.
 - `rn --init-full`: Creates a full configuration file with all options as shown below.
-- `rn --config-help`: Displays all configuration options.
+- `rn --config-help`: Displays the whole documentation of the `runa.toml`. 
+Possible to specify which section to display. Example: `rn --config-help theme`
 
 ### Quick Reference
 - `rn --help`: Shows the standard CLI help menu
-- `rn --keybinds`: Displays all default keybinds for quick reference
 - `rn --version`: Displays the current installed version
 
 ## General Settings
