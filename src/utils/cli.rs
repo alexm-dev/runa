@@ -153,7 +153,6 @@ ENVIRONMENT:
 
 fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
     let config = CONFIG_HELP;
-    let indent = "    ";
 
     let stdout = io::stdout();
     let mut handle = BufWriter::new(stdout.lock());
@@ -179,9 +178,9 @@ fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
             if let Some(ref t) = target {
                 if &hdr_name == t {
                     for h in &head_buffer {
-                        writeln!(handle, "{}{}", indent, h)?;
+                        writeln!(handle, "{}", h)?;
                     }
-                    writeln!(handle, "{}{}", indent, line)?;
+                    writeln!(handle, "{}", line)?;
                     inside = true;
                     found = true;
                     head_buffer.clear();
@@ -196,10 +195,10 @@ fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
             let is_setting = trimmed.contains('=') && !trimmed.starts_with('#');
             if is_setting || target.is_none() {
                 for b in &body_buffer {
-                    writeln!(handle, "{}{}", indent, b)?;
+                    writeln!(handle, "{}", b)?;
                 }
                 body_buffer.clear();
-                writeln!(handle, "{}{}", indent, line)?;
+                writeln!(handle, "{}", line)?;
             } else {
                 body_buffer.push(line);
             }
@@ -216,7 +215,7 @@ fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
 
     if inside {
         for b in &body_buffer {
-            writeln!(handle, "{}{}", indent, b)?;
+            writeln!(handle, "{}", b)?;
         }
     }
 
