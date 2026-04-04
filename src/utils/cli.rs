@@ -10,9 +10,12 @@ use crate::config::Config;
 
 const CONFIG_HELP: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/assets/config_help.txt"
+    "/assets/cli/config_help.txt"
 ));
-const KEYBINDS: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/keybinds.txt"));
+const KEYBINDS: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/cli/keybinds.txt"
+));
 
 pub(crate) enum CliAction {
     RunApp,

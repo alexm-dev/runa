@@ -17,12 +17,12 @@ use std::{fs, io, path::PathBuf};
 
 const FULL_TOML: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/assets/runa_full.toml"
+    "/assets/config/runa_full.toml"
 ));
 
 const MINIMAL_TOML: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/assets/runa_minimal.toml"
+    "/assets/config/runa_minimal.toml"
 ));
 
 /// Raw configuration as read from the toml file
