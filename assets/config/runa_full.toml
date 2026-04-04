@@ -159,7 +159,7 @@ owner = true
 group = true
 
 # Position of the File Info widget
-position = "default"
+position = "bottom_left"
 
 # Enable file information on the status bar on the bottom left
 status_bar = true
@@ -270,8 +270,8 @@ exe_color = "LightGreen"
 # The global selection coloring section.
 # Can be overwritten for each pane.
 [theme.selection]     # Selection bar colors
-fg = "#303030"
-bg = "default"
+fg = "default"
+bg = "#303030"
 
 [theme.accent]        # Borders/titles
 fg = "#444444"
