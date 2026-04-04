@@ -164,6 +164,27 @@ toggle_marker_jump = false
 # False results in pending preview when holding down a navigation key.
 instant_preview = true
 
+# Configuration of the sorting date format when sorting by a date (Modified, Created, Accessed).
+# Uses the standard strftime-style format codes.
+# Common specifiers:
+#   %Y - 4 digit year (2026)
+#   %y - 2 digit year (26)
+#   %m - Month number (01-12)
+#   %b - Month name (Jan, Feb, etc.)
+#   %d - Day of the month
+#   %H - Hour
+#   %M - Minute
+#   %S - Second
+#   %p - AM/PM
+#
+# Examples:
+# "%Y-%m-%d"          # 2026-04-04
+# "%d.%m.%Y %H:%M"    # 04.04.2026 14:30
+# "%b %d, %Y"         # Apr 04, 2026
+#
+# This will show up in the sorting column next to entries.
+sort_date_format = "%b %e %H:%M"
+
 # Options for the preview method used by the preview pane.
 # Options: "internal" and "bat". For "bat" you will need to have `bat` installed otherwise it will fallback to internal.
 [display.previews_options]
@@ -202,7 +223,7 @@ modified = true
 created = true
 accessed = false
 perms = true
-position = "default"
+position = "bottom_left"
 
 # Enable file information on the status bar on the bottom left
 status_bar = true
@@ -212,8 +233,8 @@ status_bar = true
 format = "{perms} | {size}"
 
 # Configure the date format for file timestamps (Modified, Created, Accessed).
-# This uses the standard stftime / chrono format strings.
-# Specifiers:
+# Uses the standard strftime-style format codes..
+# Common specifiers:
 #   %Y - 4 digit year (2026)
 #   %y - 2 digit year (26)
 #   %m - Month number (01-12)
@@ -223,7 +244,14 @@ format = "{perms} | {size}"
 #   %M - Minute
 #   %S - Second
 #   %p - AM/PM
+#
+# Examples:
+# "%Y-%m-%d"          # 2026-04-04
+# "%d.%m.%Y %H:%M"    # 04.04.2026 14:30
+# "%b %d, %Y"         # Apr 04, 2026
 date_format = "%Y-%m-%d %H:%M"
+
+
 
 # Display the status line options on the stauts line (Header or Footer)
 [display.status]
@@ -276,8 +304,7 @@ name = "default"
 selection_icon = ""
 
 # Set the colors of binaries/executables.
-# By default LightGreen.
-exe_color = "default"
+exe_color = "lightgreen"
 
 # You can set each color field directly in [theme] instead.
 # There is now need to create each [theme] subsection for overriding and or creating custom themes.
@@ -324,8 +351,8 @@ These options are optional and can be omitted.
 # The global selection coloring section.
 # Can be overwritten for each pane.
 [theme.selection]     # Selection bar colors
-fg = "#303030"
-bg = "default"
+fg = "default"
+bg = "#303030"
 
 [theme.accent]        # Borders/titles
 fg = "#444444"
@@ -568,11 +595,6 @@ alternate_delete    = ["<m-d>"]    # Alternates between move_to_trash and perman
 go_to_bottom        = ["G"]
 keybind_help        = ["?"]
 
-# Keys that are triggered by the "g" prefix
-go_to_top           = ["g"]
-go_to_home          = ["h"]
-go_to_path          = ["p"]
-
 # Tab actions
 tab_new             = ["<c-t>"]
 tab_close           = ["<c-w>"]
@@ -583,11 +605,26 @@ tab_prev            = ["<c-p>"]
 scroll_up           = ["<c-d>"]
 scroll_down         = ["<c-u>"]
 
+# Keys that are triggered by the "g" prefix
+prefix_go_to        = ["g"]
+go_to_top           = ["g"]
+go_to_home          = ["h"]
+go_to_path          = ["p"]
+
+# Sorting keybinds which are triggered by the "sort" prefix.
+sort                = ["o"]
+sort_by_name        = ["n"]
+sort_by_natural     = ["N"]
+sort_by_extension   = ["e"]
+sort_by_size        = ["s"]
+sort_by_modified    = ["m"]
+sort_by_created     = ["c"]
+sort_by_accessed    = ["a"]
 ```
 
 **Note:**
-- `go_to_top`, `go_to_path` and `go_to_home` are triggered using the `"g"` prefix.  
-  For example, press `"g"` then `"p"` to activate "go to path".
+- go_to_* actions are triggered by pressing the "g" prefix, then another key. For example, "g" then "p" for go_to_path.
+- sort_by_* actions are triggered by pressing the "o" (sort) prefix, then the sort key. For example, "o" then "e" for sort_by_extension.
 - You can use `" "` for space as well.
 
 You may remove any binding to let it fall back to the default.
