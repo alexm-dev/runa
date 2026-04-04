@@ -51,7 +51,7 @@ fn epoch_atomic() -> &'static AtomicU64 {
 }
 
 #[inline]
-fn meta_cache() -> &'static Mutex<HashMap<PathBuf, CachedMetaKey>> {
+pub(crate) fn meta_cache() -> &'static Mutex<HashMap<PathBuf, CachedMetaKey>> {
     META_SORT_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
@@ -62,9 +62,6 @@ fn meta_sort_epoch() -> u64 {
 
 pub(crate) fn bump_meta_sort_epoch() {
     epoch_atomic().fetch_add(1, Ordering::Relaxed);
-    if let Ok(mut cache) = meta_cache().lock() {
-        cache.clear();
-    }
 }
 
 pub(crate) fn get_or_update_cached_meta(path: &Path) -> Option<CachedMetaKey> {

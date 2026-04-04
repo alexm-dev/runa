@@ -8,7 +8,7 @@
 
 use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::FileEntry;
-use crate::core::metadata::{FileType, get_or_update_cached_meta};
+use crate::core::metadata::{FileType, get_or_update_cached_meta, meta_cache};
 use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
 
 use chrono::{DateTime, Local};
@@ -256,7 +256,6 @@ impl Formatter {
         metadata_sort_field: MetadataSortField,
         sort_date_format: &str,
     ) -> Vec<Arc<str>> {
-        use crate::core::formatter::{format_file_size, format_file_time};
         let now = Local::now();
         let ctx = TimeFormatCtx::new(sort_date_format, now);
 
@@ -264,6 +263,14 @@ impl Formatter {
         let mut column: Vec<Arc<str>> = Vec::with_capacity(entries.len());
 
         let mut path_buffer = directory_path.to_path_buf();
+
+        let cache = meta_cache();
+        if let Ok(mut c) = cache.lock() {
+            const HARD_LIMIT: usize = 40_000;
+            if c.len() >= HARD_LIMIT {
+                c.clear();
+            }
+        }
 
         for (index, file_entry) in entries.iter().enumerate() {
             let priority = self.prio_for_entry(file_entry);
