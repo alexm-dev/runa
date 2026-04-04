@@ -135,5 +135,5 @@ fn print_keybinds() {
 }
 
 fn print_config_help() {
-    println!("{}{}", CONFIG_HELP, KEYBINDS);
+    println!("{}\n{}", CONFIG_HELP, KEYBINDS);
 }

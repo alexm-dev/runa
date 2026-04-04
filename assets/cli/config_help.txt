@@ -1,6 +1,8 @@
 runa - Full Configuration Guide (runa.toml)
 
---[ GENERAL ]--------------------------------------------
+# ===============================
+#       GENERAL SETTINGS
+# ===============================
 
 [general]
   dirs_first                 Sort directories before files [default: true]
@@ -15,7 +17,9 @@ runa - Full Configuration Guide (runa.toml)
 [general.startup]
   tabs                       Configuration of startup paths as tabs
 
---[ DISPLAY ]--------------------------------------------
+# ===============================
+#            DISPLAY
+# ===============================
 
 [display]
   selection_marker           Show selection/cursor marker [default: true]
@@ -33,6 +37,7 @@ runa - Full Configuration Guide (runa.toml)
   scroll_padding             Reserved rows when scrolling
   toggle_marker_jump         Toggle marker jumping to first entry
   instant_preview            Toggle instant previews on every selection change
+  sort_date_format           Configure the sorting format for file timestamps
 
 [display.preview_option]
   method                     Set the preview method ("bat" or "internal")
@@ -54,6 +59,8 @@ runa - Full Configuration Guide (runa.toml)
   created
   accessed
   perms
+  owner
+  group
   status_bar
   format                     Configuration of the status line format string
   date_format                Configuration of the file information timestamps
@@ -66,7 +73,9 @@ runa - Full Configuration Guide (runa.toml)
   tasks
   tabs
 
---[ THEME ]--------------------------------------------
+# ===============================
+#             THEME
+# ===============================
 
 [theme]
   name                       Theme name, e.g. "gruvbox-dark"
@@ -123,7 +132,9 @@ Each sub-table supports fg/bg colors ("Red", "Blue", hex "#RRGGBB", or "default"
   owner.fg/bg
   group.fg/bg
 
---[ EDITOR ]--------------------------------------------
+# ===============================
+#            EDITOR
+# ===============================
+
 [editor]
   cmd                       Command to open files (e.g., "nvim", "code")
-"##;

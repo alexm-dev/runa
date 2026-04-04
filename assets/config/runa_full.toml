@@ -5,7 +5,9 @@
 # Use hex codes (eg. "#RRGGBB") or terminal colors ("cyan")
 # To get configuration help, check out the runa documentation.
 
-# General behavior
+# ===========================
+#      GENERAL SETTINGS
+# ===========================
 [general]
 dirs_first = true
 show_hidden = true
@@ -15,6 +17,10 @@ show_hidden = true
 # always_show = []
 # max_find_results = 2000
 # move_to_trash = true
+
+# ===========================
+#          DISPLAY
+# ===========================
 
 [display]
 # selection_marker = false
@@ -66,6 +72,10 @@ preview = true
 # clipboard = "footer"
 # tasks = "footer"
 # tabs = "header"
+
+# ===========================
+#           THEME
+# ===========================
 
 [theme]
 name = "default"
@@ -177,8 +187,16 @@ name = "default"
 # group.fg = "default"
 # group.bg = "default"
 
+# ===========================
+#           EDITOR
+# ===========================
+
 # [editor]
 # cmd = "nvim"
+
+# ===========================
+#          KEYBINDS
+# ===========================
 
 # [keys]
 # open_file = ["enter"]
@@ -207,7 +225,6 @@ name = "default"
 # go_to_bottom = ["G"]
 # keybind_help = ["?"]
 
-# Keys triggered by pressing "g" once
 # go_to_top = ["g"]
 # go_to_home = ["h"]
 # go_to_path = ["p"]
