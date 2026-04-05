@@ -335,14 +335,18 @@ impl Formatter {
             m_ord
         });
 
-        let old_entries = std::mem::take(entries);
-        let old_column = column;
+        let mut old_entries: Vec<Option<FileEntry>> = entries.drain(..).map(Some).collect();
+        let mut old_column: Vec<Option<Arc<str>>> = column.into_iter().map(Some).collect();
 
-        let mut new_column = Vec::with_capacity(entries.len());
+        let mut new_column = Vec::with_capacity(old_entries.len());
 
         for (_, _, idx) in &keys {
-            entries.push(old_entries[*idx].clone());
-            new_column.push(old_column[*idx].clone());
+            if let Some(entry) = old_entries[*idx].take() {
+                entries.push(entry);
+            }
+            if let Some(col_value) = old_column[*idx].take() {
+                new_column.push(col_value);
+            }
         }
 
         new_column
