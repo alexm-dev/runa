@@ -562,7 +562,6 @@ impl<'a> AppState<'a> {
         }
 
         let parent_path_buf = parent_path.to_path_buf();
-        let sort_config = self.nav.sort_config();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let req_id = self
             .parent
