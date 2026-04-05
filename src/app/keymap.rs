@@ -440,9 +440,8 @@ fn bind_prefix(
     for k in key_list {
         if let Some(key) = parse_key(k)
             && key.modifiers.is_empty()
-            && let KeyCode::Char(c) = key.code
         {
-            map.insert(KeyCode::Char(c), prefix);
+            map.insert(key.code, prefix);
         }
     }
 }
