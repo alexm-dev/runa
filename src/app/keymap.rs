@@ -392,7 +392,10 @@ fn parse_key(s: &str) -> Option<Key> {
             "backspace" | "back" => code = Some(KeyCode::Backspace),
             "tab" => code = Some(KeyCode::Tab),
             "space" | "spc" => code = Some(KeyCode::Char(' ')),
-
+            "page_up" | "pageup" | "pgup" => code = Some(KeyCode::PageUp),
+            "page_down" | "pagedown" | "pgdn" => code = Some(KeyCode::PageDown),
+            "home" => code = Some(KeyCode::Home),
+            "end" => code = Some(KeyCode::End),
             _ => {
                 if part.len() == 1 {
                     let mut c = part.chars().next()?;
