@@ -57,10 +57,21 @@ pub(crate) enum InputKeys {
 }
 
 /// Input configuration options of all actions
-#[derive(Deserialize, Debug)]
-#[serde(transparent)]
+#[derive(Debug)]
 pub(crate) struct Keys {
     bindings: HashMap<InputKeys, Vec<String>>,
+}
+
+impl<'de> Deserialize<'de> for Keys {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let user_bindings = HashMap::<InputKeys, Vec<String>>::deserialize(deserializer)?;
+        let mut keys = Keys::default();
+        keys.bindings.extend(user_bindings);
+        Ok(keys)
+    }
 }
 
 crate::key_accessor!(
