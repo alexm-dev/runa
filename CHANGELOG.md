@@ -2,6 +2,23 @@
 
 All the changes made to runa are documented here.
 
+## [0.10.1] - 2026-04-06
+
+#### Keymap overwrite bug fix and sorting performance improvements.
+
+### Fixed
+- **Key configuration**: Fixed an issue where overwriting default keybindings caused the keymap to become empty resulting in no keybindings being set afterwards.
+
+### Changed
+- **Key-Codes**: Enabled parsing of `home`, `end` ,`page_down/pgdn/pagedown` and `page_up/pgup/pageup` key-codes.
+
+### Internal
+- **Performance**: New entries and columns now do not clone the old entries in re-sorting, reducing memory when sorting.
+
+
+---
+
+
 ## [0.10.0] - 2026-04-04
 
 #### Sorting feature, performance improvements and more.
