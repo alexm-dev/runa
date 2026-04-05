@@ -148,14 +148,6 @@ impl<'a> AppState<'a> {
 
         let entry_path = self.nav.current_dir().join(entry.name());
 
-        let Ok(meta) = std::fs::metadata(&entry_path) else {
-            return KeypressResult::Continue;
-        };
-
-        if !meta.is_dir() {
-            return KeypressResult::Continue;
-        }
-
         match std::fs::read_dir(&entry_path) {
             Ok(_) => {
                 self.navigate_to(entry_path, None, workers);
