@@ -7,7 +7,7 @@ All the changes made to runa are documented here.
 #### Keymap overwrite bug fix and sorting performance improvements.
 
 ### Fixed
-- **Key configuration**: Fixed an issue where overwriting default keybindings caused the keymap to become empty resulting in no keybindings being set afterwards.
+- **Key configuration**: Fixed an issue where overwriting default keybindings caused the keymap to become empty, resulting in no keybindings being set afterwards.
 
 ### Changed
 - **Key-Codes**: Enabled parsing of `home`, `end` ,`page_down/pgdn/pagedown` and `page_up/pgup/pageup` key-codes.
