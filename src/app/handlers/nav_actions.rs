@@ -336,12 +336,7 @@ impl<'a> AppState<'a> {
         self.request_preview(workers);
     }
 
-    pub(super) fn navigate_to(
-        &mut self,
-        path: PathBuf,
-        focus: Option<OsString>,
-        workers: &Workers,
-    ) {
+    fn navigate_to(&mut self, path: PathBuf, focus: Option<OsString>, workers: &Workers) {
         self.nav.save_position();
         self.nav.set_path(path.clone());
 
