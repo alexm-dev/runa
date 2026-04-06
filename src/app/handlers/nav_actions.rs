@@ -345,12 +345,23 @@ impl<'a> AppState<'a> {
         self.nav.save_position();
         self.nav.set_path(path.clone());
 
-        if let Some((taken_entries, taken_sort)) = self.preview.try_share_directory(&path) {
-            let entries_vec = taken_entries.to_vec();
-            let sort_vec = taken_sort.map(|s| s.to_vec());
+        if let Some((preview_entries, preview_sort)) = self.preview.try_share_directory(&path) {
+            let entries_vec = preview_entries.to_vec();
+            let sort_vec = preview_sort.map(|s| s.to_vec());
             self.nav
                 .update_from_worker(path, entries_vec, sort_vec, focus.clone());
 
+            self.is_loading = false;
+        } else if let Some(parent) = self.nav.current_dir().parent()
+            && path == parent
+            && let Some((parent_entries, parent_sort)) = self
+                .parent
+                .try_share_directory(parent, self.nav.sort_config())
+        {
+            let entries_vec = parent_entries.to_vec();
+            let sort_vec = parent_sort.map(|s| s.to_vec());
+            self.nav
+                .update_from_worker(path, entries_vec, sort_vec, focus.clone());
             self.is_loading = false;
         } else {
             self.is_loading = true;

@@ -3,6 +3,7 @@
 //! Tracks entries, selection, worker requests for the parent pane view above the current working
 //! directory
 
+use crate::app::NavigationData;
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
 use std::path::{Path, PathBuf};
@@ -14,8 +15,8 @@ use std::sync::Arc;
 /// and tracks the request IDs to coordinate updates.
 #[derive(Default)]
 pub(crate) struct ParentState {
-    entries: Vec<FileEntry>,
-    sort_column: Option<Vec<Arc<str>>>,
+    entries: Arc<[FileEntry]>,
+    sort_column: Option<Arc<[Arc<str>]>>,
     selected_idx: Option<usize>,
     last_path: Option<PathBuf>,
     last_sort: Option<SortConfig>,
@@ -25,8 +26,8 @@ pub(crate) struct ParentState {
 impl ParentState {
     crate::getters! {
         request_id: u64,
-        entries: &[FileEntry],
-        sort_column: &Option<Vec<Arc<str>>>,
+        entries: &Arc<[FileEntry]>,
+        sort_column: &Option<Arc<[Arc<str>]>>,
         selected_idx: Option<usize>,
     }
 
@@ -67,17 +68,35 @@ impl ParentState {
         }
         // Find the index of the folder we are currently inside to highlight it
         self.selected_idx = entries.iter().position(|e| e.name_str() == current_name);
-        self.entries = entries;
+        self.entries = Arc::from(entries);
         self.last_path = Some(parent_path.to_path_buf());
         self.last_sort = Some(sort);
-        self.sort_column = sort_column;
+        self.sort_column = sort_column.map(Arc::from);
         self.request_id = req_id;
+    }
+
+    pub(crate) fn try_share_directory(
+        &self,
+        parent_path: &Path,
+        sort: SortConfig,
+    ) -> NavigationData {
+        if self.last_path.as_deref() == Some(parent_path)
+            && !self.entries.is_empty()
+            && self.last_sort == Some(sort)
+        {
+            Some((
+                Arc::clone(&self.entries),
+                self.sort_column.as_ref().map(Arc::clone),
+            ))
+        } else {
+            None
+        }
     }
 
     /// Clears all entries, resets the selected entry index,
     /// resets the last path and increases the request_id
     pub(super) fn clear(&mut self) {
-        self.entries.clear();
+        self.entries = Arc::default();
         self.selected_idx = None;
         self.last_path = None;
         self.last_sort = None;

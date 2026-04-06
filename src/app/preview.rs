@@ -3,6 +3,7 @@
 //! Tracks the state of the file/directory preview for the UI, including loaded preview
 //! data, debounce for background rendering, selection within the preview and request tracking
 
+use crate::app::NavigationData;
 use crate::core::FileEntry;
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
@@ -41,8 +42,6 @@ pub(crate) struct PreviewState {
     pending: bool,
     last_input_time: Instant,
 }
-
-type NavigationData = Option<(Arc<[FileEntry]>, Option<Arc<[Arc<str>]>>)>;
 
 impl PreviewState {
     crate::getters! {
