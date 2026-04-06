@@ -62,7 +62,7 @@ impl Workers {
     ///
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
-        let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(2);
+        let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
         let (sort_io_tx, sort_io_rx) = bounded::<WorkerTask>(1);
@@ -79,8 +79,8 @@ impl Workers {
         start_io_worker(nav_io_rx, res_tx.clone());
         start_io_worker(parent_io_rx, res_tx.clone());
         start_io_worker(preview_io_rx, res_tx.clone());
-        start_sort_worker(sort_io_rx, res_tx.clone());
 
+        start_sort_worker(sort_io_rx, res_tx.clone());
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
