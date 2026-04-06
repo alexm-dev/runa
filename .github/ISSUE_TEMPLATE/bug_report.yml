@@ -76,6 +76,7 @@ body:
         - Ghostty
         - Konsole
         - GNOME Terminal
+        - Windows Terminal
         - iTerm
         - Warp
         - st
