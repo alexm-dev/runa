@@ -343,7 +343,19 @@ impl<'a> AppState<'a> {
         workers: &Workers,
     ) {
         self.nav.save_position();
-        self.nav.set_path(path);
+        self.nav.set_path(path.clone());
+
+        if let Some(taken_entries) = self.preview.try_take_directory(&path) {
+            let sort_column = None;
+
+            self.nav
+                .update_from_worker(path, taken_entries, sort_column, focus.clone());
+
+            self.is_loading = false;
+        } else {
+            self.is_loading = true;
+        }
+
         self.request_dir_load(workers, focus);
         self.request_parent_content(workers);
     }

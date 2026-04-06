@@ -124,17 +124,16 @@ impl PreviewState {
         self.current_path = None;
         self.pending = false;
     }
-}
 
-impl PreviewData {
-    /// Determines if the preview data is empty
-    #[inline]
-    pub(crate) fn is_empty(&self) -> bool {
-        match self {
-            PreviewData::Directory { entries, .. } => entries.is_empty(),
-            PreviewData::File(text) => text.lines.is_empty(),
-            PreviewData::Empty => true,
+    pub(crate) fn try_take_directory(&mut self, target_path: &Path) -> Option<Vec<FileEntry>> {
+        if let Some(path) = &self.current_path
+            && path == target_path
+            && let PreviewData::Directory { entries, .. } =
+                std::mem::replace(&mut self.data, PreviewData::Empty)
+        {
+            return Some(entries);
         }
+        None
     }
 }
 
@@ -147,6 +146,18 @@ impl Default for PreviewState {
             request_id: 0,
             pending: false,
             last_input_time: Instant::now(),
+        }
+    }
+}
+
+impl PreviewData {
+    /// Determines if the preview data is empty
+    #[inline]
+    pub(crate) fn is_empty(&self) -> bool {
+        match self {
+            PreviewData::Directory { entries, .. } => entries.is_empty(),
+            PreviewData::File(text) => text.lines.is_empty(),
+            PreviewData::Empty => true,
         }
     }
 }

@@ -342,9 +342,13 @@ impl<'a> AppState<'a> {
             } => {
                 // only update nav if BOTH the ID and path match.
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                    self.nav
-                        .update_from_worker(path, entries, sort_column, focus);
-                    self.is_loading = false;
+                    if self.nav.entries() == entries {
+                        self.is_loading = false;
+                    } else {
+                        self.nav
+                            .update_from_worker(path, entries, sort_column, focus);
+                        self.is_loading = false;
+                    }
 
                     self.request_parent_content(workers);
                     self.request_preview(workers);

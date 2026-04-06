@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
 /// Used throughout runa for directory browsing and file management
 /// Created and populated by the browse_dir function.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
     name: Box<OsStr>,
     lowered: String,
