@@ -10,10 +10,10 @@ All the changes made to runa are documented here.
 - **Key configuration**: Fixed an issue where overwriting default keybindings caused the keymap to become empty, resulting in no keybindings being set afterwards.
 
 ### Changed
-- **Key-Codes**: Enabled parsing of `home`, `end` ,`page_down/pgdn/pagedown` and `page_up/pgup/pageup` key-codes.
+- **Key-Codes**: Added support for `home`, `end`, `page_down/pgdn/pagedown` and `page_up/pgup/pageup` key-codes.
 
 ### Internal
-- **Performance**: New entries and columns now do not clone the old entries in re-sorting, reducing memory when sorting.
+- **Performance**: New entries and columns no longer clone the old entries while re-sorting, reducing memory during sorting.
 
 
 ---
