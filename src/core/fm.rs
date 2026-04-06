@@ -10,6 +10,7 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Represents a single entry in a directory listing
 /// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
@@ -17,7 +18,7 @@ use std::path::{Path, PathBuf};
 /// Created and populated by the browse_dir function.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
-    name: Box<OsStr>,
+    name: Arc<OsStr>,
     lowered: String,
     flags: u8,
     symlink: Option<PathBuf>,
@@ -44,7 +45,7 @@ impl FileEntry {
             str.to_lowercase()
         };
         FileEntry {
-            name: name.into_boxed_os_str(),
+            name: Arc::from(name),
             lowered,
             flags,
             symlink,

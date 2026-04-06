@@ -159,14 +159,14 @@ pub(crate) fn draw_main(
 
     let sort_column = app.nav().sort_column();
     let inner_w = pane_inner_width(&context);
-    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
+    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
 
     let mut items = Vec::with_capacity(shown_len);
     for (vis_idx, &abs_idx) in app.nav().shown_indices().iter().enumerate() {
         let entry = &app.nav().entries()[abs_idx];
         let is_selected = Some(vis_idx) == selected_idx;
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-        let right = right_col_for(show_col, right_w, sort_column.as_ref(), abs_idx);
+        let right = right_col_for(show_col, right_w, sort_column.as_deref(), abs_idx);
 
         items.push(make_entry_row(
             entry,
@@ -265,13 +265,13 @@ pub(crate) fn draw_preview(
             }
 
             let inner_w = pane_inner_width(&context);
-            let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
+            let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
 
             let mut items = Vec::with_capacity(entries.len());
             for (idx, entry) in entries.iter().enumerate() {
                 let is_selected = Some(idx) == selected_idx;
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
-                let right = right_col_for(show_col, right_w, sort_column.as_ref(), idx);
+                let right = right_col_for(show_col, right_w, sort_column.as_deref(), idx);
 
                 items.push(make_entry_row(
                     entry,
@@ -328,13 +328,13 @@ pub(crate) fn draw_parent(
 
     let sort_column = app.parent().sort_column();
     let inner_w = pane_inner_width(&context);
-    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_ref());
+    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
 
     let mut items = Vec::with_capacity(entries.len());
     for (idx, entry) in entries.iter().enumerate() {
         let is_selected = Some(idx) == selected_idx;
         let style = context.styles.get_style(entry.is_dir(), is_selected);
-        let right = right_col_for(show_col, right_w, sort_column.as_ref(), idx);
+        let right = right_col_for(show_col, right_w, sort_column.as_deref(), idx);
 
         items.push(make_entry_row(
             entry,
@@ -685,7 +685,7 @@ fn pane_inner_width(context: &PaneContext) -> u16 {
 }
 
 #[inline]
-fn right_col_width(sort_column: Option<&Vec<Arc<str>>>) -> u16 {
+fn right_col_width(sort_column: Option<&[Arc<str>]>) -> u16 {
     let Some(col) = sort_column else {
         return 0;
     };
@@ -700,14 +700,14 @@ fn right_col_width(sort_column: Option<&Vec<Arc<str>>>) -> u16 {
 }
 
 #[inline]
-fn right_col_config(inner_w: u16, sort_column: Option<&Vec<Arc<str>>>) -> (bool, u16) {
+fn right_col_config(inner_w: u16, sort_column: Option<&[Arc<str>]>) -> (bool, u16) {
     let right_w = right_col_width(sort_column);
     let show_col = pane_show_col(inner_w, right_w);
     (show_col, right_w)
 }
 
 #[inline]
-fn right_col_at(sort_column: Option<&Vec<Arc<str>>>, idx: usize) -> Option<&str> {
+fn right_col_at(sort_column: Option<&[Arc<str>]>, idx: usize) -> Option<&str> {
     sort_column
         .and_then(|c| c.get(idx))
         .map(|s| s.as_ref())
@@ -718,7 +718,7 @@ fn right_col_at(sort_column: Option<&Vec<Arc<str>>>, idx: usize) -> Option<&str>
 fn right_col_for(
     show_col: bool,
     right_w: u16,
-    sort_column: Option<&Vec<Arc<str>>>,
+    sort_column: Option<&[Arc<str>]>,
     idx: usize,
 ) -> RightCol<'_> {
     if !show_col {

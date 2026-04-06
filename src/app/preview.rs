@@ -16,8 +16,8 @@ use std::time::Instant;
 /// Used to display or render file/folder content in the preview pane
 pub(crate) enum PreviewData {
     Directory {
-        entries: Vec<FileEntry>,
-        sort_column: Option<Vec<Arc<str>>>,
+        entries: Arc<[FileEntry]>,
+        sort_column: Option<Arc<[Arc<str>]>>,
     },
     File(Text<'static>),
     Empty,
@@ -41,6 +41,8 @@ pub(crate) struct PreviewState {
     pending: bool,
     last_input_time: Instant,
 }
+
+type NavigationData = Option<(Arc<[FileEntry]>, Option<Arc<[Arc<str>]>>)>;
 
 impl PreviewState {
     crate::getters! {
@@ -105,8 +107,8 @@ impl PreviewState {
     ) {
         if request_id == self.request_id {
             self.data = PreviewData::Directory {
-                entries,
-                sort_column,
+                entries: Arc::from(entries),
+                sort_column: sort_column.map(Arc::from),
             };
             self.selected_idx = 0;
         }
@@ -125,13 +127,15 @@ impl PreviewState {
         self.pending = false;
     }
 
-    pub(crate) fn try_take_directory(&mut self, target_path: &Path) -> Option<Vec<FileEntry>> {
+    pub(crate) fn try_share_directory(&self, target_path: &Path) -> NavigationData {
         if let Some(path) = &self.current_path
             && path == target_path
-            && let PreviewData::Directory { entries, .. } =
-                std::mem::replace(&mut self.data, PreviewData::Empty)
+            && let PreviewData::Directory {
+                entries,
+                sort_column,
+            } = &self.data
         {
-            return Some(entries);
+            return Some((Arc::clone(entries), sort_column.as_ref().map(Arc::clone)));
         }
         None
     }
