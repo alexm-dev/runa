@@ -64,6 +64,25 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: terminal_emulator
+    attributes:
+      label: Terminal
+      description: Which terminal are you using?
+      options:
+        - Alacritty
+        - Kitty
+        - WezTerm
+        - Ghostty
+        - Konsole
+        - GNOME Terminal
+        - iTerm
+        - Warp
+        - st
+        - Other / not listed
+    validations:
+      required: true
+
   - type: textarea
     id: logs
     attributes:
