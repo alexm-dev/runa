@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -21,13 +21,13 @@ jobs:
         id: vars
         run: |
           CARGO_V=$(grep -m 1 '^version =' Cargo.toml | cut -d '"' -f 2)
-          STABLE_V=$(git describe --tags --abbrev=0 || echo "None")
+          STABLE_V=$(git describe --tags --abbrev=0 2>/dev/null || echo "None")
           echo "cargo=$CARGO_V" >> $GITHUB_OUTPUT
           echo "stable=$STABLE_V" >> $GITHUB_OUTPUT
 
       - name: Update YAML template
         run: |
-          yq -i '(.body[] | select(.id == "version") | .attributes.options) = ["Latest Release (${{ steps.vars.outputs.stable }})", "Development (${{ steps.vars.outputs.cargo }})", "Other / Git Commit Hash"]' .github/ISSUE_TEMPLATE/bug_report.yml
+          yq -i '(.body[] | select(.id == "version") | .attributes.options) = ["Latest Release ('${{ steps.vars.outputs.stable }}')", "Development ('${{ steps.vars.outputs.cargo }}')", "Other / Git Commit Hash"]' .github/ISSUE_TEMPLATE/bug_report.yml
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5
