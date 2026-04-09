@@ -5,7 +5,6 @@
 #[cfg(windows)]
 use crate::utils::with_lowered_stack;
 
-use std::borrow::Cow;
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
@@ -19,6 +18,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
     name: Arc<OsStr>,
+    name_str: Arc<str>,
     lowered: String,
     flags: u8,
     symlink: Option<PathBuf>,
@@ -40,12 +40,13 @@ impl FileEntry {
     pub(super) const EXEC_FLAG: u32 = 0o111;
 
     pub(crate) fn new(name: OsString, flags: u8, symlink: Option<PathBuf>) -> Self {
-        let lowered = {
-            let str = name.to_string_lossy();
-            str.to_lowercase()
-        };
+        let lossy_str = name.to_string_lossy();
+        let lowered = lossy_str.to_lowercase();
+        let name_str: Arc<str> = Arc::from(lossy_str.into_owned());
+
         FileEntry {
             name: Arc::from(name),
+            name_str,
             lowered,
             flags,
             symlink,
@@ -54,12 +55,9 @@ impl FileEntry {
 
     crate::getters! {
         name: &OsStr,
+        name_str: &str,
         lowered: &str,
         flags: u8,
-    }
-
-    pub(crate) fn name_str(&self) -> Cow<'_, str> {
-        self.name.to_string_lossy()
     }
 
     #[inline]

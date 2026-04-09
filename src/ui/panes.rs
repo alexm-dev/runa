@@ -6,6 +6,7 @@
 //! Used internally by ui::render
 
 use crate::app::{AppState, Clipboard, PreviewData};
+use crate::config::Theme;
 use crate::core::FileEntry;
 use crate::ui::icons::nerd_font_icon;
 use ratatui::widgets::BorderType;
@@ -68,6 +69,7 @@ pub(crate) struct PaneContext<'a> {
     pub(crate) area: Rect,
     pub(crate) block: Block<'a>,
     pub(crate) border_type: BorderType,
+    pub(crate) theme: &'a Theme,
     pub(crate) accent_style: Style,
     pub(crate) styles: PaneStyles,
     pub(crate) highlight_symbol: &'a str,
@@ -487,6 +489,18 @@ fn make_entry_row<'a>(
     }
 
     let mut row_style = style;
+
+    if let Some(override_style) = context
+        .theme
+        .entry_color_override(entry.name_str(), entry.is_dir())
+    {
+        row_style = row_style.patch(override_style);
+
+        if is_selected {
+            row_style = row_style.bg(style.bg.unwrap_or_default());
+        }
+    }
+
     if let Some(opts) = opts
         && is_selected
         && opts.use_underline
@@ -564,7 +578,7 @@ fn make_entry_row<'a>(
         .saturating_sub(reserve)
         .saturating_sub(used_w)
         .max(1);
-    let name = truncate_owned(name_raw.as_ref(), name_budget);
+    let name = truncate_owned(name_raw, name_budget);
 
     used_w += UnicodeWidthStr::width(name.as_str());
 
