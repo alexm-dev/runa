@@ -5,7 +5,9 @@
 //! The main function `nerd_font_icon` takes a `FileEntry` and returns
 //! the corresponding Nerd Font icon.
 
+use crate::config::Theme;
 use crate::core::FileEntry;
+use ratatui::style::Color;
 
 use phf::phf_map;
 
@@ -13,191 +15,190 @@ use phf::phf_map;
 /// This map associates common file extensions with their corresponding
 /// Nerd Font icons.
 /// For example, "rs" maps to the Rust icon "".
-static EXT_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
-    "rs" => "",
-    "rlib" => "",
-    "py" => "",
-    "js" => "",
-    "md" => "",
-    "html" => "",
-    "css" => "",
-    "json" => "",
-    "xml" => "",
-    "sh" => "",
-    "bash" => "",
-    "zsh" => "",
-    "fish" => "",
-    "go" => "󰟓",
-    "java" => "",
-    "c" => "",
-    "cpp" => "",
-    "h" => "",
-    "hpp" => "",
-    "php" => "",
-    "rb" => "",
-    "swift" => "",
-    "kt" => "",
-    "lua" => "",
-    "ts" => "",
-    "tsx" => "",
-    "jsx" => "",
-    "vue" => "",
-    "sql" => "",
-    "lock" => "",
-    "exe" => "",
-    "zip" => "",
-    "tar" => "",
-    "gz" => "",
-    "rar" => "",
-    "zst" => "",
-    "mp3" => "",
-    "mp4" => "",
-    "png" => "",
-    "jpg" => "",
-    "jpeg" => "",
-    "gif" => "",
-    "svg" => "",
-    "pdf" => "",
-    "doc" => "",
-    "docx" => "",
-    "xls" => "",
-    "xlsx" => "",
-    "ppt" => "",
-    "pptx" => "",
-    "txt" => "",
-    "log" => "",
-    "cfg" => "",
-    "config" => "",
-    "ini" => "",
-    "bat" => "",
-    "ps1" => "󰨊",
-    "cmd" => "",
-    "yml" => "",
-    "yaml" => "",
-    "toml" => "",
-    "deb" => "",
-    "rpm" => "",
-    "dmg" => "",
-    "appimage" => "",
-    "snap" => "",
-    "flatpak" => "",
-    "msi" => "",
-    "iso" => "󰗮",
-    "img" => "󰗮",
-    "vhd" => "",
-    "cab" => "",
-    "psd" => "",
-    "patch" => "",
-    "diff" => "",
-    "ebuild" => "",
-    "spec" => "",
-    "dll" => "",
-    "a" => "",
-    "so" => "",
-    "lib" => "",
-    "o" => "",
-    "d" => "",
+pub(crate) static EXT_ICON_MAP: phf::Map<&'static str, (&'static str, Option<&'static str>)> = phf_map! {
+    "rs"    => ("", Some("#dea584")),
+    "rlib"  => ("", Some("#dea584")),
+    "py"    => ("", Some("#3572a5")),
+    "js"    => ("", Some("#f1e05a")),
+    "ts"    => ("", Some("#3178c6")),
+    "tsx"   => ("", Some("#61dafb")),
+    "jsx"   => ("", Some("#61dafb")),
+    "go"    => ("󰟓", Some("#00add8")),
+    "java"  => ("", Some("#cc2e2d")),
+    "lua"   => ("", Some("#51a0cf")),
+    "php"   => ("", Some("#777bb4")),
+    "rb"    => ("", Some("#701516")),
+    "html"  => ("", Some("#e34c26")),
+    "css"   => ("", Some("#563d7c")),
+    "swift" => ("", Some("#f05138")),
+    "kt"    => ("", Some("#7f52ff")),
+    "json"  => ("", Some("#cbcb41")),
+    "toml"  => ("", Some("#9c4221")),
+    "yaml"  => ("", None),
+    "yml"   => ("", None),
+    "xml"   => ("", None),
+    "sql"   => ("", Some("#dad8d8")),
+    "lock"  => ("", Some("#bbbbbb")),
+    "sh"    => ("", Some("#4d5a5e")),
+    "bash"  => ("", Some("#4d5a5e")),
+    "zsh"   => ("", Some("#4d5a5e")),
+    "fish"  => ("", Some("#4d5a5e")),
+    "md"    => ("", None),
+    "txt"   => ("", None),
+    "pdf"   => ("", Some("#ff0000")),
+    "png"   => ("", Some("#a074c4")),
+    "jpg"   => ("", Some("#a074c4")),
+    "jpeg"  => ("", Some("#a074c4")),
+    "gif"   => ("", Some("#a074c4")),
+    "svg"   => ("", Some("#ffb13b")),
+    "zip"   => ("", Some("#f9ae28")),
+    "tar"   => ("", Some("#f9ae28")),
+    "gz"    => ("", Some("#f9ae28")),
+    "c"     => ("", None),
+    "cpp"   => ("", None),
+    "h"     => ("", None),
+    "hpp"   => ("", None),
+    "exe"   => ("", None),
+    "bat"   => ("", None),
+    "ps1"   => ("󰨊", None),
+    "cmd"   => ("", None),
+    "deb"   => ("", None),
+    "rpm"   => ("", None),
+    "dmg"   => ("", None),
+    "appimage" => ("", None),
+    "snap"  => ("", None),
+    "flatpak" => ("", None),
+    "msi"   => ("", None),
+    "iso"   => ("󰗮", None),
+    "img"   => ("󰗮", None),
+    "vhd"   => ("", None),
+    "cab"   => ("", None),
+    "psd"   => ("", None),
+    "patch" => ("", None),
+    "diff"  => ("", None),
+    "ebuild" => ("", None),
+    "spec"  => ("", None),
+    "dll"   => ("", None),
+    "a"     => ("", None),
+    "so"    => ("", None),
+    "lib"   => ("", None),
+    "o"     => ("", None),
+    "d"     => ("", None),
 };
 
 /// Special file names
 /// This map associates specific filenames with their corresponding
 /// Nerd Font icons.
-pub(super) static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
-    "README.md" => "",
-    "LICENSE" => "",
-    "LICENSE-MIT" => "",
-    "LICENSE-APACHE" => "",
-    "COPYING" => "",
-    "LICENSE.txt" => "",
-    "LICENSE-MIT.txt" => "",
-    "LICENSE-APACHE.txt" => "",
-    "COPYING.txt" => "",
-    "LICENSE.md" => "",
-    "CHANGELOG" => "",
-    "CHANGELOG.md" => "",
-    "CHANGELOG.txt" => "",
-    "SECURITY" => "󰒃",
-    "SECURITY.md" => "󰒃",
-    "Makefile" => "",
-    ".gitignore" => "",
-    ".gitconfig" => "",
-    "Cargo.toml" => "",
-    "Dockerfile" => "",
-    "package.json" => "",
-    "tsconfig.json" => "",
-    "webpack.config.js" => "",
-    "Pipfile" => "",
-    "requirements.txt" => "",
-    "setup.py" => "",
-    "config.yaml" => "",
-    "config.yml" => "",
-    ".env" => "",
-    ".env.local" => "",
-    ".env.production" => "",
-    ".env.development" => "",
-    "TODO" => "",
-    "Dockerfile.dev" => "",
-    "Dockerfile.prod" => "",
-    "Cargo.lock" => "",
-    "CMakeLists.txt" => "",
-    "PKGBUILD" => "󰣇",
-    ".bashrc" => "󱆃",
-    ".vimrc" => "",
+pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<
+    &'static str,
+    (&'static str, Option<&'static str>),
+> = phf_map! {
+    "README.md"          => ("", Some("#cbcb41")),
+    "LICENSE"            => ("", Some("#cbcb41")),
+    "LICENSE-MIT"        => ("", Some("#cbcb41")),
+    "LICENSE-APACHE"     => ("", Some("#cbcb41")),
+    "COPYING"            => ("", Some("#cbcb41")),
+    "LICENSE.txt"        => ("", Some("#cbcb41")),
+    "LICENSE-MIT.txt"    => ("", Some("#cbcb41")),
+    "LICENSE-APACHE.txt" => ("", Some("#cbcb41")),
+    "COPYING.txt"        => ("", Some("#cbcb41")),
+    "LICENSE.md"         => ("", Some("#cbcb41")),
+    "CHANGELOG"          => ("", None),
+    "CHANGELOG.md"       => ("", None),
+    "CHANGELOG.txt"      => ("", None),
+    "SECURITY"           => ("󰒃", Some("#ed333b")),
+    "SECURITY.md"        => ("󰒃", Some("#ed333b")),
+    "TODO"               => ("", Some("#ffb13b")),
+    "Makefile"           => ("", Some("#6d8086")),
+    "CMakeLists.txt"     => ("", Some("#064f8c")),
+    ".gitignore"         => ("", Some("#f14e32")),
+    ".gitconfig"         => ("", Some("#f14e32")),
+    "PKGBUILD"           => ("󰣇", Some("#1793d1")),
+    "Cargo.toml"         => ("", Some("#dea584")),
+    "Cargo.lock"         => ("", Some("#bbbbbb")),
+    "package.json"       => ("", Some("#8bc0d0")),
+    "tsconfig.json"      => ("", Some("#3178c6")),
+    "webpack.config.js"  => ("", Some("#8bc0d0")),
+    "Pipfile"            => ("", Some("#3572a5")),
+    "requirements.txt"   => ("", Some("#3572a5")),
+    "setup.py"           => ("", Some("#3572a5")),
+    "Dockerfile"         => ("", Some("#384d54")),
+    "Dockerfile.dev"     => ("", Some("#384d54")),
+    "Dockerfile.prod"    => ("", Some("#384d54")),
+    ".env"               => ("", Some("#faf77e")),
+    ".env.local"         => ("", Some("#faf77e")),
+    ".env.production"    => ("", Some("#faf77e")),
+    ".env.development"   => ("", Some("#faf77e")),
+    "config.yaml"        => ("", None),
+    "config.yml"         => ("", None),
+    ".bashrc"            => ("󱆃", Some("#4d5a5e")),
+    ".vimrc"             => ("", Some("#019833")),
 };
 
 /// Special directory names
 /// This map associates specific directory names with their corresponding
 /// Nerd Font icons.
-pub(super) static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, &'static str> = phf_map! {
-    "Desktop" => "󰍹",
-    "Documents" => "󱔗",
-    "Downloads" => "",
-    "Pictures" => "󰉔",
-    "Music" => "󱍙",
-    "Videos" => "",
-    "lib" => "",
-    "node_modules" => "",
-    ".git" => "",
-    ".github" => "",
-    ".config" => "",
-    "nvim" => "",
+pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<
+    &'static str,
+    (&'static str, Option<&'static str>),
+> = phf_map! {
+    "Desktop"      => ("󰍹", Some("#43a047")),
+    "Documents"    => ("󱔗", Some("#1e88e5")),
+    "Downloads"    => ("", Some("#1e88e5")),
+    "Pictures"     => ("󰉔", Some("#8e24aa")),
+    "Music"        => ("󱍙", Some("#fb8c00")),
+    "Videos"       => ("", Some("#e53935")),
+    "lib"          => ("", Some("#78909c")),
+    "node_modules" => ("", Some("#388e3c")),
+    ".git"         => ("", Some("#f14e32")),
+    ".github"      => ("", None),
+    ".config"      => ("", Some("#546e7a")),
+    "nvim"         => ("", Some("#50a044")),
 };
 
 /// Get the Nerd Font icon for a given file entry.
-/// This function determines the appropriate icon based on whether
-/// the entry is a directory or a file, and uses the special
-/// filename and extension mappings to find the correct icon.
-pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
-    let name = entry.name_str();
+pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str, Option<Color>) {
+    let name_str: &str = entry.name_str();
 
     if entry.is_symlink() {
-        return if entry.is_dir() { "" } else { "" };
-    }
-
-    if entry.is_dir() {
-        if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(name.as_ref()) {
-            return icon;
-        }
-        if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(entry.lowered()) {
-            return icon;
-        }
-        return "";
-    }
-
-    if let Some(icon) = SPECIAL_FILE_ICON_MAP.get(name.as_ref()) {
-        return icon;
+        return if entry.is_dir() {
+            ("", None)
+        } else {
+            ("", None)
+        };
     }
 
     #[cfg(unix)]
     if entry.is_executable() && !entry.is_dir() {
-        return "";
+        return ("", Some(theme.exe_color()));
     }
 
-    if let Some(ext) = entry.ext()
-        && let Some(icon) = EXT_ICON_MAP.get(ext)
+    let icon = if entry.is_dir() {
+        SPECIAL_DIR_ICON_MAP
+            .get(name_str)
+            .map(|(i, _)| *i)
+            .unwrap_or("")
+    } else if let Some((i, _)) = SPECIAL_FILE_ICON_MAP.get(name_str) {
+        *i
+    } else if let Some(ext) = entry.ext()
+        && let Some((i, _)) = EXT_ICON_MAP.get(ext)
     {
-        return icon;
-    }
+        *i
+    } else {
+        ""
+    };
 
-    ""
+    let color = theme
+        .icon_styles()
+        .get(name_str)
+        .or_else(|| {
+            if !entry.is_dir() {
+                entry.ext().and_then(|e| theme.icon_styles().get(e))
+            } else {
+                None
+            }
+        })
+        .copied();
+
+    (icon, color)
 }

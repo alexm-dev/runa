@@ -6,12 +6,13 @@
 //! Also holds the internal themes and the logic to apply user overrides on top of them.
 
 use crate::config::presets::*;
+use crate::ui::icons::{EXT_ICON_MAP, SPECIAL_DIR_ICON_MAP, SPECIAL_FILE_ICON_MAP};
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::parse_color;
 
 use ahash::AHashMap;
 use ratatui::style::{Color, Style};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -36,6 +37,8 @@ pub(crate) struct Theme {
     status_line: ColorPair,
     #[serde(deserialize_with = "deserialize_color_field")]
     exe_color: Color,
+    #[serde(deserialize_with = "deserialize_color_map")]
+    icon_color: HashMap<String, Color>,
     exact: HashMap<String, ColorPair>,
     extension: HashMap<String, ColorPair>,
     symlink: SymlinkTheme,
@@ -48,10 +51,13 @@ pub(crate) struct Theme {
     exact_styles: AHashMap<String, Style>,
     #[serde(skip)]
     extension_styles: AHashMap<String, Style>,
+    #[serde(skip)]
+    icon_styles: AHashMap<String, Color>,
 }
 
 impl Default for Theme {
     fn default() -> Self {
+        let (exact, extension) = Theme::default_file_colors();
         Theme {
             name: None,
             accent: ColorPair {
@@ -80,8 +86,9 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             status_line: ColorPair::default(),
-            exact: HashMap::new(),
-            extension: HashMap::new(),
+            exact,
+            extension,
+            icon_color: HashMap::new(),
             exe_color: Color::LightGreen,
             symlink: SymlinkTheme::default(),
             marker: MarkerTheme::default(),
@@ -90,6 +97,7 @@ impl Default for Theme {
             info: InfoStatusTheme::default(),
             exact_styles: AHashMap::new(),
             extension_styles: AHashMap::new(),
+            icon_styles: AHashMap::new(),
         }
     }
 }
@@ -196,6 +204,7 @@ impl Theme {
 
     crate::getters! {
         exe_color: Color,
+        icon_styles: &AHashMap<String, Color>,
         selection_icon: &str,
         preview: &PaneTheme,
         marker: &MarkerTheme,
@@ -306,6 +315,9 @@ impl Theme {
             parent,
             preview,
             path,
+            extension,
+            exact,
+            icon_color,
             status_line,
             symlink,
             selection_icon,
@@ -334,6 +346,48 @@ impl Theme {
             ext.insert(k.to_ascii_lowercase(), pair.style_or(&fallback));
         }
         self.extension_styles = ext;
+
+        let mut icons = AHashMap::with_capacity(
+            EXT_ICON_MAP.len() + SPECIAL_FILE_ICON_MAP.len() + self.icon_color.len(),
+        );
+
+        for (key, (_, hex)) in EXT_ICON_MAP
+            .entries()
+            .chain(SPECIAL_FILE_ICON_MAP.entries())
+            .chain(SPECIAL_DIR_ICON_MAP.entries())
+        {
+            if let Some(h) = hex {
+                icons.insert(key.to_string(), parse_color(h));
+            }
+        }
+
+        for (k, color) in &self.icon_color {
+            icons.insert(k.clone(), *color);
+        }
+        self.icon_styles = icons;
+    }
+
+    #[rustfmt::skip]
+    fn default_file_colors() -> (HashMap<String, ColorPair>, HashMap<String, ColorPair>) {
+        let mut exact = HashMap::new();
+        let mut ext = HashMap::new();
+
+        let mut add_ext = |extensions: &[&str], color: Color| {
+            for e in extensions {
+                ext.insert(e.to_string(), ColorPair { fg: color, ..ColorPair::default() });
+            }
+        };
+
+        exact.insert("Dockerfile".into(), ColorPair { fg: Color::Cyan, ..ColorPair::default() });
+        exact.insert("Cargo.toml".into(), ColorPair { fg: Color::Yellow, ..ColorPair::default() });
+        exact.insert("LICENSE".into(),    ColorPair { fg: Color::Yellow, ..ColorPair::default() });
+        exact.insert("README.md".into(),    ColorPair { fg: Color::Yellow, ..ColorPair::default() });
+
+        add_ext(&["zip", "tar", "gz", "7z", "rar"], Color::Red);
+        add_ext(&["jpg", "jpeg", "png", "gif", "svg", "webm"], Color::Magenta);
+        add_ext(&["tmp"], Color::Rgb(108, 121, 135));
+
+        (exact, ext)
     }
 }
 
@@ -846,6 +900,23 @@ where
 {
     let s = String::deserialize(deserializer)?;
     Ok(parse_color(&s))
+}
+
+pub(crate) fn deserialize_color_map<'de, D>(
+    deserializer: D,
+) -> Result<HashMap<String, Color>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw_map: HashMap<String, String> = HashMap::deserialize(deserializer)?;
+    let mut processed_map = HashMap::with_capacity(raw_map.len());
+
+    for (key, val) in raw_map {
+        let color = parse_color(&val);
+        processed_map.insert(key, color);
+    }
+
+    Ok(processed_map)
 }
 
 /// Helper function to convert RGB tuples to [Color] instances.

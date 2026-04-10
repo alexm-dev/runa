@@ -556,18 +556,21 @@ fn make_entry_row<'a>(
     }
 
     if context.show_icons {
-        let icon = nerd_font_icon(entry);
+        let (icon, icon_custom_color) = nerd_font_icon(entry, context.theme);
+
         let mut icon_col = String::with_capacity(icon.len() + 1);
         icon_col.push_str(icon);
         icon_col.push(' ');
 
         used_w += UnicodeWidthStr::width(icon_col.as_str());
 
-        let icon_render_style = if entry.is_symlink() {
-            row_style.fg(symlink_fg).add_modifier(Modifier::BOLD)
-        } else {
-            row_style.add_modifier(Modifier::BOLD)
-        };
+        let mut icon_render_style = row_style.add_modifier(Modifier::BOLD);
+
+        if entry.is_symlink() {
+            icon_render_style = icon_render_style.fg(symlink_fg);
+        } else if let Some(custom_color) = icon_custom_color {
+            icon_render_style = icon_render_style.fg(custom_color);
+        }
 
         spans.push(Span::styled(icon_col, icon_render_style));
     }
