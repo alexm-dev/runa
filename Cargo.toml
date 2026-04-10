@@ -16,6 +16,7 @@ name = "rn"
 path = "src/main.rs"
 
 [dependencies]
+ahash = "0.8.12"
 ansi-to-tui = "8.0.1"
 chrono = "0.4.44"
 crossbeam-channel = "0.5.15"

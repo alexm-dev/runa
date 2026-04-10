@@ -9,6 +9,7 @@ use crate::config::presets::*;
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::parse_color;
 
+use ahash::AHashMap;
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
 
@@ -42,6 +43,11 @@ pub(crate) struct Theme {
     widget: WidgetTheme,
     tab: TabTheme,
     info: InfoStatusTheme,
+
+    #[serde(skip)]
+    exact_styles: AHashMap<String, Style>,
+    #[serde(skip)]
+    extension_styles: AHashMap<String, Style>,
 }
 
 impl Default for Theme {
@@ -82,6 +88,8 @@ impl Default for Theme {
             widget: WidgetTheme::default(),
             tab: TabTheme::default(),
             info: InfoStatusTheme::default(),
+            exact_styles: AHashMap::new(),
+            extension_styles: AHashMap::new(),
         }
     }
 }
@@ -172,15 +180,15 @@ impl Theme {
         is_dir: bool,
         ext: Option<&str>,
     ) -> Option<Style> {
-        if let Some(pair) = self.exact_map().get(name) {
-            return Some(pair.style_or(&ColorPair::default()));
+        if let Some(s) = self.exact_styles.get(name) {
+            return Some(*s);
         }
 
         if !is_dir
             && let Some(ext) = ext
-            && let Some(pair) = self.extension_map().get(ext)
+            && let Some(s) = self.extension_styles.get(ext)
         {
-            return Some(pair.style_or(&ColorPair::default()));
+            return Some(*s);
         }
 
         None
@@ -188,8 +196,6 @@ impl Theme {
 
     crate::getters! {
         exe_color: Color,
-        exact_map => exact: &HashMap<String, ColorPair>,
-        extension_map => extension: &HashMap<String, ColorPair>,
         selection_icon: &str,
         preview: &PaneTheme,
         marker: &MarkerTheme,
@@ -238,9 +244,12 @@ impl Theme {
 
         if let Some(mut base) = preset {
             base.apply_user_overrides(self);
+            base.build_style_maps();
             base
         } else {
-            self
+            let mut out = self;
+            out.build_style_maps();
+            out
         }
     }
 
@@ -309,6 +318,22 @@ impl Theme {
         if user.name.is_some() {
             self.name = user.name.clone();
         }
+    }
+
+    fn build_style_maps(&mut self) {
+        let fallback = ColorPair::default();
+
+        let mut exact = AHashMap::with_capacity(self.exact.len());
+        for (k, pair) in &self.exact {
+            exact.insert(k.clone(), pair.style_or(&fallback));
+        }
+        self.exact_styles = exact;
+
+        let mut ext = AHashMap::with_capacity(self.extension.len());
+        for (k, pair) in &self.extension {
+            ext.insert(k.to_ascii_lowercase(), pair.style_or(&fallback));
+        }
+        self.extension_styles = ext;
     }
 }
 
