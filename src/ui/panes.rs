@@ -658,21 +658,23 @@ fn truncate_owned(s: &str, max_w: usize) -> Cow<'_, str> {
     if max_w <= 1 {
         return Cow::Borrowed("…");
     }
-    let mut out = String::with_capacity(max_w);
+
     let mut w = 0usize;
-    for ch in s.chars() {
+    let mut last_idx = 0usize;
+
+    for (idx, ch) in s.char_indices() {
         let cw = UnicodeWidthChar::width(ch).unwrap_or(0);
         if w + cw >= max_w {
-            break;
+            let mut out = String::with_capacity(last_idx + 3);
+            out.push_str(&s[..last_idx]);
+            out.push('…');
+            return Cow::Owned(out);
         }
-        out.push(ch);
+        last_idx = idx;
         w += cw;
     }
-    if !out.is_empty() {
-        out.pop();
-    }
-    out.push('…');
-    Cow::Owned(out)
+
+    Cow::Borrowed(s)
 }
 
 #[inline]
@@ -683,15 +685,15 @@ fn left_remaining(total_w: usize, used_w: usize, reserve: usize) -> usize {
 #[inline]
 fn build_right_field(col: &str, total_w: usize, used_w: usize, col_area_w: usize) -> String {
     let pad_spaces = total_w.saturating_sub(used_w + 1 + col_area_w);
-
     let col_w = UnicodeWidthStr::width(col).min(col_area_w);
     let inner_pad = col_area_w.saturating_sub(col_w);
 
-    let mut out = String::with_capacity(pad_spaces + 1 + inner_pad + col.len());
-    out.extend(std::iter::repeat_n(' ', pad_spaces));
-    out.push(' ');
-    out.extend(std::iter::repeat_n(' ', inner_pad));
+    let total_spaces = pad_spaces + 1 + inner_pad;
+    let mut out = String::with_capacity(total_spaces + col.len());
+
+    out.extend(std::iter::repeat_n(' ', total_spaces));
     out.push_str(col);
+
     out
 }
 
@@ -705,13 +707,13 @@ fn right_col_width(sort_column: Option<&[Arc<str>]>) -> u16 {
     let Some(col) = sort_column else {
         return 0;
     };
-    let mut max_w: usize = 0;
-    for s in col.iter() {
-        let w = UnicodeWidthStr::width(s.as_ref());
-        if w > max_w {
-            max_w = w;
-        }
-    }
+
+    let max_w = col
+        .iter()
+        .map(|s| UnicodeWidthStr::width(s.as_ref()))
+        .max()
+        .unwrap_or(0);
+
     (max_w as u16).min(MAX_RIGHT_COLUMN_WIDTH)
 }
 
