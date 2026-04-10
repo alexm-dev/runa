@@ -196,8 +196,9 @@ pub(crate) fn handle_tab_action<'a>(
                     let new_tab = original
                         .new_current_dir()
                         .expect("Failed to create new blank tab");
-                    *container =
-                        AppContainer::Tabs(TabManager::new(*original, new_tab, workers, focus));
+                    *container = AppContainer::Tabs(Box::new(TabManager::new(
+                        *original, new_tab, workers, focus,
+                    )));
                     if let AppContainer::Tabs(tabs) = container {
                         tabs.current_tab_mut().tick(workers);
                     }

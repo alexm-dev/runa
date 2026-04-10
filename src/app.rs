@@ -27,12 +27,12 @@ use std::{collections::HashSet, path::PathBuf};
 /// either a single state or a tabs which then hold multiple AppStates.
 pub(crate) enum AppContainer<'a> {
     Single(Box<AppState<'a>>),
-    Tabs(TabManager<'a>),
+    Tabs(Box<TabManager<'a>>),
 }
 
 impl<'a> AppContainer<'a> {
     pub(crate) fn create_tabs(tabs: Vec<AppState<'a>>) -> Self {
-        Self::Tabs(tab::TabManager::from_vec(tabs))
+        Self::Tabs(Box::new(tab::TabManager::from_vec(tabs)))
     }
 }
 
