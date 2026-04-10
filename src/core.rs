@@ -10,6 +10,7 @@
 //!
 //! Most callers will import [browse_dir], [FileEntry], from this module.
 
+pub(crate) mod cache;
 pub(crate) mod fm;
 pub(crate) mod formatter;
 pub(crate) mod metadata;

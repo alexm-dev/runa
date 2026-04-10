@@ -20,12 +20,8 @@ pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
-use crate::{app::tab::TabManager, core::fm::FileEntry, core::worker::Workers};
-use std::sync::Arc;
+use crate::{app::tab::TabManager, core::worker::Workers};
 use std::{collections::HashSet, path::PathBuf};
-
-/// Navigation data for pane updates.
-pub(crate) type NavigationData = Option<(Arc<[FileEntry]>, Option<Arc<[Arc<str>]>>)>;
 
 /// The main container enum to hold either the TabManager or a single boxed AppState to then match
 /// either a single state or a tabs which then hold multiple AppStates.

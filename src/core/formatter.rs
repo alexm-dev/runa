@@ -8,6 +8,7 @@
 
 use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::FileEntry;
+use crate::core::cache::DirListOptions;
 use crate::core::metadata::{FileType, get_or_update_cached_meta, meta_cache};
 use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
 
@@ -34,15 +35,6 @@ const HEADER_PEEK_BYTES: usize = 8;
 const BINARY_PEEK_BYTES: usize = 1024;
 // CachedMetaKey limit to prevent memory growth during sorting by metadata.
 const HARD_SORT_CACHE_LIMIT: usize = 40_000;
-
-#[derive(Clone)]
-pub(crate) struct DirListOptions {
-    pub(crate) dirs_first: bool,
-    pub(crate) show_hidden: bool,
-    pub(crate) show_symlink: bool,
-    pub(crate) show_system: bool,
-    pub(crate) case_insensitive: bool,
-}
 
 #[derive(Clone, Copy)]
 enum MetadataSortField {

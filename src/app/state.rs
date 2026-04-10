@@ -25,7 +25,7 @@ use crate::app::{
 };
 use crate::config::Config;
 use crate::core::{
-    formatter::DirListOptions,
+    cache::DirListOptions,
     metadata::{FileMetadataCache, MetadataNeeds},
     worker::{WorkerResponse, WorkerTask, Workers},
 };
@@ -342,13 +342,9 @@ impl<'a> AppState<'a> {
             } => {
                 // only update nav if BOTH the ID and path match.
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                    if self.nav.entries() == entries {
-                        self.is_loading = false;
-                    } else {
-                        self.nav
-                            .update_from_worker(path, entries, sort_column, focus);
-                        self.is_loading = false;
-                    }
+                    self.nav
+                        .update_from_worker(path, entries, sort_column, focus);
+                    self.is_loading = false;
 
                     self.request_parent_content(workers);
                     self.request_preview(workers);
@@ -363,10 +359,14 @@ impl<'a> AppState<'a> {
                     && path.file_name() == Some(entry.name())
                 {
                     self.preview
-                        .update_from_entries(entries, sort_column, request_id);
+                        .update_from_entries(entries.clone(), sort_column, request_id);
 
-                    let sel_path = self.nav.current_dir().join(entry.name());
-                    let pos = self.nav.get_position().get(&sel_path).copied().unwrap_or(0);
+                    let pos = self
+                        .nav
+                        .get_position()
+                        .get(&path)
+                        .and_then(|saved| entries.iter().position(|e| e.name() == saved))
+                        .unwrap_or(0);
 
                     self.preview.set_selected_idx(pos);
                     return;
@@ -516,13 +516,28 @@ impl<'a> AppState<'a> {
             let path = self.nav.current_dir().join(entry.name());
             let req_id = self.preview.prepare_new_request(path.clone());
             let sort_config = self.nav.sort_config();
-
+            let list_opts = self.dir_list_options();
             let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
+
             if entry.is_dir() || entry.is_symlink() {
+                if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
+                    let (entries, sort_col, _rid, _ts) = &*val;
+                    self.preview
+                        .update_from_entries(entries.clone(), sort_col.clone(), req_id);
+                    let pos = self
+                        .nav
+                        .get_position()
+                        .get(&path)
+                        .and_then(|saved| entries.iter().position(|e| e.name() == saved))
+                        .unwrap_or(0);
+                    self.preview.set_selected_idx(pos);
+                    return;
+                }
+
                 let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
                     path,
                     focus: None,
-                    list: self.dir_list_options(),
+                    list: list_opts.clone(),
                     sort_config,
                     sort_date_format,
                     always_show: Arc::clone(self.config.general().always_show()),
@@ -561,6 +576,30 @@ impl<'a> AppState<'a> {
         };
 
         let sort_config = self.nav.sort_config();
+        let list_opts = self.dir_list_options();
+
+        if let Some(val) = workers.cache().get(parent_path, sort_config, &list_opts) {
+            let (entries, sort_col, _rid, _ts) = &*val;
+            let entries_vec = entries.clone();
+            let sort_vec = sort_col.clone();
+            let current_name = self
+                .nav
+                .current_dir()
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_default();
+            let req_id = self.parent.prepare_new_request(parent_path, sort_config);
+            self.parent.update_from_entries(
+                entries_vec,
+                &current_name,
+                req_id,
+                parent_path,
+                sort_config,
+                sort_vec,
+            );
+            return;
+        }
+
         if self.parent.is_cached(parent_path, sort_config) {
             return;
         }
@@ -625,7 +664,7 @@ impl<'a> AppState<'a> {
         });
     }
 
-    fn dir_list_options(&self) -> DirListOptions {
+    pub(crate) fn dir_list_options(&self) -> DirListOptions {
         DirListOptions {
             dirs_first: self.config.general().dirs_first(),
             show_hidden: self.config.general().show_hidden(),
@@ -770,7 +809,7 @@ mod tests {
         let dir_entry = FileEntry::new(OsString::from("test_dir"), 1, None);
 
         app.parent.update_from_entries(
-            vec![file_entry, dir_entry],
+            Arc::from(vec![file_entry, dir_entry]),
             "irrelevant",
             prev_request_id,
             &parent_path,

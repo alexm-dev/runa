@@ -17,8 +17,11 @@ use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
 use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
 use crate::core::{
-    FileEntry, FindResult, Formatter, browse_dir, find, formatter::DirListOptions,
-    formatter::safe_read_preview, preview_bat,
+    FileEntry, FindResult, Formatter, browse_dir,
+    cache::{DirCache, DirListOptions},
+    find,
+    formatter::safe_read_preview,
+    preview_bat,
 };
 use crate::utils::{
     copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
@@ -47,6 +50,7 @@ pub(crate) struct Workers {
     fileop_tx: Sender<WorkerTask>,
     response_rx: Receiver<WorkerResponse>,
     active: Arc<AtomicUsize>,
+    cache: Arc<DirCache>,
 }
 
 /// Manages worker thread channels for different task types.
@@ -62,6 +66,8 @@ impl Workers {
     ///
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
+        let cache = Arc::new(DirCache::new());
+
         let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
         let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
@@ -76,11 +82,11 @@ impl Workers {
         let active = Arc::new(AtomicUsize::new(0));
         let fileop_active_for_worker = Arc::clone(&active);
 
-        start_io_worker(nav_io_rx, res_tx.clone());
-        start_io_worker(parent_io_rx, res_tx.clone());
-        start_io_worker(preview_io_rx, res_tx.clone());
+        start_io_worker(nav_io_rx, res_tx.clone(), Arc::clone(&cache));
+        start_io_worker(parent_io_rx, res_tx.clone(), Arc::clone(&cache));
+        start_io_worker(preview_io_rx, res_tx.clone(), Arc::clone(&cache));
 
-        start_sort_worker(sort_io_rx, res_tx.clone());
+        start_sort_worker(sort_io_rx, res_tx.clone(), Arc::clone(&cache));
         start_preview_worker(preview_file_rx, res_tx.clone());
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
@@ -97,6 +103,7 @@ impl Workers {
             fileop_tx,
             response_rx,
             active,
+            cache,
         }
     }
 
@@ -111,6 +118,10 @@ impl Workers {
         fileop_tx: &Sender<WorkerTask>,
         response_rx: &Receiver<WorkerResponse>,
         active: &Arc<AtomicUsize>,
+    }
+
+    pub(crate) fn cache(&self) -> Arc<DirCache> {
+        Arc::clone(&self.cache)
     }
 }
 
@@ -211,9 +222,9 @@ pub(crate) enum FileOperation {
 pub(crate) enum WorkerResponse {
     DirectoryLoaded {
         path: PathBuf,
-        entries: Vec<FileEntry>,
+        entries: Arc<[FileEntry]>,
         focus: Option<OsString>,
-        sort_column: Option<Vec<Arc<str>>>,
+        sort_column: Option<Arc<[Arc<str>]>>,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -252,7 +263,11 @@ impl WorkerResponse {
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
-fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+fn start_io_worker(
+    task_rx: Receiver<WorkerTask>,
+    res_tx: Sender<WorkerResponse>,
+    cache: Arc<DirCache>,
+) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::LoadDirectory {
@@ -270,16 +285,30 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
             };
             match browse_dir(&path) {
                 Ok(mut entries) => {
-                    let formatter = Formatter::new(list, sort_config, always_show);
+                    let formatter = Formatter::new(list.clone(), sort_config, always_show);
                     formatter.filter_entries(&mut entries);
                     let sort_column =
                         formatter.sort_entries(&path, &mut entries, &sort_date_format);
 
+                    let entries_arc: Arc<[FileEntry]> = Arc::from(entries);
+                    let sort_column_arc: Option<Arc<[Arc<str>]>> = sort_column
+                        .as_ref()
+                        .map(|v| Arc::from(v.clone().into_boxed_slice()));
+
+                    cache.insert_if_newer(
+                        &path,
+                        sort_config,
+                        &list,
+                        Arc::clone(&entries_arc),
+                        sort_column_arc.clone(),
+                        request_id,
+                    );
+
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                         path,
-                        entries,
+                        entries: entries_arc,
                         focus,
-                        sort_column,
+                        sort_column: sort_column_arc,
                         request_id,
                         tab_id,
                     });
@@ -295,7 +324,11 @@ fn start_io_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>
     });
 }
 
-fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+fn start_sort_worker(
+    task_rx: Receiver<WorkerTask>,
+    res_tx: Sender<WorkerResponse>,
+    cache: Arc<DirCache>,
+) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::SortDirectory {
@@ -313,15 +346,29 @@ fn start_sort_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
                 continue;
             };
 
-            let formatter = Formatter::new(list, sort_config, always_show);
+            let formatter = Formatter::new(list.clone(), sort_config, always_show);
             formatter.filter_entries(&mut entries);
             let sort_column = formatter.sort_entries(&path, &mut entries, &sort_date_format);
 
+            let entries_arc: Arc<[FileEntry]> = Arc::from(entries);
+            let sort_column_arc: Option<Arc<[Arc<str>]>> = sort_column
+                .as_ref()
+                .map(|v| Arc::from(v.clone().into_boxed_slice()));
+
+            cache.insert_if_newer(
+                &path,
+                sort_config,
+                &list,
+                Arc::clone(&entries_arc),
+                sort_column_arc.clone(),
+                request_id,
+            );
+
             let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
                 path,
-                entries,
+                entries: entries_arc,
                 focus,
-                sort_column,
+                sort_column: sort_column_arc,
                 request_id,
                 tab_id,
             });
@@ -841,8 +888,8 @@ mod tests {
                 assert!(!entries.is_empty(), "Current dir should not be empty");
 
                 // Check display name width
-                for entry in entries {
-                    assert!(!entry.name_str().is_empty());
+                for entry in entries.iter().enumerate() {
+                    assert!(!entry.1.name_str().is_empty());
                 }
             }
             WorkerResponse::Error(e, None) => panic!("Worker error: {}", e),
@@ -922,8 +969,8 @@ mod tests {
             match res_rx.recv_timeout(remaining.min(Duration::from_millis(500))) {
                 Ok(WorkerResponse::DirectoryLoaded { entries, .. }) => {
                     valid_responses += 1;
-                    for entry in &entries {
-                        let name = entry.name_str();
+                    for entry in entries.iter().enumerate() {
+                        let name = entry.1.name_str();
 
                         assert!(!name.is_empty(), "Entry name_str must not be empty.");
                         assert!(

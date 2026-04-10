@@ -1,0 +1,106 @@
+use crate::app::nav::SortConfig;
+use crate::core::FileEntry;
+
+use dashmap::DashMap;
+use dashmap::mapref::entry::Entry;
+
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Instant;
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub(crate) struct DirListOptions {
+    pub(crate) dirs_first: bool,
+    pub(crate) show_hidden: bool,
+    pub(crate) show_symlink: bool,
+    pub(crate) show_system: bool,
+    pub(crate) case_insensitive: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+struct DirCacheKey {
+    path: PathBuf,
+    sort: SortConfig,
+    list: DirListOptions,
+}
+
+impl DirCacheKey {
+    fn new(path: &Path, sort: SortConfig, list_options: &DirListOptions) -> Self {
+        Self {
+            path: path.to_owned(),
+            sort,
+            list: list_options.clone(),
+        }
+    }
+}
+
+pub(crate) type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<[Arc<str>]>>, u64, Instant)>;
+
+pub(crate) struct DirCache {
+    inner: DashMap<DirCacheKey, DirCacheValue>,
+}
+
+impl DirCache {
+    pub(crate) fn new() -> Self {
+        Self {
+            inner: DashMap::new(),
+        }
+    }
+
+    pub(crate) fn get(
+        &self,
+        path: &Path,
+        sort: SortConfig,
+        list_options: &DirListOptions,
+    ) -> Option<DirCacheValue> {
+        let key = DirCacheKey::new(path, sort, list_options);
+        self.inner.get(&key).map(|v| Arc::clone(&*v))
+    }
+
+    pub(crate) fn insert_if_newer(
+        &self,
+        path: &Path,
+        sort: SortConfig,
+        list_options: &DirListOptions,
+        entries: Arc<[FileEntry]>,
+        sort_column: Option<Arc<[Arc<str>]>>,
+        request_id: u64,
+    ) {
+        let key = DirCacheKey::new(path, sort, list_options);
+        let new_value: DirCacheValue = Arc::new((entries, sort_column, request_id, Instant::now()));
+        match self.inner.entry(key) {
+            Entry::Occupied(mut occ) => {
+                let existing = occ.get();
+                let exisiting_req = existing.2;
+                if request_id >= exisiting_req {
+                    occ.insert(new_value);
+                }
+            }
+            Entry::Vacant(vac) => {
+                vac.insert(new_value);
+            }
+        }
+    }
+
+    // pub(crate) fn invalidate_path(&self, path: &Path) {
+    //     let p = path.to_path_buf();
+    //     let keys: Vec<_> = self
+    //         .inner
+    //         .iter()
+    //         .filter_map(|kv| {
+    //             if kv.key().path == p {
+    //                 Some(kv.key().clone())
+    //             } else {
+    //                 None
+    //             }
+    //         })
+    //         .collect();
+    //     for k in keys {
+    //         self.inner.remove(&k);
+    //     }
+    // }
+    //
+    // pub(crate) fn clear(&self) {
+    //     self.inner.clear();
+    // }
+}

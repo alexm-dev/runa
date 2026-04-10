@@ -3,7 +3,6 @@
 //! Tracks the state of the file/directory preview for the UI, including loaded preview
 //! data, debounce for background rendering, selection within the preview and request tracking
 
-use crate::app::NavigationData;
 use crate::core::FileEntry;
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
@@ -100,14 +99,14 @@ impl PreviewState {
     /// Only applies the update if the request ID matches the latest
     pub(crate) fn update_from_entries(
         &mut self,
-        entries: Vec<FileEntry>,
-        sort_column: Option<Vec<Arc<str>>>,
+        entries: Arc<[FileEntry]>,
+        sort_column: Option<Arc<[Arc<str>]>>,
         request_id: u64,
     ) {
         if request_id == self.request_id {
             self.data = PreviewData::Directory {
-                entries: Arc::from(entries),
-                sort_column: sort_column.map(Arc::from),
+                entries,
+                sort_column,
             };
             self.selected_idx = 0;
         }
@@ -124,19 +123,6 @@ impl PreviewState {
         self.selected_idx = 0;
         self.current_path = None;
         self.pending = false;
-    }
-
-    pub(crate) fn try_share_directory(&self, target_path: &Path) -> NavigationData {
-        if let Some(path) = &self.current_path
-            && path == target_path
-            && let PreviewData::Directory {
-                entries,
-                sort_column,
-            } = &self.data
-        {
-            return Some((Arc::clone(entries), sort_column.as_ref().map(Arc::clone)));
-        }
-        None
     }
 }
 

@@ -14,10 +14,10 @@ use std::sync::Arc;
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
     current_dir: PathBuf,
-    entries: Vec<FileEntry>,
+    entries: Arc<[FileEntry]>,
     selected: usize,
     shown_indices: Vec<usize>,
-    positions: HashMap<PathBuf, usize>,
+    positions: HashMap<PathBuf, OsString>,
     markers: HashSet<PathBuf>,
     filter: String,
     filters: HashMap<PathBuf, String>,
@@ -34,7 +34,7 @@ impl NavState {
         let display_path = format_display_path(&path);
         Self {
             current_dir: path,
-            entries: Vec::new(),
+            entries: Arc::default(),
             selected: 0,
             shown_indices: Vec::new(),
             positions: HashMap::new(),
@@ -122,16 +122,14 @@ impl NavState {
 
     /// Saves the current selection position for the current directory.
     pub(crate) fn save_position(&mut self) {
-        if !self.entries.is_empty()
-            && !self.shown_indices.is_empty()
-            && let Some(&abs_idx) = self.shown_indices.get(self.selected)
-        {
-            self.positions.insert(self.current_dir.clone(), abs_idx);
+        if let Some(entry) = self.selected_entry() {
+            self.positions
+                .insert(self.current_dir.clone(), entry.name().to_os_string());
         }
     }
 
     /// Returns a reference to the saved positions map.
-    pub(crate) fn get_position(&self) -> &HashMap<PathBuf, usize> {
+    pub(crate) fn get_position(&self) -> &HashMap<PathBuf, OsString> {
         &self.positions
     }
 
@@ -150,14 +148,16 @@ impl NavState {
     pub(crate) fn update_from_worker(
         &mut self,
         path: PathBuf,
-        entries: Vec<FileEntry>,
-        sort_column: Option<Vec<Arc<str>>>,
+        entries: Arc<[FileEntry]>,
+        sort_column: Option<Arc<[Arc<str>]>>,
         focus: Option<OsString>,
     ) {
         self.current_dir = path;
         self.display_path = format_display_path(&self.current_dir);
         self.entries = entries;
-        self.sort_column = sort_column;
+        self.sort_column = sort_column
+            .as_ref()
+            .map(|c| c.iter().map(Arc::clone).collect());
 
         self.restore_filter_for_current_dir();
         self.rebuild_shown_cache();
@@ -167,22 +167,17 @@ impl NavState {
             return;
         }
 
-        let mut target_abs_idx = if let Some(f) = focus {
-            self.entries
+        let target_name = focus.or_else(|| self.positions.get(&self.current_dir).cloned());
+
+        if let Some(name) = target_name {
+            self.selected = self
+                .shown_indices
                 .iter()
-                .position(|e| e.name() == f.as_os_str())
-                .unwrap_or(0)
+                .position(|&abs_idx| self.entries[abs_idx].name() == name)
+                .unwrap_or(0);
         } else {
-            self.positions.get(&self.current_dir).cloned().unwrap_or(0)
-        };
-
-        target_abs_idx = target_abs_idx.min(self.entries.len().saturating_sub(1));
-
-        self.selected = self
-            .shown_indices
-            .iter()
-            .position(|&i| i == target_abs_idx)
-            .unwrap_or(0);
+            self.selected = 0;
+        }
     }
 
     /// Toggles the marker state of the currently selected entry.
@@ -359,7 +354,7 @@ pub(crate) enum SortMode {
     Natural,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) enum SortOrder {
     Ascending,
     Descending,
@@ -374,7 +369,7 @@ impl SortOrder {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct SortConfig {
     pub(crate) mode: SortMode,
     pub(crate) order: SortOrder,
@@ -418,7 +413,12 @@ mod tests {
         assert!(!entries.is_empty(), "sandbox should not be empty");
 
         let mut nav = NavState::new(dir.path().to_path_buf());
-        nav.update_from_worker(dir.path().to_path_buf(), entries.clone(), None, None);
+        nav.update_from_worker(
+            dir.path().to_path_buf(),
+            Arc::from(entries.clone()),
+            None,
+            None,
+        );
 
         assert_eq!(
             nav.entries().len(),
@@ -490,7 +490,12 @@ mod tests {
 
         for i in 0..repetitions {
             nav.set_path(subdir_path.clone());
-            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
+            nav.update_from_worker(
+                subdir_path.clone(),
+                Arc::from(sub_entries.clone()),
+                None,
+                None,
+            );
 
             assert_eq!(nav.current_dir(), &subdir_path);
             assert!(
@@ -502,17 +507,32 @@ mod tests {
             assert_eq!(parent_path, base_path, "Iter {i} parent mismatch");
 
             nav.set_path(subsubdir_path.clone());
-            nav.update_from_worker(subsubdir_path.clone(), subsub_entries.clone(), None, None);
+            nav.update_from_worker(
+                subsubdir_path.clone(),
+                Arc::from(subsub_entries.clone()),
+                None,
+                None,
+            );
 
             assert_eq!(nav.current_dir(), &subsubdir_path);
             assert!(nav.entries().iter().any(|e| e.name() == "file_subsub.txt"));
 
             nav.set_path(subdir_path.clone());
-            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
+            nav.update_from_worker(
+                subdir_path.clone(),
+                Arc::from(sub_entries.clone()),
+                None,
+                None,
+            );
             assert_eq!(nav.current_dir(), &subdir_path);
 
             nav.set_path(base_path.clone());
-            nav.update_from_worker(base_path.clone(), base_entries.clone(), None, None);
+            nav.update_from_worker(
+                base_path.clone(),
+                Arc::from(base_entries.clone()),
+                None,
+                None,
+            );
 
             assert_eq!(nav.current_dir(), &base_path);
             assert!(nav.entries().iter().any(|e| e.name() == "subdir"));
@@ -538,7 +558,12 @@ mod tests {
         let repetitions = 200;
 
         nav.set_path(subdir_path.clone());
-        nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
+        nav.update_from_worker(
+            subdir_path.clone(),
+            Arc::from(sub_entries.clone()),
+            None,
+            None,
+        );
 
         for _ in 0..5 {
             nav.move_down();
@@ -547,13 +572,23 @@ mod tests {
 
         for i in 0..repetitions {
             nav.set_path(base_path.clone());
-            nav.update_from_worker(base_path.clone(), base_entries.clone(), None, None);
+            nav.update_from_worker(
+                base_path.clone(),
+                Arc::from(base_entries.clone()),
+                None,
+                None,
+            );
 
             nav.move_down();
 
             // Return to Subdir
             nav.set_path(subdir_path.clone());
-            nav.update_from_worker(subdir_path.clone(), sub_entries.clone(), None, None);
+            nav.update_from_worker(
+                subdir_path.clone(),
+                Arc::from(sub_entries.clone()),
+                None,
+                None,
+            );
 
             assert_eq!(
                 nav.selected_idx(),
@@ -589,7 +624,7 @@ mod tests {
         entries.shuffle(&mut rng());
 
         let mut nav = NavState::new(base_path.clone());
-        nav.update_from_worker(base_path.clone(), entries, None, None);
+        nav.update_from_worker(base_path.clone(), Arc::from(entries), None, None);
 
         let target_name = "file_manager.rs";
 
@@ -634,7 +669,7 @@ mod tests {
         entries.shuffle(&mut rng());
 
         let mut nav = NavState::new(base_path.clone());
-        nav.update_from_worker(base_path.clone(), entries, None, None);
+        nav.update_from_worker(base_path.clone(), Arc::from(entries), None, None);
 
         let mut clipboard: Option<HashSet<PathBuf>> = None;
 

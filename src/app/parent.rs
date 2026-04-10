@@ -3,7 +3,6 @@
 //! Tracks entries, selection, worker requests for the parent pane view above the current working
 //! directory
 
-use crate::app::NavigationData;
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
 use std::path::{Path, PathBuf};
@@ -56,41 +55,23 @@ impl ParentState {
     /// Only applies the update if request ID is the latest
     pub(super) fn update_from_entries(
         &mut self,
-        entries: Vec<FileEntry>,
+        entries: Arc<[FileEntry]>,
         current_name: &str,
         req_id: u64,
         parent_path: &Path,
         sort: SortConfig,
-        sort_column: Option<Vec<Arc<str>>>,
+        sort_column: Option<Arc<[Arc<str>]>>,
     ) {
         if req_id < self.request_id {
             return;
         }
         // Find the index of the folder we are currently inside to highlight it
         self.selected_idx = entries.iter().position(|e| e.name_str() == current_name);
-        self.entries = Arc::from(entries);
+        self.entries = entries;
         self.last_path = Some(parent_path.to_path_buf());
         self.last_sort = Some(sort);
-        self.sort_column = sort_column.map(Arc::from);
+        self.sort_column = sort_column;
         self.request_id = req_id;
-    }
-
-    pub(crate) fn try_share_directory(
-        &self,
-        parent_path: &Path,
-        sort: SortConfig,
-    ) -> NavigationData {
-        if self.last_path.as_deref() == Some(parent_path)
-            && !self.entries.is_empty()
-            && self.last_sort == Some(sort)
-        {
-            Some((
-                Arc::clone(&self.entries),
-                self.sort_column.as_ref().map(Arc::clone),
-            ))
-        } else {
-            None
-        }
     }
 
     /// Clears all entries, resets the selected entry index,
