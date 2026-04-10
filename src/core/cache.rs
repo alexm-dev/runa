@@ -82,25 +82,7 @@ impl DirCache {
         }
     }
 
-    // pub(crate) fn invalidate_path(&self, path: &Path) {
-    //     let p = path.to_path_buf();
-    //     let keys: Vec<_> = self
-    //         .inner
-    //         .iter()
-    //         .filter_map(|kv| {
-    //             if kv.key().path == p {
-    //                 Some(kv.key().clone())
-    //             } else {
-    //                 None
-    //             }
-    //         })
-    //         .collect();
-    //     for k in keys {
-    //         self.inner.remove(&k);
-    //     }
-    // }
-    //
-    // pub(crate) fn clear(&self) {
-    //     self.inner.clear();
-    // }
+    pub(crate) fn invalidate_path(&self, path: &Path) {
+        self.inner.retain(|key, _| key.path != path);
+    }
 }

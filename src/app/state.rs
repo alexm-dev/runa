@@ -406,6 +406,7 @@ impl<'a> AppState<'a> {
 
             WorkerResponse::OperationComplete { need_reload, focus } => {
                 if need_reload {
+                    workers.cache().invalidate_path(self.nav.current_dir());
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }

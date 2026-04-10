@@ -1,10 +1,5 @@
 //! The runa processes module.
 //!
-//! This module implements the [find] and the [preview_bat] function, the [FindResult] and the RawResult structs.
-//!
-//! The RawResult struct is an internal struct used to store intermediate results
-//! during the find process.
-//!
 //! The [find] function uses the fd command-line tool to perform a file search
 //! in the specified base directory. It then applies fuzzy matching using the
 //! fuzzy_matcher crate to filter and score the results based on the provided query.
@@ -116,14 +111,12 @@ impl FindResult {
 }
 
 /// An internal struct to hold raw results from the fuzzy matching process.
-/// It contains the relative path and the score.
 #[derive(Debug, Clone)]
 struct RawResult {
     relative: String,
     score: i64,
 }
 
-/// Perform a fuzzy find using the fd command-line tool and the fuzzy_matcher crate.
 pub(crate) fn find(
     base_dir: &Path,
     query: &str,
