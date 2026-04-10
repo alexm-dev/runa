@@ -10,7 +10,7 @@ use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::FileEntry;
 use crate::core::cache::DirListOptions;
 use crate::core::metadata::{FileType, get_or_update_cached_meta, meta_cache};
-use crate::utils::{clean_display_path, is_regular_file, shorten_home_path, with_lowered_stack};
+use crate::utils::{clean_display_path, is_regular_file, shorten_home_path};
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
@@ -212,20 +212,10 @@ impl Formatter {
                 return ord;
             }
 
-            let a_ext = Path::new(a.name()).extension();
-            let b_ext = Path::new(b.name()).extension();
+            let a_ext = a.ext_lower().unwrap_or("");
+            let b_ext = b.ext_lower().unwrap_or("");
 
-            let mut result = if case_insensitive {
-                let a_ext_str = a_ext.and_then(|s| s.to_str()).unwrap_or_default();
-                with_lowered_stack(a_ext_str, |a_low| {
-                    with_lowered_stack(
-                        &b_ext.map(|s| s.to_string_lossy()).unwrap_or_default(),
-                        |b_low| a_low.cmp(b_low),
-                    )
-                })
-            } else {
-                a_ext.cmp(&b_ext)
-            };
+            let mut result = a_ext.cmp(b_ext);
 
             if result == std::cmp::Ordering::Equal {
                 result = if case_insensitive {

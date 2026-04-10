@@ -517,34 +517,6 @@ pub(crate) fn rename_with_fallback(src: &Path, dst: &Path, is_dir: bool) -> io::
     }
 }
 
-/// Calls f closure with a lowercase (ASCII) version of a entry name if any are uppercase ASCII.
-/// Using a stack buffer for names <= 64 bytes or with unchanged name otherwise.
-/// Falls through for Unicode and long strings with no heap allocations.
-#[inline]
-pub(crate) fn with_lowered_stack<R>(name: &str, f: impl FnOnce(&str) -> R) -> R {
-    const BUFFER_SIZE: usize = 64;
-    if name.len() <= BUFFER_SIZE {
-        let mut buf = [0u8; BUFFER_SIZE];
-        let bytes = name.as_bytes();
-        let mut needs_lowering = false;
-
-        for i in 0..bytes.len() {
-            let b = bytes[i];
-            if b.is_ascii_uppercase() {
-                needs_lowering = true;
-                buf[i] = b.to_ascii_lowercase();
-            } else {
-                buf[i] = b;
-            }
-        }
-
-        if needs_lowering && let Ok(lowered) = std::str::from_utf8(&buf[..bytes.len()]) {
-            return f(lowered);
-        }
-    }
-    f(name)
-}
-
 /// Check for file extension to deny file previews
 pub(crate) fn is_preview_deny(path: &Path) -> bool {
     match path.extension() {

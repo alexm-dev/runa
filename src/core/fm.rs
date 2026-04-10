@@ -2,9 +2,6 @@
 //!
 //! Provides the FileEntry struct which is used throughout runa.
 
-#[cfg(windows)]
-use crate::utils::with_lowered_stack;
-
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
@@ -12,14 +9,12 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 /// Represents a single entry in a directory listing
-/// Holds the name, display name, and attributes like is_dir, is_hidden, is_system
-/// Used throughout runa for directory browsing and file management
-/// Created and populated by the browse_dir function.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
-    name: Arc<OsStr>,
+    name: Box<OsStr>,
     name_str: Arc<str>,
     lowered: String,
+    ext_offset: Option<usize>,
     flags: u8,
     symlink: Option<PathBuf>,
 }
@@ -44,10 +39,19 @@ impl FileEntry {
         let lowered = lossy_str.to_lowercase();
         let name_str: Arc<str> = Arc::from(lossy_str.into_owned());
 
+        let ext_offset = name_str.rsplit_once('.').and_then(|(base, ext)| {
+            if !base.is_empty() && !ext.is_empty() {
+                Some(name_str.len() - ext.len())
+            } else {
+                None
+            }
+        });
+
         FileEntry {
-            name: Arc::from(name),
+            name: name.into_boxed_os_str(),
             name_str,
             lowered,
+            ext_offset,
             flags,
             symlink,
         }
@@ -58,6 +62,23 @@ impl FileEntry {
         name_str: &str,
         lowered: &str,
         flags: u8,
+    }
+
+    #[inline]
+    pub(crate) fn ext(&self) -> Option<&str> {
+        let off = self.ext_offset?;
+        self.name_str.get(off..)
+    }
+
+    #[inline]
+    pub(crate) fn ext_lower(&self) -> Option<&str> {
+        self.lowered.rsplit_once('.').and_then(|(base, ext)| {
+            if !base.is_empty() && !ext.is_empty() {
+                Some(ext)
+            } else {
+                None
+            }
+        })
     }
 
     #[inline]
@@ -87,10 +108,10 @@ impl FileEntry {
 
     #[cfg(windows)]
     pub(super) fn match_executable_extension(ext: &str, flags: &mut u8) {
-        with_lowered_stack(ext, |lowered| match lowered {
+        match ext {
             "exe" | "com" | "bat" | "cmd" | "ps1" => *flags |= Self::IS_EXECUTABLE,
             _ => {}
-        })
+        }
     }
 }
 

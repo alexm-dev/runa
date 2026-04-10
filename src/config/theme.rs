@@ -166,21 +166,23 @@ impl Theme {
         self.parent.entry_style(&self.entry)
     }
 
-    pub(crate) fn entry_color_override(&self, name: &str, is_dir: bool) -> Option<Style> {
-        if !self.exact.is_empty()
-            && let Some(pair) = self.exact_map().get(name)
+    pub(crate) fn entry_color_override(
+        &self,
+        name: &str,
+        is_dir: bool,
+        ext: Option<&str>,
+    ) -> Option<Style> {
+        if let Some(pair) = self.exact_map().get(name) {
+            return Some(pair.style_or(&ColorPair::default()));
+        }
+
+        if !is_dir
+            && let Some(ext) = ext
+            && let Some(pair) = self.extension_map().get(ext)
         {
             return Some(pair.style_or(&ColorPair::default()));
         }
-        if !is_dir
-            && !self.extension.is_empty()
-            && let Some(idx) = name.rfind('.')
-        {
-            let ext = &name[idx + 1..];
-            if let Some(pair) = self.extension_map().get(ext) {
-                return Some(pair.style_or(&ColorPair::default()));
-            }
-        }
+
         None
     }
 

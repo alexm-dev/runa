@@ -6,7 +6,6 @@
 //! the corresponding Nerd Font icon.
 
 use crate::core::FileEntry;
-use crate::utils::with_lowered_stack;
 
 use phf::phf_map;
 
@@ -179,7 +178,7 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(name.as_ref()) {
             return icon;
         }
-        if let Some(icon) = with_lowered_stack(name, |s| SPECIAL_DIR_ICON_MAP.get(s).copied()) {
+        if let Some(icon) = SPECIAL_DIR_ICON_MAP.get(entry.lowered()) {
             return icon;
         }
         return "";
@@ -194,18 +193,10 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry) -> &'static str {
         return "";
     }
 
-    if let Some(dot_idx) = name.rfind('.')
-        && dot_idx > 0
-        && dot_idx < name.len() - 1
+    if let Some(ext) = entry.ext()
+        && let Some(icon) = EXT_ICON_MAP.get(ext)
     {
-        let ext = &name[dot_idx + 1..];
-        if let Some(icon) = EXT_ICON_MAP.get(ext) {
-            return icon;
-        }
-
-        if let Some(icon) = with_lowered_stack(ext, |s| EXT_ICON_MAP.get(s).copied()) {
-            return icon;
-        }
+        return icon;
     }
 
     ""

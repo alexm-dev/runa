@@ -19,6 +19,7 @@ use ratatui::{
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
@@ -490,9 +491,10 @@ fn make_entry_row<'a>(
 
     let mut row_style = style;
 
-    if let Some(override_style) = context
-        .theme
-        .entry_color_override(entry.name_str(), entry.is_dir())
+    if let Some(override_style) =
+        context
+            .theme
+            .entry_color_override(entry.name_str(), entry.is_dir(), entry.ext())
     {
         row_style = row_style.patch(override_style);
 
@@ -580,7 +582,7 @@ fn make_entry_row<'a>(
         .max(1);
     let name = truncate_owned(name_raw, name_budget);
 
-    used_w += UnicodeWidthStr::width(name.as_str());
+    used_w += UnicodeWidthStr::width(&*name);
 
     if entry.is_symlink() {
         spans.push(Span::styled(name, row_style.fg(symlink_fg)));
@@ -611,8 +613,8 @@ fn make_entry_row<'a>(
                     sym_text.push_str(" [broken]");
                 }
 
-                let sym_text = truncate_owned(sym_text.as_str(), rem);
-                used_w += UnicodeWidthStr::width(sym_text.as_str());
+                let sym_text = truncate_owned(&sym_text, rem).into_owned();
+                used_w += UnicodeWidthStr::width(&*sym_text);
 
                 let target_style = if entry.is_broken_sym() {
                     row_style.fg(symlink_fg)
@@ -623,7 +625,7 @@ fn make_entry_row<'a>(
                 spans.push(Span::styled(sym_text, target_style));
             } else if entry.is_broken_sym() {
                 let s = truncate_owned(" -> [broken]", rem);
-                used_w += UnicodeWidthStr::width(s.as_str());
+                used_w += UnicodeWidthStr::width(&*s);
                 spans.push(Span::styled(s, row_style.fg(Color::Red)));
             }
         }
@@ -649,12 +651,12 @@ fn pane_show_col(inner_w: u16, right_w: u16) -> bool {
     right_w > 0 && inner_w >= right_w + 1 + MIN_LEFT_WIDTH
 }
 
-fn truncate_owned(s: &str, max_w: usize) -> String {
+fn truncate_owned(s: &str, max_w: usize) -> Cow<'_, str> {
     if UnicodeWidthStr::width(s) <= max_w {
-        return s.to_string();
+        return Cow::Borrowed(s);
     }
     if max_w <= 1 {
-        return "…".to_string();
+        return Cow::Borrowed("…");
     }
     let mut out = String::with_capacity(max_w);
     let mut w = 0usize;
@@ -670,7 +672,7 @@ fn truncate_owned(s: &str, max_w: usize) -> String {
         out.pop();
     }
     out.push('…');
-    out
+    Cow::Owned(out)
 }
 
 #[inline]
