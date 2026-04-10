@@ -212,8 +212,8 @@ impl Formatter {
                 return ord;
             }
 
-            let a_ext = a.ext_lower().unwrap_or("");
-            let b_ext = b.ext_lower().unwrap_or("");
+            let a_ext = a.ext().unwrap_or("");
+            let b_ext = b.ext().unwrap_or("");
 
             let mut result = a_ext.cmp(b_ext);
 

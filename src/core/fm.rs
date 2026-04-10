@@ -66,12 +66,6 @@ impl FileEntry {
 
     #[inline]
     pub(crate) fn ext(&self) -> Option<&str> {
-        let off = self.ext_offset?;
-        self.name_str.get(off..)
-    }
-
-    #[inline]
-    pub(crate) fn ext_lower(&self) -> Option<&str> {
         self.lowered.rsplit_once('.').and_then(|(base, ext)| {
             if !base.is_empty() && !ext.is_empty() {
                 Some(ext)
