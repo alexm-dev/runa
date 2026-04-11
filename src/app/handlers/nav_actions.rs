@@ -50,30 +50,30 @@ impl<'a> AppState<'a> {
                 let marker_jump = self.config.display().toggle_marker_jump();
                 self.nav
                     .toggle_marker_advance(&mut clipboard.entries, marker_jump);
-                self.request_preview(workers);
+                self.preview.mark_pending();
                 self.update_file_info_cache(workers);
             }
             NavAction::ClearMarker => {
                 self.nav.clear_markers();
-                self.request_preview(workers);
+                self.preview.mark_pending();
             }
             NavAction::ClearFilter => {
                 self.nav.clear_filters();
                 self.update_file_info_cache(workers);
-                self.request_preview(workers);
+                self.preview.mark_pending();
             }
             NavAction::ClearAll => {
                 self.nav.clear_markers();
                 self.nav.clear_filters();
                 clipboard.clear();
                 self.update_file_info_cache(workers);
-                self.request_preview(workers);
+                self.preview.mark_pending();
             }
             NavAction::GoToBottom => {
                 self.nav.last_selected();
                 self.refresh_show_info_if_open();
                 self.update_file_info_cache(workers);
-                self.request_preview(workers);
+                self.preview.mark_pending();
             }
             NavAction::ScrollUp => {
                 self.actions.scroll().scroll_up();
@@ -84,7 +84,7 @@ impl<'a> AppState<'a> {
             NavAction::SelectAll => {
                 clipboard.clear();
                 self.nav.select_all();
-                self.request_preview(workers);
+                self.preview.mark_pending();
                 self.update_file_info_cache(workers);
             }
             _ => {}
@@ -106,7 +106,7 @@ impl<'a> AppState<'a> {
 
         self.refresh_show_info_if_open();
 
-        const NAV_THROTTLE_MS: u128 = 10;
+        const NAV_THROTTLE_MS: u128 = 25;
 
         let now = Instant::now();
         let allow_immediate = match self.nav_time {
@@ -358,9 +358,9 @@ impl<'a> AppState<'a> {
         }
     }
 
-    pub(super) fn handle_go_to_top(&mut self, workers: &Workers) {
+    pub(super) fn handle_go_to_top(&mut self) {
         self.nav.first_selected();
-        self.request_preview(workers);
+        self.preview.mark_pending();
     }
 
     fn navigate_to(&mut self, path: PathBuf, focus: Option<OsString>, workers: &Workers) {

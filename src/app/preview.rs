@@ -67,8 +67,10 @@ impl PreviewState {
 
     /// Marks the preview as pending and updates the last input time
     pub(crate) fn mark_pending(&mut self) {
-        self.pending = true;
-        self.last_input_time = Instant::now();
+        if !self.pending {
+            self.pending = true;
+            self.last_input_time = Instant::now();
+        }
     }
 
     // Debounce timing for preview render

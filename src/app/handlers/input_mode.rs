@@ -237,7 +237,7 @@ impl<'a> AppState<'a> {
     ) -> Option<KeypressResult> {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => {
-                self.handle_go_to_top(workers);
+                self.handle_go_to_top();
                 self.update_file_info_cache(workers);
                 self.refresh_show_info_if_open();
                 Some(KeypressResult::Consumed)
@@ -271,7 +271,7 @@ impl<'a> AppState<'a> {
 
                 self.request_dir_sort(workers, focus);
                 self.request_parent_content(workers);
-                self.request_preview(workers);
+                self.preview.mark_pending();
                 Some(KeypressResult::Sort(sort_config))
             }
             _ => None,
