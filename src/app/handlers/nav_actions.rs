@@ -105,8 +105,6 @@ impl<'a> AppState<'a> {
             return;
         }
 
-        self.refresh_show_info_if_open();
-
         let allow_immediate = self.nav_time.can_trigger(Timings::NAV_THROTTLE_MS);
 
         let selected_changed_preview = if let Some(entry) = self.nav.selected_entry() {
@@ -117,6 +115,7 @@ impl<'a> AppState<'a> {
         };
 
         if allow_immediate {
+            self.refresh_show_info_if_open();
             self.update_file_info_cache(workers);
 
             if selected_changed_preview {

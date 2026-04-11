@@ -7,6 +7,7 @@
 
 use crate::config::Theme;
 use crate::core::FileEntry;
+use crate::utils::parse_color;
 use ratatui::style::Color;
 
 use phf::phf_map;
@@ -158,37 +159,37 @@ pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<
 
 /// Get the Nerd Font icon for a given file entry.
 pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str, Option<Color>) {
-    let name_str: &str = entry.name_str();
+    let name_str = entry.name_str();
+    let is_dir = entry.is_dir();
 
     if entry.is_symlink() {
-        return if entry.is_dir() {
-            ("", None)
-        } else {
-            ("", None)
-        };
+        return if is_dir { ("", None) } else { ("", None) };
     }
 
     #[cfg(unix)]
-    if entry.is_executable() && !entry.is_dir() {
+    if entry.is_executable() && !is_dir {
         return ("", Some(theme.exe_color()));
     }
 
-    let icon = if entry.is_dir() {
-        SPECIAL_DIR_ICON_MAP
-            .get(name_str)
-            .map(|(i, _)| *i)
-            .unwrap_or("")
-    } else if let Some((i, _)) = SPECIAL_FILE_ICON_MAP.get(name_str) {
-        *i
-    } else if let Some(ext) = entry.ext()
-        && let Some((i, _)) = EXT_ICON_MAP.get(ext)
-    {
-        *i
+    let ext = entry.ext();
+    let lookup = if is_dir {
+        SPECIAL_DIR_ICON_MAP.get(name_str)
     } else {
-        ""
+        SPECIAL_FILE_ICON_MAP
+            .get(name_str)
+            .or_else(|| ext.and_then(|e| EXT_ICON_MAP.get(e)))
     };
 
-    let color = theme.get_icon_color(name_str, entry.ext(), entry.is_dir());
+    let icon = lookup
+        .map(|(i, _)| *i)
+        .unwrap_or(if is_dir { "" } else { "" });
+
+    let color = theme
+        .icon_color()
+        .get(name_str)
+        .or_else(|| ext.and_then(|e| theme.icon_color().get(e)))
+        .copied()
+        .or_else(|| lookup.and_then(|(_, hex)| hex.map(parse_color)));
 
     (icon, color)
 }

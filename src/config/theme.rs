@@ -6,7 +6,6 @@
 //! Also holds the internal themes and the logic to apply user overrides on top of them.
 
 use crate::config::presets::*;
-use crate::ui::icons::{EXT_ICON_MAP, SPECIAL_DIR_ICON_MAP, SPECIAL_FILE_ICON_MAP};
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::parse_color;
 
@@ -133,6 +132,7 @@ impl Theme {
 
     crate::getters! {
         exe_color: Color,
+        icon_color: &HashMap<String, Color>,
         selection_icon: &str,
         preview: &PaneTheme,
         marker: &MarkerTheme,
@@ -185,33 +185,6 @@ impl Theme {
     }
     pub(crate) fn parent_item_style(&self) -> Style {
         self.parent.entry_style(&self.entry)
-    }
-
-    pub(crate) fn get_icon_color(
-        &self,
-        name: &str,
-        ext: Option<&str>,
-        is_dir: bool,
-    ) -> Option<Color> {
-        if let Some(color) = self.icon_color.get(name) {
-            return Some(*color);
-        }
-
-        if let Some(e) = ext
-            && let Some(color) = self.icon_color.get(e)
-        {
-            return Some(*color);
-        }
-
-        let result = if is_dir {
-            SPECIAL_DIR_ICON_MAP.get(name)
-        } else {
-            SPECIAL_FILE_ICON_MAP
-                .get(name)
-                .or_else(|| ext.and_then(|e| EXT_ICON_MAP.get(e)))
-        };
-
-        result.and_then(|(_, hex)| hex.map(parse_color))
     }
 
     pub(crate) fn entry_color_override(
