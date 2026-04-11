@@ -2,19 +2,6 @@
 //!
 //! This module defines the overall [AppState] struct, which holds all major application
 //! information and passes it to relevant UI/Terminal functions
-//! - Configuration (loaded from config files)
-//! - Preview and parent pane states.
-//! - File property state for the currently selected file, used for the info overlay and status bar.
-//! - Action context for inputs
-//! - Current layout metrics
-//! - Communication with worker threads via crossbeam_channel
-//! - Notification and message handling
-//! - Tab managment (Tab IDs and titles)
-//!
-//! This module coordinates user input processing, keybindings, state mutation,
-//! pane switching and communication with worder tasks
-//!
-//! This is the primary context/state object passed to most UI/Terminal event logic.
 
 use crate::app::{
     Clipboard, NavState, ParentState, PreviewState,
@@ -22,6 +9,7 @@ use crate::app::{
     keymap::{Action, Keymap, TabAction},
     metadata::MetadataState,
     nav::SortConfig,
+    timings::{Throttler, Timings},
 };
 use crate::config::Config;
 use crate::core::{
@@ -77,15 +65,6 @@ impl Default for LayoutMetrics {
 ///
 /// AppState holds all the persisten state for the application while it is running
 ///
-/// Includes:
-/// - References to configuration settings and the keymaps.
-/// - Models for navigation, actions, file previews, and parent directory pane
-/// - File information state for updating UI widgets.
-/// - Live layout information
-/// - Notification timing and loading indicators
-/// - UI overlay for a seamless widet rendering
-/// - Tab management (IDs and titles)
-///
 /// Functions are provided for the core event loop, input handling, file navigationm
 /// worker requests and Notification management.
 pub(crate) struct AppState<'a> {
@@ -105,7 +84,10 @@ pub(crate) struct AppState<'a> {
 
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
-    pub(super) preview_request_time: Option<Instant>,
+
+    pub(super) nav_time: Throttler,
+    pub(super) preview_request_time: Throttler,
+
     pub(super) overlays: OverlayStack,
 
     pub(super) tab_id: Option<usize>,
@@ -142,7 +124,8 @@ impl<'a> AppState<'a> {
             metadata: MetadataState::new(),
             is_loading: false,
             notification_time: None,
-            preview_request_time: None,
+            nav_time: Throttler::new(),
+            preview_request_time: Throttler::new(),
             worker_time: None,
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
@@ -219,15 +202,13 @@ impl<'a> AppState<'a> {
     }
 
     pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
-        const FILE_INFO_DEBOUNCE: u64 = 25;
-        if !self.metadata.can_request(FILE_INFO_DEBOUNCE) {
-            return;
-        }
-
         let status_info = self.config.display().info().status_bar();
         let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
 
         if !status_info && !info_overlay {
+            return;
+        }
+        if !self.metadata.can_request(Timings::FILE_INFO_DEBOUNCE_MS) {
             return;
         }
 
@@ -236,21 +217,19 @@ impl<'a> AppState<'a> {
             return;
         };
 
-        let path = self.nav.current_dir().join(entry.name());
-
         if let Some(selected_cache) = self.metadata.selected_arc()
-            && let Some(sel) = self.nav.selected_entry()
-            && sel.name() == selected_cache.name()
+            && entry.name() == selected_cache.name()
         {
             return;
         }
 
+        let path = self.nav.current_dir().join(entry.name());
         if self.metadata.is_pending_path(&path) {
             return;
         }
 
         let req_id = self.metadata.prepare_new_request();
-        let date_format = self.config.display().info().date_format().to_string();
+        let date_format = self.config.display().info().date_format();
 
         let needs = MetadataNeeds::from_show_info(self.config.display().info());
 
@@ -258,12 +237,13 @@ impl<'a> AppState<'a> {
             .metadata_tx()
             .try_send(WorkerTask::GetFileMetadata {
                 path: path.clone(),
-                date_format,
+                date_format: date_format.to_string(),
                 request_id: req_id,
                 needs,
             })
             .is_ok()
         {
+            self.metadata.touch();
             self.metadata.set_pending(req_id, path);
         }
     }
@@ -515,7 +495,6 @@ impl<'a> AppState<'a> {
 
     /// Requests a preview load for the currently selected entry in the navigation pane
     pub(crate) fn request_preview(&mut self, workers: &Workers) {
-        const MIN_PREVIEW_REQUEST_MS: u128 = 30;
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             if let Some(current) = self.preview.current_path()
@@ -525,15 +504,10 @@ impl<'a> AppState<'a> {
                 return;
             }
 
-            let now = Instant::now();
-            if let Some(prev) = self.preview_request_time
-                && now.duration_since(prev).as_millis() < MIN_PREVIEW_REQUEST_MS
+            if !self
+                .preview_request_time
+                .can_trigger(Timings::PREVIEW_REQUEST_MS)
             {
-                self.preview.mark_pending();
-                return;
-            }
-
-            if workers.active().load(std::sync::atomic::Ordering::Relaxed) > 2 {
                 self.preview.mark_pending();
                 return;
             }
@@ -555,7 +529,7 @@ impl<'a> AppState<'a> {
                         .and_then(|saved| entries.iter().position(|e| e.name() == saved))
                         .unwrap_or(0);
                     self.preview.set_selected_idx(pos);
-                    self.preview_request_time = Some(now);
+                    self.preview_request_time.touch();
                     return;
                 }
 
@@ -573,7 +547,7 @@ impl<'a> AppState<'a> {
                     })
                     .is_ok()
                 {
-                    self.preview_request_time = Some(now);
+                    self.preview_request_time.touch();
                 } else {
                     self.preview.mark_pending();
                 }
@@ -599,7 +573,7 @@ impl<'a> AppState<'a> {
                     })
                     .is_ok()
                 {
-                    self.preview_request_time = Some(now);
+                    self.preview_request_time.touch();
                 } else {
                     self.preview.mark_pending();
                 }

@@ -3,12 +3,13 @@
 //! Tracks the state of the file/directory preview for the UI, including loaded preview
 //! data, debounce for background rendering, selection within the preview and request tracking
 
+use crate::app::timings::Timings;
 use crate::core::FileEntry;
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 /// Preview content for the preview pane
 ///
@@ -75,7 +76,8 @@ impl PreviewState {
 
     // Debounce timing for preview render
     pub(crate) fn should_trigger(&self) -> bool {
-        self.pending && self.last_input_time.elapsed().as_millis() > 35
+        self.pending
+            && self.last_input_time.elapsed() > Duration::from_millis(Timings::PREVIEW_DEBOUNCE_MS)
     }
 
     /// Prepares a new preview request for the given path

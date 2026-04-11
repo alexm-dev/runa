@@ -3,18 +3,18 @@
 //! [MetadataState] struct to wrap the [FileMetadata] and manage the state of worker requests,
 //! pending paths, and selected file metadata.
 
+use crate::app::timings::Throttler;
 use crate::core::metadata::FileMetadataCache;
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone)]
 pub(crate) struct MetadataState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
     selected: Option<Arc<FileMetadataCache>>,
-    last_request_time: Instant,
+    last_request_time: Throttler,
 }
 
 impl MetadataState {
@@ -23,12 +23,11 @@ impl MetadataState {
             request_id: 0,
             pending: None,
             selected: None,
-            last_request_time: Instant::now() - Duration::from_secs(1),
+            last_request_time: Throttler::new(),
         }
     }
 
     pub(crate) fn prepare_new_request(&mut self) -> u64 {
-        self.last_request_time = Instant::now();
         let id = self.request_id;
         self.request_id = self.request_id.wrapping_add(1);
         id
@@ -39,7 +38,11 @@ impl MetadataState {
     }
 
     pub(crate) fn can_request(&self, debounce_ms: u64) -> bool {
-        self.last_request_time.elapsed() >= Duration::from_millis(debounce_ms)
+        self.last_request_time.can_trigger(debounce_ms)
+    }
+
+    pub(crate) fn touch(&mut self) {
+        self.last_request_time.touch();
     }
 
     pub(crate) fn set_pending(&mut self, id: u64, path: PathBuf) {
