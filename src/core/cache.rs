@@ -1,3 +1,8 @@
+//! Cache for sharing of entries betweeen navigation changes.
+//!
+//! Caches an Arc slice of FileEntry and the sort_column needed
+//! to share entry states between panes.
+
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
 

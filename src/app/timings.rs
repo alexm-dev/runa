@@ -1,3 +1,8 @@
+//! Timings module for AppState, handling the throttling
+//! and or debounce for relevant actions.
+//!
+//! Throttler to wrap each timing into a check first before debouncing a request.
+
 use std::time::{Duration, Instant};
 
 pub(super) struct Timings;
