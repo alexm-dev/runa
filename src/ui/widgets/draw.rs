@@ -20,17 +20,19 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph},
 };
 
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-/// Draws the seperator line when enabled inside runa.toml
-pub(crate) fn draw_separator(frame: &mut Frame, area: Rect, style: Style) {
+pub(crate) fn draw_separator(frame: &mut Frame, area: Rect, style: Style, border_type: BorderType) {
     frame.render_widget(
-        Block::default().borders(Borders::LEFT).border_style(style),
+        Block::default()
+            .borders(Borders::LEFT)
+            .border_style(style)
+            .border_type(border_type),
         area,
     );
 }

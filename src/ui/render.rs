@@ -23,8 +23,9 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::Style,
+    symbols::line,
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, BorderType, Borders, Paragraph},
 };
 
 /// Render function which renders the entire terminal UI for runa on each frame.
@@ -36,6 +37,7 @@ pub(crate) fn render(
     clipboard: &mut Clipboard,
 ) {
     let mut root_area = frame.area();
+    let outer_area = root_area;
     let metrics = calculate_layout_metrics(frame.area(), app);
     app.update_layout_metrics(workers, metrics);
 
@@ -115,8 +117,9 @@ pub(crate) fn render(
             render_separator(
                 frame,
                 chunks[pane_idx].x,
-                root_area,
+                outer_area,
                 theme_cfg.separator_style(),
+                border_type,
             );
             pane_idx += 1;
         }
@@ -162,8 +165,9 @@ pub(crate) fn render(
             render_separator(
                 frame,
                 chunks[pane_idx].x,
-                root_area,
+                outer_area,
                 theme_cfg.separator_style(),
+                border_type,
             );
             pane_idx += 1;
         }
@@ -336,17 +340,26 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
 }
 
 /// Renders a vertical separator line at the specified x-coordinate within the root area.
-fn render_separator(frame: &mut Frame, x: u16, root_area: Rect, style: Style) {
+fn render_separator(
+    frame: &mut Frame,
+    x: u16,
+    outer_area: Rect,
+    style: Style,
+    border_type: BorderType,
+) {
     widgets::draw_separator(
         frame,
         Rect {
             x,
-            y: root_area.y,
+            y: outer_area.y,
             width: 1,
-            height: root_area.height,
+            height: outer_area.height,
         },
         style,
+        border_type,
     );
+
+    border_junctions(frame, outer_area, x, border_type, style);
 }
 
 /// Renders any active overlays such as input dialogs or message boxes.
@@ -422,6 +435,24 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
         metrics.preview_height = height;
     }
     metrics
+}
+
+fn border_junctions(frame: &mut Frame, area: Rect, x: u16, border_type: BorderType, style: Style) {
+    let (top_sym, bottom_sym) = match border_type {
+        BorderType::Double => (line::DOUBLE_HORIZONTAL_DOWN, line::DOUBLE_HORIZONTAL_UP),
+        BorderType::Thick => (line::THICK_HORIZONTAL_DOWN, line::THICK_HORIZONTAL_UP),
+        _ => (line::HORIZONTAL_DOWN, line::HORIZONTAL_UP),
+    };
+
+    let buffer = frame.buffer_mut();
+
+    if let Some(cell) = buffer.cell_mut((x, area.top())) {
+        cell.set_symbol(top_sym).set_style(style);
+    }
+
+    if let Some(cell) = buffer.cell_mut((x, area.bottom().saturating_sub(1))) {
+        cell.set_symbol(bottom_sym).set_style(style);
+    }
 }
 
 /// render integration tests
