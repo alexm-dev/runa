@@ -379,10 +379,16 @@ impl<'a> AppState<'a> {
             WorkerResponse::PreviewLoaded {
                 lines,
                 request_id,
+                is_eof,
                 tab_id: _tab_id,
             } => {
                 if request_id == self.preview.request_id() {
-                    self.preview.update_content(lines, request_id);
+                    self.preview.update_content(
+                        lines,
+                        self.metrics.preview_height,
+                        is_eof,
+                        request_id,
+                    );
                 }
             }
 
@@ -500,6 +506,7 @@ impl<'a> AppState<'a> {
             if let Some(current) = self.preview.current_path()
                 && current == path
                 && !self.preview.data().is_empty()
+                && self.preview.scroll().offset() == self.preview.loaded_scroll()
             {
                 return;
             }
@@ -560,12 +567,14 @@ impl<'a> AppState<'a> {
                     .into_iter()
                     .map(OsString::from)
                     .collect();
+                let scroll = self.preview.scroll().offset() as usize;
                 if workers
                     .preview_file_tx()
                     .try_send(WorkerTask::LoadPreview {
                         path,
                         max_lines: self.metrics.preview_height,
                         pane_width: self.metrics.preview_width,
+                        scroll,
                         preview_method,
                         args: bat_args,
                         request_id: req_id,

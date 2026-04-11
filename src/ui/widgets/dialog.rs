@@ -268,10 +268,10 @@ pub(crate) fn draw_dialog<'a, T>(
 {
     let dialog = dialog_area(layout.area, layout.size, layout.position);
     let text = content.into();
+    let inner_height = dialog.height.saturating_sub(2);
 
     let current_offset = if let Some(state) = scroll_state {
         let total_lines = text.lines.len() as u16;
-        let inner_height = dialog.height.saturating_sub(2);
         let max = total_lines.saturating_sub(inner_height);
 
         state.set_max_offset(max);

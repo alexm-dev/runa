@@ -209,6 +209,7 @@ pub(crate) fn preview_bat(
     path: &Path,
     max_lines: usize,
     bat_args: &[OsString],
+    scroll: usize,
 ) -> Result<Vec<String>, std::io::Error> {
     if max_lines == 0 {
         return Ok(Vec::new());
@@ -216,9 +217,12 @@ pub(crate) fn preview_bat(
 
     let bat_bin = bat_binary()?;
 
+    let start = scroll + 1;
+    let end = scroll + max_lines;
+
     let mut args = Vec::with_capacity(bat_args.len() + 1);
     args.extend_from_slice(bat_args);
-    args.push(format!("--line-range=:{}", max_lines).into());
+    args.push(format!("--line-range={}:{}", start, end).into());
     let mut cmd = Command::new(bat_bin)
         .args(args)
         .arg(path)
@@ -418,7 +422,7 @@ mod tests {
         writeln!(file, "line two")?;
         writeln!(file, "line three")?;
 
-        let preview = preview_bat(&file_path, 2, &[])?;
+        let preview = preview_bat(&file_path, 2, &[], 0)?;
         assert_eq!(preview.len(), 2);
         assert!(
             preview.iter().any(|line| line.contains("line one")),
@@ -441,7 +445,7 @@ mod tests {
         let mut file = fs::File::create(&file_path)?;
         writeln!(file, "fn main() {{}}")?;
 
-        let preview = preview_bat(&file_path, 1, &[std::ffi::OsString::from("--plain")])?;
+        let preview = preview_bat(&file_path, 1, &[std::ffi::OsString::from("--plain")], 0)?;
         assert_eq!(preview.len(), 1);
         assert!(preview[0].contains("fn main"));
 
@@ -454,7 +458,7 @@ mod tests {
 
         let dir = tempfile::tempdir()?;
         let bad_path = dir.path().join("does_not_exist.txt");
-        let result = preview_bat(&bad_path, 2, &[]);
+        let result = preview_bat(&bad_path, 2, &[], 0);
 
         assert!(result.is_err(), "Expected error for missing file");
         Ok(())

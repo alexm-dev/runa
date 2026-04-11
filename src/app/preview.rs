@@ -3,6 +3,7 @@
 //! Tracks the state of the file/directory preview for the UI, including loaded preview
 //! data, debounce for background rendering, selection within the preview and request tracking
 
+use crate::app::actions::ScrollState;
 use crate::app::timings::Timings;
 use crate::core::FileEntry;
 use ansi_to_tui::IntoText;
@@ -32,12 +33,16 @@ pub(crate) struct PreviewState {
     request_id: u64,
     pending: bool,
     last_input_time: Instant,
+    scroll: ScrollState,
+    loaded_scroll: u16,
 }
 
 impl PreviewState {
     crate::getters! {
         data: &PreviewData,
         selected_idx: usize,
+        scroll: &ScrollState,
+        loaded_scroll: u16,
         request_id: u64,
     }
 
@@ -75,18 +80,42 @@ impl PreviewState {
     /// Increments the request ID, sets the current path and marks as not pending
     pub(crate) fn prepare_new_request(&mut self, path: PathBuf) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
-        self.current_path = Some(path);
+
+        if self.current_path.as_ref() != Some(&path) {
+            self.reset_scroll();
+            self.current_path = Some(path);
+        }
+
         self.pending = false;
         self.request_id
     }
 
     /// Updates the preview content with new file lines
     /// Only applies the update if the request ID matches the latest
-    pub(crate) fn update_content(&mut self, lines: Vec<String>, request_id: u64) {
+    pub(crate) fn update_content(
+        &mut self,
+        lines: Vec<String>,
+        view_height: usize,
+        is_eof: bool,
+        request_id: u64,
+    ) {
         if request_id == self.request_id {
             let raw = lines.join("\n");
             let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
             self.data = PreviewData::File(text);
+
+            if is_eof {
+                let total_lines = self.scroll().offset() as usize + lines.len();
+                let max_offset = total_lines.saturating_sub(view_height) as u16;
+                self.scroll.set_max_offset(max_offset);
+                if self.scroll().offset() > max_offset {
+                    self.scroll().set_offset(max_offset);
+                }
+            } else {
+                self.scroll.set_max_offset(u16::MAX);
+            }
+
+            self.loaded_scroll = self.scroll().offset();
         }
     }
 
@@ -119,6 +148,21 @@ impl PreviewState {
         self.current_path = None;
         self.pending = false;
     }
+
+    pub(crate) fn scroll_up(&mut self) {
+        self.scroll.scroll_up();
+        self.mark_pending();
+    }
+
+    pub(crate) fn scroll_down(&mut self) {
+        self.scroll.scroll_down();
+        self.mark_pending();
+    }
+
+    pub(crate) fn reset_scroll(&mut self) {
+        self.scroll.reset();
+        self.loaded_scroll = 0;
+    }
 }
 
 impl Default for PreviewState {
@@ -130,6 +174,8 @@ impl Default for PreviewState {
             request_id: 0,
             pending: false,
             last_input_time: Instant::now(),
+            scroll: ScrollState::default(),
+            loaded_scroll: 0,
         }
     }
 }

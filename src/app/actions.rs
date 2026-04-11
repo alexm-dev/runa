@@ -564,6 +564,10 @@ impl ScrollState {
         self.offset.get()
     }
 
+    pub(crate) fn set_offset(&self, offset: u16) {
+        self.offset.set(offset);
+    }
+
     pub(crate) fn set_max_offset(&self, max: u16) {
         self.max_offset.set(max);
     }
@@ -573,12 +577,15 @@ impl ScrollState {
     }
 
     pub(crate) fn scroll_down(&self) {
-        if self.offset.get() < self.max_offset.get() {
-            self.offset.set(self.offset.get().saturating_add(1));
+        let current = self.offset.get();
+        let max = self.max_offset.get();
+        if current < max {
+            self.offset.set(current.saturating_add(1));
         }
     }
 
     pub(crate) fn reset(&self) {
         self.offset.set(0);
+        self.max_offset.set(0);
     }
 }

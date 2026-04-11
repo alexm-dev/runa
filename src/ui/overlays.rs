@@ -87,6 +87,13 @@ impl OverlayStack {
             _ => None,
         })
     }
+
+    pub(crate) fn needs_scroll(&self) -> bool {
+        matches!(
+            self.top(),
+            Some(Overlay::ShowInfo { .. }) | Some(Overlay::KeybindHelp)
+        )
+    }
 }
 
 impl Default for OverlayStack {

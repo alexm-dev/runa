@@ -169,6 +169,7 @@ pub(crate) enum WorkerTask {
         path: PathBuf,
         max_lines: usize,
         pane_width: usize,
+        scroll: usize,
         preview_method: PreviewMethod,
         args: Vec<OsString>,
         request_id: u64,
@@ -230,6 +231,7 @@ pub(crate) enum WorkerResponse {
     },
     PreviewLoaded {
         lines: Vec<String>,
+        is_eof: bool,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -384,6 +386,7 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                 path,
                 max_lines,
                 pane_width,
+                scroll,
                 preview_method,
                 args,
                 request_id,
@@ -394,23 +397,26 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
             };
 
             let lines = match preview_method {
-                PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width),
+                PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width, scroll),
                 PreviewMethod::Bat => {
                     if !is_regular_file(&path) || is_preview_deny(&path) {
-                        safe_read_preview(&path, max_lines, pane_width)
+                        safe_read_preview(&path, max_lines, pane_width, scroll)
                     } else {
-                        match preview_bat(&path, max_lines, args.as_slice()) {
+                        match preview_bat(&path, max_lines, args.as_slice(), scroll) {
                             // Bat preview succeeded
                             // If bat fails, fallback to internal preview
                             // If bat is not installed or returns error, we fallback to internal preview
                             Ok(lines) => lines,
-                            Err(_) => safe_read_preview(&path, max_lines, pane_width),
+                            Err(_) => safe_read_preview(&path, max_lines, pane_width, scroll),
                         }
                     }
                 }
             };
+
+            let is_eof = lines.len() < max_lines;
             let _ = res_tx.send(WorkerResponse::PreviewLoaded {
                 lines,
+                is_eof,
                 request_id,
                 tab_id,
             });
@@ -792,6 +798,7 @@ mod tests {
             path: test_file.clone(),
             max_lines: 1,
             pane_width: 10,
+            scroll: 0,
             preview_method: PreviewMethod::Internal,
             args: vec![],
             request_id: 20,
@@ -1119,6 +1126,7 @@ mod tests {
             path: preview_file.clone(),
             max_lines: 2,
             pane_width: 40,
+            scroll: 0,
             preview_method: PreviewMethod::Internal,
             args: vec![],
             request_id: 3,
@@ -1195,6 +1203,7 @@ mod tests {
             path: file_path,
             max_lines: 5,
             pane_width: 40,
+            scroll: 0,
             preview_method: PreviewMethod::Bat,
             args: vec![],
             request_id: 99,

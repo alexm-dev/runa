@@ -77,10 +77,18 @@ impl<'a> AppState<'a> {
                 self.preview.mark_pending();
             }
             NavAction::ScrollUp => {
-                self.actions.scroll().scroll_up();
+                if self.actions.is_input_mode() || self.overlays.needs_scroll() {
+                    self.actions.scroll().scroll_up();
+                } else {
+                    self.preview.scroll_up();
+                }
             }
             NavAction::ScrollDown => {
-                self.actions.scroll().scroll_down();
+                if self.actions.is_input_mode() || self.overlays.needs_scroll() {
+                    self.actions.scroll().scroll_down();
+                } else {
+                    self.preview.scroll_down();
+                }
             }
             NavAction::SelectAll => {
                 clipboard.clear();

@@ -20,7 +20,7 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
-use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
+use std::io::{BufReader, ErrorKind, Read, Seek};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -558,7 +558,12 @@ pub(crate) fn sanitize_to_exact_width(line: &str, pane_width: usize) -> String {
 ///
 /// # Returns
 /// A vector of strings, each representing a line from the file or directory preview.
-pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize) -> Vec<String> {
+pub(crate) fn safe_read_preview(
+    path: &Path,
+    max_lines: usize,
+    pane_width: usize,
+    scroll: usize,
+) -> Vec<String> {
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
     if !is_regular_file(path) {
@@ -611,23 +616,65 @@ pub(crate) fn safe_read_preview(path: &Path, max_lines: usize, pane_width: usize
             // Rewind to start for full read
             let _ = file.rewind();
 
-            // Read lines for preview
-            let reader = BufReader::new(file);
-            let mut preview_lines = Vec::with_capacity(max_lines);
+            let mut reader = BufReader::with_capacity(64 * 1024, file);
+            let mut buf = [0u8; 64 * 1024];
 
-            // Read up to max_lines
-            for line_result in reader.lines().take(max_lines) {
-                match line_result {
-                    Ok(line) => {
-                        preview_lines.push(sanitize_to_exact_width(&line, pane_width));
-                    }
+            let mut preview_lines = Vec::with_capacity(max_lines);
+            let mut current_line = Vec::with_capacity(256);
+
+            let mut line_idx = 0usize;
+            let mut collected = 0usize;
+
+            loop {
+                let n = match reader.read(&mut buf) {
+                    Ok(0) => break,
+                    Ok(n) => n,
                     Err(_) => break,
+                };
+
+                for &b in &buf[..n] {
+                    if b == b'\n' {
+                        if line_idx >= scroll {
+                            if let Some(&last) = current_line.last()
+                                && last == b'\r'
+                            {
+                                current_line.pop();
+                            }
+
+                            let line = String::from_utf8_lossy(&current_line);
+                            preview_lines.push(sanitize_to_exact_width(&line, pane_width));
+                            collected += 1;
+
+                            if collected >= max_lines {
+                                return preview_lines;
+                            }
+                        }
+
+                        current_line.clear();
+                        line_idx += 1;
+                    } else {
+                        if current_line.len() < 1024 {
+                            current_line.push(b);
+                        }
+                    }
                 }
             }
 
-            // Handle Empty File
+            if !current_line.is_empty() && line_idx >= scroll && collected < max_lines {
+                if current_line.last() == Some(&b'\r') {
+                    current_line.pop();
+                }
+                let line = String::from_utf8_lossy(&current_line);
+                preview_lines.push(sanitize_to_exact_width(&line, pane_width));
+            }
+
             if preview_lines.is_empty() {
-                preview_lines.push(sanitize_to_exact_width("[Empty file]", pane_width));
+                let msg = if scroll == 0 {
+                    "[Empty file]"
+                } else {
+                    "[End of file]"
+                };
+                preview_lines.push(sanitize_to_exact_width(msg, pane_width));
             }
 
             preview_lines
