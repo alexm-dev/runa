@@ -105,6 +105,7 @@ pub(crate) struct AppState<'a> {
 
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
+    pub(super) nav_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
 
     pub(super) tab_id: Option<usize>,
@@ -141,6 +142,7 @@ impl<'a> AppState<'a> {
             metadata: MetadataState::new(),
             is_loading: false,
             notification_time: None,
+            nav_time: None,
             worker_time: None,
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
@@ -515,6 +517,13 @@ impl<'a> AppState<'a> {
     pub(crate) fn request_preview(&mut self, workers: &Workers) {
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
+            if let Some(current) = self.preview.current_path()
+                && current == path
+                && !self.preview.data().is_empty()
+            {
+                return;
+            }
+
             let req_id = self.preview.prepare_new_request(path.clone());
             let sort_config = self.nav.sort_config();
             let list_opts = self.dir_list_options();

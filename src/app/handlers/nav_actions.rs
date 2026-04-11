@@ -18,7 +18,7 @@ use crate::utils::{clean_display_path, expand_home_path_buf, get_home};
 
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 impl<'a> AppState<'a> {
     /// Handles navigation actions (up, down, into dir, etc).
@@ -100,14 +100,41 @@ impl<'a> AppState<'a> {
     where
         F: FnOnce(&mut NavState) -> bool,
     {
-        if f(&mut self.nav) {
-            self.refresh_show_info_if_open();
+        if !f(&mut self.nav) {
+            return;
+        }
+
+        self.refresh_show_info_if_open();
+
+        const NAV_THROTTLE_MS: u128 = 10;
+
+        let now = Instant::now();
+        let allow_immediate = match self.nav_time {
+            Some(prev) => now.duration_since(prev).as_millis() >= NAV_THROTTLE_MS,
+            None => true,
+        };
+
+        let selected_changed_preview = if let Some(entry) = self.nav.selected_entry() {
+            let sel_path = self.nav.current_dir().join(entry.name());
+            self.preview.current_path() != Some(sel_path.as_path())
+        } else {
+            true
+        };
+
+        if allow_immediate {
             self.update_file_info_cache(workers);
-            if self.config.display().instant_preview() {
-                self.request_preview(workers);
-            } else {
-                self.preview.mark_pending();
+
+            if selected_changed_preview {
+                if self.config.display().instant_preview() {
+                    self.request_preview(workers);
+                } else {
+                    self.preview.mark_pending();
+                }
             }
+
+            self.nav_time = Some(now);
+        } else {
+            self.preview.mark_pending();
         }
     }
 
