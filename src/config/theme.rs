@@ -726,12 +726,12 @@ impl TabTheme {
         separator: &str,
     }
 
-    pub fn active_style_or_theme(&self) -> Style {
+    pub(crate) fn active_style_or_theme(&self) -> Style {
         self.active.style_or(&Theme::internal_defaults().tab.active)
     }
 
     /// Returns a Style for the inactive tab, using theme fallback if unset.
-    pub fn inactive_style_or_theme(&self) -> Style {
+    pub(crate) fn inactive_style_or_theme(&self) -> Style {
         self.inactive
             .style_or(&Theme::internal_defaults().tab.inactive)
     }
