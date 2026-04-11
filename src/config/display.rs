@@ -481,7 +481,6 @@ impl PreviewOptions {
         args.push("--color=always".to_string());
         args.push("--paging=never".to_string());
         args.push(format!("--tabs={}", self.tab_width));
-        args.push(format!("--terminal-width={}", pane_width));
         args.push(
             match self.style {
                 BatStyle::Plain => "--style=plain",
@@ -494,14 +493,12 @@ impl PreviewOptions {
         args.push("--theme".to_owned());
         args.push(self.theme.as_deref().unwrap_or(default_theme).to_string());
 
-        args.push(
-            if self.wrap {
-                "--wrap=character"
-            } else {
-                "--wrap=never"
-            }
-            .to_string(),
-        );
+        if self.wrap {
+            args.push(format!("--terminal-width={}", pane_width));
+            args.push("--wrap=character".to_string());
+        } else {
+            args.push("--wrap=never".to_string());
+        }
 
         args
     }

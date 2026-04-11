@@ -22,7 +22,7 @@ use fuzzy_matcher::skim::SkimMatcherV2;
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Read};
 use std::path::MAIN_SEPARATOR;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -210,29 +210,33 @@ pub(crate) fn preview_bat(
     max_lines: usize,
     bat_args: &[OsString],
 ) -> Result<Vec<String>, std::io::Error> {
+    if max_lines == 0 {
+        return Ok(Vec::new());
+    }
+
     let bat_bin = bat_binary()?;
 
+    let mut args = Vec::with_capacity(bat_args.len() + 1);
+    args.extend_from_slice(bat_args);
+    args.push(format!("--line-range=:{}", max_lines).into());
     let mut cmd = Command::new(bat_bin)
-        .args(bat_args)
+        .args(args)
         .arg(path)
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()?;
 
-    let mut lines = Vec::with_capacity(max_lines);
-
-    if let Some(stdout) = cmd.stdout.take() {
-        let reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
-        for line in reader.lines().take(max_lines) {
-            match line {
-                Ok(l) => lines.push(l),
-                Err(_) => break,
-            }
-        }
+    let mut output = String::new();
+    if let Some(mut stdout) = cmd.stdout.take() {
+        stdout.read_to_string(&mut output)?;
     }
 
-    let _ = cmd.kill();
     let _ = cmd.wait();
+
+    let mut lines = Vec::with_capacity(max_lines);
+    for line in output.lines().take(max_lines) {
+        lines.push(line.to_owned());
+    }
 
     if lines.is_empty() {
         return Err(std::io::Error::other("bat produced no output"));
