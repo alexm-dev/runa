@@ -66,13 +66,7 @@ impl FileEntry {
 
     #[inline]
     pub(crate) fn ext(&self) -> Option<&str> {
-        self.lowered.rsplit_once('.').and_then(|(base, ext)| {
-            if !base.is_empty() && !ext.is_empty() {
-                Some(ext)
-            } else {
-                None
-            }
-        })
+        self.ext_offset.map(|offset| &self.lowered[offset..])
     }
 
     #[inline]

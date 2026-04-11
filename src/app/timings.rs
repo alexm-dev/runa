@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 pub(super) struct Timings;
 
 impl Timings {
-    pub(super) const PREVIEW_REQUEST_MS: u64 = 31;
+    pub(super) const PREVIEW_REQUEST_MS: u64 = 30;
     pub(super) const PREVIEW_DEBOUNCE_MS: u64 = 35;
     pub(super) const NAV_THROTTLE_MS: u64 = 15;
     pub(super) const FILE_INFO_DEBOUNCE_MS: u64 = 60;

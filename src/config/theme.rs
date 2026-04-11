@@ -10,7 +10,6 @@ use crate::ui::icons::{EXT_ICON_MAP, SPECIAL_DIR_ICON_MAP, SPECIAL_FILE_ICON_MAP
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::parse_color;
 
-use ahash::AHashMap;
 use ratatui::style::{Color, Style};
 use serde::{Deserialize, Deserializer};
 
@@ -48,16 +47,13 @@ pub(crate) struct Theme {
     info: InfoStatusTheme,
 
     #[serde(skip)]
-    exact_styles: AHashMap<String, Style>,
+    exact_styles: HashMap<String, Style>,
     #[serde(skip)]
-    extension_styles: AHashMap<String, Style>,
-    #[serde(skip)]
-    icon_styles: AHashMap<String, Color>,
+    extension_styles: HashMap<String, Style>,
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        let (exact, extension) = Theme::default_file_colors();
         Theme {
             name: None,
             accent: ColorPair {
@@ -86,8 +82,8 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             status_line: ColorPair::default(),
-            exact,
-            extension,
+            exact: HashMap::new(),
+            extension: HashMap::new(),
             icon_color: HashMap::new(),
             exe_color: Color::LightGreen,
             symlink: SymlinkTheme::default(),
@@ -95,9 +91,8 @@ impl Default for Theme {
             widget: WidgetTheme::default(),
             tab: TabTheme::default(),
             info: InfoStatusTheme::default(),
-            exact_styles: AHashMap::new(),
-            extension_styles: AHashMap::new(),
-            icon_styles: AHashMap::new(),
+            exact_styles: HashMap::new(),
+            extension_styles: HashMap::new(),
         }
     }
 }
@@ -134,6 +129,16 @@ impl Theme {
     pub(crate) fn internal_defaults() -> &'static Self {
         static DEFAULT: LazyLock<Theme> = LazyLock::new(Theme::default);
         &DEFAULT
+    }
+
+    crate::getters! {
+        exe_color: Color,
+        selection_icon: &str,
+        preview: &PaneTheme,
+        marker: &MarkerTheme,
+        widget: &WidgetTheme,
+        info: &InfoStatusTheme,
+        tab: &TabTheme,
     }
 
     // Getters for various theme properties with fallbacks to internal defaults
@@ -182,6 +187,33 @@ impl Theme {
         self.parent.entry_style(&self.entry)
     }
 
+    pub(crate) fn get_icon_color(
+        &self,
+        name: &str,
+        ext: Option<&str>,
+        is_dir: bool,
+    ) -> Option<Color> {
+        if let Some(color) = self.icon_color.get(name) {
+            return Some(*color);
+        }
+
+        if let Some(e) = ext
+            && let Some(color) = self.icon_color.get(e)
+        {
+            return Some(*color);
+        }
+
+        let result = if is_dir {
+            SPECIAL_DIR_ICON_MAP.get(name)
+        } else {
+            SPECIAL_FILE_ICON_MAP
+                .get(name)
+                .or_else(|| ext.and_then(|e| EXT_ICON_MAP.get(e)))
+        };
+
+        result.and_then(|(_, hex)| hex.map(parse_color))
+    }
+
     pub(crate) fn entry_color_override(
         &self,
         name: &str,
@@ -199,73 +231,88 @@ impl Theme {
             return Some(*s);
         }
 
-        None
+        Self::get_default_style(name, ext, is_dir)
     }
 
-    crate::getters! {
-        exe_color: Color,
-        icon_styles: &AHashMap<String, Color>,
-        selection_icon: &str,
-        preview: &PaneTheme,
-        marker: &MarkerTheme,
-        widget: &WidgetTheme,
-        info: &InfoStatusTheme,
-        tab: &TabTheme,
+    fn get_default_style(name: &str, ext: Option<&str>, is_dir: bool) -> Option<Style> {
+        match name {
+            "Dockerfile" => return Some(Style::default().fg(Color::Cyan)),
+            "Cargo.toml" | "LICENSE" | "README.md" => {
+                return Some(Style::default().fg(Color::Yellow));
+            }
+            _ => {}
+        }
+
+        if !is_dir && let Some(e) = ext {
+            let color = match e {
+                "zip" | "tar" | "gz" | "7z" | "rar" => Color::Red,
+                "jpg" | "jpeg" | "png" | "gif" | "svg" | "webm" => Color::Magenta,
+                "tmp" => Color::Rgb(108, 121, 135),
+                _ => return None,
+            };
+            return Some(Style::default().fg(color));
+        }
+
+        None
     }
 
     /// Apply user overrides on top of a preset theme if a known preset name is provided.
     /// If no preset name is provided or the name is unknown, returns the theme as is.
-    pub(crate) fn with_overrides(self) -> Self {
-        let preset = match self.name.as_deref() {
-            Some("gruvbox-dark-hard") => Some(gruvbox_dark_hard()),
-            Some("gruvbox-dark") => Some(gruvbox_dark()),
-            Some("gruvbox-light") => Some(gruvbox_light()),
+    #[inline(never)]
+    pub(super) fn with_overrides(mut self) -> Self {
+        let preset_name = self.name.clone();
 
-            Some("catppuccin-mocha") => Some(catppuccin_mocha()),
-            Some("catppuccin-frappe") => Some(catppuccin_frappe()),
-            Some("catppuccin-macchiato") => Some(catppuccin_mocha()),
-            Some("catppuccin-latte") => Some(catppuccin_latte()),
-
-            Some("nord") => Some(nord()),
-
-            Some("two-dark") => Some(two_dark()),
-            Some("one-dark") => Some(one_dark()),
-
-            Some("solarized-dark") => Some(solarized_dark()),
-            Some("solarized-light") => Some(solarized_light()),
-
-            Some("dracula") => Some(dracula()),
-
-            Some("monokai") => Some(monokai()),
-
-            Some("nightfox") => Some(nightfox()),
-            Some("carbonfox") => Some(carbonfox()),
-
-            Some("tokyonight") => Some(tokyonight_night()),
-            Some("tokyonight-storm") => Some(tokyonight_storm()),
-            Some("tokyonight-day") => Some(tokyonight_day()),
-
-            Some("everforest") => Some(everforest()),
-            Some("rose-pine") | Some("rose_pine") => Some(rose_pine()),
-
-            _ => None,
-        };
-
-        if let Some(mut base) = preset {
+        if let Some(name) = preset_name.as_deref()
+            && let Some(mut base) = Self::get_preset_by_name(name)
+        {
             base.apply_user_overrides(self);
             base.build_style_maps();
-            base
-        } else {
-            let mut out = self;
-            out.build_style_maps();
-            out
+            return base;
+        }
+
+        self.build_style_maps();
+        self
+    }
+
+    #[inline(never)]
+    fn get_preset_by_name(name: &str) -> Option<Theme> {
+        match name {
+            "gruvbox-dark-hard" => Some(gruvbox_dark_hard()),
+            "gruvbox-dark" => Some(gruvbox_dark()),
+            "gruvbox-light" => Some(gruvbox_light()),
+
+            "catppuccin-mocha" => Some(catppuccin_mocha()),
+            "catppuccin-frappe" => Some(catppuccin_frappe()),
+            "catppuccin-macchiato" => Some(catppuccin_mocha()),
+            "catppuccin-latte" => Some(catppuccin_latte()),
+
+            "nord" => Some(nord()),
+
+            "two-dark" => Some(two_dark()),
+            "one-dark" => Some(one_dark()),
+
+            "solarized-dark" => Some(solarized_dark()),
+            "solarized-light" => Some(solarized_light()),
+
+            "dracula" => Some(dracula()),
+            "monokai" => Some(monokai()),
+            "nightfox" => Some(nightfox()),
+            "carbonfox" => Some(carbonfox()),
+
+            "tokyonight" => Some(tokyonight_night()),
+            "tokyonight-storm" => Some(tokyonight_storm()),
+            "tokyonight-day" => Some(tokyonight_day()),
+
+            "everforest" => Some(everforest()),
+            "rose-pine" | "rose_pine" => Some(rose_pine()),
+
+            _ => None,
         }
     }
 
     /// Map internal theme name to bat theme name for syntax highlighting.
     /// If no name is set, defaults to "TwoDark".
-    /// Returns a static string slice representing the bat theme name.
-    pub(crate) fn bat_theme_name(&self) -> &'static str {
+    pub(super) fn bat_theme_name(&self) -> &'static str {
         self.name
             .as_deref()
             .map(Theme::map_to_bat_theme)
@@ -302,7 +349,7 @@ impl Theme {
     /// Compares each field with the default theme and overrides if changed
     /// This allows to only specify the fields they want to change
     fn apply_user_overrides(&mut self, user: Theme) {
-        let defaults = Theme::default();
+        let defaults = Theme::internal_defaults();
 
         #[rustfmt::skip]
         override_themes!(self, user, defaults, [
@@ -332,62 +379,21 @@ impl Theme {
         }
     }
 
+    #[inline(never)]
     fn build_style_maps(&mut self) {
         let fallback = ColorPair::default();
 
-        let mut exact = AHashMap::with_capacity(self.exact.len());
-        for (k, pair) in &self.exact {
-            exact.insert(k.clone(), pair.style_or(&fallback));
-        }
-        self.exact_styles = exact;
+        self.exact_styles = self
+            .exact
+            .iter()
+            .map(|(k, v)| (k.clone(), v.style_or(&fallback)))
+            .collect();
 
-        let mut ext = AHashMap::with_capacity(self.extension.len());
-        for (k, pair) in &self.extension {
-            ext.insert(k.to_ascii_lowercase(), pair.style_or(&fallback));
-        }
-        self.extension_styles = ext;
-
-        let mut icons = AHashMap::with_capacity(
-            EXT_ICON_MAP.len() + SPECIAL_FILE_ICON_MAP.len() + self.icon_color.len(),
-        );
-
-        for (key, (_, hex)) in EXT_ICON_MAP
-            .entries()
-            .chain(SPECIAL_FILE_ICON_MAP.entries())
-            .chain(SPECIAL_DIR_ICON_MAP.entries())
-        {
-            if let Some(h) = hex {
-                icons.insert(key.to_string(), parse_color(h));
-            }
-        }
-
-        for (k, color) in &self.icon_color {
-            icons.insert(k.clone(), *color);
-        }
-        self.icon_styles = icons;
-    }
-
-    #[rustfmt::skip]
-    fn default_file_colors() -> (HashMap<String, ColorPair>, HashMap<String, ColorPair>) {
-        let mut exact = HashMap::new();
-        let mut ext = HashMap::new();
-
-        let mut add_ext = |extensions: &[&str], color: Color| {
-            for e in extensions {
-                ext.insert(e.to_string(), ColorPair { fg: color, ..ColorPair::default() });
-            }
-        };
-
-        exact.insert("Dockerfile".into(), ColorPair { fg: Color::Cyan, ..ColorPair::default() });
-        exact.insert("Cargo.toml".into(), ColorPair { fg: Color::Yellow, ..ColorPair::default() });
-        exact.insert("LICENSE".into(),    ColorPair { fg: Color::Yellow, ..ColorPair::default() });
-        exact.insert("README.md".into(),    ColorPair { fg: Color::Yellow, ..ColorPair::default() });
-
-        add_ext(&["zip", "tar", "gz", "7z", "rar"], Color::Red);
-        add_ext(&["jpg", "jpeg", "png", "gif", "svg", "webm"], Color::Magenta);
-        add_ext(&["tmp"], Color::Rgb(108, 121, 135));
-
-        (exact, ext)
+        self.extension_styles = self
+            .extension
+            .iter()
+            .map(|(k, v)| (k.to_ascii_lowercase(), v.style_or(&fallback)))
+            .collect();
     }
 }
 

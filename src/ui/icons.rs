@@ -93,7 +93,7 @@ pub(crate) static SPECIAL_FILE_ICON_MAP: phf::Map<
     &'static str,
     (&'static str, Option<&'static str>),
 > = phf_map! {
-    "README.md"          => ("", Some("#cbcb41")),
+    "README.md"          => ("", None),
     "LICENSE"            => ("", Some("#cbcb41")),
     "LICENSE-MIT"        => ("", Some("#cbcb41")),
     "LICENSE-APACHE"     => ("", Some("#cbcb41")),
@@ -188,17 +188,7 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str,
         ""
     };
 
-    let color = theme
-        .icon_styles()
-        .get(name_str)
-        .or_else(|| {
-            if !entry.is_dir() {
-                entry.ext().and_then(|e| theme.icon_styles().get(e))
-            } else {
-                None
-            }
-        })
-        .copied();
+    let color = theme.get_icon_color(name_str, entry.ext(), entry.is_dir());
 
     (icon, color)
 }
