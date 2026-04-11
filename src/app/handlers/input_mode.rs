@@ -237,7 +237,7 @@ impl<'a> AppState<'a> {
     ) -> Option<KeypressResult> {
         match prefix {
             PrefixCommand::Nav(NavAction::GoToTop) => {
-                self.handle_go_to_top();
+                self.handle_go_to_top(workers);
                 self.update_file_info_cache(workers);
                 self.refresh_show_info_if_open();
                 Some(KeypressResult::Consumed)

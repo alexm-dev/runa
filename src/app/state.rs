@@ -105,7 +105,7 @@ pub(crate) struct AppState<'a> {
 
     pub(super) notification_time: Option<Instant>,
     pub(super) worker_time: Option<Instant>,
-    pub(super) nav_time: Option<Instant>,
+    pub(super) preview_request_time: Option<Instant>,
     pub(super) overlays: OverlayStack,
 
     pub(super) tab_id: Option<usize>,
@@ -142,7 +142,7 @@ impl<'a> AppState<'a> {
             metadata: MetadataState::new(),
             is_loading: false,
             notification_time: None,
-            nav_time: None,
+            preview_request_time: None,
             worker_time: None,
             overlays: OverlayStack::new(),
             tab_line: Arc::new(Vec::new()),
@@ -515,12 +515,26 @@ impl<'a> AppState<'a> {
 
     /// Requests a preview load for the currently selected entry in the navigation pane
     pub(crate) fn request_preview(&mut self, workers: &Workers) {
+        const MIN_PREVIEW_REQUEST_MS: u128 = 30;
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             if let Some(current) = self.preview.current_path()
                 && current == path
                 && !self.preview.data().is_empty()
             {
+                return;
+            }
+
+            let now = Instant::now();
+            if let Some(prev) = self.preview_request_time
+                && now.duration_since(prev).as_millis() < MIN_PREVIEW_REQUEST_MS
+            {
+                self.preview.mark_pending();
+                return;
+            }
+
+            if workers.active().load(std::sync::atomic::Ordering::Relaxed) > 2 {
+                self.preview.mark_pending();
                 return;
             }
 
@@ -541,19 +555,28 @@ impl<'a> AppState<'a> {
                         .and_then(|saved| entries.iter().position(|e| e.name() == saved))
                         .unwrap_or(0);
                     self.preview.set_selected_idx(pos);
+                    self.preview_request_time = Some(now);
                     return;
                 }
 
-                let _ = workers.preview_io_tx().try_send(WorkerTask::LoadDirectory {
-                    path,
-                    focus: None,
-                    list: list_opts.clone(),
-                    sort_config,
-                    sort_date_format,
-                    always_show: Arc::clone(self.config.general().always_show()),
-                    request_id: req_id,
-                    tab_id: self.tab_id(),
-                });
+                if workers
+                    .preview_io_tx()
+                    .try_send(WorkerTask::LoadDirectory {
+                        path,
+                        focus: None,
+                        list: list_opts.clone(),
+                        sort_config,
+                        sort_date_format,
+                        always_show: Arc::clone(self.config.general().always_show()),
+                        request_id: req_id,
+                        tab_id: self.tab_id(),
+                    })
+                    .is_ok()
+                {
+                    self.preview_request_time = Some(now);
+                } else {
+                    self.preview.mark_pending();
+                }
             } else {
                 let preview_options = self.config.display().preview_options();
                 let preview_method = preview_options.method().clone();
@@ -563,15 +586,23 @@ impl<'a> AppState<'a> {
                     .into_iter()
                     .map(OsString::from)
                     .collect();
-                let _ = workers.preview_file_tx().try_send(WorkerTask::LoadPreview {
-                    path,
-                    max_lines: self.metrics.preview_height,
-                    pane_width: self.metrics.preview_width,
-                    preview_method,
-                    args: bat_args,
-                    request_id: req_id,
-                    tab_id: self.tab_id(),
-                });
+                if workers
+                    .preview_file_tx()
+                    .try_send(WorkerTask::LoadPreview {
+                        path,
+                        max_lines: self.metrics.preview_height,
+                        pane_width: self.metrics.preview_width,
+                        preview_method,
+                        args: bat_args,
+                        request_id: req_id,
+                        tab_id: self.tab_id(),
+                    })
+                    .is_ok()
+                {
+                    self.preview_request_time = Some(now);
+                } else {
+                    self.preview.mark_pending();
+                }
             }
         } else {
             self.preview.clear();

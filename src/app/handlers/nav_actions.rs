@@ -18,7 +18,7 @@ use crate::utils::{clean_display_path, expand_home_path_buf, get_home};
 
 use std::ffi::OsString;
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 impl<'a> AppState<'a> {
     /// Handles navigation actions (up, down, into dir, etc).
@@ -106,14 +106,6 @@ impl<'a> AppState<'a> {
 
         self.refresh_show_info_if_open();
 
-        const NAV_THROTTLE_MS: u128 = 25;
-
-        let now = Instant::now();
-        let allow_immediate = match self.nav_time {
-            Some(prev) => now.duration_since(prev).as_millis() >= NAV_THROTTLE_MS,
-            None => true,
-        };
-
         let selected_changed_preview = if let Some(entry) = self.nav.selected_entry() {
             let sel_path = self.nav.current_dir().join(entry.name());
             self.preview.current_path() != Some(sel_path.as_path())
@@ -121,20 +113,14 @@ impl<'a> AppState<'a> {
             true
         };
 
-        if allow_immediate {
-            self.update_file_info_cache(workers);
+        self.update_file_info_cache(workers);
 
-            if selected_changed_preview {
-                if self.config.display().instant_preview() {
-                    self.request_preview(workers);
-                } else {
-                    self.preview.mark_pending();
-                }
+        if selected_changed_preview {
+            if self.config.display().instant_preview() {
+                self.request_preview(workers);
+            } else {
+                self.preview.mark_pending();
             }
-
-            self.nav_time = Some(now);
-        } else {
-            self.preview.mark_pending();
         }
     }
 
@@ -358,9 +344,9 @@ impl<'a> AppState<'a> {
         }
     }
 
-    pub(super) fn handle_go_to_top(&mut self) {
+    pub(super) fn handle_go_to_top(&mut self, workers: &Workers) {
         self.nav.first_selected();
-        self.preview.mark_pending();
+        self.request_preview(workers);
     }
 
     fn navigate_to(&mut self, path: PathBuf, focus: Option<OsString>, workers: &Workers) {
