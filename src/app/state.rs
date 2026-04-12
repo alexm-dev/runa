@@ -302,7 +302,7 @@ impl<'a> AppState<'a> {
             && let Some(query) = self.actions.take_query()
         {
             if query.is_empty() {
-                self.actions.clear_find_results();
+                self.actions.find_mut().clear_results();
             } else {
                 self.request_find(workers, query);
             }
@@ -424,9 +424,9 @@ impl<'a> AppState<'a> {
                 tab_id: _tab_id,
             } => {
                 if base_dir == self.nav.current_dir()
-                    && request_id == self.actions.find_request_id()
+                    && request_id == self.actions.find().request_id()
                 {
-                    self.actions.set_find_results(results);
+                    self.actions.find_mut().set_results(results);
                 }
             }
 
@@ -647,9 +647,9 @@ impl<'a> AppState<'a> {
 
     /// Requests a recursive find operation for the current navigation directory
     pub(crate) fn request_find(&mut self, workers: &Workers, query: String) {
-        self.actions.cancel_find();
+        self.actions.find_mut().cancel_current();
 
-        let request_id = self.actions.prepare_new_find_request();
+        let request_id = self.actions.find_mut().prepare_new_request();
         let cancel_token = Arc::new(AtomicBool::new(false));
 
         let show_hidden = self.config.general().show_hidden();

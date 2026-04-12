@@ -206,8 +206,9 @@ impl<'a> AppState<'a> {
     pub(super) fn handle_find(&mut self, workers: &Workers) {
         let Some(r) = self
             .actions
-            .find_results()
-            .get(self.actions.find_selected())
+            .find()
+            .results()
+            .get(self.actions.find().selected())
         else {
             return;
         };

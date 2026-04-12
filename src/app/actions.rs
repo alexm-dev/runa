@@ -81,6 +81,7 @@ impl ActionContext {
         input_cursor_pos: usize,
         scroll: &ScrollState,
         prefix_recognizer: &KeyPrefix,
+        find: &FindState,
     }
 
     pub(crate) fn prefix_recognizer_mut(&mut self) -> &mut KeyPrefix {
@@ -93,35 +94,8 @@ impl ActionContext {
 
     // Find functions
 
-    pub(crate) fn find_state_mut(&mut self) -> &mut FindState {
+    pub(crate) fn find_mut(&mut self) -> &mut FindState {
         &mut self.find
-    }
-
-    #[inline]
-    pub(crate) fn find_results(&self) -> &[FindResult] {
-        self.find.results()
-    }
-
-    #[inline]
-    pub(crate) fn find_selected(&self) -> usize {
-        self.find.selected()
-    }
-
-    pub(crate) fn set_find_results(&mut self, results: Vec<FindResult>) {
-        self.find.set_results(results)
-    }
-
-    pub(crate) fn clear_find_results(&mut self) {
-        self.find.clear_results()
-    }
-
-    #[inline]
-    pub(crate) fn find_request_id(&self) -> u64 {
-        self.find.request_id()
-    }
-
-    pub(crate) fn prepare_new_find_request(&mut self) -> u64 {
-        self.find.prepare_new_request()
     }
 
     pub(crate) fn take_query(&mut self) -> Option<String> {
@@ -130,10 +104,6 @@ impl ActionContext {
 
     pub(crate) fn find_debounce(&mut self, delay: Duration) {
         self.find.set_debounce(delay);
-    }
-
-    pub(crate) fn cancel_find(&mut self) {
-        self.find.cancel_current();
     }
 
     pub(crate) fn set_cancel_find_token(&mut self, token: Arc<AtomicBool>) {
@@ -440,14 +410,14 @@ impl FindState {
     /// Cancels the current ongoing find operation, if any.
     ///
     /// Sets the cancellation token to true.
-    fn cancel_current(&mut self) {
+    pub(crate) fn cancel_current(&mut self) {
         if let Some(token) = self.cancel.take() {
             token.store(true, Ordering::Relaxed);
         }
     }
 
     /// Sets the cached find results and resets the selected index.
-    fn set_results(&mut self, results: Vec<FindResult>) {
+    pub(crate) fn set_results(&mut self, results: Vec<FindResult>) {
         self.cache = results;
         self.selected = 0;
     }
@@ -455,29 +425,29 @@ impl FindState {
     /// Sets the cancellation token for the current find operation.
     ///
     /// Sets the internal cancel token.
-    fn set_cancel(&mut self, token: Arc<AtomicBool>) {
+    pub(crate) fn set_cancel(&mut self, token: Arc<AtomicBool>) {
         self.cancel = Some(token);
     }
 
     /// Clears the cached find results.
-    fn clear_results(&mut self) {
+    pub(crate) fn clear_results(&mut self) {
         self.cache.clear();
     }
 
     /// Prepares a new unique request ID for a find operation.
     /// Increments the internal request ID counter.
-    fn prepare_new_request(&mut self) -> u64 {
+    pub(crate) fn prepare_new_request(&mut self) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.request_id
     }
 
     /// Sets the debounce timer for the find operation.
-    fn set_debounce(&mut self, delay: Duration) {
+    pub(crate) fn set_debounce(&mut self, delay: Duration) {
         self.debounce = Some(Instant::now() + delay);
     }
 
     /// Takes the current query if the debounce period has elapsed and its different from the last query.
-    fn take_query(&mut self, current_query: &str) -> Option<String> {
+    pub(crate) fn take_query(&mut self, current_query: &str) -> Option<String> {
         let until = self.debounce?;
         if Instant::now() < until {
             return None;

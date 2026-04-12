@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-pub(crate) struct MetadataState {
+pub(super) struct MetadataState {
     request_id: u64,
     pending: Option<(u64, PathBuf)>,
     selected: Option<Arc<FileMetadataCache>>,
@@ -18,7 +18,7 @@ pub(crate) struct MetadataState {
 }
 
 impl MetadataState {
-    pub(crate) fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             request_id: 0,
             pending: None,
@@ -27,49 +27,49 @@ impl MetadataState {
         }
     }
 
-    pub(crate) fn prepare_new_request(&mut self) -> u64 {
+    pub(super) fn prepare_new_request(&mut self) -> u64 {
         let id = self.request_id;
         self.request_id = self.request_id.wrapping_add(1);
         id
     }
 
-    pub(crate) fn is_pending_path(&self, path: &Path) -> bool {
+    pub(super) fn is_pending_path(&self, path: &Path) -> bool {
         self.pending.as_ref().is_some_and(|(_, p)| p == path)
     }
 
-    pub(crate) fn can_request(&self, debounce_ms: u64) -> bool {
+    pub(super) fn can_request(&self, debounce_ms: u64) -> bool {
         self.last_request_time.can_trigger(debounce_ms)
     }
 
-    pub(crate) fn touch(&mut self) {
+    pub(super) fn touch(&mut self) {
         self.last_request_time.touch();
     }
 
-    pub(crate) fn set_pending(&mut self, id: u64, path: PathBuf) {
+    pub(super) fn set_pending(&mut self, id: u64, path: PathBuf) {
         self.pending = Some((id, path));
     }
 
-    pub(crate) fn matches_pending(&self, id: u64, path: &Path) -> bool {
+    pub(super) fn matches_pending(&self, id: u64, path: &Path) -> bool {
         matches!(&self.pending, Some((pid, p)) if *pid == id && p == path )
     }
 
-    pub(crate) fn selected(&self) -> Option<&FileMetadataCache> {
+    pub(super) fn selected(&self) -> Option<&FileMetadataCache> {
         self.selected.as_deref()
     }
 
-    pub(crate) fn selected_arc(&self) -> Option<&Arc<FileMetadataCache>> {
+    pub(super) fn selected_arc(&self) -> Option<&Arc<FileMetadataCache>> {
         self.selected.as_ref()
     }
 
-    pub(crate) fn set_selected(&mut self, meta: Option<Arc<FileMetadataCache>>) {
+    pub(super) fn set_selected(&mut self, meta: Option<Arc<FileMetadataCache>>) {
         self.selected = meta;
     }
 
-    pub(crate) fn clear_pending(&mut self) {
+    pub(super) fn clear_pending(&mut self) {
         self.pending = None;
     }
 
-    pub(crate) fn clear(&mut self) {
+    pub(super) fn clear(&mut self) {
         self.pending = None;
         self.selected = None;
     }

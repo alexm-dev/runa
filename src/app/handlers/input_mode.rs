@@ -87,7 +87,7 @@ impl<'a> AppState<'a> {
 
             Up => {
                 if matches!(mode, InputMode::Find) {
-                    self.actions.find_state_mut().select_prev();
+                    self.actions.find_mut().select_prev();
                     KeypressResult::Consumed
                 } else {
                     KeypressResult::Continue
@@ -96,7 +96,7 @@ impl<'a> AppState<'a> {
 
             Down => {
                 if matches!(mode, InputMode::Find) {
-                    self.actions.find_state_mut().select_next();
+                    self.actions.find_mut().select_next();
                     KeypressResult::Consumed
                 } else {
                     KeypressResult::Continue

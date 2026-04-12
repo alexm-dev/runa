@@ -675,8 +675,8 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
 
     let input_text = actions.input_buffer();
     let cursor_pos = actions.input_cursor_pos();
-    let results = actions.find_results();
-    let selected = actions.find_selected();
+    let results = actions.find().results();
+    let selected = actions.find().selected();
     let area = frame.area();
     let dialog_rect = dialog_area(area, size, position);
 
