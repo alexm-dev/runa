@@ -149,12 +149,19 @@ impl Theme {
         underline_style => underline,
         entry_style => entry,
         directory_style => directory,
-        separator_style => separator,
         path_style => path,
         status_line_style => status_line,
     }
 
-    /// Symlink theme getter to use SymlinkTheme fields directly
+    pub(crate) fn separator_style(&self) -> Style {
+        let default = Theme::internal_defaults();
+        if self.separator != default.separator {
+            self.separator.style_or(&default.separator)
+        } else {
+            self.accent_style()
+        }
+    }
+
     pub(crate) fn symlink_theme(&self) -> SymlinkTheme {
         let defaults = Theme::internal_defaults().symlink;
         SymlinkTheme {
@@ -234,6 +241,11 @@ impl Theme {
     #[inline(never)]
     pub(super) fn with_overrides(mut self) -> Self {
         let preset_name = self.name.clone();
+        let defaults = Theme::internal_defaults();
+
+        if self.accent != defaults.accent && self.separator == defaults.separator {
+            self.separator = self.accent;
+        }
 
         if let Some(name) = preset_name.as_deref()
             && let Some(mut base) = Self::get_preset_by_name(name)
@@ -294,8 +306,6 @@ impl Theme {
 
     /// Helper function to map internal theme names to bat theme names.
     /// Used by bat for syntax highlighting.
-    /// # Returns:
-    /// A static string slice representing the corresponding bat theme name.
     fn map_to_bat_theme(internal_theme: &str) -> &'static str {
         match internal_theme {
             "default" => "TwoDark",

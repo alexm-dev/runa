@@ -351,9 +351,9 @@ fn render_separator(
         frame,
         Rect {
             x,
-            y: outer_area.y,
+            y: outer_area.y + 1,
             width: 1,
-            height: outer_area.height,
+            height: outer_area.height.saturating_sub(2),
         },
         style,
         border_type,
@@ -403,7 +403,6 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
     let mut idx = 0;
     let has_sep = display_cfg.separators() && !display_cfg.is_split();
 
-    // Helper to get inner width and height of a Rect, accounting for borders
     let get_inner = |rect: Rect| {
         let width = if display_cfg.is_split() || display_cfg.is_unified() {
             rect.width.saturating_sub(2)
@@ -444,13 +443,23 @@ fn border_junctions(frame: &mut Frame, area: Rect, x: u16, border_type: BorderTy
         _ => (line::HORIZONTAL_DOWN, line::HORIZONTAL_UP),
     };
 
+    let horizontal_line = match border_type {
+        BorderType::Double => line::DOUBLE_HORIZONTAL,
+        BorderType::Thick => line::THICK_HORIZONTAL,
+        _ => line::HORIZONTAL,
+    };
+
     let buffer = frame.buffer_mut();
 
-    if let Some(cell) = buffer.cell_mut((x, area.top())) {
+    if let Some(cell) = buffer.cell_mut((x, area.top()))
+        && cell.symbol() == horizontal_line
+    {
         cell.set_symbol(top_sym).set_style(style);
     }
 
-    if let Some(cell) = buffer.cell_mut((x, area.bottom().saturating_sub(1))) {
+    if let Some(cell) = buffer.cell_mut((x, area.bottom().saturating_sub(1)))
+        && cell.symbol() == horizontal_line
+    {
         cell.set_symbol(bottom_sym).set_style(style);
     }
 }
