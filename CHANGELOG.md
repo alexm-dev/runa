@@ -2,6 +2,40 @@
 
 All the changes made to runa are documented here.
 
+## [0.11.0-beta.1] - UNRELEASED
+
+#### Icon coloring, preview scrolling, performance improvements and more.
+
+### Added
+- **Preview scrolling**: Preview pane is now scrollable with the `scroll_up` and `scroll_down` keybinds. Works for both `internal` and `bat` preview methods.
+- **Icon Coloring**: Added colored icons. 
+    - Possible to be configured via the `[theme.icon_color] "foo" = "#RRGGBB"` setting in the runa.toml
+- **Entry Coloring**: Added colored entries and extensions. 
+    - Possible to be configured via `[theme.exact] "foo" = { fg = "#RRGGBB", bg ..}` for entires and `[theme.extension] "foo" = { fg = "#RRGGBB, bg .. }` for extensions.
+
+### Fixed
+- **CLI**: Fixed an issue where the CLI arg `--init-full` generated a broken `runa.toml`. [Issue #55](https://github.com/alexm-dev/runa/issues/55)
+- **Theme**: Fixed an issuse where the `accent` style ignored the `separator`. Now, the separator applies the set `accent` theme and also consideres the `separtor` override. [Issue #56](https://github.com/alexm-dev/runa/issues/56)
+
+### Changed
+- **Border styling**: `unified` border style now applies the separator to the outer border as well, making it look like a proper "boxed" or "unified" look.
+
+### Internal
+- **Performance**:
+    - Added `core/cache` module to cache shared FileEntry and sort_column data for the main pane to apply instead of re-computing all entries on each diirectory change, resulting in big performance improvements on navigation and directory changes.
+    - Added `app/timings` module to centralize the "Throttling" of worker requests, resulting in less flodding of worker activity and therefore massive efficiency improvements and smoother navigation.
+    - `FileEntry` now stores the `name_str` and `ext(ension)` of an entry name to reduce re-computing of each data for each entry row.
+    - `nerd_font_icons()` phf-map lookups are more efficient with the lookup happening once and without relying on lowering the entry name and extension.
+    - `AppContainer` now owns `TabManager` exclusively via heap allocation.
+
+> [!TODO]:
+    Finish 0.11.0 CHANGELOG
+    Finish documentation for 0.11.0
+    Adjust runa_full.toml for 0.11.0
+
+---
+
+
 ## [0.10.1] - 2026-04-06
 
 #### Keymap overwrite bug fix and sorting performance improvements.
