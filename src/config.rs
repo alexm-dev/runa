@@ -3,6 +3,7 @@
 //! This module holds the submodules and structs necessary to load and represent
 //! configuration options for runa, including display settings, input keybindings,
 
+pub(crate) mod assets;
 pub(crate) mod display;
 pub(crate) mod general;
 pub(crate) mod input;

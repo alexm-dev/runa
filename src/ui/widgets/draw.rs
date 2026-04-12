@@ -13,7 +13,7 @@ use crate::core::{metadata::FileMetadataCache, worker::Workers};
 use crate::ui::widgets::{
     DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
 };
-use crate::utils::clean_display_path;
+use crate::utils::path::clean_display_path;
 
 use ratatui::{
     Frame,

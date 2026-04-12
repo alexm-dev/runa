@@ -12,6 +12,7 @@
 pub(crate) mod cache;
 pub(crate) mod fm;
 pub(crate) mod formatter;
+pub(crate) mod fs;
 pub(crate) mod metadata;
 pub(crate) mod proc;
 pub(crate) mod terminal;

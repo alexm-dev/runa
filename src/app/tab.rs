@@ -7,7 +7,7 @@
 
 use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction, nav::SortConfig};
 use crate::core::worker::Workers;
-use crate::utils::shorten_home_path;
+use crate::utils::path::shorten_home_path;
 
 use ratatui::text::Span;
 use std::ffi::OsString;

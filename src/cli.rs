@@ -1,14 +1,12 @@
 //! Command-line argument parsing and help for runa.
 //!
 //! This module handles all CLI flag parsing used for config initialization and help.
-//!
 //! When invoked with no args/flags (rn), runa simply launches the TUI
 
 use std::io::{self, BufWriter, Write};
 use std::path::PathBuf;
 
-use crate::config::Config;
-use crate::utils::FULL_TOML;
+use crate::config::{Config, assets::FULL_TOML};
 
 pub(crate) enum CliAction {
     RunApp,

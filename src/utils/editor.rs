@@ -1,0 +1,47 @@
+//! Editor utilities
+
+use crate::config::Editor;
+use crate::core::metadata::bump_meta_sort_epoch;
+use std::io;
+use std::path::Path;
+
+use crossterm::{
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+};
+
+/// Opens a specified path/file in the configured editor ("nvim" or "vim" etc.).
+///
+/// Temporary disables raw mode and exits alternate sceen while the editor runs.
+/// On return, restores raw mode and alternate sceen.
+pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Result<()> {
+    let editor_path = editor.resolved_path().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Editor '{}' not found", editor.cmd()),
+        )
+    })?;
+
+    let mut stdout = io::stdout();
+    disable_raw_mode()?;
+    execute!(stdout, LeaveAlternateScreen)?;
+    bump_meta_sort_epoch();
+
+    let status = std::process::Command::new(editor_path)
+        .arg(file_path)
+        .status();
+
+    execute!(io::stdout(), EnterAlternateScreen)?;
+    enable_raw_mode()?;
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(s) => Err(io::Error::other(format!(
+            "Editor exited with status: {}",
+            s
+        ))),
+        Err(e) => Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("Command '{}' not found: {}", editor.cmd(), e),
+        )),
+    }
+}

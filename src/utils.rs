@@ -8,10 +8,10 @@
 //!
 //! All of these utilities are used throughout runa for convenience and code clarity.
 
-pub(crate) mod cli;
-pub(crate) mod helpers;
+pub(crate) mod editor;
+pub(crate) mod os;
+pub(crate) mod path;
+pub(crate) mod text;
 
 #[macro_use]
 pub(crate) mod macros;
-
-pub(crate) use helpers::*;

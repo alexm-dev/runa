@@ -14,7 +14,7 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::FileAction;
 use crate::app::state::{AppState, KeypressResult};
 use crate::app::{Clipboard, Workers};
-use crate::utils::open_in_editor;
+use crate::utils::editor::open_in_editor;
 
 use std::sync::Arc;
 use std::time::Duration;

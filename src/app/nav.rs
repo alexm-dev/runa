@@ -4,7 +4,7 @@
 //! Provides helpers for pane navigation, selection, filtering, and bulk actions.
 
 use crate::core::FileEntry;
-use crate::core::formatter::format_display_path;
+use crate::utils::path::format_display_path;
 
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;

@@ -7,7 +7,7 @@
 
 use crate::config::Theme;
 use crate::core::FileEntry;
-use crate::utils::parse_color;
+use crate::utils::text::parse_color;
 use ratatui::style::Color;
 
 use phf::phf_map;

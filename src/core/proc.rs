@@ -14,7 +14,8 @@
 //! The module also includes [complete_dirs_with_fd] function to enable the move file function to have
 //! auto-completion of paths via fd.
 
-use crate::utils::{flatten_separators, normalize_search_path, normalize_separators};
+use crate::utils::os::{bat_binary, fd_binary};
+use crate::utils::path::{flatten_separators, normalize_search_path, normalize_separators};
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -26,8 +27,8 @@ use std::io::{self, BufRead, Read};
 use std::path::MAIN_SEPARATOR;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, OnceLock};
 
 /// The size of the buffer reader used to read the output of fd
 /// This value is set to 32KB to balance memory usage and performance.
@@ -42,42 +43,6 @@ const EXCLUDES: &[&str] = &[
     ".git", ".hg", ".svn", ".rustup", ".cargo", "target", "node_modules", "dist", ".local",
     "venv", ".venv", "__pycache__", ".DS_Store", "build", "out", "bin", "obj", ".cache",
 ];
-
-/// A OnceLock to store the fd binary name.
-/// This is used to avoid checking for the binary multiple times.
-static FD_BIN: OnceLock<Option<&'static str>> = OnceLock::new();
-
-/// OnceLock cache to store the bat binary name.
-/// This is used to avoid checking for the binary multiple times.
-/// If bat is not found, the value will be None.
-static BAT_BIN: OnceLock<Option<&'static str>> = OnceLock::new();
-
-fn cached_binary(
-    cache: &'static OnceLock<Option<&'static str>>,
-    binaries: &[&'static str],
-    err_msg: &'static str,
-) -> io::Result<&'static str> {
-    cache
-        .get_or_init(|| {
-            binaries
-                .iter()
-                .find(|&&bin| which::which(bin).is_ok())
-                .copied()
-        })
-        .as_ref()
-        .copied()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, err_msg))
-}
-
-#[inline]
-pub(crate) fn fd_binary() -> io::Result<&'static str> {
-    cached_binary(&FD_BIN, &["fd", "fd-find"], "fd/fd-find not found")
-}
-
-#[inline]
-fn bat_binary() -> io::Result<&'static str> {
-    cached_binary(&BAT_BIN, &["bat"], "bat not found")
-}
 
 /// A single result from the find function.
 /// It contains the path and the score of the fuzzy match.

@@ -8,9 +8,10 @@
 
 use crate::config::Display;
 use crate::config::Theme;
+use crate::config::assets::{FULL_TOML, MINIMAL_TOML};
 use crate::config::{Editor, Keys};
 use crate::config::{General, InternalGeneral};
-use crate::utils::{FULL_TOML, MINIMAL_TOML, get_home};
+use crate::utils::os::get_home;
 
 use serde::Deserialize;
 use std::{fs, io, path::PathBuf};

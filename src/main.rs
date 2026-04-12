@@ -2,6 +2,7 @@
 //! Entry point for runa
 
 pub(crate) mod app;
+pub(crate) mod cli;
 pub(crate) mod config;
 pub(crate) mod core;
 pub(crate) mod ui;
@@ -10,11 +11,11 @@ pub(crate) mod utils;
 use std::io;
 use std::path::PathBuf;
 
+use crate::cli::{CliAction, handle_args};
 use crate::config::Config;
 use crate::core::terminal;
 use crate::core::worker::Workers;
-use crate::utils::cli::{CliAction, handle_args};
-use crate::utils::{resolve_initial_dir, validate_path};
+use crate::utils::path::{resolve_initial_dir, validate_path};
 
 fn startup_container<'a>(
     config: &'a Config,

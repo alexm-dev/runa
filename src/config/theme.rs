@@ -7,7 +7,7 @@
 
 use crate::config::presets::*;
 use crate::ui::widgets::{DialogPosition, DialogSize};
-use crate::utils::parse_color;
+use crate::utils::text::parse_color;
 
 use ratatui::style::{Color, Style};
 use serde::{Deserialize, Deserializer};

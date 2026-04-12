@@ -15,9 +15,10 @@ use crate::app::actions::{ActionMode, InputMode};
 use crate::app::keymap::{Action, NavAction, PrefixCommand, SystemAction};
 use crate::app::nav::{SortConfig, SortOrder};
 use crate::app::state::{AppState, KeypressResult};
-use crate::core::proc::{complete_dirs_with_fd, fd_binary};
+use crate::core::proc::complete_dirs_with_fd;
 use crate::ui::overlays::OverlayKind;
-use crate::utils::expand_home_path;
+use crate::utils::os::fd_binary;
+use crate::utils::path::expand_home_path;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
 use std::path::MAIN_SEPARATOR;

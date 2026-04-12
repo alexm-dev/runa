@@ -21,12 +21,10 @@ use crate::core::{
     cache::{DirCache, DirListOptions},
     find,
     formatter::safe_read_preview,
+    fs::{copy_recursive, get_unused_path, is_preview_deny, merge_dir, rename_with_fallback},
     preview_bat,
 };
-use crate::utils::{
-    copy_recursive, get_unused_path, is_preview_deny, is_regular_file, merge_dir,
-    rename_with_fallback,
-};
+use crate::utils::os::is_regular_file;
 
 use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};

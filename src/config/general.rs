@@ -7,14 +7,19 @@
 //! It includes settings such as display options, case sensitivity,
 //! and file handling preferences.
 
-use crate::utils::{DEFAULT_FIND_RESULTS, clamp_find_results};
-
 use serde::Deserialize;
 
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
+
+/// The minimum results which is set to if the maximum is overset in the runa.toml.
+pub(crate) const MIN_FIND_RESULTS: usize = 15;
+/// The maximum find result limit which is possible.
+/// Can be set higher, but better to set it to a big limit instead of usize::MAX
+pub(crate) const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
+pub(crate) const DEFAULT_FIND_RESULTS: usize = 2000;
 
 #[derive(Deserialize, Debug)]
 #[serde(default)]
@@ -104,11 +109,6 @@ impl InternalGeneral {
     }
 }
 
-/// Helper function for default max_find_results
-fn default_find_results() -> usize {
-    DEFAULT_FIND_RESULTS
-}
-
 #[derive(Deserialize, Debug, Default)]
 #[serde(default)]
 pub(super) struct StartupConfig {
@@ -118,4 +118,20 @@ pub(super) struct StartupConfig {
 #[derive(Debug, Default)]
 pub(crate) struct InternalStartup {
     pub(crate) tabs: Vec<PathBuf>,
+}
+
+/// Helper function for default max_find_results
+fn default_find_results() -> usize {
+    DEFAULT_FIND_RESULTS
+}
+
+fn clamp_find_results(value: usize) -> usize {
+    let clamped = value.clamp(MIN_FIND_RESULTS, MAX_FIND_RESULTS_LIMIT);
+    if clamped != value {
+        eprintln!(
+            "[Warning] max_find_results={} out of range ({}..={}), clamped to {}",
+            value, MIN_FIND_RESULTS, MAX_FIND_RESULTS_LIMIT, clamped
+        );
+    }
+    clamped
 }

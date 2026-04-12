@@ -10,7 +10,7 @@ use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::FileEntry;
 use crate::core::cache::DirListOptions;
 use crate::core::metadata::{FileType, get_or_update_cached_meta, meta_cache};
-use crate::utils::{clean_display_path, is_regular_file, shorten_home_path};
+use crate::utils::os::is_regular_file;
 
 use chrono::{DateTime, Local};
 use humansize::{DECIMAL, format_size};
@@ -492,20 +492,6 @@ pub(crate) fn format_file_time(time: Option<SystemTime>, ctx: &TimeFormatCtx) ->
         return dt.format("%Y-%m-%d %H:%M").to_string();
     }
     formatted
-}
-
-pub(crate) fn format_display_path(path: &Path) -> String {
-    let path_str = path.to_string_lossy();
-    let cleaned = clean_display_path(&path_str);
-    let path_short = shorten_home_path(cleaned);
-    #[cfg(windows)]
-    {
-        path_short.replace('/', "\\")
-    }
-    #[cfg(not(windows))]
-    {
-        path_short
-    }
 }
 
 /// Calculating the pane widht and clean the output to the widht of the pane

@@ -14,8 +14,8 @@ use crate::app::keymap::NavAction;
 use crate::app::state::{AppState, KeypressResult};
 use crate::app::timings::Timings;
 use crate::app::{Clipboard, NavState, Workers};
-use crate::core::formatter::format_display_path;
-use crate::utils::{clean_display_path, expand_home_path_buf, get_home};
+use crate::utils::os::get_home;
+use crate::utils::path::{clean_display_path, expand_home_path_buf, format_display_path};
 
 use std::ffi::OsString;
 use std::path::PathBuf;
