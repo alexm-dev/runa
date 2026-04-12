@@ -499,97 +499,14 @@ impl<'a> AppState<'a> {
         });
     }
 
-    /// Requests a preview load for the currently selected entry in the navigation pane
+    #[inline]
     pub(crate) fn request_preview(&mut self, workers: &Workers) {
-        if let Some(entry) = self.nav.selected_entry() {
-            let path = self.nav.current_dir().join(entry.name());
-            if let Some(current) = self.preview.current_path()
-                && current == path
-                && !self.preview.data().is_empty()
-                && self.preview.scroll().offset() == self.preview.loaded_scroll()
-            {
-                return;
-            }
+        self.do_request_preview(workers, false);
+    }
 
-            if !self
-                .preview_request_time
-                .can_trigger(Timings::PREVIEW_REQUEST_MS)
-            {
-                self.preview.mark_pending();
-                return;
-            }
-
-            let req_id = self.preview.prepare_new_request(path.clone());
-            let sort_config = self.nav.sort_config();
-            let list_opts = self.dir_list_options();
-            let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
-
-            if entry.is_dir() || entry.is_symlink() {
-                if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
-                    let (entries, sort_col, _rid, _ts) = &*val;
-                    self.preview
-                        .update_from_entries(entries.clone(), sort_col.clone(), req_id);
-                    let pos = self
-                        .nav
-                        .get_position()
-                        .get(&path)
-                        .and_then(|saved| entries.iter().position(|e| e.name() == saved))
-                        .unwrap_or(0);
-                    self.preview.set_selected_idx(pos);
-                    self.preview_request_time.touch();
-                    return;
-                }
-
-                if workers
-                    .preview_io_tx()
-                    .try_send(WorkerTask::LoadDirectory {
-                        path,
-                        focus: None,
-                        list: list_opts.clone(),
-                        sort_config,
-                        sort_date_format,
-                        always_show: Arc::clone(self.config.general().always_show()),
-                        request_id: req_id,
-                        tab_id: self.tab_id(),
-                    })
-                    .is_ok()
-                {
-                    self.preview_request_time.touch();
-                } else {
-                    self.preview.mark_pending();
-                }
-            } else {
-                let preview_options = self.config.display().preview_options();
-                let preview_method = preview_options.method().clone();
-                let bat_args = self
-                    .config
-                    .bat_args_for_preview(self.metrics.preview_width)
-                    .into_iter()
-                    .map(OsString::from)
-                    .collect();
-                let scroll = self.preview.scroll().offset() as usize;
-                if workers
-                    .preview_file_tx()
-                    .try_send(WorkerTask::LoadPreview {
-                        path,
-                        max_lines: self.metrics.preview_height,
-                        pane_width: self.metrics.preview_width,
-                        scroll,
-                        preview_method,
-                        args: bat_args,
-                        request_id: req_id,
-                        tab_id: self.tab_id(),
-                    })
-                    .is_ok()
-                {
-                    self.preview_request_time.touch();
-                } else {
-                    self.preview.mark_pending();
-                }
-            }
-        } else {
-            self.preview.clear();
-        }
+    #[inline]
+    pub(crate) fn request_preview_force(&mut self, workers: &Workers) {
+        self.do_request_preview(workers, true);
     }
 
     /// Requests loading of the parent directory content for the parent pane
@@ -695,6 +612,101 @@ impl<'a> AppState<'a> {
             show_symlink: self.config.general().show_symlink(),
             show_system: self.config.general().show_system(),
             case_insensitive: self.config.general().case_insensitive(),
+        }
+    }
+
+    /// Requests a preview load for the currently selected entry in the navigation pane
+    fn do_request_preview(&mut self, workers: &Workers, force: bool) {
+        if let Some(entry) = self.nav.selected_entry() {
+            let path = self.nav.current_dir().join(entry.name());
+            if !force
+                && let Some(current) = self.preview.current_path()
+                && current == path
+                && !self.preview.data().is_empty()
+                && self.preview.scroll().offset() == self.preview.loaded_scroll()
+            {
+                return;
+            }
+
+            if !force
+                && !self
+                    .preview_request_time
+                    .can_trigger(Timings::PREVIEW_REQUEST_MS)
+            {
+                self.preview.mark_pending();
+                return;
+            }
+
+            let req_id = self.preview.prepare_new_request(path.clone());
+            let sort_config = self.nav.sort_config();
+            let list_opts = self.dir_list_options();
+            let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
+
+            if entry.is_dir() || entry.is_symlink() {
+                if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
+                    let (entries, sort_col, _rid, _ts) = &*val;
+                    self.preview
+                        .update_from_entries(entries.clone(), sort_col.clone(), req_id);
+                    let pos = self
+                        .nav
+                        .get_position()
+                        .get(&path)
+                        .and_then(|saved| entries.iter().position(|e| e.name() == saved))
+                        .unwrap_or(0);
+                    self.preview.set_selected_idx(pos);
+                    self.preview_request_time.touch();
+                    return;
+                }
+
+                if workers
+                    .preview_io_tx()
+                    .try_send(WorkerTask::LoadDirectory {
+                        path,
+                        focus: None,
+                        list: list_opts.clone(),
+                        sort_config,
+                        sort_date_format,
+                        always_show: Arc::clone(self.config.general().always_show()),
+                        request_id: req_id,
+                        tab_id: self.tab_id(),
+                    })
+                    .is_ok()
+                {
+                    self.preview_request_time.touch();
+                } else {
+                    self.preview.mark_pending();
+                }
+            } else {
+                let preview_options = self.config.display().preview_options();
+                let preview_method = preview_options.method().clone();
+                let bat_args = self
+                    .config
+                    .bat_args_for_preview(self.metrics.preview_width)
+                    .into_iter()
+                    .map(OsString::from)
+                    .collect();
+                let scroll = self.preview.scroll().offset() as usize;
+                if workers
+                    .preview_file_tx()
+                    .try_send(WorkerTask::LoadPreview {
+                        path,
+                        max_lines: self.metrics.preview_height,
+                        pane_width: self.metrics.preview_width,
+                        scroll,
+                        preview_method,
+                        args: bat_args,
+                        request_id: req_id,
+                        tab_id: self.tab_id(),
+                    })
+                    .is_ok()
+                {
+                    self.preview_request_time.touch();
+                } else {
+                    self.preview.mark_pending();
+                }
+            }
+        } else {
+            self.preview.clear();
         }
     }
 }

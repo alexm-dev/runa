@@ -80,7 +80,7 @@ impl<'a> AppState<'a> {
             match open_in_editor(self.config.editor(), &path) {
                 Ok(_) => {
                     self.request_dir_load(workers, Some(entry.name().to_os_string()));
-                    self.request_preview(workers);
+                    self.request_preview_force(workers);
                     KeypressResult::OpenedEditor
                 }
                 Err(e) => {
