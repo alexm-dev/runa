@@ -10,20 +10,10 @@ use crate::config::Display;
 use crate::config::Theme;
 use crate::config::{Editor, Keys};
 use crate::config::{General, InternalGeneral};
-use crate::utils::get_home;
+use crate::utils::{FULL_TOML, MINIMAL_TOML, get_home};
 
 use serde::Deserialize;
 use std::{fs, io, path::PathBuf};
-
-const FULL_TOML: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/config/runa_full.toml"
-));
-
-const MINIMAL_TOML: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/config/runa_minimal.toml"
-));
 
 /// Raw configuration as read from the toml file
 /// This struct is deserialized directly from the toml file.

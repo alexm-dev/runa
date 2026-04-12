@@ -25,6 +25,16 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 
+pub(crate) const FULL_TOML: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/config/runa_full.toml"
+));
+
+pub(crate) const MINIMAL_TOML: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/config/runa_minimal.toml"
+));
+
 /// The minimum results which is set to if the maximum is overset in the runa.toml.
 pub(crate) const MIN_FIND_RESULTS: usize = 15;
 /// The default find results. Can be overwritten in the runa.toml.

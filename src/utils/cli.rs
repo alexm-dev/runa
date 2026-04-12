@@ -8,11 +8,7 @@ use std::io::{self, BufWriter, Write};
 use std::path::PathBuf;
 
 use crate::config::Config;
-
-const CONFIG_HELP: &str = include_str!(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/config/runa_full.toml"
-));
+use crate::utils::FULL_TOML;
 
 pub(crate) enum CliAction {
     RunApp,
@@ -152,7 +148,7 @@ ENVIRONMENT:
 }
 
 fn print_config_help(target_section: Option<&str>) -> io::Result<()> {
-    let config = CONFIG_HELP;
+    let config = FULL_TOML;
 
     let stdout = io::stdout();
     let mut handle = BufWriter::new(stdout.lock());
