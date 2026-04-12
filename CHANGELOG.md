@@ -28,7 +28,7 @@ All the changes made to runa are documented here.
     - `nerd_font_icons()` phf-map lookups are more efficient with the lookup happening once and without relying on lowering the entry name and extension.
     - `AppContainer` now owns `TabManager` exclusively via heap allocation.
 
-> [!TODO]:
+> [!TODO]:  
 >   Finish 0.11.0 CHANGELOG  
 >   Finish documentation for 0.11.0  
 >   Adjust runa_full.toml for 0.11.0  
