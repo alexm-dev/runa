@@ -29,9 +29,9 @@ All the changes made to runa are documented here.
     - `AppContainer` now owns `TabManager` exclusively via heap allocation.
 
 > [!TODO]:
-    Finish 0.11.0 CHANGELOG
-    Finish documentation for 0.11.0
-    Adjust runa_full.toml for 0.11.0
+>   Finish 0.11.0 CHANGELOG
+>   Finish documentation for 0.11.0
+>   Adjust runa_full.toml for 0.11.0
 
 ---
 
