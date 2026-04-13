@@ -6,17 +6,16 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 /// Represents a single entry in a directory listing
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
     name: Box<OsStr>,
-    name_str: Arc<str>,
-    lowered: String,
-    ext_offset: Option<usize>,
+    name_str: Box<str>,
+    lowered: Box<str>,
+    symlink: Option<Box<Path>>,
+    ext_offset: Option<u16>,
     flags: u8,
-    symlink: Option<PathBuf>,
 }
 
 impl FileEntry {
@@ -34,14 +33,14 @@ impl FileEntry {
     #[cfg(unix)]
     pub(super) const EXEC_FLAG: u32 = 0o111;
 
-    pub(crate) fn new(name: OsString, flags: u8, symlink: Option<PathBuf>) -> Self {
+    pub(crate) fn new(name: OsString, flags: u8, symlink: Option<Box<Path>>) -> Self {
         let lossy_str = name.to_string_lossy();
-        let lowered = lossy_str.to_lowercase();
-        let name_str: Arc<str> = Arc::from(lossy_str.into_owned());
+        let lowered = lossy_str.to_lowercase().into_boxed_str();
+        let name_str = lossy_str.into_owned().into_boxed_str();
 
-        let ext_offset = name_str.rsplit_once('.').and_then(|(base, ext)| {
+        let ext_offset = lowered.rsplit_once('.').and_then(|(base, ext)| {
             if !base.is_empty() && !ext.is_empty() {
-                Some(name_str.len() - ext.len())
+                Some((name_str.len() - ext.len()) as u16)
             } else {
                 None
             }
@@ -66,12 +65,13 @@ impl FileEntry {
 
     #[inline]
     pub(crate) fn ext(&self) -> Option<&str> {
-        self.ext_offset.map(|offset| &self.lowered[offset..])
+        self.ext_offset
+            .map(|offset| &self.lowered[offset as usize..])
     }
 
     #[inline]
-    pub(crate) fn symlink(&self) -> Option<&PathBuf> {
-        self.symlink.as_ref()
+    pub(crate) fn symlink(&self) -> Option<&Path> {
+        self.symlink.as_deref()
     }
 
     #[inline]
@@ -129,11 +129,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
             flags |= FileEntry::IS_SYMLINK;
         }
 
-        let path_buf = if (flags & FileEntry::IS_SYMLINK) != 0 {
-            Some(entry.path())
-        } else {
-            None
-        };
+        let mut path_cache: Option<PathBuf> = None;
 
         #[cfg(unix)]
         {
@@ -141,7 +137,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
             use std::os::unix::fs::PermissionsExt;
 
             let md_res = if (flags & FileEntry::IS_SYMLINK) != 0 {
-                fs::metadata(entry.path())
+                fs::metadata(path_cache.get_or_insert_with(|| entry.path()))
             } else {
                 entry.metadata()
             };
@@ -154,7 +150,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                 if md.permissions().mode() & FileEntry::EXEC_FLAG != 0 {
                     flags |= FileEntry::IS_EXECUTABLE;
                 }
-            } else if path_buf.is_some() {
+            } else if path_cache.is_some() {
                 flags |= FileEntry::IS_BROKEN_SYM;
             }
 
@@ -176,7 +172,8 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
                     flags |= FileEntry::IS_SYSTEM;
                 }
 
-                if let Some(ref p) = path_buf {
+                if (flags & FileEntry::IS_SYMLINK) != 0 {
+                    let p = path_cache.get_or_insert_with(|| entry.path());
                     match fs::metadata(p) {
                         Ok(target_md) => {
                             if target_md.is_dir() {
@@ -201,10 +198,12 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
             }
         }
         let symlink = if (flags & FileEntry::IS_SYMLINK) != 0 {
-            fs::read_link(entry.path()).ok()
+            let p = path_cache.get_or_insert_with(|| entry.path());
+            fs::read_link(p).ok().map(|p| p.into_boxed_path())
         } else {
             None
         };
+
         entries.push(FileEntry::new(name, flags, symlink));
     }
     Ok(entries)
