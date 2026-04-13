@@ -633,7 +633,6 @@ impl<'a> AppState<'a> {
                     .preview_request_time
                     .can_trigger(Timings::PREVIEW_REQUEST_MS)
             {
-                self.preview.mark_pending();
                 return;
             }
 
