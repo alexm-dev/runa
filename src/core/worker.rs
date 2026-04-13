@@ -154,7 +154,7 @@ pub(crate) enum WorkerTask {
     },
     SortDirectory {
         path: PathBuf,
-        entries: Vec<FileEntry>,
+        entries: Arc<[FileEntry]>,
         focus: Option<OsString>,
         list: DirListOptions,
         sort_config: SortConfig,
@@ -333,6 +333,7 @@ fn start_sort_worker(
         while let Ok(task) = task_rx.recv() {
             let WorkerTask::SortDirectory {
                 path,
+                entries,
                 focus,
                 list,
                 sort_config,
@@ -340,20 +341,19 @@ fn start_sort_worker(
                 always_show,
                 request_id,
                 tab_id,
-                mut entries,
             } = task
             else {
                 continue;
             };
 
-            let formatter = Formatter::new(list.clone(), sort_config, always_show);
-            formatter.filter_entries(&mut entries);
-            let sort_column = formatter.sort_entries(&path, &mut entries, &sort_date_format);
+            let mut entries_vec = entries.to_vec();
 
-            let entries_arc: Arc<[FileEntry]> = Arc::from(entries);
-            let sort_column_arc: Option<Arc<[Arc<str>]>> = sort_column
-                .as_ref()
-                .map(|v| Arc::from(v.clone().into_boxed_slice()));
+            let formatter = Formatter::new(list.clone(), sort_config, always_show);
+            formatter.filter_entries(&mut entries_vec);
+            let sort_column = formatter.sort_entries(&path, &mut entries_vec, &sort_date_format);
+
+            let entries_arc: Arc<[FileEntry]> = Arc::from(entries_vec);
+            let sort_column_arc: Option<Arc<[Arc<str>]>> = sort_column.map(Arc::from);
 
             cache.insert_if_newer(
                 &path,

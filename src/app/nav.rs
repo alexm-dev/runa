@@ -61,6 +61,10 @@ impl NavState {
         request_id: u64,
     }
 
+    pub(crate) fn entries_arc(&self) -> Arc<[FileEntry]> {
+        Arc::clone(&self.entries)
+    }
+
     pub(crate) fn first_selected(&mut self) -> usize {
         self.selected = 0;
         self.selected

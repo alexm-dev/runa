@@ -774,7 +774,6 @@ mod tests {
     use super::*;
     use crate::core;
     use std::io::Write;
-    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]
@@ -815,7 +814,7 @@ mod tests {
         let symlink = FileEntry::new(
             OsString::from("symlink"),
             FileEntry::IS_SYMLINK,
-            Some(PathBuf::from("target").into_boxed_path()),
+            Some(Arc::from(Path::new("target"))),
         );
 
         let mut entries = vec![

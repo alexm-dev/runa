@@ -6,14 +6,15 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 /// Represents a single entry in a directory listing
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
-    name: Box<OsStr>,
-    name_str: Box<str>,
-    lowered: Box<str>,
-    symlink: Option<Box<Path>>,
+    name: Arc<OsStr>,
+    name_str: Arc<str>,
+    lowered: Arc<str>,
+    symlink: Option<Arc<Path>>,
     ext_offset: Option<u16>,
     flags: u8,
 }
@@ -33,10 +34,10 @@ impl FileEntry {
     #[cfg(unix)]
     pub(super) const EXEC_FLAG: u32 = 0o111;
 
-    pub(crate) fn new(name: OsString, flags: u8, symlink: Option<Box<Path>>) -> Self {
+    pub(crate) fn new(name: OsString, flags: u8, symlink: Option<Arc<Path>>) -> Self {
         let lossy_str = name.to_string_lossy();
-        let lowered = lossy_str.to_lowercase().into_boxed_str();
-        let name_str = lossy_str.into_owned().into_boxed_str();
+        let lowered: Arc<str> = Arc::from(lossy_str.to_lowercase());
+        let name_str: Arc<str> = Arc::from(lossy_str.as_ref());
 
         let ext_offset = lowered.rsplit_once('.').and_then(|(base, ext)| {
             if !base.is_empty() && !ext.is_empty() {
@@ -47,7 +48,7 @@ impl FileEntry {
         });
 
         FileEntry {
-            name: name.into_boxed_os_str(),
+            name: Arc::from(name),
             name_str,
             lowered,
             ext_offset,
@@ -199,7 +200,7 @@ pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
         }
         let symlink = if (flags & FileEntry::IS_SYMLINK) != 0 {
             let p = path_cache.get_or_insert_with(|| entry.path());
-            fs::read_link(p).ok().map(|p| p.into_boxed_path())
+            fs::read_link(p).ok().map(Arc::from)
         } else {
             None
         };

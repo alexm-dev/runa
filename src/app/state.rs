@@ -590,7 +590,7 @@ impl<'a> AppState<'a> {
         let request_id = self.nav.request_id();
         let sort_config = self.nav.sort_config();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
-        let entries = self.nav.entries().to_vec();
+        let entries = self.nav.entries_arc();
 
         let _ = workers.sort_io_tx().try_send(WorkerTask::SortDirectory {
             path: self.nav.current_dir().to_path_buf(),
