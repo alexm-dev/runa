@@ -329,7 +329,7 @@ impl<'a> AppState<'a> {
                     self.is_loading = false;
 
                     self.request_parent_content(workers);
-                    self.request_preview(workers);
+                    self.request_preview_force(workers);
                     self.update_file_info_cache(workers);
                     self.refresh_show_info_if_open();
                     return;
