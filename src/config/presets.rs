@@ -3,10 +3,9 @@
 //! This module defines several preset themes that can be used in runa.
 //! Each theme is created using a specific color palette and a unique name.
 
-use crate::config::Theme;
-use crate::config::theme::{Palette, make_theme};
+use crate::config::theme::Palette;
 
-const TOKYO_STORM: Palette = Palette {
+pub(super) const TOKYO_STORM: Palette = Palette {
     base: (36, 40, 59),
     surface: (41, 46, 66),
     overlay: (86, 95, 137),
@@ -15,7 +14,7 @@ const TOKYO_STORM: Palette = Palette {
     directory: (122, 162, 247),
 };
 
-const TOKYO_NIGHT: Palette = Palette {
+pub(super) const TOKYO_NIGHT: Palette = Palette {
     base: (26, 27, 38),
     surface: (44, 51, 78),
     overlay: (86, 95, 137),
@@ -24,7 +23,7 @@ const TOKYO_NIGHT: Palette = Palette {
     directory: (122, 162, 247),
 };
 
-const TOKYO_DAY: Palette = Palette {
+pub(super) const TOKYO_DAY: Palette = Palette {
     base: (225, 226, 231),
     surface: (196, 199, 209),
     overlay: (168, 175, 199),
@@ -33,17 +32,7 @@ const TOKYO_DAY: Palette = Palette {
     directory: (52, 90, 183),
 };
 
-pub(crate) fn tokyonight_storm() -> Theme {
-    make_theme("tokyonight-storm", TOKYO_STORM, "┃")
-}
-pub(crate) fn tokyonight_night() -> Theme {
-    make_theme("tokyonight-night", TOKYO_NIGHT, "┃")
-}
-pub(crate) fn tokyonight_day() -> Theme {
-    make_theme("tokyonight-day", TOKYO_DAY, "┃")
-}
-
-const GRUV_DARK_HARD: Palette = Palette {
+pub(super) const GRUV_DARK_HARD: Palette = Palette {
     base: (29, 32, 33),
     surface: (60, 56, 54),
     overlay: (146, 131, 116),
@@ -52,7 +41,7 @@ const GRUV_DARK_HARD: Palette = Palette {
     directory: (131, 165, 152),
 };
 
-const GRUV_DARK: Palette = Palette {
+pub(super) const GRUV_DARK: Palette = Palette {
     base: (40, 40, 40),
     surface: (60, 56, 54),
     overlay: (146, 131, 116),
@@ -61,7 +50,7 @@ const GRUV_DARK: Palette = Palette {
     directory: (131, 165, 152),
 };
 
-const GRUV_LIGHT: Palette = Palette {
+pub(super) const GRUV_LIGHT: Palette = Palette {
     base: (251, 241, 199),
     surface: (213, 196, 161),
     overlay: (124, 111, 100),
@@ -70,17 +59,7 @@ const GRUV_LIGHT: Palette = Palette {
     directory: (7, 102, 120),
 };
 
-pub(crate) fn gruvbox_dark_hard() -> Theme {
-    make_theme("gruvbox-dark-hard", GRUV_DARK_HARD, "*")
-}
-pub(crate) fn gruvbox_dark() -> Theme {
-    make_theme("gruvbox-dark", GRUV_DARK, "*")
-}
-pub(crate) fn gruvbox_light() -> Theme {
-    make_theme("gruvbox-light", GRUV_LIGHT, "*")
-}
-
-const MOCHA: Palette = Palette {
+pub(super) const MOCHA: Palette = Palette {
     base: (30, 30, 46),
     surface: (49, 50, 68),
     overlay: (108, 112, 134),
@@ -89,7 +68,7 @@ const MOCHA: Palette = Palette {
     directory: (137, 180, 250),
 };
 
-const FRAPPE: Palette = Palette {
+pub(super) const FRAPPE: Palette = Palette {
     base: (48, 52, 70),
     surface: (65, 69, 89),
     overlay: (115, 121, 148),
@@ -98,7 +77,7 @@ const FRAPPE: Palette = Palette {
     directory: (140, 170, 238),
 };
 
-const LATTE: Palette = Palette {
+pub(super) const LATTE: Palette = Palette {
     base: (239, 241, 245),
     surface: (204, 208, 218),
     overlay: (156, 160, 176),
@@ -107,17 +86,7 @@ const LATTE: Palette = Palette {
     directory: (30, 102, 245),
 };
 
-pub(crate) fn catppuccin_mocha() -> Theme {
-    make_theme("catppuccin-mocha", MOCHA, "┃")
-}
-pub(crate) fn catppuccin_frappe() -> Theme {
-    make_theme("catppuccin-frappe", FRAPPE, "┃")
-}
-pub(crate) fn catppuccin_latte() -> Theme {
-    make_theme("catppuccin-latte", LATTE, "┃")
-}
-
-const CARBON: Palette = Palette {
+pub(super) const CARBON: Palette = Palette {
     base: (22, 22, 22),
     surface: (42, 42, 42),
     overlay: (82, 82, 82),
@@ -126,7 +95,7 @@ const CARBON: Palette = Palette {
     directory: (120, 169, 235),
 };
 
-const NIGHTFOX: Palette = Palette {
+pub(super) const NIGHTFOX: Palette = Palette {
     base: (25, 30, 36),
     surface: (43, 51, 63),
     overlay: (87, 91, 112),
@@ -135,14 +104,7 @@ const NIGHTFOX: Palette = Palette {
     directory: (113, 161, 236),
 };
 
-pub(crate) fn carbonfox() -> Theme {
-    make_theme("carbonfox", CARBON, "┃")
-}
-pub(crate) fn nightfox() -> Theme {
-    make_theme("nightfox", NIGHTFOX, "┃")
-}
-
-const FOREST: Palette = Palette {
+pub(super) const FOREST: Palette = Palette {
     base: (43, 51, 57),
     surface: (74, 82, 88),
     overlay: (133, 146, 137),
@@ -151,7 +113,7 @@ const FOREST: Palette = Palette {
     directory: (127, 187, 179),
 };
 
-const ROSE_PINE: Palette = Palette {
+pub(super) const ROSE_PINE: Palette = Palette {
     base: (25, 23, 36),
     surface: (31, 29, 46),
     overlay: (110, 106, 134),
@@ -160,14 +122,7 @@ const ROSE_PINE: Palette = Palette {
     directory: (49, 116, 143),
 };
 
-pub(crate) fn everforest() -> Theme {
-    make_theme("everforest", FOREST, "*")
-}
-pub(crate) fn rose_pine() -> Theme {
-    make_theme("rose_pine", ROSE_PINE, "*")
-}
-
-const NORD: Palette = Palette {
+pub(super) const NORD: Palette = Palette {
     base: (46, 52, 64),
     surface: (67, 76, 94),
     overlay: (94, 129, 172),
@@ -176,11 +131,7 @@ const NORD: Palette = Palette {
     directory: (129, 161, 193),
 };
 
-pub(crate) fn nord() -> Theme {
-    make_theme("nord", NORD, "*")
-}
-
-const TWO_DARK: Palette = Palette {
+pub(super) const TWO_DARK: Palette = Palette {
     base: (40, 44, 52),
     surface: (33, 37, 43),
     overlay: (92, 99, 112),
@@ -189,11 +140,7 @@ const TWO_DARK: Palette = Palette {
     directory: (229, 192, 123),
 };
 
-pub(crate) fn two_dark() -> Theme {
-    make_theme("two-dark", TWO_DARK, "*")
-}
-
-const ONE_DARK: Palette = Palette {
+pub(super) const ONE_DARK: Palette = Palette {
     base: (40, 44, 52),
     surface: (56, 60, 69),
     overlay: (97, 102, 117),
@@ -202,11 +149,7 @@ const ONE_DARK: Palette = Palette {
     directory: (229, 192, 123),
 };
 
-pub(crate) fn one_dark() -> Theme {
-    make_theme("one-dark", ONE_DARK, "*")
-}
-
-const SOLARIZED_DARK: Palette = Palette {
+pub(super) const SOLARIZED_DARK: Palette = Palette {
     base: (0, 43, 54),
     surface: (7, 54, 66),
     overlay: (101, 123, 131),
@@ -215,7 +158,7 @@ const SOLARIZED_DARK: Palette = Palette {
     directory: (42, 161, 152),
 };
 
-const SOLARIZED_LIGHT: Palette = Palette {
+pub(super) const SOLARIZED_LIGHT: Palette = Palette {
     base: (253, 246, 227),
     surface: (238, 232, 213),
     overlay: (101, 123, 131),
@@ -224,15 +167,7 @@ const SOLARIZED_LIGHT: Palette = Palette {
     directory: (42, 161, 152),
 };
 
-pub(crate) fn solarized_dark() -> Theme {
-    make_theme("solarized-dark", SOLARIZED_DARK, "*")
-}
-
-pub(crate) fn solarized_light() -> Theme {
-    make_theme("solarized-light", SOLARIZED_LIGHT, "*")
-}
-
-const DRACULA: Palette = Palette {
+pub(super) const DRACULA: Palette = Palette {
     base: (40, 42, 54),
     surface: (68, 71, 90),
     overlay: (139, 233, 253),
@@ -241,11 +176,7 @@ const DRACULA: Palette = Palette {
     directory: (189, 147, 249),
 };
 
-pub(crate) fn dracula() -> Theme {
-    make_theme("dracula", DRACULA, "┃")
-}
-
-const MONOKAI: Palette = Palette {
+pub(super) const MONOKAI: Palette = Palette {
     base: (39, 40, 34),
     surface: (49, 51, 43),
     overlay: (117, 113, 94),
@@ -253,7 +184,3 @@ const MONOKAI: Palette = Palette {
     secondary: (166, 226, 46),
     directory: (102, 217, 239),
 };
-
-pub(crate) fn monokai() -> Theme {
-    make_theme("monokai", MONOKAI, "┃")
-}

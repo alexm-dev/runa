@@ -9,9 +9,10 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use ratatui::style::{Color, Style};
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Deserializer};
 
-use crate::config::presets::*;
+use crate::config::presets;
 use crate::ui::widgets::{DialogPosition, DialogSize};
 use crate::utils::text;
 
@@ -38,7 +39,7 @@ pub(crate) struct Theme {
     #[serde(deserialize_with = "deserialize_color_map")]
     icon_color: HashMap<String, Color>,
     exact: HashMap<String, ColorPair>,
-    extension: HashMap<String, ColorPair>,
+    ext: HashMap<String, ColorPair>,
     symlink: SymlinkTheme,
     marker: MarkerTheme,
     widget: WidgetTheme,
@@ -46,9 +47,11 @@ pub(crate) struct Theme {
     info: InfoStatusTheme,
 
     #[serde(skip)]
-    exact_styles: HashMap<String, Style>,
+    exact_cache: FxHashMap<String, Style>,
     #[serde(skip)]
-    extension_styles: HashMap<String, Style>,
+    extension_cache: FxHashMap<String, Style>,
+    #[serde(skip)]
+    icon_color_cache: FxHashMap<String, Color>,
 }
 
 impl Default for Theme {
@@ -82,7 +85,7 @@ impl Default for Theme {
             },
             status_line: ColorPair::default(),
             exact: HashMap::new(),
-            extension: HashMap::new(),
+            ext: HashMap::new(),
             icon_color: HashMap::new(),
             exe_color: Color::LightGreen,
             symlink: SymlinkTheme::default(),
@@ -90,8 +93,9 @@ impl Default for Theme {
             widget: WidgetTheme::default(),
             tab: TabTheme::default(),
             info: InfoStatusTheme::default(),
-            exact_styles: HashMap::new(),
-            extension_styles: HashMap::new(),
+            exact_cache: FxHashMap::default(),
+            extension_cache: FxHashMap::default(),
+            icon_color_cache: FxHashMap::default(),
         }
     }
 }
@@ -132,7 +136,7 @@ impl Theme {
 
     crate::getters! {
         exe_color: Color,
-        icon_color: &HashMap<String, Color>,
+        icon_color_cache: &FxHashMap<String, Color>,
         selection_icon: &str,
         preview: &PaneTheme,
         marker: &MarkerTheme,
@@ -200,13 +204,13 @@ impl Theme {
         is_dir: bool,
         ext: Option<&str>,
     ) -> Option<Style> {
-        if let Some(s) = self.exact_styles.get(name) {
+        if let Some(s) = self.exact_cache.get(name) {
             return Some(*s);
         }
 
         if !is_dir
             && let Some(ext) = ext
-            && let Some(s) = self.extension_styles.get(ext)
+            && let Some(s) = self.extension_cache.get(ext)
         {
             return Some(*s);
         }
@@ -261,38 +265,39 @@ impl Theme {
 
     #[inline(never)]
     fn get_preset_by_name(name: &str) -> Option<Theme> {
-        match name {
-            "gruvbox-dark-hard" => Some(gruvbox_dark_hard()),
-            "gruvbox-dark" => Some(gruvbox_dark()),
-            "gruvbox-light" => Some(gruvbox_light()),
+        let (palette, icon) = match name {
+            "gruvbox-dark-hard" => (presets::GRUV_DARK_HARD, "*"),
+            "gruvbox-dark" => (presets::GRUV_DARK, "*"),
+            "gruvbox-light" => (presets::GRUV_LIGHT, "*"),
 
-            "catppuccin-mocha" => Some(catppuccin_mocha()),
-            "catppuccin-frappe" => Some(catppuccin_frappe()),
-            "catppuccin-macchiato" => Some(catppuccin_mocha()),
-            "catppuccin-latte" => Some(catppuccin_latte()),
+            "catppuccin-mocha" | "catppuccin-macchiato" => (presets::MOCHA, "┃"),
+            "catppuccin-frappe" => (presets::FRAPPE, "┃"),
+            "catppuccin-latte" => (presets::LATTE, "┃"),
 
-            "nord" => Some(nord()),
+            "nord" => (presets::NORD, "*"),
+            "two-dark" => (presets::TWO_DARK, "*"),
+            "one-dark" => (presets::ONE_DARK, "*"),
 
-            "two-dark" => Some(two_dark()),
-            "one-dark" => Some(one_dark()),
+            "solarized-dark" => (presets::SOLARIZED_DARK, "*"),
+            "solarized-light" => (presets::SOLARIZED_LIGHT, "*"),
 
-            "solarized-dark" => Some(solarized_dark()),
-            "solarized-light" => Some(solarized_light()),
+            "dracula" => (presets::DRACULA, "┃"),
+            "monokai" => (presets::MONOKAI, "┃"),
+            "nightfox" => (presets::NIGHTFOX, "┃"),
+            "carbonfox" => (presets::CARBON, "┃"),
 
-            "dracula" => Some(dracula()),
-            "monokai" => Some(monokai()),
-            "nightfox" => Some(nightfox()),
-            "carbonfox" => Some(carbonfox()),
+            "tokyonight-storm" => (presets::TOKYO_STORM, "┃"),
+            "tokyonight" | "tokyonight-night" => (presets::TOKYO_NIGHT, "┃"),
+            "tokyonight-day" => (presets::TOKYO_DAY, "┃"),
 
-            "tokyonight" => Some(tokyonight_night()),
-            "tokyonight-storm" => Some(tokyonight_storm()),
-            "tokyonight-day" => Some(tokyonight_day()),
+            "everforest" => (presets::FOREST, "*"),
+            "rose-pine" | "rose_pine" => (presets::ROSE_PINE, "*"),
 
-            "everforest" => Some(everforest()),
-            "rose-pine" | "rose_pine" => Some(rose_pine()),
+            _ => return None,
+        };
 
-            _ => None,
-        }
+        // One single call-site for make_theme prevents monomorphization bloat
+        Some(make_theme(name, palette, icon))
     }
 
     /// Map internal theme name to bat theme name for syntax highlighting.
@@ -345,7 +350,7 @@ impl Theme {
             parent,
             preview,
             path,
-            extension,
+            ext,
             exact,
             icon_color,
             status_line,
@@ -366,16 +371,22 @@ impl Theme {
     fn build_style_maps(&mut self) {
         let fallback = ColorPair::default();
 
-        self.exact_styles = self
+        self.exact_cache = self
             .exact
             .iter()
             .map(|(k, v)| (k.clone(), v.style_or(&fallback)))
             .collect();
 
-        self.extension_styles = self
-            .extension
+        self.extension_cache = self
+            .ext
             .iter()
             .map(|(k, v)| (k.to_ascii_lowercase(), v.style_or(&fallback)))
+            .collect();
+
+        self.icon_color_cache = self
+            .icon_color
+            .iter()
+            .map(|(k, v)| (k.clone(), *v))
             .collect();
     }
 }
@@ -898,12 +909,11 @@ where
     D: Deserializer<'de>,
 {
     let raw_map: HashMap<String, String> = HashMap::deserialize(deserializer)?;
-    let mut processed_map = HashMap::with_capacity(raw_map.len());
 
-    for (key, val) in raw_map {
-        let color = text::parse_color(&val);
-        processed_map.insert(key, color);
-    }
+    let processed_map = raw_map
+        .into_iter()
+        .map(|(key, val)| (key, text::parse_color(&val)))
+        .collect();
 
     Ok(processed_map)
 }

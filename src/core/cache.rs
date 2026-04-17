@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use dashmap::{DashMap, mapref::entry::Entry};
+use rustc_hash::FxBuildHasher;
 
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
@@ -41,13 +42,13 @@ impl DirCacheKey {
 pub(crate) type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<[Arc<str>]>>, u64, Instant)>;
 
 pub(crate) struct DirCache {
-    inner: DashMap<DirCacheKey, DirCacheValue>,
+    inner: DashMap<DirCacheKey, DirCacheValue, FxBuildHasher>,
 }
 
 impl DirCache {
     pub(crate) fn new() -> Self {
         Self {
-            inner: DashMap::new(),
+            inner: DashMap::with_hasher(FxBuildHasher),
         }
     }
 

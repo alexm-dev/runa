@@ -180,7 +180,7 @@ impl Default for Keys {
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub(crate) struct Editor {
-    default: String,
+    default: Vec<String>,
     ext: HashMap<String, Vec<String>>,
     filename: HashMap<String, Vec<String>>,
 }
@@ -188,14 +188,14 @@ pub(crate) struct Editor {
 /// Public methods for accessing editor configuration options
 impl Editor {
     #[inline]
-    pub(crate) fn cmd(&self, path: &Path) -> Vec<String> {
+    pub(crate) fn cmd(&self, path: &Path) -> &[String] {
         if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
             if let Some(cmd) = self.filename.get(name) {
-                return cmd.clone();
+                return cmd;
             }
             let name_lower = name.to_lowercase();
             if let Some(cmd) = self.filename.get(&name_lower) {
-                return cmd.clone();
+                return cmd;
             }
         }
 
@@ -203,12 +203,12 @@ impl Editor {
             .extension()
             .and_then(|s| s.to_str())
             .map(|s| s.to_lowercase())
-            && let Some(cmd) = self.ext.get(&ext)
+            .and_then(|ext| self.ext.get(&ext))
         {
-            return cmd.clone();
+            return ext;
         }
 
-        vec![self.default.clone()]
+        &self.default
     }
 
     pub(crate) fn resolved_path(&self, path: &Path) -> Option<PathBuf> {
@@ -226,7 +226,7 @@ impl Editor {
 impl Default for Editor {
     fn default() -> Self {
         Editor {
-            default: "vim".into(),
+            default: vec!["vim".into()],
             ext: HashMap::new(),
             filename: HashMap::new(),
         }

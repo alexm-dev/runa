@@ -3,10 +3,10 @@
 //! Defines key to an action, parsing from the config, and enum variants
 //! for all navigation, file and actions used by runa.
 
-use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use rustc_hash::FxHashMap;
 
 use crate::Config;
 use crate::app::nav::SortMode;
@@ -89,9 +89,9 @@ pub(crate) struct Key {
 
 /// Stores the mapping from Key to action, which is built in the config
 pub(crate) struct Keymap {
-    map: HashMap<Key, Action>,
-    gmap: HashMap<KeyCode, PrefixCommand>,
-    sortmap: HashMap<KeyCode, PrefixCommand>,
+    map: FxHashMap<Key, Action>,
+    gmap: FxHashMap<KeyCode, PrefixCommand>,
+    sortmap: FxHashMap<KeyCode, PrefixCommand>,
     g_prefix: Vec<Key>,
     sort_prefix: Vec<Key>,
 }
@@ -100,9 +100,9 @@ impl Keymap {
     /// Builds the keymap from the config
     #[rustfmt::skip]
     pub(crate) fn from_config(config: &Config) -> Self {
-        let mut map = HashMap::new();
-        let mut gmap = HashMap::new();
-        let mut sortmap = HashMap::new();
+        let mut map = FxHashMap::default();
+        let mut gmap = FxHashMap::default();
+        let mut sortmap = FxHashMap::default();
         let keys = config.keys();
         let sort_prefix: Vec<Key> = keys
             .sort().iter()
@@ -222,11 +222,11 @@ impl Keymap {
         None
     }
 
-    pub(crate) fn gmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
+    pub(crate) fn gmap(&self) -> &FxHashMap<KeyCode, PrefixCommand> {
         &self.gmap
     }
 
-    pub(crate) fn sortmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
+    pub(crate) fn sortmap(&self) -> &FxHashMap<KeyCode, PrefixCommand> {
         &self.sortmap
     }
 
@@ -265,8 +265,8 @@ impl KeyPrefix {
     pub(crate) fn feed(
         &mut self,
         key: &KeyEvent,
-        gmap: &HashMap<KeyCode, PrefixCommand>,
-        sortmap: &HashMap<KeyCode, PrefixCommand>,
+        gmap: &FxHashMap<KeyCode, PrefixCommand>,
+        sortmap: &FxHashMap<KeyCode, PrefixCommand>,
         sort_prefix: &[Key],
         g_prefix: &[Key],
     ) -> Option<PrefixCommand> {
@@ -425,7 +425,7 @@ fn parse_key(s: &str) -> Option<Key> {
     })
 }
 
-fn bind(key_list: &[String], action: Action, map: &mut HashMap<Key, Action>) {
+fn bind(key_list: &[String], action: Action, map: &mut FxHashMap<Key, Action>) {
     for k in key_list {
         if let Some(key) = parse_key(k) {
             map.insert(key, action);
@@ -436,7 +436,7 @@ fn bind(key_list: &[String], action: Action, map: &mut HashMap<Key, Action>) {
 fn bind_prefix(
     key_list: &[String],
     prefix: PrefixCommand,
-    map: &mut HashMap<KeyCode, PrefixCommand>,
+    map: &mut FxHashMap<KeyCode, PrefixCommand>,
 ) {
     for k in key_list {
         if let Some(key) = parse_key(k)

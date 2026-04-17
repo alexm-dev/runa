@@ -6,7 +6,6 @@
 //! Used internally by ui::render
 
 use std::borrow::Cow;
-use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -19,6 +18,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
+use rustc_hash::FxHashSet;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::app::{AppState, Clipboard, PreviewData};
@@ -89,8 +89,8 @@ pub(crate) struct PreviewOptions {
 
 /// Marker and clipboard data for use in pane drawing functions
 pub(crate) struct PaneMarkers<'a> {
-    pub(crate) markers: Option<HashSet<OsString>>,
-    pub(crate) clipboard: Option<HashSet<OsString>>,
+    pub(crate) markers: Option<FxHashSet<OsString>>,
+    pub(crate) clipboard: Option<FxHashSet<OsString>>,
     pub(crate) marker_icon: &'a str,
     pub(crate) marker_style: Style,
     pub(crate) clipboard_style: Style,
@@ -372,10 +372,10 @@ pub(crate) fn draw_parent(
 /// Helper: Build marker and clipboard sets for a specific preview directory.
 /// Used to decorate the preview pane with marker/copy icons.
 pub(crate) fn pane_marker_sets(
-    nav_markers: &HashSet<PathBuf>,
-    clipboard: Option<&HashSet<PathBuf>>,
+    nav_markers: &FxHashSet<PathBuf>,
+    clipboard: Option<&FxHashSet<PathBuf>>,
     dir: Option<&Path>,
-) -> (Option<HashSet<OsString>>, Option<HashSet<OsString>>) {
+) -> (Option<FxHashSet<OsString>>, Option<FxHashSet<OsString>>) {
     match dir {
         Some(dir) => {
             let markers = nav_markers
@@ -398,8 +398,8 @@ pub(crate) fn pane_marker_sets(
 /// Helper: Create a PaneMarkers struct for use in pane drawing functions.
 /// Builds marker and clipboard sets for a specific directory.
 pub(crate) fn make_pane_markers<'a>(
-    nav_markers: &'a HashSet<PathBuf>,
-    clipboard: Option<&'a HashSet<PathBuf>>,
+    nav_markers: &'a FxHashSet<PathBuf>,
+    clipboard: Option<&'a FxHashSet<PathBuf>>,
     dir: Option<&'a Path>,
     marker_icon: &'a str,
     marker_style: Style,
@@ -431,7 +431,7 @@ fn make_main_pane_markers<'a>(
     let local_markers = if markers.is_empty() {
         None
     } else {
-        let set: HashSet<OsString> = markers
+        let set: FxHashSet<OsString> = markers
             .iter()
             .filter(|p| p.parent() == Some(current_dir))
             .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
@@ -444,7 +444,7 @@ fn make_main_pane_markers<'a>(
         set.iter()
             .filter(|p| p.parent() == Some(current_dir))
             .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
-            .collect::<HashSet<OsString>>()
+            .collect::<FxHashSet<OsString>>()
     });
 
     PaneMarkers {

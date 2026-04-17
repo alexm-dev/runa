@@ -185,9 +185,9 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str,
         .unwrap_or(if is_dir { "" } else { "" });
 
     let color = theme
-        .icon_color()
+        .icon_color_cache()
         .get(name_str)
-        .or_else(|| ext.and_then(|e| theme.icon_color().get(e)))
+        .or_else(|| ext.and_then(|e| theme.icon_color_cache().get(e)))
         .copied()
         .or_else(|| lookup.and_then(|(_, hex)| hex.map(parse_color)));
 

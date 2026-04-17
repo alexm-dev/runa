@@ -19,6 +19,7 @@ use std::time::SystemTime;
 
 use chrono::{DateTime, Local};
 use dashmap::DashMap;
+use rustc_hash::FxBuildHasher;
 
 use crate::config::display::ShowInfoOptions;
 use crate::core::formatter::{self, TimeFormatCtx};
@@ -40,7 +41,7 @@ pub(crate) struct CachedMetaKey {
 }
 
 static META_SORT_EPOCH: OnceLock<AtomicU64> = OnceLock::new();
-static META_SORT_CACHE: OnceLock<DashMap<PathBuf, CachedMetaKey>> = OnceLock::new();
+static META_SORT_CACHE: OnceLock<DashMap<PathBuf, CachedMetaKey, FxBuildHasher>> = OnceLock::new();
 
 #[inline]
 fn epoch_atomic() -> &'static AtomicU64 {
@@ -48,8 +49,8 @@ fn epoch_atomic() -> &'static AtomicU64 {
 }
 
 #[inline]
-pub(crate) fn meta_cache() -> &'static DashMap<PathBuf, CachedMetaKey> {
-    META_SORT_CACHE.get_or_init(DashMap::new)
+pub(crate) fn meta_cache() -> &'static DashMap<PathBuf, CachedMetaKey, FxBuildHasher> {
+    META_SORT_CACHE.get_or_init(|| DashMap::with_hasher(FxBuildHasher))
 }
 
 #[inline]
@@ -300,7 +301,7 @@ impl MetadataNeeds {
 
 #[cfg(unix)]
 pub(crate) mod unix_meta {
-    use std::collections::HashMap;
+    use rustc_hash::FxHashMap;
     use std::sync::Arc;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
@@ -311,15 +312,15 @@ pub(crate) mod unix_meta {
 
     #[derive(Debug, Clone)]
     pub(crate) struct UserGroupCache {
-        users: HashMap<u32, Arc<str>>,
-        groups: HashMap<u32, Arc<str>>,
+        users: FxHashMap<u32, Arc<str>>,
+        groups: FxHashMap<u32, Arc<str>>,
     }
 
     impl UserGroupCache {
         pub(crate) fn new() -> Self {
             Self {
-                users: HashMap::with_capacity(8),
-                groups: HashMap::with_capacity(8),
+                users: FxHashMap::with_capacity_and_hasher(8, Default::default()),
+                groups: FxHashMap::with_capacity_and_hasher(8, Default::default()),
             }
         }
 

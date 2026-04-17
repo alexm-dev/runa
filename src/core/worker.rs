@@ -13,7 +13,6 @@
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
 //! may require corresponding changes throughout state, response-handling code and UI.
 
-use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -22,6 +21,7 @@ use std::thread;
 
 use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
+use rustc_hash::FxHashSet;
 
 use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
@@ -146,7 +146,7 @@ pub(crate) enum WorkerTask {
         list: DirListOptions,
         sort_config: SortConfig,
         sort_date_format: Arc<str>,
-        always_show: Arc<HashSet<OsString>>,
+        always_show: Arc<FxHashSet<OsString>>,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -157,7 +157,7 @@ pub(crate) enum WorkerTask {
         list: DirListOptions,
         sort_config: SortConfig,
         sort_date_format: Arc<str>,
-        always_show: Arc<HashSet<OsString>>,
+        always_show: Arc<FxHashSet<OsString>>,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -811,7 +811,7 @@ mod tests {
             list: test_list_opts(),
             sort_date_format: Arc::<str>::from(""),
             sort_config: SortConfig::default(),
-            always_show: Arc::new(HashSet::new()),
+            always_show: Arc::new(FxHashSet::default()),
             request_id: 30,
             tab_id: TEST_TAB_ID,
         })?;
@@ -885,7 +885,7 @@ mod tests {
             list: test_list_opts(),
             sort_date_format: Arc::<str>::from(""),
             sort_config: SortConfig::default(),
-            always_show: Arc::new(HashSet::new()),
+            always_show: Arc::new(FxHashSet::default()),
             request_id: 1,
             tab_id: TEST_TAB_ID,
         })?;
@@ -947,7 +947,7 @@ mod tests {
                             list,
                             sort_config: SortConfig::default(),
                             sort_date_format: Arc::<str>::from(""),
-                            always_show: Arc::new(HashSet::new()),
+                            always_show: Arc::new(FxHashSet::default()),
                             request_id: (t * requests_per_thread + i) as u64,
                             tab_id: TEST_TAB_ID,
                         })
