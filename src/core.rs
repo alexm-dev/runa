@@ -18,6 +18,6 @@ pub(crate) mod proc;
 pub(crate) mod terminal;
 pub(crate) mod worker;
 
-pub(crate) use fm::{FileEntry, browse_dir};
+pub(crate) use fm::FileEntry;
 pub(crate) use formatter::Formatter;
-pub(crate) use proc::{FindResult, find, preview_bat};
+pub(crate) use proc::{FindResult, find};

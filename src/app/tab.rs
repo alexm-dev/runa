@@ -5,14 +5,15 @@
 //!
 //! It also includes the [handle_tab_action] function, which processes tab actions related to tab management.
 
-use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction, nav::SortConfig};
-use crate::core::worker::Workers;
-use crate::utils::path::shorten_home_path;
-
-use ratatui::text::Span;
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
+
+use ratatui::text::Span;
+
+use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction, nav::SortConfig};
+use crate::core::worker::Workers;
+use crate::utils::path;
 
 pub(crate) struct TabManager<'a> {
     pub(crate) tabs: Vec<AppState<'a>>,
@@ -147,7 +148,7 @@ impl<'a> TabManager<'a> {
 
                 let name = if tab_theme.uses_name() {
                     let cwd = tab.nav.current_dir();
-                    let shortened = shorten_home_path(cwd);
+                    let shortened = path::shorten_home_path(cwd);
                     Path::new(&shortened)
                         .file_name()
                         .map(|os_str| os_str.to_string_lossy().into_owned())

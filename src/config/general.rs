@@ -7,12 +7,12 @@
 //! It includes settings such as display options, case sensitivity,
 //! and file handling preferences.
 
-use serde::Deserialize;
-
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
+
+use serde::Deserialize;
 
 /// The minimum results which is set to if the maximum is overset in the runa.toml.
 pub(crate) const MIN_FIND_RESULTS: usize = 15;

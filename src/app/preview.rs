@@ -3,14 +3,15 @@
 //! Tracks the state of the file/directory preview for the UI, including loaded preview
 //! data, debounce for background rendering, selection within the preview and request tracking
 
-use crate::app::actions::ScrollState;
-use crate::app::timings::Timings;
-use crate::core::FileEntry;
-use ansi_to_tui::IntoText;
-use ratatui::text::Text;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+use ansi_to_tui::IntoText;
+use ratatui::text::Text;
+
+use crate::app::{actions::ScrollState, timings::Timings};
+use crate::core::FileEntry;
 
 /// Preview content for the preview pane
 ///

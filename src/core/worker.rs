@@ -13,28 +13,26 @@
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
 //! may require corresponding changes throughout state, response-handling code and UI.
 
-use crate::app::nav::SortConfig;
-use crate::config::display::PreviewMethod;
-use crate::core::metadata::{FileMetadata, FileMetadataCache, MetadataNeeds, bump_meta_sort_epoch};
-use crate::core::{
-    FileEntry, FindResult, Formatter, browse_dir,
-    cache::{DirCache, DirListOptions},
-    find,
-    formatter::safe_read_preview,
-    fs::{copy_recursive, get_unused_path, is_preview_deny, merge_dir, rename_with_fallback},
-    preview_bat,
-};
-use crate::utils::os::is_regular_file;
-
-use chrono::Local;
-use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
-
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
+
+use chrono::Local;
+use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
+
+use crate::app::nav::SortConfig;
+use crate::config::display::PreviewMethod;
+use crate::core::{
+    FileEntry, FindResult, Formatter,
+    cache::{DirCache, DirListOptions},
+    find, fm, formatter, fs,
+    metadata::{self, FileMetadata, FileMetadataCache, MetadataNeeds},
+    proc,
+};
+use crate::utils::os::is_regular_file;
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
@@ -283,7 +281,7 @@ fn start_io_worker(
             else {
                 continue;
             };
-            match browse_dir(&path) {
+            match fm::browse_dir(&path) {
                 Ok(mut entries) => {
                     let formatter = Formatter::new(list.clone(), sort_config, always_show);
                     formatter.filter_entries(&mut entries);
@@ -395,17 +393,21 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
             };
 
             let lines = match preview_method {
-                PreviewMethod::Internal => safe_read_preview(&path, max_lines, pane_width, scroll),
+                PreviewMethod::Internal => {
+                    formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+                }
                 PreviewMethod::Bat => {
-                    if !is_regular_file(&path) || is_preview_deny(&path) {
-                        safe_read_preview(&path, max_lines, pane_width, scroll)
+                    if !is_regular_file(&path) || fs::is_preview_deny(&path) {
+                        formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                     } else {
-                        match preview_bat(&path, max_lines, args.as_slice(), scroll) {
+                        match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
                             // Bat preview succeeded
                             // If bat fails, fallback to internal preview
                             // If bat is not installed or returns error, we fallback to internal preview
                             Ok(lines) => lines,
-                            Err(_) => safe_read_preview(&path, max_lines, pane_width, scroll),
+                            Err(_) => {
+                                formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+                            }
                         }
                     }
                 }
@@ -516,7 +518,7 @@ fn start_fileop_worker(
                     } else {
                         if target.exists() && !is_case_rename && overwrite {
                             if old.is_dir() && target.is_dir() {
-                                match merge_dir(&old, &target, true) {
+                                match fs::merge_dir(&old, &target, true) {
                                     Ok(()) => {
                                         focus_target = target.file_name().map(|n| n.to_os_string());
                                         Ok(())
@@ -543,13 +545,13 @@ fn start_fileop_worker(
                                     ))
                                 } else {
                                     focus_target = target.file_name().map(|n| n.to_os_string());
-                                    rename_with_fallback(&old, &target, old.is_dir())
+                                    fs::rename_with_fallback(&old, &target, old.is_dir())
                                         .map_err(|e| e.to_string())
                                 }
                             }
                         } else {
                             focus_target = target.file_name().map(|n| n.to_os_string());
-                            rename_with_fallback(&old, &target, old.is_dir())
+                            fs::rename_with_fallback(&old, &target, old.is_dir())
                                 .map_err(|e| e.to_string())
                         }
                     }
@@ -562,7 +564,7 @@ fn start_fileop_worker(
                     let target = if overwrite {
                         path
                     } else {
-                        get_unused_path(&path)
+                        fs::get_unused_path(&path)
                     };
 
                     if target.exists() {
@@ -623,7 +625,7 @@ fn start_fileop_worker(
 
                     for s in src {
                         if let Some(name) = s.file_name() {
-                            let target = get_unused_path(&dest.join(name));
+                            let target = fs::get_unused_path(&dest.join(name));
 
                             if let Some(ref ft) = focus_target
                                 && ft == name
@@ -634,7 +636,7 @@ fn start_fileop_worker(
                             if cut {
                                 if std::fs::rename(&s, &target).is_err() {
                                     let copy_res = if s.is_dir() {
-                                        copy_recursive(&s, &target)
+                                        fs::copy_recursive(&s, &target)
                                     } else {
                                         std::fs::copy(&s, &target).map(|_| ())
                                     };
@@ -663,7 +665,7 @@ fn start_fileop_worker(
                                 }
                             } else {
                                 let res = if s.is_dir() {
-                                    copy_recursive(&s, &target)
+                                    fs::copy_recursive(&s, &target)
                                 } else {
                                     std::fs::copy(&s, &target).map(|_| ())
                                 };
@@ -681,7 +683,7 @@ fn start_fileop_worker(
 
             match result {
                 Ok(_) => {
-                    bump_meta_sort_epoch();
+                    metadata::bump_meta_sort_epoch();
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
                         need_reload: true,
                         focus: focus_target,

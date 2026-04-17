@@ -10,19 +10,21 @@
 //! helper functions for entering/exiting input modes
 //! and processing specific actions within those modes.
 
-use crate::app::Workers;
-use crate::app::actions::{ActionMode, InputMode};
-use crate::app::keymap::{Action, NavAction, PrefixCommand, SystemAction};
-use crate::app::nav::{SortConfig, SortOrder};
-use crate::app::state::{AppState, KeypressResult};
-use crate::core::proc::complete_dirs_with_fd;
-use crate::ui::overlays::OverlayKind;
-use crate::utils::os::fd_binary;
-use crate::utils::path::expand_home_path;
-
-use crossterm::event::{KeyCode::*, KeyEvent};
 use std::path::MAIN_SEPARATOR;
 use std::time::Duration;
+
+use crossterm::event::{KeyCode::*, KeyEvent};
+
+use crate::app::{
+    Workers,
+    actions::{ActionMode, InputMode},
+    keymap::{Action, NavAction, PrefixCommand, SystemAction},
+    nav::{SortConfig, SortOrder},
+    state::{AppState, KeypressResult},
+};
+use crate::core::proc;
+use crate::ui::overlays::OverlayKind;
+use crate::utils::{os, path};
 
 /// AppState input handlers
 impl<'a> AppState<'a> {
@@ -132,7 +134,7 @@ impl<'a> AppState<'a> {
 
             Tab => {
                 if matches!(mode, InputMode::MoveFile | InputMode::GoToPath) {
-                    if fd_binary().is_ok() {
+                    if os::fd_binary().is_ok() {
                         self.tab_autocomplete();
                         KeypressResult::Consumed
                     } else {
@@ -363,7 +365,7 @@ impl<'a> AppState<'a> {
     /// Requires the `fd` tool to be installed.
     /// If `fd` is not found, displays a temporary overlay message.
     pub(super) fn prompt_find(&mut self) {
-        if fd_binary().is_err() {
+        if os::fd_binary().is_err() {
             self.push_overlay_message(
                 "Fuzzy Find requires the `fd` tool.".to_string(),
                 Duration::from_secs(5),
@@ -384,12 +386,12 @@ impl<'a> AppState<'a> {
 
     /// Handles the autocomplete for move to directory action
     fn tab_autocomplete(&mut self) {
-        if fd_binary().is_err() {
+        if os::fd_binary().is_err() {
             return;
         }
 
         let input = self.actions.input_buffer().to_string();
-        let expanded = expand_home_path(input.trim());
+        let expanded = path::expand_home_path(input.trim());
 
         let (base_dir, prefix) = if let Some(idx) = expanded.rfind(MAIN_SEPARATOR) {
             let (base, frag) = expanded.split_at(idx + 1);
@@ -406,7 +408,7 @@ impl<'a> AppState<'a> {
             let needs_update = ac.last_input() != input || ac.suggestions().is_empty();
             if needs_update {
                 let suggestions =
-                    complete_dirs_with_fd(base_dir, prefix, show_hidden).unwrap_or_default();
+                    proc::complete_dirs_with_fd(base_dir, prefix, show_hidden).unwrap_or_default();
                 ac.update(suggestions, &input);
             }
 

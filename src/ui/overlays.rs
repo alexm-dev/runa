@@ -5,9 +5,10 @@
 //!
 //! Is used throughout the ui modules and in handlers.rs.
 
-use crate::core::metadata::FileMetadataCache;
 use std::slice;
 use std::sync::Arc;
+
+use crate::core::metadata::FileMetadataCache;
 
 pub(crate) enum Overlay {
     ShowInfo { info: Arc<FileMetadataCache> },

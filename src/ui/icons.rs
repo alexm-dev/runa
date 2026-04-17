@@ -5,12 +5,12 @@
 //! The main function `nerd_font_icon` takes a `FileEntry` and returns
 //! the corresponding Nerd Font icon.
 
+use phf::phf_map;
+use ratatui::style::Color;
+
 use crate::config::Theme;
 use crate::core::FileEntry;
 use crate::utils::text::parse_color;
-use ratatui::style::Color;
-
-use phf::phf_map;
 
 /// File extension to icon mapping
 /// This map associates common file extensions with their corresponding

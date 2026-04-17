@@ -5,15 +5,15 @@
 //!
 //! Also holds the internal themes and the logic to apply user overrides on top of them.
 
-use crate::config::presets::*;
-use crate::ui::widgets::{DialogPosition, DialogSize};
-use crate::utils::text::parse_color;
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use ratatui::style::{Color, Style};
 use serde::{Deserialize, Deserializer};
 
-use std::collections::HashMap;
-use std::sync::LazyLock;
+use crate::config::presets::*;
+use crate::ui::widgets::{DialogPosition, DialogSize};
+use crate::utils::text;
 
 /// Theme configuration options
 /// Holds all color and style options for the application.
@@ -888,7 +888,7 @@ where
     D: serde::Deserializer<'de>,
 {
     let s = String::deserialize(deserializer)?;
-    Ok(parse_color(&s))
+    Ok(text::parse_color(&s))
 }
 
 pub(crate) fn deserialize_color_map<'de, D>(
@@ -901,7 +901,7 @@ where
     let mut processed_map = HashMap::with_capacity(raw_map.len());
 
     for (key, val) in raw_map {
-        let color = parse_color(&val);
+        let color = text::parse_color(&val);
         processed_map.insert(key, color);
     }
 

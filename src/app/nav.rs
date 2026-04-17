@@ -3,13 +3,13 @@
 //! Manages the current directory, file entries, selection, markers and filters.
 //! Provides helpers for pane navigation, selection, filtering, and bulk actions.
 
-use crate::core::FileEntry;
-use crate::utils::path::format_display_path;
-
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use crate::core::FileEntry;
+use crate::utils::path;
 
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
@@ -31,7 +31,7 @@ pub(crate) struct NavState {
 
 impl NavState {
     pub(crate) fn new(path: PathBuf) -> Self {
-        let display_path = format_display_path(&path);
+        let display_path = path::format_display_path(&path);
         Self {
             current_dir: path,
             entries: Arc::default(),
@@ -157,7 +157,7 @@ impl NavState {
         focus: Option<OsString>,
     ) {
         self.current_dir = path;
-        self.display_path = format_display_path(&self.current_dir);
+        self.display_path = path::format_display_path(&self.current_dir);
         self.entries = entries;
         self.sort_column = sort_column
             .as_ref()
@@ -392,7 +392,7 @@ impl Default for SortConfig {
 mod tests {
     use super::*;
 
-    use crate::core::browse_dir;
+    use crate::core::fm;
 
     use rand::rng;
     use rand::seq::SliceRandom;
@@ -413,7 +413,7 @@ mod tests {
             File::create(&file_path)?;
         }
 
-        let entries = browse_dir(dir.path())?;
+        let entries = fm::browse_dir(dir.path())?;
         assert!(!entries.is_empty(), "sandbox should not be empty");
 
         let mut nav = NavState::new(dir.path().to_path_buf());
@@ -485,9 +485,9 @@ mod tests {
         File::create(subdir_path.join("file_sub.txt"))?;
         File::create(subsubdir_path.join("file_subsub.txt"))?;
 
-        let base_entries = browse_dir(&base_path)?;
-        let sub_entries = browse_dir(&subdir_path)?;
-        let subsub_entries = browse_dir(&subsubdir_path)?;
+        let base_entries = fm::browse_dir(&base_path)?;
+        let sub_entries = fm::browse_dir(&subdir_path)?;
+        let subsub_entries = fm::browse_dir(&subsubdir_path)?;
 
         let mut nav = NavState::new(base_path.clone());
         let repetitions = 500;
@@ -555,8 +555,8 @@ mod tests {
             File::create(subdir_path.join(format!("file_{}.txt", i)))?;
         }
 
-        let base_entries = browse_dir(&base_path)?;
-        let sub_entries = browse_dir(&subdir_path)?;
+        let base_entries = fm::browse_dir(&base_path)?;
+        let sub_entries = fm::browse_dir(&subdir_path)?;
 
         let mut nav = NavState::new(base_path.clone());
         let repetitions = 200;
@@ -624,7 +624,7 @@ mod tests {
             fs::write(base_path.join(name), "")?;
         }
 
-        let mut entries = browse_dir(&base_path)?;
+        let mut entries = fm::browse_dir(&base_path)?;
         entries.shuffle(&mut rng());
 
         let mut nav = NavState::new(base_path.clone());
@@ -668,7 +668,7 @@ mod tests {
             fs::write(base_path.join(name), "")?;
         }
 
-        let mut entries = browse_dir(&base_path)?;
+        let mut entries = fm::browse_dir(&base_path)?;
         // Shuffle to ensure we arent relying on alphabetical order
         entries.shuffle(&mut rng());
 

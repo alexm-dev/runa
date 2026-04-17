@@ -6,19 +6,6 @@
 //! This module should stay mostly “pure rendering”: it reads state + config and
 //! produces widgets, without owning runa core logic.
 
-use crate::{
-    app::{
-        AppState, Clipboard, LayoutMetrics,
-        actions::{ActionMode, InputMode},
-    },
-    core::worker::Workers,
-    ui::{
-        overlays::Overlay,
-        panes::{self, PaneContext, PaneStyles},
-        widgets,
-    },
-};
-
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
@@ -26,6 +13,17 @@ use ratatui::{
     symbols::line,
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
+};
+
+use crate::app::{
+    AppState, Clipboard, LayoutMetrics,
+    actions::{ActionMode, InputMode},
+};
+use crate::core::worker::Workers;
+use crate::ui::{
+    overlays::Overlay,
+    panes::{self, PaneContext, PaneStyles},
+    widgets,
 };
 
 /// Render function which renders the entire terminal UI for runa on each frame.

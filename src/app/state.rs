@@ -3,6 +3,15 @@
 //! This module defines the overall [AppState] struct, which holds all major application
 //! information and passes it to relevant UI/Terminal functions
 
+use std::ffi::OsString;
+use std::path::Path;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
+
+use crossterm::event::KeyEvent;
+use ratatui::text::Span;
+
 use crate::app::{
     Clipboard, NavState, ParentState, PreviewState,
     actions::{ActionContext, ActionMode, InputMode},
@@ -18,15 +27,6 @@ use crate::core::{
     worker::{WorkerResponse, WorkerTask, Workers},
 };
 use crate::ui::overlays::{OverlayKind, OverlayStack};
-
-use crossterm::event::KeyEvent;
-use ratatui::text::Span;
-
-use std::ffi::OsString;
-use std::path::Path;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
 
 /// Enumeration for each individual keypress result processed.
 ///

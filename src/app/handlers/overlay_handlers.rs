@@ -3,13 +3,14 @@
 //! This module defines the overlay-related functions for the central
 //! [app::state::handle_keypress] function.
 
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use crossterm::event::{KeyCode::*, KeyEvent};
+
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::metadata::FileMetadataCache;
 use crate::ui::overlays::{Overlay, OverlayKind};
-
-use crossterm::event::{KeyCode::*, KeyEvent};
-use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 /// AppState input and action handlers
 impl<'a> AppState<'a> {

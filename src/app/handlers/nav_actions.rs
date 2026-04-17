@@ -10,16 +10,17 @@
 //! the navigation state, requesting previews, and managing the file information cache
 //! as needed based on user interactions.
 
-use crate::app::keymap::NavAction;
-use crate::app::state::{AppState, KeypressResult};
-use crate::app::timings::Timings;
-use crate::app::{Clipboard, NavState, Workers};
-use crate::utils::os::get_home;
-use crate::utils::path::{clean_display_path, expand_home_path_buf, format_display_path};
-
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::Duration;
+
+use crate::app::{
+    Clipboard, NavState, Workers,
+    keymap::NavAction,
+    state::{AppState, KeypressResult},
+    timings::Timings,
+};
+use crate::utils::{os, path};
 
 impl<'a> AppState<'a> {
     /// Handles navigation actions (up, down, into dir, etc).
@@ -248,7 +249,7 @@ impl<'a> AppState<'a> {
             return;
         }
 
-        let input_path = expand_home_path_buf(dest_dir.trim());
+        let input_path = path::expand_home_path_buf(dest_dir.trim());
         let resolved_path = if input_path.is_absolute() {
             input_path
         } else {
@@ -258,7 +259,7 @@ impl<'a> AppState<'a> {
         let absolute_dest = match resolved_path.canonicalize() {
             Ok(p) => p,
             Err(e) => {
-                let norm_msg = format_display_path(&resolved_path);
+                let norm_msg = path::format_display_path(&resolved_path);
                 self.push_overlay_message(
                     format!("Move failed: {}: {}", e, norm_msg),
                     Duration::from_secs(3),
@@ -276,7 +277,7 @@ impl<'a> AppState<'a> {
         }
 
         if let Err(e) = std::fs::read_dir(&absolute_dest) {
-            let norm_msg = format_display_path(&absolute_dest);
+            let norm_msg = path::format_display_path(&absolute_dest);
             self.push_overlay_message(
                 format!("Move failed: Permission denied in {}: {}", norm_msg, e),
                 Duration::from_secs(3),
@@ -285,7 +286,7 @@ impl<'a> AppState<'a> {
         }
 
         if !absolute_dest.is_dir() {
-            let norm_msg = format_display_path(&absolute_dest);
+            let norm_msg = path::format_display_path(&absolute_dest);
             self.push_overlay_message(
                 format!("Move failed: not a directory: {}", norm_msg),
                 Duration::from_secs(3),
@@ -301,8 +302,8 @@ impl<'a> AppState<'a> {
                 let msg = if absolute_dest == absolute_src {
                     "Move failed: source and destination are the same".to_string()
                 } else {
-                    let normalized = format_display_path(&absolute_src);
-                    let display_path = clean_display_path(&normalized);
+                    let normalized = path::format_display_path(&absolute_src);
+                    let display_path = path::clean_display_path(&normalized);
                     format!(
                         "Move failed: cannot move directory into its own sub directory: {}",
                         display_path
@@ -316,7 +317,7 @@ impl<'a> AppState<'a> {
         let fileop_tx = workers.fileop_tx();
         let move_msg = format!(
             "Files moved to: {}",
-            clean_display_path(&absolute_dest.to_string_lossy())
+            path::clean_display_path(&absolute_dest.to_string_lossy())
         );
 
         self.actions
@@ -327,7 +328,7 @@ impl<'a> AppState<'a> {
     }
 
     pub(super) fn handle_go_to_home(&mut self, workers: &Workers) {
-        if let Some(home_path) = get_home() {
+        if let Some(home_path) = os::get_home() {
             self.navigate_to(home_path.clone(), None, workers);
         }
     }
@@ -339,7 +340,7 @@ impl<'a> AppState<'a> {
             return;
         }
 
-        let expaned = expand_home_path_buf(path);
+        let expaned = path::expand_home_path_buf(path);
         let abs_path = if expaned.is_absolute() {
             expaned
         } else {

@@ -3,18 +3,18 @@
 //! This module mostly holds dialog widget logic to help draw functions with positioning, size,
 //! area and style.
 
-use crate::app::AppState;
-use crate::app::actions::ScrollState;
-use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
     style::{Color, Style},
     text::{Span, Text},
-    widgets::{Block, Borders, Clear, Paragraph},
+    widgets::{Block, BorderType, Borders, Clear, Paragraph},
 };
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
+
+use crate::app::AppState;
+use crate::app::actions::ScrollState;
 
 /// Specifies possible dialog positions within the TUI frame.
 /// Also possible to customize the position via the runa.toml

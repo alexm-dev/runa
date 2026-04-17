@@ -8,23 +8,20 @@
 //! The main entry point is [FileMetadata::new], which takes a
 //! file path and returns a populated [FileMetadata] instance.
 
-use crate::config::display::ShowInfoOptions;
-use crate::core::formatter::{
-    TimeFormatCtx, format_attributes, format_file_size, format_file_time, format_file_type,
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::sync::{
+    Arc, OnceLock,
+    atomic::{AtomicU64, Ordering},
 };
+use std::time::SystemTime;
 
 use chrono::{DateTime, Local};
 use dashmap::DashMap;
 
-use std::fs::symlink_metadata;
-use std::io;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::sync::{
-    OnceLock,
-    atomic::{AtomicU64, Ordering},
-};
-use std::time::SystemTime;
+use crate::config::display::ShowInfoOptions;
+use crate::core::formatter::{self, TimeFormatCtx};
 
 #[cfg(windows)]
 pub(crate) const PERMS_WIDTH: usize = 5;
@@ -74,7 +71,7 @@ pub(crate) fn get_or_update_cached_meta(path: &Path) -> Option<CachedMetaKey> {
         return Some(*c);
     }
 
-    let md = symlink_metadata(path).ok();
+    let md = fs::symlink_metadata(path).ok();
     let c = CachedMetaKey {
         epoch,
         size: md.as_ref().filter(|m| m.is_file()).map(|m| m.len()),
@@ -119,7 +116,7 @@ impl FileMetadata {
     /// # Returns
     /// A FileMetadata struct populated with the file's information.
     pub(crate) fn new(path: &Path) -> io::Result<FileMetadata> {
-        let metadata = symlink_metadata(path)?;
+        let metadata = fs::symlink_metadata(path)?;
 
         let file_type = if metadata.is_file() {
             FileType::File
@@ -150,7 +147,7 @@ impl FileMetadata {
             modified: metadata.modified().ok(),
             created: metadata.created().ok(),
             accessed: metadata.accessed().ok(),
-            attributes: format_attributes(&metadata),
+            attributes: formatter::format_attributes(&metadata),
             file_type,
             #[cfg(unix)]
             unix_meta,
@@ -172,27 +169,27 @@ impl FileMetadata {
 
     #[inline]
     pub(crate) fn size(&self) -> String {
-        format_file_size(self.size, self.file_type == FileType::Directory)
+        formatter::format_file_size(self.size, self.file_type == FileType::Directory)
     }
 
     #[inline]
     pub(crate) fn modified(&self, ctx: &TimeFormatCtx) -> String {
-        format_file_time(self.modified, ctx)
+        formatter::format_file_time(self.modified, ctx)
     }
 
     #[inline]
     pub(crate) fn created(&self, ctx: &TimeFormatCtx) -> String {
-        format_file_time(self.created, ctx)
+        formatter::format_file_time(self.created, ctx)
     }
 
     #[inline]
     pub(crate) fn accessed(&self, ctx: &TimeFormatCtx) -> String {
-        format_file_time(self.accessed, ctx)
+        formatter::format_file_time(self.accessed, ctx)
     }
 
     #[inline]
     pub(crate) fn file_type(&self) -> &'static str {
-        format_file_type(&self.file_type)
+        formatter::format_file_type(&self.file_type)
     }
 
     #[cfg(unix)]
@@ -357,7 +354,7 @@ pub(crate) mod unix_meta {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::browse_dir;
+    use crate::core::fm;
     use std::fs::{self, File};
     use std::io::Write;
     use std::path::PathBuf;
@@ -392,7 +389,7 @@ mod tests {
     #[test]
     fn browse_nonexistent() -> Result<(), Box<dyn std::error::Error>> {
         let path = PathBuf::from("/path/does/not/exist");
-        let result = browse_dir(&path);
+        let result = fm::browse_dir(&path);
         assert!(result.is_err());
         Ok(())
     }
@@ -412,8 +409,11 @@ mod tests {
         };
 
         assert_eq!(info.name(), "");
-        assert_eq!(info.file_type(), format_file_type(&FileType::Other));
-        assert_eq!(info.size(), format_file_size(None, false));
+        assert_eq!(
+            info.file_type(),
+            formatter::format_file_type(&FileType::Other)
+        );
+        assert_eq!(info.size(), formatter::format_file_size(None, false));
     }
 
     #[test]
@@ -433,9 +433,9 @@ mod tests {
             unix_meta: None,
         };
 
-        assert_eq!(info.modified(&ctx), format_file_time(None, &ctx));
-        assert_eq!(info.created(&ctx), format_file_time(None, &ctx),);
-        assert_eq!(info.accessed(&ctx), format_file_time(None, &ctx));
+        assert_eq!(info.modified(&ctx), formatter::format_file_time(None, &ctx));
+        assert_eq!(info.created(&ctx), formatter::format_file_time(None, &ctx),);
+        assert_eq!(info.accessed(&ctx), formatter::format_file_time(None, &ctx));
     }
 
     #[test]

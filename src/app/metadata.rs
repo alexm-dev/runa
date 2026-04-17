@@ -3,11 +3,11 @@
 //! [MetadataState] struct to wrap the [FileMetadata] and manage the state of worker requests,
 //! pending paths, and selected file metadata.
 
-use crate::app::timings::Throttler;
-use crate::core::metadata::FileMetadataCache;
-
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use crate::app::timings::Throttler;
+use crate::core::metadata::FileMetadataCache;
 
 #[derive(Debug, Clone)]
 pub(super) struct MetadataState {

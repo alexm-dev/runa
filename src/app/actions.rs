@@ -5,19 +5,20 @@
 //! Defines available modes/actions for file operations like
 //! copy, paste, rename, create, delete, filter.
 
-use crate::app::Clipboard;
-use crate::app::keymap::KeyPrefix;
-use crate::app::nav::NavState;
-use crate::core::proc::FindResult;
-use crate::core::worker::{FileOperation, WorkerTask};
-
-use crossbeam_channel::Sender;
 use std::cell::Cell;
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
+
+use crossbeam_channel::Sender;
+
+use crate::app::{Clipboard, keymap::KeyPrefix, nav::NavState};
+use crate::core::{
+    proc::FindResult,
+    worker::{FileOperation, WorkerTask},
+};
 
 /// Describes the current mode for action handling/input.
 ///

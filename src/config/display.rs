@@ -3,10 +3,11 @@
 //! This module defines the display configuration options which are read from the runa.toml
 //! configuration file.
 
-use crate::ui::widgets::DialogPosition;
 use chrono::format::{Item, StrftimeItems};
 use ratatui::widgets::BorderType;
 use serde::{Deserialize, Deserializer};
+
+use crate::ui::widgets::DialogPosition;
 
 /// Display configuration options
 ///

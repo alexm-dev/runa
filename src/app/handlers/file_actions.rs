@@ -10,14 +10,16 @@
 //! This module is responsible for connecting file actions
 //! to the underlying logic that performs those actions,
 
-use crate::app::actions::{ActionMode, InputMode};
-use crate::app::keymap::FileAction;
-use crate::app::state::{AppState, KeypressResult};
-use crate::app::{Clipboard, Workers};
-use crate::utils::editor::open_in_editor;
-
 use std::sync::Arc;
 use std::time::Duration;
+
+use crate::app::{
+    actions::{ActionMode, InputMode},
+    keymap::FileAction,
+    state::{AppState, KeypressResult},
+    {Clipboard, Workers},
+};
+use crate::utils::editor;
 
 /// AppState file action handlers
 impl<'a> AppState<'a> {
@@ -80,7 +82,7 @@ impl<'a> AppState<'a> {
                 return KeypressResult::Continue;
             }
 
-            match open_in_editor(editor, &path) {
+            match editor::open_in_editor(editor, &path) {
                 Ok(_) => {
                     self.request_dir_load(workers, Some(entry.name().to_os_string()));
                     self.request_preview_force(workers);

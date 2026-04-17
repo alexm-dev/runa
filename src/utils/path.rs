@@ -1,9 +1,10 @@
 //! Path string and formatting relevant utilities.
 
-use crate::utils::os::get_home;
 use std::borrow::Cow;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
 use std::{fs, io};
+
+use crate::utils::os;
 
 /// Helper to resolve the initial loaded for path string.
 /// Checks if the path arg is a file and then loads the parent directory of that file.
@@ -51,7 +52,7 @@ pub(crate) fn clean_display_path(path: &str) -> &str {
 pub(crate) fn shorten_home_path<P: AsRef<Path>>(path: P) -> String {
     let path = path.as_ref();
 
-    let home_dir = get_home();
+    let home_dir = os::get_home();
 
     if let Some(home) = home_dir
         && let Ok(stripped) = path.strip_prefix(home)
@@ -116,7 +117,7 @@ pub(crate) fn expand_home_path(input: &str) -> String {
 
 /// Expands the home path and returns the PathBuf of the home path.
 pub(crate) fn expand_home_path_buf<P: AsRef<Path>>(input: P) -> PathBuf {
-    let home = get_home();
+    let home = os::get_home();
     let input_ref = input.as_ref();
     let input_str = input_ref.to_string_lossy();
 

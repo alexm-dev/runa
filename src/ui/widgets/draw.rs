@@ -5,15 +5,8 @@
 //! All draw functions are then used by ui::rende] to then draw widgets such a input dialog,
 //! which is used by file action functions like rename and more..
 
-use crate::app::actions::{ActionMode, InputMode};
-use crate::app::{AppState, Clipboard};
-use crate::config::display::{StatusSegment, StatusTag};
-use crate::config::input::InputKeys;
-use crate::core::{metadata::FileMetadataCache, worker::Workers};
-use crate::ui::widgets::{
-    DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition, dialog_area, draw_dialog,
-};
-use crate::utils::path::clean_display_path;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
 
 use ratatui::{
     Frame,
@@ -22,10 +15,21 @@ use ratatui::{
     text::{Line, Span, Text},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
-
-use std::sync::atomic::Ordering;
-use std::time::Duration;
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+
+use crate::app::{
+    AppState, Clipboard,
+    actions::{ActionMode, InputMode},
+};
+use crate::config::{
+    display::{StatusSegment, StatusTag},
+    input::InputKeys,
+};
+use crate::core::{metadata::FileMetadataCache, worker::Workers};
+use crate::ui::widgets::{
+    self, DialogLayout, DialogPosition, DialogSize, DialogStyle, StatusPosition,
+};
+use crate::utils::path;
 
 pub(crate) fn draw_separator(frame: &mut Frame, area: Rect, style: Style, border_type: BorderType) {
     frame.render_widget(
@@ -82,7 +86,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     String::new()
                 };
 
-                let dialog_area = dialog_area(frame.area(), confirm_size, position);
+                let dialog_area = widgets::dialog_area(frame.area(), confirm_size, position);
                 let visible_width = dialog_area.width.saturating_sub(2) as usize;
 
                 let mut dialog_lines = vec![
@@ -105,7 +109,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     size: confirm_size,
                 };
 
-                draw_dialog(
+                widgets::draw_dialog(
                     frame,
                     dialog_layout,
                     border_type,
@@ -130,7 +134,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     if action_targets.len() == 1 {
                         format!(
                             "File to move: {}",
-                            clean_display_path(&action_targets[0].to_string_lossy())
+                            path::clean_display_path(&action_targets[0].to_string_lossy())
                         )
                     } else {
                         format!(
@@ -140,7 +144,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                                 .iter()
                                 .map(|p| format!(
                                     "  - {}",
-                                    clean_display_path(&p.to_string_lossy())
+                                    path::clean_display_path(&p.to_string_lossy())
                                 ))
                                 .collect::<Vec<_>>()
                                 .join("\n")
@@ -158,7 +162,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
 
                 let input_text = app.actions().input_buffer();
                 let cursor_pos = app.actions().input_cursor_pos();
-                let dialog_area = dialog_area(frame.area(), move_size, position);
+                let dialog_area = widgets::dialog_area(frame.area(), move_size, position);
                 let visible_width = dialog_area.width.saturating_sub(2) as usize;
 
                 let (display_input, cursor_offset) =
@@ -179,7 +183,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 }
                 let dialog_text = Text::from(dialog_lines);
 
-                draw_dialog(
+                widgets::draw_dialog(
                     frame,
                     dialog_layout,
                     border_type,
@@ -219,7 +223,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     format!("This {kind} will be overwritten:\n  {}", target_name)
                 };
 
-                let dialog_area = dialog_area(frame.area(), confirm_size, position);
+                let dialog_area = widgets::dialog_area(frame.area(), confirm_size, position);
                 let visible_width = dialog_area.width.saturating_sub(2) as usize;
 
                 let mut dialog_lines = vec![
@@ -244,7 +248,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                     size: confirm_size,
                 };
 
-                draw_dialog(
+                widgets::draw_dialog(
                     frame,
                     dialog_layout,
                     border_type,
@@ -269,13 +273,13 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
 
                 let input_text = app.actions().input_buffer();
                 let cursor_pos = app.actions().input_cursor_pos();
-                let dialog_area = dialog_area(frame.area(), size, position);
+                let dialog_area = widgets::dialog_area(frame.area(), size, position);
                 let visible_width = dialog_area.width.saturating_sub(2) as usize;
 
                 let (display_input, cursor_offset) =
                     input_field_view(input_text, cursor_pos, visible_width);
 
-                draw_dialog(
+                widgets::draw_dialog(
                     frame,
                     dialog_layout,
                     border_type,
@@ -639,7 +643,7 @@ pub(crate) fn draw_show_info_dialog(
         size: DialogSize::Custom(width, height),
     };
 
-    draw_dialog(
+    widgets::draw_dialog(
         frame,
         dialog_layout,
         border_type,
@@ -678,7 +682,7 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     let results = actions.find().results();
     let selected = actions.find().selected();
     let area = frame.area();
-    let dialog_rect = dialog_area(area, size, position);
+    let dialog_rect = widgets::dialog_area(area, size, position);
 
     let total = results.len();
     let selected = selected.min(total.saturating_sub(1));
@@ -753,7 +757,7 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
         }
     }
 
-    draw_dialog(
+    widgets::draw_dialog(
         frame,
         DialogLayout {
             area,
@@ -824,7 +828,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
 
         let height = (lines.len() + border_pad).min(area.height as usize) as u16;
 
-        draw_dialog(
+        widgets::draw_dialog(
             frame,
             DialogLayout {
                 area,
@@ -868,7 +872,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
     let size = widget.go_to_help_size();
     let position = widget.go_to_help_position();
 
-    draw_dialog(
+    widgets::draw_dialog(
         frame,
         DialogLayout {
             area,
@@ -911,7 +915,7 @@ pub(crate) fn draw_message_overlay(
     let height = ((line_count + border_pad).min(area.height as usize)) as u16;
 
     let dialog_size = DialogSize::Custom(width, height);
-    let mut dialog_rect = dialog_area(area, dialog_size, position);
+    let mut dialog_rect = widgets::dialog_area(area, dialog_size, position);
     if dialog_rect.y + dialog_rect.height >= area.y + area.height && dialog_rect.y > area.y {
         dialog_rect.y -= 1;
     }
@@ -922,7 +926,7 @@ pub(crate) fn draw_message_overlay(
         size: dialog_size,
     };
 
-    draw_dialog(
+    widgets::draw_dialog(
         frame,
         custom_layout,
         border_type,
@@ -1188,7 +1192,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
     let max_allowed_height = (area.height * 80 / 100).max(12);
     let dynamic_height = (content_height + 1).min(max_allowed_height);
 
-    draw_dialog(
+    widgets::draw_dialog(
         frame,
         DialogLayout {
             area,

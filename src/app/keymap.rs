@@ -3,12 +3,13 @@
 //! Defines key to an action, parsing from the config, and enum variants
 //! for all navigation, file and actions used by runa.
 
-use crate::Config;
-use crate::app::nav::SortMode;
-
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
+
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+use crate::Config;
+use crate::app::nav::SortMode;
 
 /// Represents any action in the app: navigation, file, or system.
 #[derive(Copy, Clone, Debug, PartialEq)]

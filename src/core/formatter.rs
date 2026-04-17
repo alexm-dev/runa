@@ -6,16 +6,6 @@
 //!
 //! Also formatts FileTypes to be used by FileMetadata and ShowInfo overlay widget.
 
-use crate::app::nav::{SortConfig, SortMode, SortOrder};
-use crate::core::FileEntry;
-use crate::core::cache::DirListOptions;
-use crate::core::metadata::{FileType, get_or_update_cached_meta, meta_cache};
-use crate::utils::os::is_regular_file;
-
-use chrono::{DateTime, Local};
-use humansize::{DECIMAL, format_size};
-use unicode_width::UnicodeWidthChar;
-
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::ffi::OsString;
@@ -24,6 +14,18 @@ use std::io::{BufReader, ErrorKind, Read, Seek};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use chrono::{DateTime, Local};
+use humansize::{self, DECIMAL};
+use unicode_width::UnicodeWidthChar;
+
+use crate::app::nav::{SortConfig, SortMode, SortOrder};
+use crate::core::{
+    FileEntry,
+    cache::DirListOptions,
+    metadata::{self, FileType},
+};
+use crate::utils::os;
 
 // Minimum number of lines shown in any preview
 const MIN_PREVIEW_LINES: usize = 3;
@@ -248,7 +250,7 @@ impl Formatter {
 
         let mut path_buffer = directory_path.to_path_buf();
 
-        let cache = meta_cache();
+        let cache = metadata::meta_cache();
         if cache.len() > HARD_SORT_CACHE_LIMIT {
             cache.clear();
         }
@@ -258,7 +260,7 @@ impl Formatter {
 
             path_buffer.push(file_entry.name());
 
-            if let Some(cached) = get_or_update_cached_meta(&path_buffer) {
+            if let Some(cached) = metadata::get_or_update_cached_meta(&path_buffer) {
                 let (key, display) = match metadata_sort_field {
                     MetadataSortField::Size => {
                         let val = cached.size.unwrap_or(0);
@@ -465,7 +467,7 @@ pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
     if is_dir {
         "-".into()
     } else if let Some(sz) = size {
-        format_size(sz, DECIMAL)
+        humansize::format_size(sz, DECIMAL)
     } else {
         "-".to_string()
     }
@@ -552,7 +554,7 @@ pub(crate) fn safe_read_preview(
 ) -> Vec<String> {
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
-    if !is_regular_file(path) {
+    if !os::is_regular_file(path) {
         return vec![sanitize_to_exact_width(
             "[Not a regular file - preview skipped]",
             pane_width,
@@ -772,7 +774,7 @@ fn natural_cmp_bytes(a: &[u8], b: &[u8], fold_case: bool) -> Ordering {
 mod tests {
 
     use super::*;
-    use crate::core;
+    use crate::core::fm;
     use std::io::Write;
     use tempfile::tempdir;
 
@@ -866,7 +868,7 @@ mod tests {
     #[test]
     fn core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
         let temp_dir = tempdir()?;
-        let entries = core::browse_dir(temp_dir.path())?;
+        let entries = fm::browse_dir(temp_dir.path())?;
 
         assert!(entries.is_empty(), "Directory should be empty");
         Ok(())
@@ -1033,7 +1035,7 @@ mod tests {
         File::create(&path2)?.write_all(b"medium content")?;
         File::create(&path3)?.write_all(b"large content that is bigger")?;
 
-        let mut entries = core::browse_dir(temp_dir.path())?;
+        let mut entries = fm::browse_dir(temp_dir.path())?;
         let fmt = Formatter::new(
             DirListOptions {
                 dirs_first: true,
@@ -1068,7 +1070,7 @@ mod tests {
         File::create(&path3)?.write_all(b"newest")?;
         filetime::set_file_mtime(&path3, filetime::FileTime::from_unix_time(3000, 0))?;
 
-        let mut entries = core::browse_dir(temp_dir.path())?;
+        let mut entries = fm::browse_dir(temp_dir.path())?;
         let fmt = Formatter::new(
             DirListOptions {
                 dirs_first: true,
@@ -1091,7 +1093,7 @@ mod tests {
 
     #[test]
     fn formatter_sort_modified_with_dirs_first() -> Result<(), Box<dyn std::error::Error>> {
-        meta_cache().clear();
+        metadata::meta_cache().clear();
         let temp_dir = tempdir()?;
         let dir_path = temp_dir.path().join("aaa_old_dir");
         let file_path = temp_dir.path().join("bbb_new_file.txt");
@@ -1102,7 +1104,7 @@ mod tests {
         File::create(&file_path)?.write_all(b"new")?;
         filetime::set_file_mtime(&file_path, filetime::FileTime::from_unix_time(5000, 0))?;
 
-        let mut entries = core::browse_dir(temp_dir.path())?;
+        let mut entries = fm::browse_dir(temp_dir.path())?;
 
         let fmt = Formatter::new(
             DirListOptions {
@@ -1124,7 +1126,7 @@ mod tests {
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names, vec!["aaa_old_dir", "bbb_new_file.txt"]);
 
-        let cache = meta_cache();
+        let cache = metadata::meta_cache();
         assert!(
             !cache.is_empty(),
             "Metadata cache should not be empty after sorting"

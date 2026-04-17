@@ -3,10 +3,11 @@
 //! Tracks entries, selection, worker requests for the parent pane view above the current working
 //! directory
 
-use crate::app::nav::SortConfig;
-use crate::core::FileEntry;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+
+use crate::app::nav::SortConfig;
+use crate::core::FileEntry;
 
 /// Holds the state of the parent directory pane
 ///

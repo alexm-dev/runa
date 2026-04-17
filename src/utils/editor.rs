@@ -1,7 +1,5 @@
 //! Editor utilities
 
-use crate::config::Editor;
-use crate::core::metadata::bump_meta_sort_epoch;
 use std::io;
 use std::path::Path;
 
@@ -9,6 +7,9 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
+
+use crate::config::Editor;
+use crate::core::metadata;
 
 /// Opens a specified path/file in the configured editor ("nvim" or "vim" etc.).
 ///
@@ -30,7 +31,7 @@ pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Resu
     let mut stdout = io::stdout();
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
-    bump_meta_sort_epoch();
+    metadata::bump_meta_sort_epoch();
 
     let status = std::process::Command::new(editor_path)
         .args(args)

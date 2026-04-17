@@ -13,8 +13,7 @@ use std::path::PathBuf;
 
 use crate::cli::{CliAction, handle_args};
 use crate::config::Config;
-use crate::core::terminal;
-use crate::core::worker::Workers;
+use crate::core::{terminal, worker::Workers};
 use crate::utils::path::{resolve_initial_dir, validate_path};
 
 fn startup_container<'a>(

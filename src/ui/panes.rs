@@ -5,10 +5,12 @@
 //!
 //! Used internally by ui::render
 
-use crate::app::{AppState, Clipboard, PreviewData};
-use crate::config::Theme;
-use crate::core::FileEntry;
-use crate::ui::icons::nerd_font_icon;
+use std::borrow::Cow;
+use std::collections::HashSet;
+use std::ffi::OsString;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+
 use ratatui::widgets::BorderType;
 use ratatui::{
     Frame,
@@ -19,11 +21,10 @@ use ratatui::{
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
-use std::borrow::Cow;
-use std::collections::HashSet;
-use std::ffi::OsString;
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use crate::app::{AppState, Clipboard, PreviewData};
+use crate::config::Theme;
+use crate::core::FileEntry;
+use crate::ui::icons;
 
 const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
 const MIN_LEFT_WIDTH: u16 = 12;
@@ -556,7 +557,7 @@ fn make_entry_row<'a>(
     }
 
     if context.show_icons {
-        let (icon, icon_custom_color) = nerd_font_icon(entry, context.theme);
+        let (icon, icon_custom_color) = icons::nerd_font_icon(entry, context.theme);
 
         let mut icon_col = String::with_capacity(icon.len() + 1);
         icon_col.push_str(icon);

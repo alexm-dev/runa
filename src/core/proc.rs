@@ -14,12 +14,6 @@
 //! The module also includes [complete_dirs_with_fd] function to enable the move file function to have
 //! auto-completion of paths via fd.
 
-use crate::utils::os::{bat_binary, fd_binary};
-use crate::utils::path::{flatten_separators, normalize_search_path, normalize_separators};
-
-use fuzzy_matcher::FuzzyMatcher;
-use fuzzy_matcher::skim::SkimMatcherV2;
-
 use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::ffi::OsString;
@@ -29,6 +23,11 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
+
+use crate::utils::{os, path};
 
 /// The size of the buffer reader used to read the output of fd
 /// This value is set to 32KB to balance memory usage and performance.
@@ -71,7 +70,7 @@ impl FindResult {
 
     pub(crate) fn relative(&self, base: &Path) -> Cow<'_, str> {
         let rel = self.path.strip_prefix(base).unwrap_or(&self.path);
-        normalize_search_path(rel)
+        path::normalize_search_path(rel)
     }
 }
 
@@ -97,7 +96,7 @@ pub(crate) fn find(
 
     let max_res_str = max_results.to_string();
 
-    let fd_bin = fd_binary()?;
+    let fd_bin = os::fd_binary()?;
 
     let mut cmd = Command::new(fd_bin);
     cmd.arg(".")
@@ -126,8 +125,8 @@ pub(crate) fn find(
     let matcher = SkimMatcherV2::default();
     let mut raw_results: Vec<RawResult> = Vec::with_capacity(max_results * 2);
 
-    let norm_query = normalize_separators(query);
-    let flat_query = flatten_separators(&norm_query);
+    let norm_query = path::normalize_separators(query);
+    let flat_query = path::flatten_separators(&norm_query);
 
     if let Some(stdout) = proc.stdout.take() {
         let mut reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
@@ -140,8 +139,8 @@ pub(crate) fn find(
                 break;
             }
             let rel = line_buffer.trim();
-            let norm_rel = normalize_separators(rel);
-            let flat_rel = flatten_separators(&norm_rel);
+            let norm_rel = path::normalize_separators(rel);
+            let flat_rel = path::flatten_separators(&norm_rel);
             if let Some(score) = matcher.fuzzy_match(&flat_rel, &flat_query) {
                 raw_results.push(RawResult {
                     relative: norm_rel.into_owned(),
@@ -185,7 +184,7 @@ pub(crate) fn preview_bat(
         return Ok(Vec::new());
     }
 
-    let bat_bin = bat_binary()?;
+    let bat_bin = os::bat_binary()?;
 
     let start = scroll + 1;
     let end = scroll + max_lines;
@@ -226,7 +225,7 @@ pub(crate) fn complete_dirs_with_fd(
     prefix: &str,
     show_hidden: bool,
 ) -> Result<Vec<String>, std::io::Error> {
-    let fd_bin = fd_binary()?;
+    let fd_bin = os::fd_binary()?;
 
     let mut cmd = Command::new(fd_bin);
     cmd.arg("--type").arg("d").arg("--max-depth").arg("1");
@@ -297,7 +296,7 @@ mod tests {
     #[test]
     fn finds_fd_binary_if_available() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
-        let bin = fd_binary()?;
+        let bin = os::fd_binary()?;
         assert!(bin == "fd" || bin == "fd-find");
         assert!(which::which(bin).is_ok());
         Ok(())
@@ -306,7 +305,7 @@ mod tests {
     #[test]
     fn finds_bat_binary_if_available() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
-        let bin = bat_binary()?;
+        let bin = os::bat_binary()?;
         assert_eq!(bin, "bat");
         assert!(which::which(bin).is_ok());
         Ok(())

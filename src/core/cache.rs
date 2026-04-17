@@ -3,15 +3,14 @@
 //! Caches an Arc slice of FileEntry and the sort_column needed
 //! to share entry states between panes.
 
-use crate::app::nav::SortConfig;
-use crate::core::FileEntry;
-
-use dashmap::DashMap;
-use dashmap::mapref::entry::Entry;
-
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Instant;
+
+use dashmap::{DashMap, mapref::entry::Entry};
+
+use crate::app::nav::SortConfig;
+use crate::core::FileEntry;
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) struct DirListOptions {

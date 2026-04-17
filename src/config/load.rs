@@ -6,15 +6,15 @@
 //!
 //! Also implements default config initialization when `runa.toml` is not present.
 
-use crate::config::Display;
-use crate::config::Theme;
-use crate::config::assets::{FULL_TOML, MINIMAL_TOML};
-use crate::config::{Editor, Keys};
-use crate::config::{General, InternalGeneral};
-use crate::utils::os::get_home;
+use std::{fs, io, path::PathBuf};
 
 use serde::Deserialize;
-use std::{fs, io, path::PathBuf};
+
+use crate::config::{
+    Display, Editor, General, InternalGeneral, Keys, Theme,
+    assets::{FULL_TOML, MINIMAL_TOML},
+};
+use crate::utils::os;
 
 /// Raw configuration as read from the toml file
 /// This struct is deserialized directly from the toml file.
@@ -117,7 +117,7 @@ impl Config {
             .or_else(|| {
                 std::env::var_os("XDG_CONFIG_HOME").map(|s| PathBuf::from(s).join("runa/runa.toml"))
             })
-            .or_else(|| get_home().map(|h| h.join(".config/runa/runa.toml")))
+            .or_else(|| os::get_home().map(|h| h.join(".config/runa/runa.toml")))
             .unwrap_or_else(|| PathBuf::from("runa.toml"))
     }
 

@@ -3,17 +3,21 @@
 //! Handles setup/teardown of raw mode, alternate screen, redraws,
 //! and events (keypress, resize) to app logic.
 
-use crate::app::{AppContainer, KeypressResult, RunaRoot, handle_sort_action, handle_tab_action};
-use crate::ui;
+use std::{io, time::Duration};
+
 use crossterm::{
     cursor::{Hide, Show},
     event::{self, Event, KeyEventKind},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{self, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::Terminal;
-use ratatui::backend::{Backend, CrosstermBackend};
-use std::{io, time::Duration};
+use ratatui::{
+    Terminal,
+    backend::{Backend, CrosstermBackend},
+};
+
+use crate::app::{self, AppContainer, KeypressResult, RunaRoot};
+use crate::ui;
 
 /// Initializes the terminal in raw mode and alternate sceen and runs the main event loop.
 ///
@@ -22,24 +26,21 @@ use std::{io, time::Duration};
 ///
 /// Returns an std::io::Error if terminal setup or teardown fails.
 pub(crate) fn run_terminal(root: &mut RunaRoot) -> io::Result<()> {
-    enable_raw_mode()?;
+    terminal::enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, Hide)?;
     let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
     let result = event_loop(&mut terminal, root);
 
-    disable_raw_mode()?;
+    terminal::disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen, Show)?;
     result
 }
 
 /// Main event loop of runa: draws UI, polls for events and dispatches them to the app.
 /// Returns on quit
-fn event_loop<B: ratatui::backend::Backend>(
-    terminal: &mut Terminal<B>,
-    root: &mut RunaRoot,
-) -> io::Result<()>
+fn event_loop<B: Backend>(terminal: &mut Terminal<B>, root: &mut RunaRoot) -> io::Result<()>
 where
     io::Error: From<<B as Backend>::Error>,
 {
@@ -91,13 +92,13 @@ where
                         }
                         KeypressResult::Tab(tab_act) => {
                             if let KeypressResult::Quit =
-                                handle_tab_action(&root.workers, &mut root.container, tab_act)
+                                app::handle_tab_action(&root.workers, &mut root.container, tab_act)
                             {
                                 break;
                             }
                         }
                         KeypressResult::Sort(config) => {
-                            handle_sort_action(&mut root.container, config);
+                            app::handle_sort_action(&mut root.container, config);
                         }
                         _ => {}
                     }
