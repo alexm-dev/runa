@@ -36,7 +36,7 @@ which = "8.0.2"
 uzers = "0.12.2"
 
 [dev-dependencies]
-rand = "0.10.0"
+rand = "0.10.1"
 tempfile = "3.27.0"
 filetime = "0.2.27"
 
