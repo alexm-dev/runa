@@ -69,15 +69,18 @@ impl<'a> AppState<'a> {
     /// If a file is selected, attempts to open it in the configured editor.
     /// If an error occurs, prints it to stderr.
     fn handle_open_file(&mut self, workers: &Workers) -> KeypressResult {
-        let editor = self.config.editor();
-        if !editor.exists() {
-            let msg = format!("Editor '{}' not found", editor.cmd());
-            self.push_overlay_message(msg, Duration::from_secs(3));
-            return KeypressResult::Continue;
-        }
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
-            match open_in_editor(self.config.editor(), &path) {
+            let editor = self.config.editor();
+            if !editor.exists(&path) {
+                let cmd = editor.cmd(&path);
+                let binary = cmd.first().map(|s| s.as_str()).unwrap_or("unknown");
+                let msg = format!("Editor '{}' not found", binary);
+                self.push_overlay_message(msg, Duration::from_secs(3));
+                return KeypressResult::Continue;
+            }
+
+            match open_in_editor(editor, &path) {
                 Ok(_) => {
                     self.request_dir_load(workers, Some(entry.name().to_os_string()));
                     self.request_preview_force(workers);

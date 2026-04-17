@@ -4,7 +4,7 @@
 //! configuration file.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
@@ -180,29 +180,55 @@ impl Default for Keys {
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub(crate) struct Editor {
-    cmd: String,
+    default: String,
+    ext: HashMap<String, Vec<String>>,
+    filename: HashMap<String, Vec<String>>,
 }
 
 /// Public methods for accessing editor configuration options
 impl Editor {
     #[inline]
-    pub(crate) fn cmd(&self) -> &str {
-        let trimmed = self.cmd.trim();
-        if trimmed.is_empty() { "vim" } else { trimmed }
+    pub(crate) fn cmd(&self, path: &Path) -> Vec<String> {
+        if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
+            if let Some(cmd) = self.filename.get(name) {
+                return cmd.clone();
+            }
+            let name_lower = name.to_lowercase();
+            if let Some(cmd) = self.filename.get(&name_lower) {
+                return cmd.clone();
+            }
+        }
+
+        if let Some(ext) = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.to_lowercase())
+            && let Some(cmd) = self.ext.get(&ext)
+        {
+            return cmd.clone();
+        }
+
+        vec![self.default.clone()]
     }
 
-    pub(crate) fn resolved_path(&self) -> Option<PathBuf> {
-        which::which(self.cmd()).ok()
+    pub(crate) fn resolved_path(&self, path: &Path) -> Option<PathBuf> {
+        let cmd = self.cmd(path);
+        let program = cmd.first()?;
+        which::which(program).ok()
     }
 
-    pub(crate) fn exists(&self) -> bool {
-        self.resolved_path().is_some()
+    pub(crate) fn exists(&self, path: &Path) -> bool {
+        self.resolved_path(path).is_some()
     }
 }
 
 /// Default editor configuration options
 impl Default for Editor {
     fn default() -> Self {
-        Editor { cmd: "nvim".into() }
+        Editor {
+            default: "nvim".into(),
+            ext: HashMap::new(),
+            filename: HashMap::new(),
+        }
     }
 }

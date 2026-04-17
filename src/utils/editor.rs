@@ -15,10 +15,15 @@ use crossterm::{
 /// Temporary disables raw mode and exits alternate sceen while the editor runs.
 /// On return, restores raw mode and alternate sceen.
 pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Result<()> {
-    let editor_path = editor.resolved_path().ok_or_else(|| {
+    let cmd = editor.cmd(file_path);
+    let binary = cmd
+        .first()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "No editor command configured"))?;
+    let args = &cmd[1..];
+    let editor_path = which::which(binary).map_err(|_| {
         io::Error::new(
             io::ErrorKind::NotFound,
-            format!("Editor '{}' not found", editor.cmd()),
+            format!("Editor '{}' not found", binary),
         )
     })?;
 
@@ -28,6 +33,7 @@ pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Resu
     bump_meta_sort_epoch();
 
     let status = std::process::Command::new(editor_path)
+        .args(args)
         .arg(file_path)
         .status();
 
@@ -41,7 +47,7 @@ pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Resu
         ))),
         Err(e) => Err(io::Error::new(
             io::ErrorKind::NotFound,
-            format!("Command '{}' not found: {}", editor.cmd(), e),
+            format!("Command '{}' not found: {}", binary, e),
         )),
     }
 }
