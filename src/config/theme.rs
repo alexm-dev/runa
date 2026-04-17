@@ -666,8 +666,8 @@ impl Default for WidgetTheme {
             size: Some(DialogSize::Small),
             confirm_size: Some(DialogSize::Large),
             move_size: Some(DialogSize::Custom(70, 14)),
-            find_visible_results: Some(5),
-            find_width: Some(40),
+            find_visible_results: Some(8),
+            find_width: Some(60),
             go_to_help: GoToHelpTheme::default(),
         }
     }

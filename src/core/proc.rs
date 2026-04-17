@@ -130,16 +130,16 @@ pub(crate) fn find(
     let flat_query = flatten_separators(&norm_query);
 
     if let Some(stdout) = proc.stdout.take() {
-        let reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
+        let mut reader = io::BufReader::with_capacity(BUFREADER_SIZE, stdout);
+        let mut line_buffer = String::with_capacity(256);
 
-        for line in reader.lines() {
+        while reader.read_line(&mut line_buffer)? > 0 {
             if cancel.load(std::sync::atomic::Ordering::Relaxed) {
                 let _ = proc.kill();
                 let _ = proc.wait();
                 break;
             }
-            let rel = line?;
-            let rel = rel.trim();
+            let rel = line_buffer.trim();
             let norm_rel = normalize_separators(rel);
             let flat_rel = flatten_separators(&norm_rel);
             if let Some(score) = matcher.fuzzy_match(&flat_rel, &flat_query) {
@@ -148,21 +148,26 @@ pub(crate) fn find(
                     score,
                 });
             }
+            line_buffer.clear();
         }
         let _ = proc.wait();
     }
 
-    raw_results.sort_unstable_by(|a, b| b.score.cmp(&a.score));
-    raw_results.truncate(max_results);
+    if raw_results.len() > max_results {
+        raw_results.select_nth_unstable_by_key(max_results - 1, |raw| std::cmp::Reverse(raw.score));
+        raw_results.truncate(max_results);
+    }
+    raw_results.sort_unstable_by_key(|raw| std::cmp::Reverse(raw.score));
 
     out.reserve(raw_results.len());
-    for raw in raw_results {
+    out.extend(raw_results.into_iter().map(|raw| {
         let path = base_dir.join(&raw.relative);
-        out.push(FindResult {
+        FindResult {
             path,
             score: raw.score,
-        });
-    }
+        }
+    }));
+
     Ok(())
 }
 
