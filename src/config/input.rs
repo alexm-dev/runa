@@ -226,7 +226,7 @@ impl Editor {
 impl Default for Editor {
     fn default() -> Self {
         Editor {
-            default: "nvim".into(),
+            default: "vim".into(),
             ext: HashMap::new(),
             filename: HashMap::new(),
         }

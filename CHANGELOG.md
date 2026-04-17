@@ -12,13 +12,44 @@ All the changes made to runa are documented here.
     - Possible to be configured via the `[theme.icon_color] "foo" = "#RRGGBB"` setting in the runa.toml
 - **Entry Coloring**: Added colored entries and extensions. 
     - Possible to be configured via `[theme.exact] "foo" = { fg = "#RRGGBB", bg ..}` for entires and `[theme.extension] "foo" = { fg = "#RRGGBB, bg .. }` for extensions.
+- **Editor Configuration**: Added more editor configuration options. 
+    - Possible to now set editors/programs for specific filenames and extensions.
+    ```toml
+    [editor]
+    default = "nvim"
+    ext = { rs = ["vim"], md = ["code"] }
+    filename = { "Cargo.toml" = ["vim"] }
+
+    # OR
+    [editor.ext]
+    rs = ["vim"]
+    md = ["code"]
+
+    [editor.filename]
+    "Cargo.toml" = ["vim"]
+
+    # Also possible to add arguments
+    ext = { md = ["code", "-d"] }
+    ```
 
 ### Fixed
 - **CLI**: Fixed an issue where the CLI arg `--init-full` generated a broken `runa.toml`. [Issue #55](https://github.com/alexm-dev/runa/issues/55)
 - **Theme**: Fixed an issuse where the `accent` style ignored the `separator`. Now, the separator applies the set `accent` theme and also consideres the `separtor` override. [Issue #56](https://github.com/alexm-dev/runa/issues/56)
 
 ### Changed
+- **[BREAKING] Editor Config**: With the new editor configuration, the older `[editor] cmd = "foo"` no longer works.
+    - Example:
+    ```toml
+    # Old 
+    [editor]
+    cmd = "nvim"
+
+    # New
+    [editor]
+    default = "nvim"
+    ```
 - **Border styling**: `unified` border style now applies the separator to the outer border as well, making it look like a proper "boxed" or "unified" look.
+- **Find Widget**: Set `find_width` to 60 and `find_visible_results` to 8.
 
 ### Internal
 - **Performance**:
