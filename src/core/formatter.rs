@@ -7,6 +7,7 @@
 //! Also formatts FileTypes to be used by FileMetadata and ShowInfo overlay widget.
 
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
 use std::io::{BufReader, ErrorKind, Read, Seek};
@@ -16,7 +17,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Local};
 use humansize::{self, DECIMAL};
-use rustc_hash::FxHashSet;
 use unicode_width::UnicodeWidthChar;
 
 use crate::app::nav::{SortConfig, SortMode, SortOrder};
@@ -51,8 +51,8 @@ enum MetadataSortField {
 pub(crate) struct Formatter {
     list: DirListOptions,
     sort_config: SortConfig,
-    always_show: Option<Arc<FxHashSet<OsString>>>,
-    always_show_lowercase: Option<Arc<FxHashSet<String>>>,
+    always_show: Option<Arc<HashSet<OsString>>>,
+    always_show_lowercase: Option<Arc<HashSet<String>>>,
 }
 
 impl Formatter {
@@ -62,7 +62,7 @@ impl Formatter {
     pub(crate) fn new(
         list: DirListOptions,
         sort_config: SortConfig,
-        always_show: Arc<FxHashSet<OsString>>,
+        always_show: Arc<HashSet<OsString>>,
     ) -> Self {
         let (always_show, always_show_lowercase) = if always_show.is_empty() {
             (None, None)
@@ -71,7 +71,7 @@ impl Formatter {
                 always_show
                     .iter()
                     .map(|s| s.to_string_lossy().to_lowercase())
-                    .collect::<FxHashSet<_>>(),
+                    .collect::<HashSet<_>>(),
             );
             (Some(always_show), Some(lower))
         } else {
@@ -835,7 +835,7 @@ mod tests {
         };
         let short_config = SortConfig::default();
 
-        let fmt = Formatter::new(list_hide, short_config, Arc::new(FxHashSet::default()));
+        let fmt = Formatter::new(list_hide, short_config, Arc::new(HashSet::new()));
         fmt.filter_entries(&mut entries);
 
         assert_eq!(entries.len(), 1);
@@ -856,7 +856,7 @@ mod tests {
             case_insensitive: true,
         };
 
-        let fmt = Formatter::new(list_show, short_config, Arc::new(FxHashSet::default()));
+        let fmt = Formatter::new(list_show, short_config, Arc::new(HashSet::new()));
         fmt.filter_entries(&mut entries);
         assert_eq!(entries.len(), 4);
         assert!(entries.iter().any(|e| e.name_str() == ".hidden"));
@@ -893,7 +893,7 @@ mod tests {
                 mode: SortMode::Name,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -912,7 +912,7 @@ mod tests {
                 mode: SortMode::Name,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
         let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -945,7 +945,7 @@ mod tests {
                 mode: SortMode::Extension,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -967,7 +967,7 @@ mod tests {
                 mode: SortMode::Extension,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
         let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -997,7 +997,7 @@ mod tests {
                 mode: SortMode::Natural,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -1016,7 +1016,7 @@ mod tests {
                 mode: SortMode::Natural,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
         let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -1048,7 +1048,7 @@ mod tests {
                 mode: SortMode::Size,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -1083,7 +1083,7 @@ mod tests {
                 mode: SortMode::Modified,
                 order: SortOrder::Ascending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
         fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
@@ -1118,7 +1118,7 @@ mod tests {
                 mode: SortMode::Modified,
                 order: SortOrder::Descending,
             },
-            Arc::new(FxHashSet::default()),
+            Arc::new(HashSet::new()),
         );
 
         fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");

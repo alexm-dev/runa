@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use std::sync::LazyLock;
 
 use ratatui::style::{Color, Style};
-use rustc_hash::FxHashMap;
 use serde::{Deserialize, Deserializer};
 
 use crate::config::presets;
@@ -47,11 +46,11 @@ pub(crate) struct Theme {
     info: InfoStatusTheme,
 
     #[serde(skip)]
-    exact_cache: FxHashMap<String, Style>,
+    exact_cache: HashMap<String, Style>,
     #[serde(skip)]
-    extension_cache: FxHashMap<String, Style>,
+    extension_cache: HashMap<String, Style>,
     #[serde(skip)]
-    icon_color_cache: FxHashMap<String, Color>,
+    icon_color_cache: HashMap<String, Color>,
 }
 
 impl Default for Theme {
@@ -93,9 +92,9 @@ impl Default for Theme {
             widget: WidgetTheme::default(),
             tab: TabTheme::default(),
             info: InfoStatusTheme::default(),
-            exact_cache: FxHashMap::default(),
-            extension_cache: FxHashMap::default(),
-            icon_color_cache: FxHashMap::default(),
+            exact_cache: HashMap::new(),
+            extension_cache: HashMap::new(),
+            icon_color_cache: HashMap::new(),
         }
     }
 }
@@ -136,7 +135,7 @@ impl Theme {
 
     crate::getters! {
         exe_color: Color,
-        icon_color_cache: &FxHashMap<String, Color>,
+        icon_color_cache: &HashMap<String, Color>,
         selection_icon: &str,
         preview: &PaneTheme,
         marker: &MarkerTheme,

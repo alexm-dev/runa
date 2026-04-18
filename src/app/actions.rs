@@ -6,13 +6,13 @@
 //! copy, paste, rename, create, delete, filter.
 
 use std::cell::Cell;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 use crossbeam_channel::Sender;
-use rustc_hash::FxHashSet;
 
 use crate::app::{Clipboard, keymap::KeyPrefix, nav::NavState};
 use crate::core::{
@@ -167,7 +167,7 @@ impl ActionContext {
         clipboard: &mut Clipboard,
         is_cut: bool,
     ) {
-        let mut set = FxHashSet::default();
+        let mut set = HashSet::new();
         if !nav.markers().is_empty() {
             for path in nav.markers() {
                 set.insert(path.clone());

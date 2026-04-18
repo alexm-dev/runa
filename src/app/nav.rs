@@ -3,13 +3,13 @@
 //! Manages the current directory, file entries, selection, markers and filters.
 //! Provides helpers for pane navigation, selection, filtering, and bulk actions.
 
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::core::FileEntry;
 use crate::utils::path;
-use rustc_hash::{FxHashMap, FxHashSet};
 
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
@@ -17,10 +17,10 @@ pub(crate) struct NavState {
     entries: Arc<[FileEntry]>,
     selected: usize,
     shown_indices: Vec<usize>,
-    positions: FxHashMap<PathBuf, OsString>,
-    markers: FxHashSet<PathBuf>,
+    positions: HashMap<PathBuf, OsString>,
+    markers: HashSet<PathBuf>,
     filter: String,
-    filters: FxHashMap<PathBuf, String>,
+    filters: HashMap<PathBuf, String>,
     sort_config: SortConfig,
     request_id: u64,
 
@@ -37,10 +37,10 @@ impl NavState {
             entries: Arc::default(),
             selected: 0,
             shown_indices: Vec::new(),
-            positions: FxHashMap::default(),
-            markers: FxHashSet::default(),
+            positions: HashMap::new(),
+            markers: HashSet::new(),
             filter: String::new(),
-            filters: FxHashMap::default(),
+            filters: HashMap::new(),
             sort_config: SortConfig::default(),
             sort_column: None,
             display_path,
@@ -55,7 +55,7 @@ impl NavState {
         shown_indices: &[usize],
         sort_config: SortConfig,
         sort_column: &Option<Vec<Arc<str>>>,
-        markers: &FxHashSet<PathBuf>,
+        markers: &HashSet<PathBuf>,
         filter: &str,
         display_path: &str,
         request_id: u64,
@@ -133,7 +133,7 @@ impl NavState {
     }
 
     /// Returns a reference to the saved positions map.
-    pub(crate) fn get_position(&self) -> &FxHashMap<PathBuf, OsString> {
+    pub(crate) fn get_position(&self) -> &HashMap<PathBuf, OsString> {
         &self.positions
     }
 
@@ -186,7 +186,7 @@ impl NavState {
 
     /// Toggles the marker state of the currently selected entry.
     /// If the entry is in the clipboard, it is unmarked and removed from the clipboard.
-    pub(crate) fn toggle_marker(&mut self, clipboard: &mut Option<FxHashSet<PathBuf>>) {
+    pub(crate) fn toggle_marker(&mut self, clipboard: &mut Option<HashSet<PathBuf>>) {
         if let Some(entry) = self.selected_entry() {
             let path = self.current_dir().join(entry.name());
 
@@ -205,7 +205,7 @@ impl NavState {
     /// Toggles the marker state of the currently selected entry and advances the selection.
     pub(crate) fn toggle_marker_advance(
         &mut self,
-        clipboard: &mut Option<FxHashSet<PathBuf>>,
+        clipboard: &mut Option<HashSet<PathBuf>>,
         jump: bool,
     ) {
         self.toggle_marker(clipboard);
@@ -230,7 +230,7 @@ impl NavState {
     }
 
     /// Returns the set of action targets, either marked entries or the selected entry.
-    pub(crate) fn get_action_targets(&self) -> FxHashSet<PathBuf> {
+    pub(crate) fn get_action_targets(&self) -> HashSet<PathBuf> {
         if self.markers.is_empty() {
             self.selected_entry()
                 .map(|e| self.current_dir.join(e.name()))
@@ -674,7 +674,7 @@ mod tests {
         let mut nav = NavState::new(base_path.clone());
         nav.update_from_worker(base_path.clone(), Arc::from(entries), None, None);
 
-        let mut clipboard: Option<FxHashSet<PathBuf>> = None;
+        let mut clipboard: Option<HashSet<PathBuf>> = None;
 
         let to_mark = vec!["apple.txt", "banana.txt"];
         for target in to_mark {

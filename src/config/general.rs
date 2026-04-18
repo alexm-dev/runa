@@ -7,11 +7,11 @@
 //! It includes settings such as display options, case sensitivity,
 //! and file handling preferences.
 
+use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use rustc_hash::FxHashSet;
 use serde::Deserialize;
 
 /// The minimum results which is set to if the maximum is overset in the runa.toml.
@@ -59,7 +59,7 @@ pub(crate) struct InternalGeneral {
     show_symlink: bool,
     show_system: bool,
     case_insensitive: bool,
-    always_show: Arc<FxHashSet<OsString>>,
+    always_show: Arc<HashSet<OsString>>,
     max_find_results: usize,
     move_to_trash: bool,
     startup: InternalStartup,
@@ -71,7 +71,7 @@ impl From<General> for InternalGeneral {
             .always_show
             .into_iter()
             .map(OsString::from)
-            .collect::<FxHashSet<_>>();
+            .collect::<HashSet<_>>();
 
         let internal_startup = InternalStartup {
             tabs: g.startup.tabs.into_iter().map(PathBuf::from).collect(),
@@ -98,7 +98,7 @@ impl InternalGeneral {
         show_symlink: bool,
         show_system: bool,
         case_insensitive: bool,
-        always_show: &Arc<FxHashSet<OsString>>,
+        always_show: &Arc<HashSet<OsString>>,
         max_find_results: usize,
         move_to_trash: bool,
     }
