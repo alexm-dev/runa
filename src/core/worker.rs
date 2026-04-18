@@ -28,7 +28,7 @@ use crate::config::display::PreviewMethod;
 use crate::core::{
     FileEntry, FindResult, Formatter,
     cache::{DirCache, DirListOptions},
-    find, fm, formatter, fs,
+    fm, formatter, fs,
     metadata::{self, FileMetadata, FileMetadataCache, MetadataNeeds},
     proc,
 };
@@ -442,7 +442,7 @@ fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRespons
             };
 
             let mut results = Vec::new();
-            let _ = find(
+            let _ = proc::find(
                 &base_dir,
                 &query,
                 &mut results,

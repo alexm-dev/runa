@@ -20,4 +20,4 @@ pub(crate) mod worker;
 
 pub(crate) use fm::FileEntry;
 pub(crate) use formatter::Formatter;
-pub(crate) use proc::{FindResult, find};
+pub(crate) use proc::FindResult;
