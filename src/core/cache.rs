@@ -12,6 +12,8 @@ use dashmap::{DashMap, mapref::entry::Entry};
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
 
+const DIR_CACHE_CAP: usize = 30;
+
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub(crate) struct DirListOptions {
     pub(crate) dirs_first: bool,
@@ -70,6 +72,23 @@ impl DirCache {
         sort_column: Option<Arc<[Arc<str>]>>,
         request_id: u64,
     ) {
+        if self.inner.len() > DIR_CACHE_CAP {
+            let mut oldest_key = None;
+            let mut oldest_time = Instant::now();
+
+            for entry in self.inner.iter() {
+                let time = entry.value().3;
+                if time < oldest_time {
+                    oldest_time = time;
+                    oldest_key = Some(entry.key().clone());
+                }
+            }
+
+            if let Some(key) = oldest_key {
+                self.inner.remove(&key);
+            }
+        }
+
         let key = DirCacheKey::new(path, sort, list_options);
         let new_value: DirCacheValue = Arc::new((entries, sort_column, request_id, Instant::now()));
         match self.inner.entry(key) {

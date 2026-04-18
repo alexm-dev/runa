@@ -816,7 +816,7 @@ mod tests {
         let symlink = FileEntry::new(
             OsString::from("symlink"),
             FileEntry::IS_SYMLINK,
-            Some(Arc::from(Path::new("target"))),
+            Some(Path::new("target").to_path_buf().into_boxed_path()),
         );
 
         let mut entries = vec![
