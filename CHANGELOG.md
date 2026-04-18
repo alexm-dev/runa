@@ -9,9 +9,24 @@ All the changes made to runa are documented here.
 ### Added
 - **Preview scrolling**: Preview pane is now scrollable with the `scroll_up` and `scroll_down` keybinds. Works for both `internal` and `bat` preview methods.
 - **Icon Coloring**: Added colored icons. 
-    - Possible to be configured via the `[theme.icon_color] "foo" = "#RRGGBB"` setting in the runa.toml
 - **Entry Coloring**: Added colored entries and extensions. 
-    - Possible to be configured via `[theme.exact] "foo" = { fg = "#RRGGBB", bg ..}` for entires and `[theme.extension] "foo" = { fg = "#RRGGBB, bg .. }` for extensions.
+    - Possible to be configured via the `[theme.icon_color] "foo" = "#RRGGBB"` setting in the runa.toml
+    - Possible to be configured via `[theme.exact] "foo" = { fg = "#RRGGBB", bg ..}` for entires and `[theme.ext] "foo" = { fg = "#RRGGBB, bg .. }` for extensions.
+    ```toml
+    # Set the entry color for a exact filename
+    [theme.exact]
+    "foo" = { fg = "#RRGGBB", bg = "#RRGGBB" }
+    "bar" = { fg = "#RRGGBB", bg = "#RRGGBB" }
+
+    # Set the entry color for extensions
+    [theme.ext]
+    "foo" = { fg = "#RRGGBB", bg = "#RRGGBB" }
+
+    # Set the extension icon color (not entry color).
+    [theme.icon_color]
+    foo = "#RRGGBB"
+    ```
+
 - **Editor Configuration**: Added more editor configuration options. 
     - Possible to now set editors/programs for specific filenames and extensions.
     ```toml

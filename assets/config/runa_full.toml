@@ -241,29 +241,25 @@ exe_color = "LightGreen"
 # selection.fg = "#EEBBAA"
 # directory.fg = "#7BA"
 # widget.border.fg = "#555555"
-# symlink.directory = "#8aA"
+# symlink.directory.fg = "#8aA"
 # and so on
 
-# Color keys for most sections are always placed directly in the table:
-# [theme.selection]
-# fg = "yellow"
-# bg = "default"
+# Color fields support two formats:
 #
-# For larger sections such as [theme.widget] or [theme.info], you may use either
-# dot notation (e.g. color.fg, border.bg) OR define sub-tables like [theme.widget.color]:
+# 1) Flat shorthand which always sets the .fg
+#    accent = "blue"
 #
-# [theme.widget]
-# color.fg = "white"
-# color.bg = "black"
-# border.fg = "magenta"
+# 2) Explicit form using fg/bg
+#    accent.fg = "blue"
+#    accent.bg = "default"
 #
-# Alternatively, this works and is equivalent:
-# [theme.widget.color]
-# fg = "white"
-# bg = "black"
+# Both are equivalent:
+#   accent = "blue"  ==  accent.fg = "blue"
 #
-# [theme.widget.border]
-# fg = "magenta"
+# Rules:
+# - If only a single value is provided, it maps to `.fg`
+# - `.bg` defaults to "default" unless explicitly set.
+# - `.fg` will always take precedence over the shorthand.
 #
 # Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
 
@@ -324,6 +320,18 @@ file = "default"
 
 # Set the target path color of the symlink
 target = "default"
+
+# Map icon colors to specific files
+# [theme.icon_color]
+# "rs" = "#dea584"
+
+# Map entry colors to specific files
+# [theme.exact]
+# "README.md" = { fg = "yellow", bg = "default" }
+
+# Map entry color for specific file extensions
+# [theme.ext]
+# "rs" = { fg = "default", bg = "default" }
 
 [theme.marker]        # Multi-select marker
 icon = "*"
@@ -462,7 +470,16 @@ group.bg = "default"
 # ===========================
 
 [editor]
-cmd = "nvim"
+# Command to open files (e.g., "nvim", "code", etc.)
+default = "nvim"
+
+# Map file extensions to editors/program commands
+# Use single command or array of command + arguments
+ext = { rs = "nvim", md = "code", txt = ["code", "-d"] }
+
+# Map specific filenames to editors/program commands
+# Use single command or array of command + arguments
+filename = { "Cargo.toml" = "nvim" }
 
 # ===========================
 #          KEYBINDS
