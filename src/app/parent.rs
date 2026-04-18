@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
+use crate::utils::text::StrBuffer;
 
 /// Holds the state of the parent directory pane
 ///
@@ -16,7 +17,7 @@ use crate::core::FileEntry;
 #[derive(Default)]
 pub(crate) struct ParentState {
     entries: Arc<[FileEntry]>,
-    sort_column: Option<Arc<[Arc<str>]>>,
+    sort_column: Option<Arc<StrBuffer>>,
     selected_idx: Option<usize>,
     last_path: Option<PathBuf>,
     last_sort: Option<SortConfig>,
@@ -27,7 +28,7 @@ impl ParentState {
     crate::getters! {
         request_id: u64,
         entries: &Arc<[FileEntry]>,
-        sort_column: &Option<Arc<[Arc<str>]>>,
+        sort_column: &Option<Arc<StrBuffer>>,
         selected_idx: Option<usize>,
     }
 
@@ -61,7 +62,7 @@ impl ParentState {
         req_id: u64,
         parent_path: &Path,
         sort: SortConfig,
-        sort_column: Option<Arc<[Arc<str>]>>,
+        sort_column: Option<Arc<StrBuffer>>,
     ) {
         if req_id < self.request_id {
             return;

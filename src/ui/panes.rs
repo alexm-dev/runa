@@ -9,7 +9,6 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use ratatui::widgets::BorderType;
 use ratatui::{
@@ -25,6 +24,7 @@ use crate::app::{AppState, Clipboard, PreviewData};
 use crate::config::Theme;
 use crate::core::FileEntry;
 use crate::ui::icons;
+use crate::utils::text::StrBuffer;
 
 const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
 const MIN_LEFT_WIDTH: u16 = 12;
@@ -707,40 +707,33 @@ fn pane_inner_width(context: &PaneContext) -> u16 {
 }
 
 #[inline]
-fn right_col_width(sort_column: Option<&[Arc<str>]>) -> u16 {
+fn right_col_width(sort_column: Option<&StrBuffer>) -> u16 {
     let Some(col) = sort_column else {
         return 0;
     };
 
-    let max_w = col
-        .iter()
-        .map(|s| UnicodeWidthStr::width(s.as_ref()))
-        .max()
-        .unwrap_or(0);
+    let max_w = col.iter().map(UnicodeWidthStr::width).max().unwrap_or(0);
 
     (max_w as u16).min(MAX_RIGHT_COLUMN_WIDTH)
 }
 
 #[inline]
-fn right_col_config(inner_w: u16, sort_column: Option<&[Arc<str>]>) -> (bool, u16) {
+fn right_col_config(inner_w: u16, sort_column: Option<&StrBuffer>) -> (bool, u16) {
     let right_w = right_col_width(sort_column);
     let show_col = pane_show_col(inner_w, right_w);
     (show_col, right_w)
 }
 
 #[inline]
-fn right_col_at(sort_column: Option<&[Arc<str>]>, idx: usize) -> Option<&str> {
-    sort_column
-        .and_then(|c| c.get(idx))
-        .map(|s| s.as_ref())
-        .filter(|s| !s.is_empty())
+fn right_col_at(sort_column: Option<&StrBuffer>, idx: usize) -> Option<&str> {
+    sort_column.map(|c| c.get(idx)).filter(|s| !s.is_empty())
 }
 
 #[inline]
 fn right_col_for(
     show_col: bool,
     right_w: u16,
-    sort_column: Option<&[Arc<str>]>,
+    sort_column: Option<&StrBuffer>,
     idx: usize,
 ) -> RightCol<'_> {
     if !show_col {

@@ -32,7 +32,7 @@ use crate::core::{
     metadata::{self, FileMetadata, FileMetadataCache, MetadataNeeds},
     proc,
 };
-use crate::utils::os::is_regular_file;
+use crate::utils::{os::is_regular_file, text::StrBuffer};
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
@@ -221,7 +221,7 @@ pub(crate) enum WorkerResponse {
         path: PathBuf,
         entries: Arc<[FileEntry]>,
         focus: Option<OsString>,
-        sort_column: Option<Arc<[Arc<str>]>>,
+        sort_column: Option<Arc<StrBuffer>>,
         request_id: u64,
         tab_id: Option<usize>,
     },
@@ -289,9 +289,8 @@ fn start_io_worker(
                         formatter.sort_entries(&path, &mut entries, &sort_date_format);
 
                     let entries_arc: Arc<[FileEntry]> = Arc::from(entries);
-                    let sort_column_arc: Option<Arc<[Arc<str>]>> = sort_column
-                        .as_ref()
-                        .map(|v| Arc::from(v.clone().into_boxed_slice()));
+                    let sort_column_arc: Option<Arc<StrBuffer>> =
+                        sort_column.map(|v| Arc::new(StrBuffer::from_iter(v)));
 
                     cache.insert_if_newer(
                         &path,
@@ -351,7 +350,8 @@ fn start_sort_worker(
             let sort_column = formatter.sort_entries(&path, &mut entries_vec, &sort_date_format);
 
             let entries_arc: Arc<[FileEntry]> = Arc::from(entries_vec);
-            let sort_column_arc: Option<Arc<[Arc<str>]>> = sort_column.map(Arc::from);
+            let sort_column_arc: Option<Arc<StrBuffer>> =
+                sort_column.map(|v| Arc::new(StrBuffer::from_iter(v)));
 
             cache.insert_if_newer(
                 &path,

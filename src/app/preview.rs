@@ -12,6 +12,7 @@ use ratatui::text::Text;
 
 use crate::app::{actions::ScrollState, timings::Timings};
 use crate::core::FileEntry;
+use crate::utils::text::StrBuffer;
 
 /// Preview content for the preview pane
 ///
@@ -20,7 +21,7 @@ use crate::core::FileEntry;
 pub(crate) enum PreviewData {
     Directory {
         entries: Arc<[FileEntry]>,
-        sort_column: Option<Arc<[Arc<str>]>>,
+        sort_column: Option<Arc<StrBuffer>>,
     },
     File(Text<'static>),
     Empty,
@@ -125,7 +126,7 @@ impl PreviewState {
     pub(crate) fn update_from_entries(
         &mut self,
         entries: Arc<[FileEntry]>,
-        sort_column: Option<Arc<[Arc<str>]>>,
+        sort_column: Option<Arc<StrBuffer>>,
         request_id: u64,
     ) {
         if request_id == self.request_id {

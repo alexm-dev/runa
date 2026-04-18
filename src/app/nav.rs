@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use crate::core::FileEntry;
-use crate::utils::path;
+use crate::utils::{path, text::StrBuffer};
 
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
@@ -25,7 +25,7 @@ pub(crate) struct NavState {
     request_id: u64,
 
     // UI releted fields
-    sort_column: Option<Vec<Arc<str>>>,
+    sort_column: Option<Arc<StrBuffer>>,
     display_path: String,
 }
 
@@ -54,7 +54,7 @@ impl NavState {
         selected_idx => selected: usize,
         shown_indices: &[usize],
         sort_config: SortConfig,
-        sort_column: &Option<Vec<Arc<str>>>,
+        sort_column: &Option<Arc<StrBuffer>>,
         markers: &HashSet<PathBuf>,
         filter: &str,
         display_path: &str,
@@ -153,15 +153,13 @@ impl NavState {
         &mut self,
         path: PathBuf,
         entries: Arc<[FileEntry]>,
-        sort_column: Option<Arc<[Arc<str>]>>,
+        sort_column: Option<Arc<StrBuffer>>,
         focus: Option<OsString>,
     ) {
         self.current_dir = path;
         self.display_path = path::format_display_path(&self.current_dir);
         self.entries = entries;
-        self.sort_column = sort_column
-            .as_ref()
-            .map(|c| c.iter().map(Arc::clone).collect());
+        self.sort_column = sort_column;
 
         self.restore_filter_for_current_dir();
         self.rebuild_shown_cache();

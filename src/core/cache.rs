@@ -3,7 +3,7 @@
 //! Caches an Arc slice of FileEntry and the sort_column needed
 //! to share entry states between panes.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -11,6 +11,7 @@ use dashmap::{DashMap, mapref::entry::Entry};
 
 use crate::app::nav::SortConfig;
 use crate::core::FileEntry;
+use crate::utils::text::StrBuffer;
 
 const DIR_CACHE_CAP: usize = 30;
 
@@ -25,7 +26,7 @@ pub(crate) struct DirListOptions {
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct DirCacheKey {
-    path: PathBuf,
+    path: Arc<Path>,
     sort: SortConfig,
     list: DirListOptions,
 }
@@ -33,14 +34,14 @@ struct DirCacheKey {
 impl DirCacheKey {
     fn new(path: &Path, sort: SortConfig, list_options: &DirListOptions) -> Self {
         Self {
-            path: path.to_owned(),
+            path: Arc::from(path),
             sort,
             list: list_options.clone(),
         }
     }
 }
 
-pub(crate) type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<[Arc<str>]>>, u64, Instant)>;
+pub(crate) type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<StrBuffer>>, u64, Instant)>;
 
 pub(crate) struct DirCache {
     inner: DashMap<DirCacheKey, DirCacheValue>,
@@ -60,7 +61,7 @@ impl DirCache {
         list_options: &DirListOptions,
     ) -> Option<DirCacheValue> {
         let key = DirCacheKey::new(path, sort, list_options);
-        self.inner.get(&key).map(|v| Arc::clone(&*v))
+        self.inner.get(&key).map(|v| Arc::clone(v.value()))
     }
 
     pub(crate) fn insert_if_newer(
@@ -69,22 +70,16 @@ impl DirCache {
         sort: SortConfig,
         list_options: &DirListOptions,
         entries: Arc<[FileEntry]>,
-        sort_column: Option<Arc<[Arc<str>]>>,
+        sort_column: Option<Arc<StrBuffer>>,
         request_id: u64,
     ) {
-        if self.inner.len() > DIR_CACHE_CAP {
-            let mut oldest_key = None;
-            let mut oldest_time = Instant::now();
-
-            for entry in self.inner.iter() {
-                let time = entry.value().3;
-                if time < oldest_time {
-                    oldest_time = time;
-                    oldest_key = Some(entry.key().clone());
-                }
-            }
-
-            if let Some(key) = oldest_key {
+        if self.inner.len() >= DIR_CACHE_CAP {
+            let to_remove = self
+                .inner
+                .iter()
+                .min_by_key(|entry| entry.value().3)
+                .map(|entry| entry.key().clone());
+            if let Some(key) = to_remove {
                 self.inner.remove(&key);
             }
         }
@@ -106,6 +101,6 @@ impl DirCache {
     }
 
     pub(crate) fn invalidate_path(&self, path: &Path) {
-        self.inner.retain(|key, _| key.path != path);
+        self.inner.retain(|key, _| &*key.path != path);
     }
 }
