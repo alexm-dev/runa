@@ -9,7 +9,6 @@ use crossterm::{
 };
 
 use crate::config::Editor;
-use crate::core::metadata;
 
 /// Opens a specified path/file in the configured editor ("nvim" or "vim" etc.).
 ///
@@ -31,7 +30,6 @@ pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Resu
     let mut stdout = io::stdout();
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
-    metadata::bump_meta_sort_epoch();
 
     let status = std::process::Command::new(editor_path)
         .args(args)

@@ -11,11 +11,12 @@ use std::collections::HashSet;
 use std::ffi::OsString;
 use std::fs::{File, Metadata};
 use std::io::{BufReader, ErrorKind, Read, Seek};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, Local};
+use dashmap::DashMap;
 use humansize::{self, DECIMAL};
 use unicode_width::UnicodeWidthChar;
 
@@ -23,7 +24,7 @@ use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::{
     FileEntry,
     cache::DirListOptions,
-    metadata::{self, FileType},
+    metadata::{self, CachedMetaKey, FileType},
 };
 use crate::utils::os;
 
@@ -45,6 +46,8 @@ enum MetadataSortField {
     Created,
     Accessed,
 }
+
+type MetaCache = DashMap<PathBuf, CachedMetaKey>;
 
 /// Formatter struct to handle sorting, filtering, and formatting of file entries
 /// based on user preferences.
@@ -101,6 +104,7 @@ impl Formatter {
         directory_path: &Path,
         entries: &mut Vec<FileEntry>,
         sort_date_format: &str,
+        cache: &MetaCache,
     ) -> Option<Vec<Arc<str>>> {
         match self.sort_config.mode {
             SortMode::Name => {
@@ -120,24 +124,28 @@ impl Formatter {
                 entries,
                 MetadataSortField::Size,
                 sort_date_format,
+                cache,
             )),
             SortMode::Modified => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Modified,
                 sort_date_format,
+                cache,
             )),
             SortMode::Created => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Created,
                 sort_date_format,
+                cache,
             )),
             SortMode::Accessed => Some(self.sort_by_metadata(
                 directory_path,
                 entries,
                 MetadataSortField::Accessed,
                 sort_date_format,
+                cache,
             )),
         }
     }
@@ -241,6 +249,7 @@ impl Formatter {
         entries: &mut Vec<FileEntry>,
         metadata_sort_field: MetadataSortField,
         sort_date_format: &str,
+        cache: &MetaCache,
     ) -> Vec<Arc<str>> {
         let now = Local::now();
         let ctx = TimeFormatCtx::new(sort_date_format, now);
@@ -250,7 +259,6 @@ impl Formatter {
 
         let mut path_buffer = directory_path.to_path_buf();
 
-        let cache = metadata::meta_cache();
         if cache.len() > HARD_SORT_CACHE_LIMIT {
             cache.clear();
         }
@@ -260,7 +268,7 @@ impl Formatter {
 
             path_buffer.push(file_entry.name());
 
-            if let Some(cached) = metadata::get_or_update_cached_meta(&path_buffer) {
+            if let Some(cached) = metadata::get_or_update_cached_meta(&path_buffer, cache) {
                 let (key, display) = match metadata_sort_field {
                     MetadataSortField::Size => {
                         let val = cached.size.unwrap_or(0);
@@ -881,6 +889,8 @@ mod tests {
         let entry3 = FileEntry::new(OsString::from("FileC.txt"), 0, None);
         let mut entries = vec![entry1.clone(), entry2.clone(), entry3.clone()];
 
+        let meta_cache = DashMap::new();
+
         let fmt = Formatter::new(
             DirListOptions {
                 dirs_first: false,
@@ -895,7 +905,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names, vec!["FileC.txt", "fileA.txt", "fileB.txt"]);
 
@@ -914,7 +924,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
         let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names_ci, vec!["fileA.txt", "fileB.txt", "FileC.txt"]);
         Ok(())
@@ -933,6 +943,8 @@ mod tests {
             entry4.clone(),
         ];
 
+        let meta_cache = DashMap::new();
+
         let fmt = Formatter::new(
             DirListOptions {
                 dirs_first: false,
@@ -947,7 +959,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(
             names,
@@ -969,7 +981,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
         let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(
             names_ci,
@@ -985,6 +997,8 @@ mod tests {
         let entry3 = FileEntry::new(OsString::from("File1.txt"), 0, None);
         let mut entries = vec![entry1.clone(), entry2.clone(), entry3.clone()];
 
+        let meta_cache = DashMap::new();
+
         let fmt = Formatter::new(
             DirListOptions {
                 dirs_first: false,
@@ -999,7 +1013,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names, vec!["File1.txt", "file2.txt", "file10.txt"]);
 
@@ -1018,7 +1032,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M");
+        fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
         let names_ci: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names_ci, vec!["File1.txt", "file2.txt", "file10.txt"]);
         Ok(())
@@ -1030,6 +1044,8 @@ mod tests {
         let path1 = temp_dir.path().join("small.txt");
         let path2 = temp_dir.path().join("medium.txt");
         let path3 = temp_dir.path().join("large.txt");
+
+        let meta_cache = DashMap::new();
 
         File::create(&path1)?.write_all(b"small")?;
         File::create(&path2)?.write_all(b"medium content")?;
@@ -1050,7 +1066,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
+        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M", &meta_cache);
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names, vec!["small.txt", "medium.txt", "large.txt"]);
         Ok(())
@@ -1062,6 +1078,8 @@ mod tests {
         let path1 = temp_dir.path().join("old.txt");
         let path2 = temp_dir.path().join("newer.txt");
         let path3 = temp_dir.path().join("newest.txt");
+
+        let meta_cache = DashMap::new();
 
         File::create(&path1)?.write_all(b"old")?;
         filetime::set_file_mtime(&path1, filetime::FileTime::from_unix_time(1000, 0))?;
@@ -1085,7 +1103,7 @@ mod tests {
             },
             Arc::new(HashSet::new()),
         );
-        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
+        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M", &meta_cache);
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names, vec!["old.txt", "newer.txt", "newest.txt"]);
         Ok(())
@@ -1093,10 +1111,11 @@ mod tests {
 
     #[test]
     fn formatter_sort_modified_with_dirs_first() -> Result<(), Box<dyn std::error::Error>> {
-        metadata::meta_cache().clear();
         let temp_dir = tempdir()?;
         let dir_path = temp_dir.path().join("aaa_old_dir");
         let file_path = temp_dir.path().join("bbb_new_file.txt");
+
+        let meta_cache = DashMap::new();
 
         std::fs::create_dir(&dir_path)?;
         filetime::set_file_mtime(&dir_path, filetime::FileTime::from_unix_time(1000, 0))?;
@@ -1121,14 +1140,13 @@ mod tests {
             Arc::new(HashSet::new()),
         );
 
-        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M");
+        fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M", &meta_cache);
 
         let names: Vec<_> = entries.iter().map(|e| e.name_str()).collect();
         assert_eq!(names, vec!["aaa_old_dir", "bbb_new_file.txt"]);
 
-        let cache = metadata::meta_cache();
         assert!(
-            !cache.is_empty(),
+            !meta_cache.is_empty(),
             "Metadata cache should not be empty after sorting"
         );
 

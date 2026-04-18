@@ -11,10 +11,7 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::sync::{
-    Arc, OnceLock,
-    atomic::{AtomicU64, Ordering},
-};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use chrono::{DateTime, Local};
@@ -32,48 +29,22 @@ pub(crate) const PERMS_WIDTH: usize = 10;
 /// Holds system calls required info only.
 #[derive(Clone, Copy)]
 pub(crate) struct CachedMetaKey {
-    pub(crate) epoch: u64,
     pub(crate) size: Option<u64>,
     pub(crate) modified: Option<SystemTime>,
     pub(crate) created: Option<SystemTime>,
     pub(crate) accessed: Option<SystemTime>,
 }
 
-static META_SORT_EPOCH: OnceLock<AtomicU64> = OnceLock::new();
-static META_SORT_CACHE: OnceLock<DashMap<PathBuf, CachedMetaKey>> = OnceLock::new();
-
-#[inline]
-fn epoch_atomic() -> &'static AtomicU64 {
-    META_SORT_EPOCH.get_or_init(|| AtomicU64::new(1))
-}
-
-#[inline]
-pub(crate) fn meta_cache() -> &'static DashMap<PathBuf, CachedMetaKey> {
-    META_SORT_CACHE.get_or_init(DashMap::new)
-}
-
-#[inline]
-fn meta_sort_epoch() -> u64 {
-    epoch_atomic().load(Ordering::Relaxed)
-}
-
-pub(crate) fn bump_meta_sort_epoch() {
-    epoch_atomic().fetch_add(1, Ordering::Relaxed);
-}
-
-pub(crate) fn get_or_update_cached_meta(path: &Path) -> Option<CachedMetaKey> {
-    let epoch = meta_sort_epoch();
-    let cache = meta_cache();
-
-    if let Some(c) = cache.get(path)
-        && c.epoch == epoch
-    {
+pub(crate) fn get_or_update_cached_meta(
+    path: &Path,
+    cache: &DashMap<PathBuf, CachedMetaKey>,
+) -> Option<CachedMetaKey> {
+    if let Some(c) = cache.get(path) {
         return Some(*c);
     }
 
     let md = fs::symlink_metadata(path).ok();
     let c = CachedMetaKey {
-        epoch,
         size: md.as_ref().filter(|m| m.is_file()).map(|m| m.len()),
         modified: md.as_ref().and_then(|m| m.modified().ok()),
         created: md.as_ref().and_then(|m| m.created().ok()),

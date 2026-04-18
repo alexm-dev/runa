@@ -22,6 +22,7 @@ use std::thread;
 
 use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
+use dashmap::DashMap;
 
 use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
@@ -29,7 +30,7 @@ use crate::core::{
     FileEntry, FindResult, Formatter,
     cache::{DirCache, DirListOptions},
     fm, formatter, fs,
-    metadata::{self, FileMetadata, FileMetadataCache, MetadataNeeds},
+    metadata::{FileMetadata, FileMetadataCache, MetadataNeeds},
     proc,
 };
 use crate::utils::{os::is_regular_file, text::StrBuffer};
@@ -283,10 +284,11 @@ fn start_io_worker(
             };
             match fm::browse_dir(&path) {
                 Ok(mut entries) => {
+                    let meta_cache = DashMap::with_capacity(entries.len());
                     let formatter = Formatter::new(list.clone(), sort_config, always_show);
                     formatter.filter_entries(&mut entries);
                     let sort_column =
-                        formatter.sort_entries(&path, &mut entries, &sort_date_format);
+                        formatter.sort_entries(&path, &mut entries, &sort_date_format, &meta_cache);
 
                     let entries_arc: Arc<[FileEntry]> = Arc::from(entries);
                     let sort_column_arc: Option<Arc<StrBuffer>> =
@@ -344,10 +346,12 @@ fn start_sort_worker(
             };
 
             let mut entries_vec = entries.to_vec();
+            let meta_cache = DashMap::with_capacity(entries.len());
 
             let formatter = Formatter::new(list.clone(), sort_config, always_show);
             formatter.filter_entries(&mut entries_vec);
-            let sort_column = formatter.sort_entries(&path, &mut entries_vec, &sort_date_format);
+            let sort_column =
+                formatter.sort_entries(&path, &mut entries_vec, &sort_date_format, &meta_cache);
 
             let entries_arc: Arc<[FileEntry]> = Arc::from(entries_vec);
             let sort_column_arc: Option<Arc<StrBuffer>> =
@@ -683,7 +687,6 @@ fn start_fileop_worker(
 
             match result {
                 Ok(_) => {
-                    metadata::bump_meta_sort_epoch();
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
                         need_reload: true,
                         focus: focus_target,
