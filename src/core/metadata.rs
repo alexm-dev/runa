@@ -300,6 +300,7 @@ impl MetadataNeeds {
 
 #[cfg(unix)]
 pub(crate) mod unix_meta {
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
