@@ -392,12 +392,38 @@ impl Theme {
 
 /// ColorPair struct to hold foreground and background colors.
 /// Used throughout the theme configuration.
-#[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct ColorPair {
-    #[serde(default, deserialize_with = "deserialize_color_field")]
     fg: Color,
-    #[serde(default, deserialize_with = "deserialize_color_field")]
     bg: Color,
+}
+
+impl<'de> Deserialize<'de> for ColorPair {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum ColorFormat {
+            Short(String),
+            Full {
+                #[serde(default, deserialize_with = "deserialize_color_field")]
+                fg: Color,
+                #[serde(default, deserialize_with = "deserialize_color_field")]
+                bg: Color,
+            },
+        }
+
+        let inner = ColorFormat::deserialize(deserializer)?;
+        match inner {
+            ColorFormat::Short(s) => Ok(ColorPair {
+                fg: text::parse_color(&s),
+                bg: Color::Reset,
+            }),
+            ColorFormat::Full { fg, bg } => Ok(ColorPair { fg, bg }),
+        }
+    }
 }
 
 /// Default implementation for ColorPair

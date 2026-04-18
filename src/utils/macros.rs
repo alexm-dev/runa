@@ -67,25 +67,6 @@ macro_rules! getters {
     () => {};
 }
 
-/// Accessor macro for input keys defined in config/input
-/// Returns `&[String]` by default
-#[macro_export]
-macro_rules! key_accessor {
-    ($($name:ident => $variant:ident),+ $(,)?) => {
-        impl Keys {
-            $(
-                #[inline]
-                pub(crate) fn $name(&self) -> &[String] {
-                    self.bindings
-                        .get(&InputKeys::$variant)
-                        .map(|v| v.as_slice())
-                        .unwrap_or(&[])
-                }
-            )+
-        }
-    };
-}
-
 #[macro_export]
 macro_rules! option_arc_str_getters {
     ($($field:ident),* $(,)?) => {

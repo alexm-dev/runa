@@ -8,6 +8,47 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
+#[derive(Debug)]
+struct InputKeyLists(pub Box<[String]>);
+
+impl<'de> Deserialize<'de> for InputKeyLists {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum OneOrMany {
+            One(String),
+            Many(Vec<String>),
+        }
+
+        let inner = OneOrMany::deserialize(deserializer)?;
+        match inner {
+            OneOrMany::One(s) => Ok(InputKeyLists(vec![s].into_boxed_slice())),
+            OneOrMany::Many(v) => Ok(InputKeyLists(v.into_boxed_slice())),
+        }
+    }
+}
+
+/// Accessor macro for input keys defined in config/input
+/// Returns `&[String]` by default
+macro_rules! key_accessor {
+    ($($name:ident => $variant:ident),+ $(,)?) => {
+        impl Keys {
+            $(
+                #[inline]
+                pub(crate) fn $name(&self) -> &[String] {
+                    self.bindings
+                        .get(&InputKeys::$variant)
+                        .map(|v| v.0.as_ref())
+                        .unwrap_or(&[])
+                }
+            )+
+        }
+    };
+}
+
 #[derive(Deserialize, Debug, Hash, Eq, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum InputKeys {
@@ -59,7 +100,7 @@ pub(crate) enum InputKeys {
 /// Input configuration options of all actions
 #[derive(Debug)]
 pub(crate) struct Keys {
-    bindings: HashMap<InputKeys, Vec<String>>,
+    bindings: HashMap<InputKeys, InputKeyLists>,
 }
 
 impl<'de> Deserialize<'de> for Keys {
@@ -67,14 +108,14 @@ impl<'de> Deserialize<'de> for Keys {
     where
         D: serde::Deserializer<'de>,
     {
-        let user_bindings = HashMap::<InputKeys, Vec<String>>::deserialize(deserializer)?;
+        let user_bindings = HashMap::<InputKeys, InputKeyLists>::deserialize(deserializer)?;
         let mut keys = Keys::default();
         keys.bindings.extend(user_bindings);
         Ok(keys)
     }
 }
 
-crate::key_accessor!(
+key_accessor!(
     open_file => OpenFile,
     go_up => GoUp,
     go_down => GoDown,
@@ -170,7 +211,10 @@ impl Default for Keys {
 
         let bindings = defaults
             .into_iter()
-            .map(|(k, v)| (k, v.into_iter().map(String::from).collect()))
+            .map(|(k, v)| {
+                let list: Box<[String]> = v.into_iter().map(String::from).collect();
+                (k, InputKeyLists(list))
+            })
             .collect();
 
         Keys { bindings }
@@ -180,9 +224,9 @@ impl Default for Keys {
 #[derive(Deserialize, Debug)]
 #[serde(default)]
 pub(crate) struct Editor {
-    default: Vec<String>,
-    ext: HashMap<String, Vec<String>>,
-    filename: HashMap<String, Vec<String>>,
+    default: InputKeyLists,
+    ext: HashMap<String, InputKeyLists>,
+    filename: HashMap<String, InputKeyLists>,
 }
 
 /// Public methods for accessing editor configuration options
@@ -191,24 +235,24 @@ impl Editor {
     pub(crate) fn cmd(&self, path: &Path) -> &[String] {
         if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
             if let Some(cmd) = self.filename.get(name) {
-                return cmd;
+                return &cmd.0;
             }
             let name_lower = name.to_lowercase();
             if let Some(cmd) = self.filename.get(&name_lower) {
-                return cmd;
+                return &cmd.0;
             }
         }
 
-        if let Some(ext) = path
+        if let Some(cmd) = path
             .extension()
             .and_then(|s| s.to_str())
             .map(|s| s.to_lowercase())
             .and_then(|ext| self.ext.get(&ext))
         {
-            return ext;
+            return &cmd.0;
         }
 
-        &self.default
+        &self.default.0
     }
 
     pub(crate) fn resolved_path(&self, path: &Path) -> Option<PathBuf> {
@@ -226,7 +270,7 @@ impl Editor {
 impl Default for Editor {
     fn default() -> Self {
         Editor {
-            default: vec!["vim".into()],
+            default: InputKeyLists(vec!["vim".into()].into_boxed_slice()),
             ext: HashMap::new(),
             filename: HashMap::new(),
         }
