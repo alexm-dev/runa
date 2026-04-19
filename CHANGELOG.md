@@ -8,10 +8,10 @@ All the changes made to runa are documented here.
 
 ### Added
 - **Preview scrolling**: Preview pane is now scrollable with the `scroll_up` and `scroll_down` keybinds. Works for both `internal` and `bat` preview methods.
-- **Entry and Icon coloring**: Added colored entries, extensions and icons. 
-    - Possible to now set the color of an entry via the exact filename or the extension as well as the icon color of an entry.
+- **Entry and Icon coloring**: Added coloring entries, extensions and icons.  
+    - It is now possible to set entry colors by the exact filename or by extension.
     ```toml
-    # Set the entry color for a exact filename
+    # Set the entry color for an exact filename
     [theme.exact]
     "foo" = { fg = "#RRGGBB", bg = "#RRGGBB" }
     "bar" = { fg = "#RRGGBB", bg = "#RRGGBB" }
@@ -20,12 +20,12 @@ All the changes made to runa are documented here.
     [theme.ext]
     "foo" = { fg = "#RRGGBB", bg = "#RRGGBB" }
 
-    # Set the extension icon color (not entry color).
+    # Set the icon color (does not affect entry color)
     [theme.icon_color]
     foo = "#RRGGBB"
     ```
 
-- **Editor config**: Added more editor configuration options. This introduces breaking changes. 
+- **Editor config**: Added more editor configuration options. This introduces breaking changes.  
     - Possible to now set editors/programs for specific filenames and extensions.
     ```toml
     [editor]
@@ -33,7 +33,8 @@ All the changes made to runa are documented here.
     ext = { rs = ["vim"], md = ["code"] }
     filename = { "Cargo.toml" = ["vim"] }
 
-    # OR
+    # -- OR --
+
     [editor.ext]
     rs = ["vim"]
     md = ["code"]
@@ -63,18 +64,18 @@ All the changes made to runa are documented here.
 
 ### Fixed
 - **CLI**: Fixed an issue where the CLI arg `--init-full` generated a broken `runa.toml`. [Issue #55](https://github.com/alexm-dev/runa/issues/55)
-- **Theme**: Fixed an issuse where the `accent` style ignored the `separator`. Now, the separator applies the set `accent` theme and also consideres the `separtor` override. [Issue #56](https://github.com/alexm-dev/runa/issues/56)
+- **Theme**: Fixed an issue where the `accent` style ignored the `separator`. Now, the separator applies the set `accent` theme and also considers the `separator` override. [Issue #56](https://github.com/alexm-dev/runa/issues/56)
 - **Status line**: Fixed an issue where the `status_line.fg/bg` did not set the marker/clipboard colors correctly.
 - **Selection color**: Fixed an issue where the selection color would override the marker background color when one was set.
 
 ### Internal
 - **Performance improvements**:
-    - Added `core/cache` module to cache shared FileEntry and sort_column data for the main pane to apply instead of re-computing all entries on each diirectory change, resulting in big performance improvements on navigation and directory changes.
-    - Added `app/timings` module to centralize the "throttling" of worker requests, resulting in less flodding of worker activity and therefore massive efficiency improvements and smoother navigation.
+    - Added `core/cache` module to cache shared FileEntry and sort_column data for the main pane to apply instead of re-computing all entries on each directory change, resulting in big performance improvements on navigation and directory changes.
+    - Added `app/timings` module to centralize the "throttling" of worker requests, resulting in less flooding of worker activity and therefore massive efficiency improvements and smoother navigation.
     - `FileEntry` now stores the `name_str` and `ext(ension)` of an entry name to reduce re-computing of each data for each entry row.
-    - `nerd_font_icons` phf-map lookups are more efficient with the lookup happening once and without relying on lowering the entry name and extension.
+    - `nerd_font_icons` phf-map look-ups are more efficient with the lookup happening once and without relying on lowering the entry name and extension.
     - `AppContainer` now owns `TabManager` exclusively via heap allocation.
-    - `sort_column` now is a new type `StrBuffer` instead of a `Arc<[Arc<str>]>` to only do one atomic refcount increment.
+    - `sort_column` now is a new type `StrBuffer` instead of a `Arc<[Arc<str>]>` to only do one atomic ref-count increment.
     - Removed static `META_SORT_EPOCH` and `META_SORT_CACHE` caches and instead cache the metadata of a sorted directory in a local cache resulting in memory efficiency and stability.
 
 
