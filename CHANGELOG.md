@@ -68,7 +68,7 @@ All the changes made to runa are documented here.
 - **Selection Color**: Fixed an issue where the selection color would override the marker background color when one was set.
 
 ### Internal
-- **Performance**:
+- **Performance improvements**:
     - Added `core/cache` module to cache shared FileEntry and sort_column data for the main pane to apply instead of re-computing all entries on each diirectory change, resulting in big performance improvements on navigation and directory changes.
     - Added `app/timings` module to centralize the "throttling" of worker requests, resulting in less flodding of worker activity and therefore massive efficiency improvements and smoother navigation.
     - `FileEntry` now stores the `name_str` and `ext(ension)` of an entry name to reduce re-computing of each data for each entry row.
