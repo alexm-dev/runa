@@ -334,6 +334,7 @@ target = "default"
 # "rs" = { fg = "default", bg = "default" }
 
 [theme.marker]        # Multi-select marker
+# To disable icon set icon = " "
 icon = "*"
 fg = "default"
 bg = "default"

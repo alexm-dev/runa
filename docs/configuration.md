@@ -415,6 +415,7 @@ file = "default"
 target = "default"
 
 [theme.marker]        # Multi-select marker
+# To disable icon set icon = " "
 icon = "*"
 fg = "default"
 bg = "default"
@@ -685,7 +686,7 @@ show_hidden = true
 startup.tabs = ["cwd", '.']
 
 [display]
-borders = "split"
+borders = "unified"
 titles = true
 icons = true
 parent = true
