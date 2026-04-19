@@ -37,8 +37,8 @@
 <img src="https://github.com/user-attachments/assets/b02a5190-3e0a-45d3-ace1-f1d067f4bdaa" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 <br></br>
 
-**runa - rn** is a minimalist terminal file manager focused on speed and simplicity.  
-It allows you to navigate directories, view file listings, and perform typical file browser actions.  
+**runa - rn** is a feature-rich terminal file manager with a concurrent, multi-threaded architecture designed for speed and a minimal footprint.  
+It allows you to navigate directories, view file listings, and perform typical file manager actions.  
 
 <details>
 
