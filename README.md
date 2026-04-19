@@ -34,7 +34,7 @@
 - **Keyboard-Driven:** Every action accessible by keybindings. No mouse needed.
 - **Integrated Find (`fd` required):** Blazingly fast file search.
 
-<img src="https://github.com/user-attachments/assets/0d42812b-69c8-4a70-a1b7-b4327f538ccd" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
+<img src="https://github.com/user-attachments/assets/b02a5190-3e0a-45d3-ace1-f1d067f4bdaa" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 <br></br>
 
 **runa - rn** is a minimalist terminal file manager focused on speed and simplicity.  
