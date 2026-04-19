@@ -148,7 +148,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
                 if want_separator {
                     dialog_lines.push(Line::from(vec![Span::styled(
                         "─".repeat(visible_width),
-                        accent_style,
+                        widget.border_style_or(accent_style),
                     )]));
                 }
                 if !preview.is_empty() {
@@ -341,7 +341,10 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     ));
     display_lines.push(Line::from(line_input));
 
-    let horizontal_line = Span::styled("─".repeat(field_width), accent_style);
+    let horizontal_line = Span::styled(
+        "─".repeat(field_width),
+        widget.border_style_or(accent_style),
+    );
     display_lines.push(Line::from(horizontal_line));
 
     if results.is_empty() {
