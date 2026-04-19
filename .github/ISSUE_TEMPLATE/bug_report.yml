@@ -16,7 +16,7 @@ body:
       label: Version
       description: What version of our software are you running?
       options:
-        - v0.10.1 release
+        - v0.11.0 release
         - Git main branch
       default: 0
     validations:
