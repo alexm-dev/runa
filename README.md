@@ -34,8 +34,11 @@
 - **Keyboard-Driven:** Every action accessible by keybindings. No mouse needed.
 - **Integrated Find (`fd` required):** Blazingly fast file search.
 
-<img src="https://github.com/user-attachments/assets/d1420cfc-195f-4344-aa5b-7dccaea44c81" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
+<img src="https://github.com/user-attachments/assets/0d42812b-69c8-4a70-a1b7-b4327f538ccd" alt="runa" width="100%" style="max-width: 1274px; height: auto;" />
 <br></br>
+
+**runa - rn** is a minimalist terminal file manager focused on speed and simplicity.  
+It allows you to navigate directories, view file listings, and perform typical file browser actions.  
 
 <details>
 
@@ -49,9 +52,6 @@
 - **Minimal memory footprint**: Optimized for low RAM usage.
 
 </details>
-
-**runa - rn** is a minimalist terminal file manager focused on speed and simplicity.  
-It allows you to navigate directories, view file listings, and perform typical file browser actions.  
 
 **runa** is very customizable, checkout the [Configuration](docs/configuration.md) docs for all the available options.
 
@@ -228,8 +228,7 @@ runa is in active development, with future releases focusing on expanding functi
 > See [CHANGELOG.md](./CHANGELOG.md) for version details and release history.
 
 ---
-
-<img src="https://github.com/user-attachments/assets/e66fdb98-43c4-4227-8bea-b4084fefcf19" alt="runa_alt" style="max-width: 100%; height: auto;" />
+<img src="https://github.com/user-attachments/assets/690bf317-57cd-4cb2-91c0-e293941c1281" alt="runa_alt" style="max-width: 100%; height: auto;" />
 
 ---
 
