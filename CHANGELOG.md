@@ -50,6 +50,8 @@ All the changes made to runa are documented here.
 ### Fixed
 - **CLI**: Fixed an issue where the CLI arg `--init-full` generated a broken `runa.toml`. [Issue #55](https://github.com/alexm-dev/runa/issues/55)
 - **Theme**: Fixed an issuse where the `accent` style ignored the `separator`. Now, the separator applies the set `accent` theme and also consideres the `separtor` override. [Issue #56](https://github.com/alexm-dev/runa/issues/56)
+- **Status line**: Fixed an issue where the `status_line.fg/bg` did not set the marker/clipboard colors correctly.
+- **Selection Color**: Fixed an issue where the selection color would override the marker background color when one was set.
 
 ### Changed
 - **[BREAKING] Editor Config**: With the new editor configuration, the older `[editor] cmd = "foo"` no longer works.
@@ -66,15 +68,19 @@ All the changes made to runa are documented here.
 - **Border styling**: `unified` border style now applies the separator to the outer border as well, making it look like a proper "boxed" or "unified" look.
 - **Find Widget**: Set `find_width` to 60 and `find_visible_results` to 8.
 
+
 ### Internal
 - **Performance**:
     - Added `core/cache` module to cache shared FileEntry and sort_column data for the main pane to apply instead of re-computing all entries on each diirectory change, resulting in big performance improvements on navigation and directory changes.
     - Added `app/timings` module to centralize the "Throttling" of worker requests, resulting in less flodding of worker activity and therefore massive efficiency improvements and smoother navigation.
     - `FileEntry` now stores the `name_str` and `ext(ension)` of an entry name to reduce re-computing of each data for each entry row.
-    - `nerd_font_icons()` phf-map lookups are more efficient with the lookup happening once and without relying on lowering the entry name and extension.
+    - `nerd_font_icons` phf-map lookups are more efficient with the lookup happening once and without relying on lowering the entry name and extension.
     - `AppContainer` now owns `TabManager` exclusively via heap allocation.
+    - `sort_column` now is a new type `StrBuffer` instead of a `Arc<[Arc<str>]>` to only do one atomic refcount increment.
+    - Removed static `META_SORT_EPOCH` and `META_SORT_CACHE`caches to instead cache the metadata of a sorted directory in a local cache resulting in memory efficiency and stability.
 
 > [!TODO]:  
+>
 >   Finish 0.11.0 CHANGELOG  
 >   Finish documentation for 0.11.0  
 >   Adjust runa_full.toml for 0.11.0  
