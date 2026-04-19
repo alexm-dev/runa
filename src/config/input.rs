@@ -179,7 +179,7 @@ impl Editor {
 impl Default for Editor {
     fn default() -> Self {
         Editor {
-            default: InputKeyLists(vec!["vim".into()].into_boxed_slice()),
+            default: InputKeyLists(vec!["nvim".into()].into_boxed_slice()),
             ext: HashMap::new(),
             filename: HashMap::new(),
         }
