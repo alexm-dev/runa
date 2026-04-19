@@ -546,6 +546,11 @@ sort_by_modified    = ["m"]
 sort_by_created     = ["c"]
 sort_by_accessed    = ["a"]
 
+# Also possible to just write a single keybind instead of a vector
+# Example:
+# sort = "o"
+# find = "s"
+
 # Note:
 # - go_to_* actions are triggered by pressing the "g" prefix, then another key. For example, "g" then "p" for go_to_path.
 # - sort_by_* actions are triggered by pressing the "o" (sort) prefix, then the sort key. For example, "o" then "e" for sort_by_extension.
