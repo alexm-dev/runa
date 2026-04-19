@@ -6,7 +6,7 @@ use std::time::Duration;
 use ratatui::{
     Frame,
     layout::{Alignment, Constraint, Layout, Rect},
-    style::Style,
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Paragraph},
 };
@@ -42,8 +42,17 @@ pub(crate) fn draw_status_bar(
     let status_cfg = display_cfg.status();
     let theme = app.config().theme();
     let base_style = theme.status_line_style();
+    let status_bg = base_style.bg.unwrap_or(Color::Reset);
     let marker_theme = theme.marker();
     let use_icons = display_cfg.icons();
+
+    let patch_style = |s: Style| {
+        if s.bg == Some(Color::Reset) || s.bg.is_none() {
+            s.bg(status_bg)
+        } else {
+            s
+        }
+    };
 
     let mut left_spans = Vec::with_capacity(12);
 
@@ -52,51 +61,64 @@ pub(crate) fn draw_status_bar(
         && let Some(file_meta) = app.selected_metadata()
     {
         let info_theme = theme.info();
-        let separator_style = theme.accent_style();
-
         let segments = display_cfg.info().segments();
 
         for segment in segments {
             match segment {
                 StatusSegment::Literal(lit) => {
-                    left_spans.push(Span::styled(lit, separator_style));
+                    left_spans.push(Span::styled(lit, patch_style(base_style)));
                 }
                 StatusSegment::Tag(tag) => match tag {
                     StatusTag::Perms => {
-                        left_spans.push(Span::styled(file_meta.perms(), info_theme.perms_style()));
+                        left_spans.push(Span::styled(
+                            file_meta.perms(),
+                            patch_style(info_theme.perms_style()),
+                        ));
                     }
                     StatusTag::Size => {
                         let padded_size = format!("{:>8}", file_meta.size());
-                        left_spans.push(Span::styled(padded_size, info_theme.size_style()));
+                        left_spans.push(Span::styled(
+                            padded_size,
+                            patch_style(info_theme.size_style()),
+                        ));
                     }
                     StatusTag::Mtime => {
                         let modified = file_meta.modified();
-                        left_spans.push(Span::styled(modified, info_theme.modified_style()));
+                        left_spans.push(Span::styled(
+                            modified,
+                            patch_style(info_theme.modified_style()),
+                        ));
                     }
                     StatusTag::Btime => {
                         let created = file_meta.created();
-                        left_spans.push(Span::styled(created, info_theme.created_style()));
+                        left_spans.push(Span::styled(
+                            created,
+                            patch_style(info_theme.created_style()),
+                        ));
                     }
                     StatusTag::Atime => {
                         let accessed = file_meta.accessed();
-                        left_spans.push(Span::styled(accessed, info_theme.accessed_style()));
+                        left_spans.push(Span::styled(
+                            accessed,
+                            patch_style(info_theme.accessed_style()),
+                        ));
                     }
                     StatusTag::Type => {
                         left_spans.push(Span::styled(
                             file_meta.file_type(),
-                            info_theme.file_type_style(),
+                            patch_style(info_theme.file_type_style()),
                         ));
                     }
                     #[cfg(unix)]
                     StatusTag::Owner => {
                         let owner = file_meta.owner();
-                        left_spans.push(Span::styled(owner, info_theme.owner_style()));
+                        left_spans.push(Span::styled(owner, patch_style(info_theme.owner_style())));
                     }
 
                     #[cfg(unix)]
                     StatusTag::Group => {
                         let group = file_meta.group();
-                        left_spans.push(Span::styled(group, info_theme.group_style()));
+                        left_spans.push(Span::styled(group, patch_style(info_theme.group_style())));
                     }
                 },
             }
@@ -150,7 +172,7 @@ pub(crate) fn draw_status_bar(
         if count > 0 {
             add_sep(&mut spans);
             let icon = if use_icons { "󰆏 " } else { "" };
-            let style = marker_theme.clipboard_style_or_theme();
+            let style = patch_style(marker_theme.clipboard_style_or_theme());
             spans.push(Span::styled(icon, style));
             spans.push(Span::styled(count.to_string(), style));
             spans.push(Span::styled(" copied", style));
@@ -173,7 +195,7 @@ pub(crate) fn draw_status_bar(
 
             if !is_redundant {
                 add_sep(&mut spans);
-                let style = marker_theme.style_or_theme();
+                let style = patch_style(marker_theme.style_or_theme());
                 spans.push(Span::styled(marker_count.to_string(), style));
                 spans.push(Span::styled(" marked", style));
             }
