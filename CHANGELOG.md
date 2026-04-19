@@ -2,13 +2,13 @@
 
 All the changes made to runa are documented here.
 
-## [0.11.0-beta.1] - UNRELEASED
+## [0.11.0] - 2026-04-19
 
 #### Icon coloring, preview scrolling, performance improvements and more.
 
 ### Added
 - **Preview scrolling**: Preview pane is now scrollable with the `scroll_up` and `scroll_down` keybinds. Works for both `internal` and `bat` preview methods.
-- **Entry and Icon Coloring**: Added colored entries, extensions and icons. 
+- **Entry and Icon coloring**: Added colored entries, extensions and icons. 
     - Possible to now set the color of an entry via the exact filename or the extension as well as the icon color of an entry.
     ```toml
     # Set the entry color for a exact filename
@@ -25,7 +25,7 @@ All the changes made to runa are documented here.
     foo = "#RRGGBB"
     ```
 
-- **Editor Config**: Added more editor configuration options. This introduces breaking changes. 
+- **Editor config**: Added more editor configuration options. This introduces breaking changes. 
     - Possible to now set editors/programs for specific filenames and extensions.
     ```toml
     [editor]
@@ -46,7 +46,7 @@ All the changes made to runa are documented here.
     ```
 
 ### Changed
-- **[BREAKING] Editor Config**: With the new editor configuration, the older `[editor] cmd = "foo"` no longer works.
+- **[BREAKING] Editor config**: With the new editor configuration, the older `[editor] cmd = "foo"` no longer works.
     - Example:
     ```toml
     # Old 
@@ -59,13 +59,13 @@ All the changes made to runa are documented here.
     ```
 
 - **Border styling**: `unified` border style now applies the separator to the outer border as well, making it look like a proper "boxed" or "unified" look.
-- **Find Widget**: Set `find_width` to 60 and `find_visible_results` to 8.
+- **Find widget**: Set `find_width` to 60 and `find_visible_results` to 8.
 
 ### Fixed
 - **CLI**: Fixed an issue where the CLI arg `--init-full` generated a broken `runa.toml`. [Issue #55](https://github.com/alexm-dev/runa/issues/55)
 - **Theme**: Fixed an issuse where the `accent` style ignored the `separator`. Now, the separator applies the set `accent` theme and also consideres the `separtor` override. [Issue #56](https://github.com/alexm-dev/runa/issues/56)
 - **Status line**: Fixed an issue where the `status_line.fg/bg` did not set the marker/clipboard colors correctly.
-- **Selection Color**: Fixed an issue where the selection color would override the marker background color when one was set.
+- **Selection color**: Fixed an issue where the selection color would override the marker background color when one was set.
 
 ### Internal
 - **Performance improvements**:
@@ -77,11 +77,6 @@ All the changes made to runa are documented here.
     - `sort_column` now is a new type `StrBuffer` instead of a `Arc<[Arc<str>]>` to only do one atomic refcount increment.
     - Removed static `META_SORT_EPOCH` and `META_SORT_CACHE` caches and instead cache the metadata of a sorted directory in a local cache resulting in memory efficiency and stability.
 
-> [!TODO]:  
->
->   Finish 0.11.0 CHANGELOG  
->   Finish documentation for 0.11.0  
->   Adjust runa_full.toml for 0.11.0  
 
 ---
 

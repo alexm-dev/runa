@@ -325,26 +325,22 @@ You can override all these color options for each section down below.
 These options are optional and can be omitted.  
 ```toml
 
-# Color keys for most sections are always placed directly in the table:
-# [theme.selection]
-# fg = "yellow"
-# bg = "default"
+# Color fields support two formats:
 #
-# For larger sections such as [theme.widget] or [theme.info], you may use either
-# dot notation (e.g. color.fg, border.bg) OR define sub-tables like [theme.widget.color]:
+# 1) Flat shorthand which always sets the .fg
+#    accent = "blue"
 #
-# [theme.widget]
-# color.fg = "white"
-# color.bg = "black"
-# border.fg = "magenta"
+# 2) Explicit form using fg/bg
+#    accent.fg = "blue"
+#    accent.bg = "default"
 #
-# Alternatively, this works and is equivalent:
-# [theme.widget.color]
-# fg = "white"
-# bg = "black"
+# Both are equivalent:
+#   accent = "blue"  ==  accent.fg = "blue"
 #
-# [theme.widget.border]
-# fg = "magenta"
+# Rules:
+# - If only a single value is provided, it maps to `.fg`
+# - `.bg` defaults to "default" unless explicitly set.
+# - `.fg` will always take precedence over the shorthand.
 #
 # Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
 
@@ -395,6 +391,18 @@ selection_mode = "on"
 # Overrides the central [theme.selection] for just the preview pane
 selection.fg = "default"
 selection.bg = "default"
+
+# Map icon colors to specific files
+[theme.icon_color]
+"rs" = "#dea584"
+
+# Map entry colors to specific files
+[theme.exact]
+"README.md" = { fg = "yellow", bg = "default" }
+
+# Map entry color for specific file extensions
+[theme.ext]
+"rs" = { fg = "default", bg = "default" }
 
 [theme.symlink]
 # Set the symlink colors for symlinks who are linked to directories
@@ -451,10 +459,10 @@ move_size = [70, 14]
 
 # Option to specify the maximal `drawn` results of the find widget.
 # Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
-find_visible_results = 5
+find_visible_results = 8
 
 # Option to configure the find widget width
-find_width = 40
+find_width = 60
 
 # Coloring for the widgets
 # Styles the overall widget text.
@@ -547,7 +555,15 @@ group.bg = "default"
 ```toml
 [editor]
 # Command to open files (e.g., "nvim", "code", etc.)
-cmd = "nvim"
+default = "nvim"
+
+# Map file extensions to editors/program commands
+# Use single command or array of command + arguments
+ext = { rs = "nvim", md = "code", txt = ["code", "-d"] }
+
+# Map specific filenames to editors/program commands
+# Use single command or array of command + arguments
+filename = { "Cargo.toml" = "nvim" }
 ```
 
 
@@ -620,6 +636,11 @@ sort_by_size        = ["s"]
 sort_by_modified    = ["m"]
 sort_by_created     = ["c"]
 sort_by_accessed    = ["a"]
+
+# Also possible to just write a single keybind instead of a vector
+# Example:
+# sort = "o"
+# find = "s"
 ```
 
 **Note:**
@@ -654,4 +675,53 @@ fg = "#00ff00"
 [theme.widget]
 position = [25, 60]
 size = { w = 36, h = 20 }
+```
+
+Example custom configuration:
+```toml
+[general]
+dirs_first = true
+show_hidden = true
+startup.tabs = ["cwd", '.']
+
+[display]
+borders = "split"
+titles = true
+icons = true
+parent = true
+preview = true
+preview_underline = false
+
+[display.layout]
+preview = 70
+
+[display.preview_options]
+method = "bat"
+style = "numbers"
+
+[display.info]
+format = "{perms} | {size} | {mtime}"
+date_format = "%d %b %y %H:%M"
+
+[theme]
+accent = "#8ac"
+path.bg = "#333333"
+tab.active.fg = "#8ac"
+tab.active.bg = "#555555"
+tab.inactive.bg = "#333333"
+tab.line_format = " {idx} {name} "
+status_line.bg = "#333333"
+status_line.fg = "#8ac"
+widget.border.fg = "green"
+info.date.bg = "#333333"
+info.date.fg = "green"
+info.size.bg = "#333333"
+info.perms.bg = "#333333"
+
+[editor]
+default = "nvim"
+
+[keys]
+scroll_up = ["pgup"]
+scroll_down = ["pgdn"]
 ```
