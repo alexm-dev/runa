@@ -8,7 +8,7 @@ All the changes made to runa are documented here.
 
 ### Added
 - **Preview scrolling**: Preview pane is now scrollable with the `scroll_up` and `scroll_down` keybinds. Works for both `internal` and `bat` preview methods.
-- **Entry and Icon coloring**: Added coloring entries, extensions and icons.  
+- **Entry and Icon coloring**: Added coloring entries, extensions and icons.
     - It is now possible to set entry colors by the exact filename or by extension.
     ```toml
     # Set the entry color for an exact filename
@@ -25,7 +25,7 @@ All the changes made to runa are documented here.
     foo = "#RRGGBB"
     ```
 
-- **Editor config**: Added more editor configuration options. This introduces breaking changes.  
+- **Editor config**: Added more editor configuration options. This introduces breaking changes. 
     - Possible to now set editors/programs for specific filenames and extensions.
     ```toml
     [editor]
