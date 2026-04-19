@@ -487,7 +487,11 @@ fn make_entry_row<'a>(
         markers.marker_style
     };
     if is_selected {
-        icon_style = icon_style.bg(style.bg.unwrap_or_default());
+        let has_distinct_bg = icon_style.bg.is_some() && icon_style.bg != Some(Color::Reset);
+
+        if !has_distinct_bg {
+            icon_style = icon_style.bg(style.bg.unwrap_or_default());
+        }
     }
 
     let mut row_style = style;
