@@ -1,5 +1,6 @@
 //! Editor utilities
 
+use std::fs;
 use std::io;
 use std::path::Path;
 
@@ -27,14 +28,28 @@ pub(crate) fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Resu
         )
     })?;
 
+    let resolved_path = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
+
     let mut stdout = io::stdout();
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
 
-    let status = std::process::Command::new(editor_path)
-        .args(args)
-        .arg(file_path)
-        .status();
+    let mut editor_cmd = std::process::Command::new(editor_path);
+    editor_cmd.args(args).arg(file_path);
+
+    let target_dir = if resolved_path.is_dir() {
+        Some(resolved_path.as_path())
+    } else {
+        resolved_path.parent()
+    };
+
+    if let Some(dir) = target_dir
+        && !dir.as_os_str().is_empty()
+    {
+        editor_cmd.current_dir(dir);
+    }
+
+    let status = editor_cmd.status();
 
     execute!(io::stdout(), EnterAlternateScreen)?;
     enable_raw_mode()?;
