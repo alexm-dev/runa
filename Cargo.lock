@@ -934,7 +934,7 @@ dependencies = [
 
 [[package]]
 name = "runa-tui"
-version = "0.11.0"
+version = "0.11.1-alpha.1"
 dependencies = [
  "ansi-to-tui",
  "chrono",
@@ -1646,9 +1646,9 @@ checksum = "589f6da84c646204747d1270a2a5661ea66ed1cced2631d546fdfb155959f9ec"
 
 [[package]]
 name = "winnow"
-version = "1.0.1"
+version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09dac053f1cd375980747450bfc7250c264eaae0583872e845c0c7cd578872b5"
+checksum = "2ee1708bef14716a11bae175f579062d4554d95be2c6829f518df847b7b3fdd0"
 
 [[package]]
 name = "wit-bindgen"
