@@ -6,8 +6,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::app::timings::Throttler;
 use crate::core::metadata::FileMetadataCache;
+use crate::utils::timings::Throttler;
 
 #[derive(Debug, Clone)]
 pub(super) struct MetadataState {

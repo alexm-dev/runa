@@ -18,9 +18,8 @@ use crate::app::{
     Clipboard, NavState, Workers,
     keymap::NavAction,
     state::{AppState, KeypressResult},
-    timings::Timings,
 };
-use crate::utils::{os, path};
+use crate::utils::{os, path, timings::Timings};
 
 impl<'a> AppState<'a> {
     /// Handles navigation actions (up, down, into dir, etc).

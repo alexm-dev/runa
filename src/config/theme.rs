@@ -37,7 +37,7 @@ pub(crate) struct Theme {
     exe_color: Color,
     #[serde(deserialize_with = "deserialize_color_map")]
     icon_color: HashMap<String, Color>,
-    exact: HashMap<String, ColorPair>,
+    filename: HashMap<String, ColorPair>,
     ext: HashMap<String, ColorPair>,
     symlink: SymlinkTheme,
     marker: MarkerTheme,
@@ -46,7 +46,7 @@ pub(crate) struct Theme {
     info: InfoStatusTheme,
 
     #[serde(skip)]
-    exact_cache: HashMap<String, Style>,
+    filename_cache: HashMap<String, Style>,
     #[serde(skip)]
     extension_cache: HashMap<String, Style>,
     #[serde(skip)]
@@ -83,7 +83,7 @@ impl Default for Theme {
                 ..ColorPair::default()
             },
             status_line: ColorPair::default(),
-            exact: HashMap::new(),
+            filename: HashMap::new(),
             ext: HashMap::new(),
             icon_color: HashMap::new(),
             exe_color: Color::LightGreen,
@@ -92,7 +92,7 @@ impl Default for Theme {
             widget: WidgetTheme::default(),
             tab: TabTheme::default(),
             info: InfoStatusTheme::default(),
-            exact_cache: HashMap::new(),
+            filename_cache: HashMap::new(),
             extension_cache: HashMap::new(),
             icon_color_cache: HashMap::new(),
         }
@@ -203,7 +203,7 @@ impl Theme {
         is_dir: bool,
         ext: Option<&str>,
     ) -> Option<Style> {
-        if let Some(s) = self.exact_cache.get(name) {
+        if let Some(s) = self.filename_cache.get(name) {
             return Some(*s);
         }
 
@@ -350,7 +350,7 @@ impl Theme {
             preview,
             path,
             ext,
-            exact,
+            filename,
             icon_color,
             status_line,
             symlink,
@@ -370,8 +370,8 @@ impl Theme {
     fn build_style_maps(&mut self) {
         let fallback = ColorPair::default();
 
-        self.exact_cache = self
-            .exact
+        self.filename_cache = self
+            .filename
             .iter()
             .map(|(k, v)| (k.clone(), v.style_or(&fallback)))
             .collect();

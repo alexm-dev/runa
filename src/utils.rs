@@ -12,6 +12,7 @@ pub(crate) mod editor;
 pub(crate) mod os;
 pub(crate) mod path;
 pub(crate) mod text;
+pub(crate) mod timings;
 
 #[macro_use]
 pub(crate) mod macros;

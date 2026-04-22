@@ -18,7 +18,6 @@ use crate::app::{
     keymap::{Action, Keymap, TabAction},
     metadata::MetadataState,
     nav::SortConfig,
-    timings::{Throttler, Timings},
 };
 use crate::config::Config;
 use crate::core::{
@@ -27,6 +26,7 @@ use crate::core::{
     worker::{WorkerResponse, WorkerTask, Workers},
 };
 use crate::ui::overlays::{OverlayKind, OverlayStack};
+use crate::utils::timings::{Throttler, Timings};
 
 /// Enumeration for each individual keypress result processed.
 ///

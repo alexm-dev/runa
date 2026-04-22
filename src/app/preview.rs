@@ -10,9 +10,9 @@ use std::time::{Duration, Instant};
 use ansi_to_tui::IntoText;
 use ratatui::text::Text;
 
-use crate::app::{actions::ScrollState, timings::Timings};
+use crate::app::actions::ScrollState;
 use crate::core::FileEntry;
-use crate::utils::text::StrBuffer;
+use crate::utils::{text::StrBuffer, timings::Timings};
 
 /// Preview content for the preview pane
 ///

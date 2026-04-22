@@ -13,7 +13,6 @@ mod parent;
 pub(crate) mod preview;
 mod state;
 pub(crate) mod tab;
-mod timings;
 
 pub(crate) use nav::NavState;
 pub(crate) use parent::ParentState;
