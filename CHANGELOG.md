@@ -8,7 +8,7 @@ All the changes made to runa are documented here.
 - **[BREAKING] Theme.exact renamed**:
     - `[theme.exact]` has been renamed to `[theme.filename]`
 - **Editor cmd**: Changed how editor filenames and extension mappings resolve the target path of files.
-    - If you set a custom filename to a certain program/cmd, the actual file path will be handled in the actual file path directory and never in the starting directory of runa._
+    - _If you set a custom filename to a certain program/cmd, the actual file path will be handled in the actual file path directory and never in the starting directory of runa._
     - _Note: `tar -xf`, or similar, wont need special scripting to handle file paths to the actual target directory._
 
 ### Internal
