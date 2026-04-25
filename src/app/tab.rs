@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use ratatui::text::Span;
 
-use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction, nav::SortConfig};
-use crate::core::worker::Workers;
+use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction};
+use crate::core::{sort::SortConfig, worker::Workers};
 use crate::utils::path;
 
 pub(crate) struct TabManager<'a> {

@@ -24,7 +24,6 @@ use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use dashmap::DashMap;
 
-use crate::app::nav::SortConfig;
 use crate::config::display::PreviewMethod;
 use crate::core::{
     FileEntry, FindResult, Formatter,
@@ -32,6 +31,7 @@ use crate::core::{
     fm, formatter, fs,
     metadata::{FileMetadata, FileMetadataCache, MetadataNeeds},
     proc,
+    sort::SortConfig,
 };
 use crate::utils::{os::is_regular_file, text::StrBuffer};
 

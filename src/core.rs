@@ -15,6 +15,7 @@ pub(crate) mod formatter;
 pub(crate) mod fs;
 pub(crate) mod metadata;
 pub(crate) mod proc;
+pub(crate) mod sort;
 pub(crate) mod terminal;
 pub(crate) mod worker;
 

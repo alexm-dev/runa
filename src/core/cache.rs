@@ -9,8 +9,7 @@ use std::time::Instant;
 
 use dashmap::{DashMap, mapref::entry::Entry};
 
-use crate::app::nav::SortConfig;
-use crate::core::FileEntry;
+use crate::core::{FileEntry, sort::SortConfig};
 use crate::utils::text::StrBuffer;
 
 const DIR_CACHE_CAP: usize = 30;

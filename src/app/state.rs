@@ -17,12 +17,12 @@ use crate::app::{
     actions::{ActionContext, ActionMode, InputMode},
     keymap::{Action, Keymap, TabAction},
     metadata::MetadataState,
-    nav::SortConfig,
 };
 use crate::config::Config;
 use crate::core::{
     cache::DirListOptions,
     metadata::{FileMetadataCache, MetadataNeeds},
+    sort::SortConfig,
     worker::{WorkerResponse, WorkerTask, Workers},
 };
 use crate::ui::overlays::{OverlayKind, OverlayStack};

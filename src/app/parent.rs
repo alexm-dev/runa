@@ -6,8 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::app::nav::SortConfig;
-use crate::core::FileEntry;
+use crate::core::{FileEntry, sort::SortConfig};
 use crate::utils::text::StrBuffer;
 
 /// Holds the state of the parent directory pane

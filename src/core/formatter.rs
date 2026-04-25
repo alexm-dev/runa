@@ -20,11 +20,11 @@ use dashmap::DashMap;
 use humansize::{self, DECIMAL};
 use unicode_width::UnicodeWidthChar;
 
-use crate::app::nav::{SortConfig, SortMode, SortOrder};
 use crate::core::{
     FileEntry,
     cache::DirListOptions,
     metadata::{self, CachedMetaKey, FileType},
+    sort::{SortConfig, SortMode, SortOrder},
 };
 use crate::utils::os;
 

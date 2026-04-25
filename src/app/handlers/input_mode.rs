@@ -19,10 +19,10 @@ use crate::app::{
     Workers,
     actions::{ActionMode, InputMode},
     keymap::{Action, NavAction, PrefixCommand, SystemAction},
-    nav::{SortConfig, SortOrder},
     state::{AppState, KeypressResult},
 };
 use crate::core::proc;
+use crate::core::sort::{SortConfig, SortOrder};
 use crate::ui::overlays::OverlayKind;
 use crate::utils::{os, path};
 
