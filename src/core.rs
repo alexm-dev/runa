@@ -2,12 +2,13 @@
 //!
 //! This module contains the non-UI pieces used by runa:
 //! - [fm]: directory traversal (see [browse_dir], [FileEntry]).
+//! - [fs]: filesystem functionality and sys-calls functions.
 //! - [formatter]: formatting and sorting logic.
 //! - [worker]: background work and message passing back into the RunaRoot struct.
-//! - [terminal]: terminal setup/teardown and the main crossterm/ratatui event loop.
 //! - [proc]: process management for running external commands like `bat`, `fd`.
 //! - [metadata]: file metadata extraction and caching, including file properties.
 //! - [cache]: caching of FileEntry data for pane rendering.
+//! - [sort]: sorting configuration data for entry sorting.
 
 pub(crate) mod cache;
 pub(crate) mod fm;
