@@ -17,7 +17,6 @@ use std::time::SystemTime;
 use chrono::{DateTime, Local};
 use dashmap::DashMap;
 
-use crate::config::display::ShowInfoOptions;
 use crate::core::formatter::{self, TimeFormatCtx};
 
 #[cfg(windows)]
@@ -133,32 +132,26 @@ impl FileMetadata {
             .unwrap_or_default()
     }
 
-    #[inline]
     pub(crate) fn perms(&self) -> String {
         format!("{:width$}", self.attributes, width = PERMS_WIDTH)
     }
 
-    #[inline]
     pub(crate) fn size(&self) -> String {
         formatter::format_file_size(self.size, self.file_type == FileType::Directory)
     }
 
-    #[inline]
     pub(crate) fn modified(&self, ctx: &TimeFormatCtx) -> String {
         formatter::format_file_time(self.modified, ctx)
     }
 
-    #[inline]
     pub(crate) fn created(&self, ctx: &TimeFormatCtx) -> String {
         formatter::format_file_time(self.created, ctx)
     }
 
-    #[inline]
     pub(crate) fn accessed(&self, ctx: &TimeFormatCtx) -> String {
         formatter::format_file_time(self.accessed, ctx)
     }
 
-    #[inline]
     pub(crate) fn file_type(&self) -> &'static str {
         formatter::format_file_type(&self.file_type)
     }
@@ -238,35 +231,17 @@ impl FileMetadataCache {
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct MetadataNeeds {
-    name: bool,
-    file_type: bool,
-    size: bool,
-    modified: bool,
-    created: bool,
-    accessed: bool,
-    perms: bool,
+    pub(crate) name: bool,
+    pub(crate) file_type: bool,
+    pub(crate) size: bool,
+    pub(crate) modified: bool,
+    pub(crate) created: bool,
+    pub(crate) accessed: bool,
+    pub(crate) perms: bool,
     #[cfg(unix)]
-    owner: bool,
+    pub(crate) owner: bool,
     #[cfg(unix)]
-    group: bool,
-}
-
-impl MetadataNeeds {
-    pub(crate) fn from_show_info(info: &ShowInfoOptions) -> Self {
-        Self {
-            name: info.name(),
-            file_type: info.file_type(),
-            size: info.size(),
-            modified: info.modified(),
-            created: info.created(),
-            accessed: info.accessed(),
-            perms: info.perms(),
-            #[cfg(unix)]
-            owner: info.owner(),
-            #[cfg(unix)]
-            group: info.group(),
-        }
-    }
+    pub(crate) group: bool,
 }
 
 #[cfg(unix)]

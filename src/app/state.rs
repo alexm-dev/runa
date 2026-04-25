@@ -231,7 +231,7 @@ impl<'a> AppState<'a> {
         let req_id = self.metadata.prepare_new_request();
         let date_format = self.config.display().info().date_format();
 
-        let needs = MetadataNeeds::from_show_info(self.config.display().info());
+        let needs = self.metadata_needs();
 
         if workers
             .metadata_tx()
@@ -706,6 +706,22 @@ impl<'a> AppState<'a> {
             }
         } else {
             self.preview.clear();
+        }
+    }
+
+    fn metadata_needs(&self) -> MetadataNeeds {
+        MetadataNeeds {
+            name: self.config.display().info().name(),
+            file_type: self.config.display().info().file_type(),
+            size: self.config.display().info().size(),
+            accessed: self.config.display().info().accessed(),
+            modified: self.config.display().info().modified(),
+            created: self.config.display().info().created(),
+            perms: self.config.display().info().perms(),
+            #[cfg(unix)]
+            owner: self.config.display().info().owner(),
+            #[cfg(unix)]
+            group: self.config.display().info().group(),
         }
     }
 }
