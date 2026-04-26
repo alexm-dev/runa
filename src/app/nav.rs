@@ -329,7 +329,7 @@ impl NavState {
                 .entries
                 .iter()
                 .enumerate()
-                .filter(|(_, e)| e.name_str().to_lowercase().contains(&filter_lower))
+                .filter(|(_, e)| e.lowered().contains(&filter_lower))
                 .map(|(i, _)| i)
                 .collect();
         }
