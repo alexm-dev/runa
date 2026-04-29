@@ -84,9 +84,9 @@ pub(crate) fn render(
         );
 
         let parent_pane_style = PaneStyles {
-            item: theme_cfg.parent_item_style(),
+            item: theme_cfg.parent().entry_style_or_theme(),
             dir: theme_cfg.directory_style(),
-            selection: theme_cfg.parent_selection_style(),
+            selection: theme_cfg.parent().selection_style(),
             symlink_file: symlink_theme.file(),
             symlink_dir: symlink_theme.directory(),
             symlink_target: symlink_theme.target(),
@@ -188,9 +188,9 @@ pub(crate) fn render(
         );
 
         let preview_pane_styles = PaneStyles {
-            item: theme_cfg.preview_item_style(),
+            item: theme_cfg.preview().entry_style_or_theme(),
             dir: theme_cfg.directory_style(),
-            selection: theme_cfg.preview_selection_style(),
+            selection: theme_cfg.preview().selection_style(),
             symlink_file: symlink_theme.file(),
             symlink_dir: symlink_theme.directory(),
             symlink_target: symlink_theme.target(),

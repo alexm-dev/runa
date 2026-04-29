@@ -14,10 +14,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::app::{
+    Clipboard, Workers,
     actions::{ActionMode, InputMode},
     keymap::FileAction,
     state::{AppState, KeypressResult},
-    {Clipboard, Workers},
 };
 use crate::utils::editor;
 
