@@ -21,7 +21,7 @@ use ratatui::{
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::app::{AppState, Clipboard, PreviewData};
-use crate::config::Theme;
+use crate::config::{Display, Theme};
 use crate::core::FileEntry;
 use crate::ui::icons;
 use crate::utils::text::StrBuffer;
@@ -31,18 +31,41 @@ const MIN_LEFT_WIDTH: u16 = 12;
 
 /// Styles used for rendering items in a pane
 /// Includes styles for regular items, directories and selected items
-pub(crate) struct PaneStyles {
-    pub(crate) item: Style,
-    pub(crate) dir: Style,
-    pub(crate) selection: Style,
-    pub(crate) symlink_dir: Color,
-    pub(crate) symlink_file: Color,
-    pub(crate) symlink_target: Color,
-    pub(crate) executable_fg: Color,
+pub(super) struct PaneStyles {
+    item: Style,
+    dir: Style,
+    selection: Style,
+    symlink_dir: Color,
+    symlink_file: Color,
+    symlink_target: Color,
+    executable_fg: Color,
 }
 
 impl PaneStyles {
-    pub(crate) fn get_style(&self, is_dir: bool, is_selected: bool) -> Style {
+    pub(super) fn new(theme: &Theme) -> Self {
+        let sym = theme.symlink_theme();
+        Self {
+            item: theme.entry_style(),
+            dir: theme.directory_style(),
+            selection: theme.selection_style(),
+            symlink_dir: sym.directory(),
+            symlink_file: sym.file(),
+            symlink_target: sym.target(),
+            executable_fg: theme.exe_color(),
+        }
+    }
+
+    pub(super) fn with_entry(mut self, item: Style) -> Self {
+        self.item = item;
+        self
+    }
+
+    pub(super) fn with_selection(mut self, selection: Style) -> Self {
+        self.selection = selection;
+        self
+    }
+
+    fn get_style(&self, is_dir: bool, is_selected: bool) -> Style {
         let mut style = if is_dir && self.dir.fg != Some(Color::Reset) {
             self.dir
         } else {
@@ -67,33 +90,58 @@ impl PaneStyles {
 }
 
 /// Context data for pane rendering functions
-pub(crate) struct PaneContext<'a> {
-    pub(crate) area: Rect,
-    pub(crate) block: Block<'a>,
-    pub(crate) border_type: BorderType,
-    pub(crate) theme: &'a Theme,
-    pub(crate) accent_style: Style,
-    pub(crate) styles: PaneStyles,
-    pub(crate) highlight_symbol: &'a str,
-    pub(crate) padding_str: &'static str,
-    pub(crate) show_icons: bool,
-    pub(crate) show_marker: bool,
+pub(super) struct PaneContext<'a> {
+    area: Rect,
+    block: Block<'a>,
+    border_type: BorderType,
+    theme: &'a Theme,
+    accent_style: Style,
+    styles: PaneStyles,
+    highlight_symbol: &'a str,
+    padding_str: &'static str,
+    show_icons: bool,
+    show_marker: bool,
 }
 
-/// Options for preview pane rendering
-pub(crate) struct PreviewOptions {
-    pub(crate) use_underline: bool,
-    pub(crate) underline_match_text: bool,
-    pub(crate) underline_style: Style,
+impl<'a> PaneContext<'a> {
+    pub(super) fn new(
+        area: Rect,
+        block: Block<'a>,
+        border_type: BorderType,
+        theme: &'a Theme,
+        display: &'a Display,
+        styles: PaneStyles,
+        highlight_symbol: &'a str,
+    ) -> Self {
+        Self {
+            area,
+            block,
+            border_type,
+            theme,
+            accent_style: theme.accent_style(),
+            padding_str: display.padding_str(),
+            show_icons: display.icons(),
+            show_marker: display.dir_marker(),
+            styles,
+            highlight_symbol,
+        }
+    }
 }
 
 /// Marker and clipboard data for use in pane drawing functions
-pub(crate) struct PaneMarkers<'a> {
-    pub(crate) markers: Option<HashSet<OsString>>,
-    pub(crate) clipboard: Option<HashSet<OsString>>,
-    pub(crate) marker_icon: &'a str,
-    pub(crate) marker_style: Style,
-    pub(crate) clipboard_style: Style,
+pub(super) struct PaneMarkers<'a> {
+    markers: Option<HashSet<OsString>>,
+    clipboard: Option<HashSet<OsString>>,
+    marker_icon: &'a str,
+    marker_style: Style,
+    clipboard_style: Style,
+}
+
+/// Options for preview pane rendering
+struct PreviewOptions {
+    use_underline: bool,
+    underline_match_text: bool,
+    underline_style: Style,
 }
 
 #[derive(Clone, Copy)]
@@ -124,7 +172,7 @@ impl<'a> RightCol<'a> {
 /// Draws the main file list pane in the UI
 ///
 /// Highlights selection, markers and directories and handles styling for items.
-pub(crate) fn draw_main(
+pub(super) fn draw_main(
     frame: &mut Frame,
     app: &AppState,
     context: PaneContext,
@@ -207,7 +255,7 @@ pub(crate) fn draw_main(
 /// Draws the preview pane, showing either the file content or directory listing
 ///
 /// Also applies underline/selection styles and manages cursor position
-pub(crate) fn draw_preview(
+pub(super) fn draw_preview(
     frame: &mut Frame,
     app: &AppState,
     context: PaneContext,
@@ -309,7 +357,7 @@ pub(crate) fn draw_preview(
 }
 
 /// Draws the parent directory of the current working directory.
-pub(crate) fn draw_parent(
+pub(super) fn draw_parent(
     frame: &mut Frame,
     app: &AppState,
     context: PaneContext,
@@ -369,9 +417,29 @@ pub(crate) fn draw_parent(
     );
 }
 
+/// Helper: Create a PaneMarkers struct for use in pane drawing functions.
+/// Builds marker and clipboard sets for a specific directory.
+pub(super) fn make_pane_markers<'a>(
+    nav_markers: &'a HashSet<PathBuf>,
+    clipboard: Option<&'a HashSet<PathBuf>>,
+    dir: Option<&'a Path>,
+    marker_icon: &'a str,
+    marker_style: Style,
+    clipboard_style: Style,
+) -> PaneMarkers<'a> {
+    let (markers, clipboard) = pane_marker_sets(nav_markers, clipboard, dir);
+    PaneMarkers {
+        markers,
+        clipboard,
+        marker_icon,
+        marker_style,
+        clipboard_style,
+    }
+}
+
 /// Helper: Build marker and clipboard sets for a specific preview directory.
 /// Used to decorate the preview pane with marker/copy icons.
-pub(crate) fn pane_marker_sets(
+fn pane_marker_sets(
     nav_markers: &HashSet<PathBuf>,
     clipboard: Option<&HashSet<PathBuf>>,
     dir: Option<&Path>,
@@ -392,26 +460,6 @@ pub(crate) fn pane_marker_sets(
             (Some(markers), clipboard)
         }
         None => (None, None),
-    }
-}
-
-/// Helper: Create a PaneMarkers struct for use in pane drawing functions.
-/// Builds marker and clipboard sets for a specific directory.
-pub(crate) fn make_pane_markers<'a>(
-    nav_markers: &'a HashSet<PathBuf>,
-    clipboard: Option<&'a HashSet<PathBuf>>,
-    dir: Option<&'a Path>,
-    marker_icon: &'a str,
-    marker_style: Style,
-    clipboard_style: Style,
-) -> PaneMarkers<'a> {
-    let (markers, clipboard) = pane_marker_sets(nav_markers, clipboard, dir);
-    PaneMarkers {
-        markers,
-        clipboard,
-        marker_icon,
-        marker_style,
-        clipboard_style,
     }
 }
 

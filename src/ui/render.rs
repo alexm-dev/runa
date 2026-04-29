@@ -44,11 +44,6 @@ pub(crate) fn render(
     let theme_cfg = cfg.theme();
 
     let accent_style = theme_cfg.accent_style();
-    let selection_style = theme_cfg.selection_style();
-
-    let symlink_theme = theme_cfg.symlink_theme();
-
-    let padding_str = display_cfg.padding_str();
     let border_type = display_cfg.border_shape().as_border_type();
 
     let markers = app.nav().markers();
@@ -83,31 +78,22 @@ pub(crate) fn render(
             clipboard_style,
         );
 
-        let parent_pane_style = PaneStyles {
-            item: theme_cfg.parent().entry_style_or_theme(),
-            dir: theme_cfg.directory_style(),
-            selection: theme_cfg.parent().selection_style(),
-            symlink_file: symlink_theme.file(),
-            symlink_dir: symlink_theme.directory(),
-            symlink_target: symlink_theme.target(),
-            executable_fg: theme_cfg.exe_color(),
-        };
+        let parent_pane_style = PaneStyles::new(theme_cfg)
+            .with_entry(theme_cfg.parent().entry_style_or_theme())
+            .with_selection(theme_cfg.parent().selection_style());
 
         panes::draw_parent(
             frame,
             app,
-            PaneContext {
-                area: chunks[pane_idx],
-                block: widgets::get_pane_block("Parent", app),
+            PaneContext::new(
+                chunks[pane_idx],
+                widgets::get_pane_block("Parent", app),
                 border_type,
-                theme: theme_cfg,
-                accent_style,
-                styles: parent_pane_style,
-                highlight_symbol: "",
-                padding_str,
-                show_icons: display_cfg.icons(),
-                show_marker: display_cfg.dir_marker(),
-            },
+                theme_cfg,
+                display_cfg,
+                parent_pane_style,
+                "",
+            ),
             &parent_markers,
         );
         pane_idx += 1;
@@ -131,31 +117,18 @@ pub(crate) fn render(
             ""
         };
 
-        let pane_style = PaneStyles {
-            item: theme_cfg.entry_style(),
-            dir: theme_cfg.directory_style(),
-            selection: selection_style,
-            symlink_file: symlink_theme.file(),
-            symlink_dir: symlink_theme.directory(),
-            symlink_target: symlink_theme.target(),
-            executable_fg: theme_cfg.exe_color(),
-        };
-
         panes::draw_main(
             frame,
             app,
-            PaneContext {
-                area: chunks[pane_idx],
-                block: widgets::get_pane_block("Files", app),
+            PaneContext::new(
+                chunks[pane_idx],
+                widgets::get_pane_block("Files", app),
                 border_type,
-                accent_style,
-                theme: theme_cfg,
-                styles: pane_style,
-                highlight_symbol: symbol,
-                padding_str,
-                show_icons: display_cfg.icons(),
-                show_marker: display_cfg.dir_marker(),
-            },
+                theme_cfg,
+                display_cfg,
+                PaneStyles::new(theme_cfg),
+                symbol,
+            ),
             clipboard,
         );
         pane_idx += 1;
@@ -174,7 +147,7 @@ pub(crate) fn render(
     // PREVIEW PANE
     if display_cfg.preview() && pane_idx < chunks.len() {
         let area = chunks[pane_idx];
-        let bg_filler = Block::default().style(theme_cfg.preview().effective_style_or_theme());
+        let bg_filler = Block::default().style(theme_cfg.preview().entry_style_or_theme());
         frame.render_widget(bg_filler, area);
 
         let preview_dir = app.preview().current_path();
@@ -187,31 +160,22 @@ pub(crate) fn render(
             clipboard_style,
         );
 
-        let preview_pane_styles = PaneStyles {
-            item: theme_cfg.preview().entry_style_or_theme(),
-            dir: theme_cfg.directory_style(),
-            selection: theme_cfg.preview().selection_style(),
-            symlink_file: symlink_theme.file(),
-            symlink_dir: symlink_theme.directory(),
-            symlink_target: symlink_theme.target(),
-            executable_fg: theme_cfg.exe_color(),
-        };
+        let preview_pane_style = PaneStyles::new(theme_cfg)
+            .with_entry(theme_cfg.preview().entry_style_or_theme())
+            .with_selection(theme_cfg.preview().selection_style());
 
         panes::draw_preview(
             frame,
             app,
-            PaneContext {
-                area: chunks[pane_idx],
-                block: widgets::get_pane_block("Preview", app),
+            PaneContext::new(
+                chunks[pane_idx],
+                widgets::get_pane_block("Preview", app),
                 border_type,
-                accent_style,
-                theme: theme_cfg,
-                styles: preview_pane_styles,
-                highlight_symbol: "",
-                padding_str,
-                show_icons: display_cfg.icons(),
-                show_marker: display_cfg.dir_marker(),
-            },
+                theme_cfg,
+                display_cfg,
+                preview_pane_style,
+                "",
+            ),
             &preview_markers,
         );
     }

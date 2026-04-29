@@ -49,12 +49,6 @@ impl PaneTheme {
     pub(crate) fn entry_style_or_theme(&self) -> Style {
         self.color.style_or(&Theme::builtin().entry)
     }
-
-    /// Returns the pane color style, falling back to the internal default theme's entry style.
-    /// This method uses the internal default theme as the fallback.
-    pub(crate) fn effective_style_or_theme(&self) -> Style {
-        self.color.style_or(&Theme::builtin().entry)
-    }
 }
 
 /// MarkerTheme struct to hold marker icon and colors.
