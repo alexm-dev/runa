@@ -398,10 +398,9 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                     tab_id,
                 } => {
                     let lines = formatter::safe_read_preview(&path, max_lines, pane_width, scroll);
-                    let is_eof = lines.len() < max_lines;
                     let _ = res_tx.send(WorkerResponse::PreviewLoaded {
+                        is_eof: lines.len() < max_lines,
                         lines,
-                        is_eof,
                         request_id,
                         tab_id,
                     });
@@ -425,10 +424,9 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                             }
                         }
                     };
-                    let is_eof = lines.len() < max_lines;
                     let _ = res_tx.send(WorkerResponse::PreviewLoaded {
+                        is_eof: lines.len() < max_lines,
                         lines,
-                        is_eof,
                         request_id,
                         tab_id,
                     });
