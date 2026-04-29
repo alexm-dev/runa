@@ -28,8 +28,8 @@ impl SortOrder {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct SortConfig {
-    pub(crate) mode: SortMode,
-    pub(crate) order: SortOrder,
+    mode: SortMode,
+    order: SortOrder,
 }
 
 impl Default for SortConfig {
@@ -38,5 +38,26 @@ impl Default for SortConfig {
             mode: SortMode::Natural,
             order: SortOrder::Ascending,
         }
+    }
+}
+
+impl From<(SortMode, SortOrder)> for SortConfig {
+    fn from((mode, order): (SortMode, SortOrder)) -> Self {
+        Self { mode, order }
+    }
+}
+
+impl SortConfig {
+    crate::getters!(
+        mode: SortMode,
+        order: SortOrder,
+    );
+
+    pub(crate) fn set_mode(&mut self, mode: SortMode) {
+        self.mode = mode;
+    }
+
+    pub(crate) fn set_order(&mut self, order: SortOrder) {
+        self.order = order
     }
 }

@@ -106,7 +106,7 @@ impl Formatter {
         sort_date_format: &str,
         cache: &MetaCache,
     ) -> Option<Vec<Arc<str>>> {
-        match self.sort_config.mode {
+        match self.sort_config.mode() {
             SortMode::Name => {
                 self.sort_by_name(entries);
                 None
@@ -151,7 +151,7 @@ impl Formatter {
     }
 
     fn sort_by_name(&self, entries: &mut [FileEntry]) {
-        let sort_order = self.sort_config.order;
+        let sort_order = self.sort_config.order();
 
         if !self.list.case_insensitive {
             entries.sort_unstable_by(|left_entry, right_entry| {
@@ -189,7 +189,7 @@ impl Formatter {
     }
 
     fn sort_by_natural(&self, entries: &mut [FileEntry]) {
-        let sort_order = self.sort_config.order;
+        let sort_order = self.sort_config.order();
         let case_insensitive = self.list.case_insensitive;
 
         entries.sort_unstable_by(|a, b| {
@@ -213,7 +213,7 @@ impl Formatter {
     }
 
     fn sort_by_extension(&self, entries: &mut [FileEntry]) {
-        let sort_order = self.sort_config.order;
+        let sort_order = self.sort_config.order();
         let case_insensitive = self.list.case_insensitive;
 
         entries.sort_unstable_by(|a, b| {
@@ -301,7 +301,7 @@ impl Formatter {
             path_buffer.pop();
         }
 
-        let sort_order = self.sort_config.order;
+        let sort_order = self.sort_config.order();
 
         keys.sort_unstable_by(|left, right| {
             let p_ord = left.0.cmp(&right.0);
@@ -899,10 +899,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: false,
             },
-            SortConfig {
-                mode: SortMode::Name,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Name, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -918,10 +915,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: true,
             },
-            SortConfig {
-                mode: SortMode::Name,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Name, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -953,10 +947,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: false,
             },
-            SortConfig {
-                mode: SortMode::Extension,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Extension, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -975,10 +966,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: true,
             },
-            SortConfig {
-                mode: SortMode::Extension,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Extension, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -1007,10 +995,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: false,
             },
-            SortConfig {
-                mode: SortMode::Natural,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Natural, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -1026,10 +1011,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: true,
             },
-            SortConfig {
-                mode: SortMode::Natural,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Natural, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt_ci.sort_entries(Path::new(""), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -1060,10 +1042,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: true,
             },
-            SortConfig {
-                mode: SortMode::Size,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Size, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -1097,10 +1076,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: true,
             },
-            SortConfig {
-                mode: SortMode::Modified,
-                order: SortOrder::Ascending,
-            },
+            (SortMode::Modified, SortOrder::Ascending).into(),
             Arc::new(HashSet::new()),
         );
         fmt.sort_entries(temp_dir.path(), &mut entries, "%b %e %H:%M", &meta_cache);
@@ -1133,10 +1109,7 @@ mod tests {
                 show_system: true,
                 case_insensitive: true,
             },
-            SortConfig {
-                mode: SortMode::Modified,
-                order: SortOrder::Descending,
-            },
+            (SortMode::Modified, SortOrder::Descending).into(),
             Arc::new(HashSet::new()),
         );
 

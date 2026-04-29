@@ -258,11 +258,11 @@ impl<'a> AppState<'a> {
             PrefixCommand::Sort(sort_mode) => {
                 let mut sort_config: SortConfig = self.nav.sort_config();
 
-                if sort_config.mode == sort_mode {
-                    sort_config.order = sort_config.order.toggle();
+                if sort_config.mode() == sort_mode {
+                    sort_config.set_order(sort_config.order().toggle());
                 } else {
-                    sort_config.mode = sort_mode;
-                    sort_config.order = SortOrder::Ascending;
+                    sort_config.set_mode(sort_mode);
+                    sort_config.set_order(SortOrder::Ascending);
                 }
 
                 self.nav.set_sort_config(sort_config);
