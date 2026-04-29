@@ -24,7 +24,7 @@ use crate::core::{
     cache::DirListOptions,
     metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
-    workers::{WorkerResponse, WorkerTask, Workers},
+    workers::{PreviewMode, WorkerResponse, WorkerTask, Workers},
 };
 
 use crate::ui::overlays::{OverlayKind, OverlayStack};
@@ -680,9 +680,8 @@ impl<'a> AppState<'a> {
             } else {
                 let preview_options = self.config.display().preview_options();
                 let preview_method = preview_options.method();
-                let scroll = self.preview.scroll().offset() as usize;
-
-                let task = match preview_method {
+                let preview_mode = match preview_method {
+                    PreviewMethod::Internal => PreviewMode::Internal,
                     PreviewMethod::Bat => {
                         let args = self
                             .config
@@ -690,29 +689,24 @@ impl<'a> AppState<'a> {
                             .into_iter()
                             .map(OsString::from)
                             .collect();
-
-                        WorkerTask::LoadBatPreview {
-                            path,
-                            max_lines: self.metrics.preview_height,
-                            pane_width: self.metrics.preview_width,
-                            scroll,
-                            args,
-                            request_id: req_id,
-                            tab_id: self.tab_id(),
-                        }
+                        PreviewMode::Bat { args }
                     }
+                };
+                let scroll = self.preview.scroll().offset() as usize;
 
-                    PreviewMethod::Internal => WorkerTask::LoadInternalPreview {
+                if workers
+                    .preview_file_tx()
+                    .try_send(WorkerTask::LoadPreview {
                         path,
                         max_lines: self.metrics.preview_height,
                         pane_width: self.metrics.preview_width,
                         scroll,
+                        preview_mode,
                         request_id: req_id,
                         tab_id: self.tab_id(),
-                    },
-                };
-
-                if workers.preview_file_tx().try_send(task).is_ok() {
+                    })
+                    .is_ok()
+                {
                     self.preview_request_time.touch();
                 } else {
                     self.preview.mark_pending();
