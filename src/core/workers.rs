@@ -136,12 +136,6 @@ impl Drop for ActiveOpGuard {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum PreviewMode {
-    Internal,
-    Bat,
-}
-
 /// Tasks sent to the worker thread via channel.
 ///
 /// Each variant describes a filesystem or a preview operation to perform.
@@ -167,12 +161,19 @@ pub(crate) enum WorkerTask {
         request_id: u64,
         tab_id: Option<usize>,
     },
-    LoadPreview {
+    LoadInternalPreview {
         path: PathBuf,
         max_lines: usize,
         pane_width: usize,
         scroll: usize,
-        preview_mode: PreviewMode,
+        request_id: u64,
+        tab_id: Option<usize>,
+    },
+    LoadBatPreview {
+        path: PathBuf,
+        max_lines: usize,
+        pane_width: usize,
+        scroll: usize,
         args: Vec<OsString>,
         request_id: u64,
         tab_id: Option<usize>,
@@ -387,48 +388,53 @@ fn start_sort_worker(
 fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
         while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadPreview {
-                path,
-                max_lines,
-                pane_width,
-                scroll,
-                preview_mode,
-                args,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
-            let lines = match preview_mode {
-                PreviewMode::Internal => {
-                    formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+            match task {
+                WorkerTask::LoadInternalPreview {
+                    path,
+                    max_lines,
+                    pane_width,
+                    scroll,
+                    request_id,
+                    tab_id,
+                } => {
+                    let lines = formatter::safe_read_preview(&path, max_lines, pane_width, scroll);
+                    let is_eof = lines.len() < max_lines;
+                    let _ = res_tx.send(WorkerResponse::PreviewLoaded {
+                        lines,
+                        is_eof,
+                        request_id,
+                        tab_id,
+                    });
                 }
-                PreviewMode::Bat => {
-                    if !is_regular_file(&path) || fs::is_preview_deny(&path) {
+                WorkerTask::LoadBatPreview {
+                    path,
+                    max_lines,
+                    pane_width,
+                    scroll,
+                    args,
+                    request_id,
+                    tab_id,
+                } => {
+                    let lines = if !is_regular_file(&path) || fs::is_preview_deny(&path) {
                         formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                     } else {
                         match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
-                            // Bat preview succeeded
-                            // If bat fails, fallback to internal preview
-                            // If bat is not installed or returns error, we fallback to internal preview
                             Ok(lines) => lines,
                             Err(_) => {
                                 formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                             }
                         }
-                    }
+                    };
+                    let is_eof = lines.len() < max_lines;
+                    let _ = res_tx.send(WorkerResponse::PreviewLoaded {
+                        lines,
+                        is_eof,
+                        request_id,
+                        tab_id,
+                    });
                 }
-            };
-
-            let is_eof = lines.len() < max_lines;
-            let _ = res_tx.send(WorkerResponse::PreviewLoaded {
-                lines,
-                is_eof,
-                request_id,
-                tab_id,
-            });
+                _ => continue,
+            }
         }
     });
 }
@@ -802,16 +808,16 @@ mod tests {
             tab_id: TEST_TAB_ID,
         })?;
 
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
-            path: test_file.clone(),
-            max_lines: 1,
-            pane_width: 10,
-            scroll: 0,
-            preview_mode: PreviewMode::Internal,
-            args: vec![],
-            request_id: 20,
-            tab_id: TEST_TAB_ID,
-        })?;
+        workers
+            .preview_file_tx()
+            .send(WorkerTask::LoadInternalPreview {
+                path: test_file.clone(),
+                max_lines: 1,
+                pane_width: 10,
+                scroll: 0,
+                request_id: 20,
+                tab_id: TEST_TAB_ID,
+            })?;
 
         workers.nav_io_tx().send(WorkerTask::LoadDirectory {
             path: temp.path().to_path_buf(),
@@ -1130,16 +1136,16 @@ mod tests {
         let preview_file = temp.path().join("preview.txt");
         std::fs::write(&preview_file, "A\nB\nC\nD\n")?;
         let workers = Workers::spawn();
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
-            path: preview_file.clone(),
-            max_lines: 2,
-            pane_width: 40,
-            scroll: 0,
-            preview_mode: PreviewMode::Internal,
-            args: vec![],
-            request_id: 3,
-            tab_id: TEST_TAB_ID,
-        })?;
+        workers
+            .preview_file_tx()
+            .send(WorkerTask::LoadInternalPreview {
+                path: preview_file.clone(),
+                max_lines: 2,
+                pane_width: 40,
+                scroll: 0,
+                request_id: 3,
+                tab_id: TEST_TAB_ID,
+            })?;
 
         match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
             WorkerResponse::PreviewLoaded { lines, .. } => {
@@ -1207,12 +1213,11 @@ mod tests {
 
         let workers = Workers::spawn();
 
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+        workers.preview_file_tx().send(WorkerTask::LoadBatPreview {
             path: file_path,
             max_lines: 5,
             pane_width: 40,
             scroll: 0,
-            preview_mode: PreviewMode::Bat,
             args: vec![],
             request_id: 99,
             tab_id: TEST_TAB_ID,
