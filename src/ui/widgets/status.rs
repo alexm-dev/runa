@@ -13,7 +13,7 @@ use ratatui::{
 
 use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
-use crate::core::worker::Workers;
+use crate::core::workers::Workers;
 use crate::ui::widgets::StatusPosition;
 
 pub(crate) fn draw_separator(frame: &mut Frame, area: Rect, style: Style, border_type: BorderType) {

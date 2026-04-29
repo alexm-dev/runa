@@ -20,7 +20,7 @@ pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
-use crate::{app::tab::TabManager, core::worker::Workers};
+use crate::{app::tab::TabManager, core::workers::Workers};
 use std::collections::HashSet;
 use std::path::PathBuf;
 

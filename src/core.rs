@@ -17,7 +17,7 @@ pub(crate) mod fs;
 pub(crate) mod metadata;
 pub(crate) mod proc;
 pub(crate) mod sort;
-pub(crate) mod worker;
+pub(crate) mod workers;
 
 pub(crate) use fm::FileEntry;
 pub(crate) use formatter::Formatter;

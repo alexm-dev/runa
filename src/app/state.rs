@@ -19,11 +19,12 @@ use crate::app::{
     metadata::MetadataState,
 };
 use crate::config::Config;
+use crate::config::display::PreviewMethod;
 use crate::core::{
     cache::DirListOptions,
     metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
-    worker::{WorkerResponse, WorkerTask, Workers},
+    workers::{PreviewMode, WorkerResponse, WorkerTask, Workers},
 };
 use crate::ui::overlays::{OverlayKind, OverlayStack};
 use crate::utils::timings::{Throttler, Timings};
@@ -677,13 +678,23 @@ impl<'a> AppState<'a> {
                 }
             } else {
                 let preview_options = self.config.display().preview_options();
-                let preview_method = preview_options.method().clone();
-                let bat_args = self
-                    .config
-                    .bat_args_for_preview(self.metrics.preview_width)
-                    .into_iter()
-                    .map(OsString::from)
-                    .collect();
+                let preview_method = preview_options.method();
+
+                let preview_mode = match preview_method {
+                    PreviewMethod::Internal => PreviewMode::Internal,
+                    PreviewMethod::Bat => PreviewMode::Bat,
+                };
+
+                let bat_args: Vec<OsString> = if matches!(preview_method, PreviewMethod::Bat) {
+                    self.config
+                        .bat_args_for_preview(self.metrics.preview_width)
+                        .into_iter()
+                        .map(OsString::from)
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+
                 let scroll = self.preview.scroll().offset() as usize;
                 if workers
                     .preview_file_tx()
@@ -692,7 +703,7 @@ impl<'a> AppState<'a> {
                         max_lines: self.metrics.preview_height,
                         pane_width: self.metrics.preview_width,
                         scroll,
-                        preview_method,
+                        preview_mode,
                         args: bat_args,
                         request_id: req_id,
                         tab_id: self.tab_id(),

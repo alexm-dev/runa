@@ -24,7 +24,6 @@ use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use dashmap::DashMap;
 
-use crate::config::display::PreviewMethod;
 use crate::core::{
     FileEntry, FindResult, Formatter,
     cache::{DirCache, DirListOptions},
@@ -137,6 +136,12 @@ impl Drop for ActiveOpGuard {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum PreviewMode {
+    Internal,
+    Bat,
+}
+
 /// Tasks sent to the worker thread via channel.
 ///
 /// Each variant describes a filesystem or a preview operation to perform.
@@ -167,7 +172,7 @@ pub(crate) enum WorkerTask {
         max_lines: usize,
         pane_width: usize,
         scroll: usize,
-        preview_method: PreviewMethod,
+        preview_mode: PreviewMode,
         args: Vec<OsString>,
         request_id: u64,
         tab_id: Option<usize>,
@@ -387,7 +392,7 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                 max_lines,
                 pane_width,
                 scroll,
-                preview_method,
+                preview_mode,
                 args,
                 request_id,
                 tab_id,
@@ -396,11 +401,11 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                 continue;
             };
 
-            let lines = match preview_method {
-                PreviewMethod::Internal => {
+            let lines = match preview_mode {
+                PreviewMode::Internal => {
                     formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                 }
-                PreviewMethod::Bat => {
+                PreviewMode::Bat => {
                     if !is_regular_file(&path) || fs::is_preview_deny(&path) {
                         formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                     } else {
@@ -802,7 +807,7 @@ mod tests {
             max_lines: 1,
             pane_width: 10,
             scroll: 0,
-            preview_method: PreviewMethod::Internal,
+            preview_mode: PreviewMode::Internal,
             args: vec![],
             request_id: 20,
             tab_id: TEST_TAB_ID,
@@ -1130,7 +1135,7 @@ mod tests {
             max_lines: 2,
             pane_width: 40,
             scroll: 0,
-            preview_method: PreviewMethod::Internal,
+            preview_mode: PreviewMode::Internal,
             args: vec![],
             request_id: 3,
             tab_id: TEST_TAB_ID,
@@ -1207,7 +1212,7 @@ mod tests {
             max_lines: 5,
             pane_width: 40,
             scroll: 0,
-            preview_method: PreviewMethod::Bat,
+            preview_mode: PreviewMode::Bat,
             args: vec![],
             request_id: 99,
             tab_id: TEST_TAB_ID,

@@ -17,7 +17,7 @@ use crossbeam_channel::Sender;
 use crate::app::{Clipboard, keymap::KeyPrefix, nav::NavState};
 use crate::core::{
     proc::FindResult,
-    worker::{FileOperation, WorkerTask},
+    workers::{FileOperation, WorkerTask},
 };
 
 /// Describes the current mode for action handling/input.

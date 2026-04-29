@@ -19,7 +19,7 @@ use crate::app::{
     AppState, Clipboard, LayoutMetrics,
     actions::{ActionMode, InputMode},
 };
-use crate::core::worker::Workers;
+use crate::core::workers::Workers;
 use crate::ui::{
     overlays::Overlay,
     panes::{self, PaneContext, PaneStyles},
@@ -44,6 +44,7 @@ pub(crate) fn render(
     let theme_cfg = cfg.theme();
 
     let accent_style = theme_cfg.accent_style();
+
     let border_type = display_cfg.border_shape().as_border_type();
 
     let markers = app.nav().markers();
