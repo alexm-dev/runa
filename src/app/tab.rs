@@ -7,6 +7,7 @@
 
 use std::ffi::OsString;
 use std::path::Path;
+use std::slice::IterMut;
 use std::sync::Arc;
 
 use ratatui::text::Span;
@@ -16,8 +17,8 @@ use crate::core::{sort::SortConfig, workers::Workers};
 use crate::utils::path;
 
 pub(crate) struct TabManager<'a> {
-    pub(crate) tabs: Vec<AppState<'a>>,
-    pub(crate) current: usize,
+    tabs: Vec<AppState<'a>>,
+    current: usize,
     next_tab_id: usize,
 }
 
@@ -57,6 +58,11 @@ impl<'a> TabManager<'a> {
         };
         manager.sync_tab_line();
         manager
+    }
+
+    #[inline]
+    pub(crate) fn iter_mut(&mut self) -> IterMut<'_, AppState<'a>> {
+        self.tabs.iter_mut()
     }
 
     #[inline]

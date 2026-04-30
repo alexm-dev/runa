@@ -166,7 +166,7 @@ pub(crate) fn draw_status_bar(
     }
 
     if status_cfg.clipboard() == position
-        && let Some(clipboard_set) = &clipboard.entries
+        && let Some(clipboard_set) = &clipboard.entries()
     {
         let count = clipboard_set.len();
         if count > 0 {
@@ -183,7 +183,7 @@ pub(crate) fn draw_status_bar(
         let markers = app.nav().markers();
         let marker_count = markers.len();
         if marker_count > 0 {
-            let is_redundant = if let Some(clipboard_set) = &clipboard.entries {
+            let is_redundant = if let Some(clipboard_set) = &clipboard.entries() {
                 if clipboard_set.len() != marker_count {
                     false
                 } else {

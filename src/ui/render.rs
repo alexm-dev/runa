@@ -72,7 +72,7 @@ pub(crate) fn render(
             .or_else(|| app.nav().current_dir().parent());
         let parent_markers = panes::make_pane_markers(
             markers,
-            clipboard.entries.as_ref(),
+            clipboard.entries().as_ref(),
             parent_dir,
             marker_icon,
             marker_style,
@@ -154,7 +154,7 @@ pub(crate) fn render(
         let preview_dir = app.preview().current_path();
         let preview_markers = panes::make_pane_markers(
             markers,
-            clipboard.entries.as_ref(),
+            clipboard.entries().as_ref(),
             preview_dir,
             marker_icon,
             marker_style,

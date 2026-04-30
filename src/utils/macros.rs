@@ -12,13 +12,18 @@
 /// - [cfg(...)]            -> apply config specific setting to
 #[macro_export]
 macro_rules! getters {
-    ($( #[$meta:meta] )? $method:ident => $field:ident : &$type:ty, $($rest:tt)+) => {
-        $crate::getters!($( #[$meta] )? $method => $field : &$type);
+    ($( #[$meta:meta] )? $method:ident => $field:ident : &mut $type:ty, $($rest:tt)+) => {
+        $crate::getters!($( #[$meta] )? $method => $field : &mut $type);
         $crate::getters!($($rest)+);
     };
 
-    ($( #[$meta:meta] )? $method:ident => $field:ident : $type:ty, $($rest:tt)+) => {
-        $crate::getters!($( #[$meta] )? $method => $field : $type);
+    ($( #[$meta:meta] )? $field:ident : &mut $type:ty, $($rest:tt)+) => {
+        $crate::getters!($( #[$meta] )? $field : &mut $type);
+        $crate::getters!($($rest)+);
+    };
+
+    ($( #[$meta:meta] )? $method:ident => $field:ident : &$type:ty, $($rest:tt)+) => {
+        $crate::getters!($( #[$meta] )? $method => $field : &$type);
         $crate::getters!($($rest)+);
     };
 
@@ -27,9 +32,30 @@ macro_rules! getters {
         $crate::getters!($($rest)+);
     };
 
+    ($( #[$meta:meta] )? $method:ident => $field:ident : $type:ty, $($rest:tt)+) => {
+        $crate::getters!($( #[$meta] )? $method => $field : $type);
+        $crate::getters!($($rest)+);
+    };
+
     ($( #[$meta:meta] )? $field:ident : $type:ty, $($rest:tt)+) => {
         $crate::getters!($( #[$meta] )? $field : $type);
         $crate::getters!($($rest)+);
+    };
+
+    ($( #[$meta:meta] )? $method:ident => $field:ident : &mut $type:ty $(,)?) => {
+        $( #[$meta] )?
+        #[inline]
+        pub(crate) fn $method(&mut self) -> &mut $type {
+            &mut self.$field
+        }
+    };
+
+    ($( #[$meta:meta] )? $field:ident : &mut $type:ty $(,)?) => {
+        $( #[$meta] )?
+        #[inline]
+        pub(crate) fn $field(&mut self) -> &mut $type {
+            &mut self.$field
+        }
     };
 
     ($( #[$meta:meta] )? $method:ident => $field:ident : &$type:ty $(,)?) => {
@@ -40,19 +66,19 @@ macro_rules! getters {
         }
     };
 
-    ($( #[$meta:meta] )? $method:ident => $field:ident : $type:ty $(,)?) => {
-        $( #[$meta] )?
-        #[inline]
-        pub(crate) fn $method(&self) -> $type {
-            self.$field
-        }
-    };
-
     ($( #[$meta:meta] )? $field:ident : &$type:ty $(,)?) => {
         $( #[$meta] )?
         #[inline]
         pub(crate) fn $field(&self) -> &$type {
             &self.$field
+        }
+    };
+
+    ($( #[$meta:meta] )? $method:ident => $field:ident : $type:ty $(,)?) => {
+        $( #[$meta] )?
+        #[inline]
+        pub(crate) fn $method(&self) -> $type {
+            self.$field
         }
     };
 

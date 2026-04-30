@@ -47,24 +47,23 @@ where
     loop {
         let mut changed = root.update();
 
-        changed |= match &mut root.container {
-            AppContainer::Single(app) => app.tick(&root.workers),
-            AppContainer::Tabs(tabs) => tabs.current_tab_mut().tick(&root.workers),
+        let (container, workers, clipboard) = root.parts();
+
+        changed |= match container {
+            AppContainer::Single(app) => app.tick(workers),
+            AppContainer::Tabs(tabs) => tabs.current_tab_mut().tick(workers),
         };
 
         if changed {
-            if let AppContainer::Tabs(tabs) = &mut root.container {
+            if let AppContainer::Tabs(tabs) = container {
                 tabs.sync_tab_line();
             }
 
-            terminal.draw(|f| match &mut root.container {
-                AppContainer::Single(app) => ui::render(f, app, &root.workers, &mut root.clipboard),
-                AppContainer::Tabs(tabs) => ui::render(
-                    f,
-                    tabs.current_tab_mut(),
-                    &root.workers,
-                    &mut root.clipboard,
-                ),
+            terminal.draw(|f| match container {
+                AppContainer::Single(app) => ui::render(f, app, workers, clipboard),
+                AppContainer::Tabs(tabs) => {
+                    ui::render(f, tabs.current_tab_mut(), workers, clipboard)
+                }
             })?;
         }
 
@@ -73,15 +72,11 @@ where
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    let result = match &mut root.container {
-                        AppContainer::Single(app) => {
-                            app.handle_keypress(key, &root.workers, &mut root.clipboard)
-                        }
-                        AppContainer::Tabs(tabs) => tabs.current_tab_mut().handle_keypress(
-                            key,
-                            &root.workers,
-                            &mut root.clipboard,
-                        ),
+                    let result = match container {
+                        AppContainer::Single(app) => app.handle_keypress(key, workers, clipboard),
+                        AppContainer::Tabs(tabs) => tabs
+                            .current_tab_mut()
+                            .handle_keypress(key, workers, clipboard),
                     };
 
                     match result {
@@ -92,42 +87,32 @@ where
                         }
                         KeypressResult::Tab(tab_act) => {
                             if let KeypressResult::Quit =
-                                app::handle_tab_action(&root.workers, &mut root.container, tab_act)
+                                app::handle_tab_action(workers, container, tab_act)
                             {
                                 break;
                             }
                         }
                         KeypressResult::Sort(config) => {
-                            app::handle_sort_action(&mut root.container, config);
+                            app::handle_sort_action(container, config);
                         }
                         _ => {}
                     }
                     // Redraw after state change
-                    terminal.draw(|f| match &mut root.container {
-                        AppContainer::Single(app) => {
-                            ui::render(f, app, &root.workers, &mut root.clipboard)
+                    terminal.draw(|f| match container {
+                        AppContainer::Single(app) => ui::render(f, app, workers, clipboard),
+                        AppContainer::Tabs(tabs) => {
+                            ui::render(f, tabs.current_tab_mut(), workers, clipboard)
                         }
-                        AppContainer::Tabs(tabs) => ui::render(
-                            f,
-                            tabs.current_tab_mut(),
-                            &root.workers,
-                            &mut root.clipboard,
-                        ),
                     })?;
                 }
 
                 // handle resize
                 Event::Resize(_, _) => {
-                    terminal.draw(|f| match &mut root.container {
-                        AppContainer::Single(app) => {
-                            ui::render(f, app, &root.workers, &mut root.clipboard)
+                    terminal.draw(|f| match container {
+                        AppContainer::Single(app) => ui::render(f, app, workers, clipboard),
+                        AppContainer::Tabs(tabs) => {
+                            ui::render(f, tabs.current_tab_mut(), workers, clipboard)
                         }
-                        AppContainer::Tabs(tabs) => ui::render(
-                            f,
-                            tabs.current_tab_mut(),
-                            &root.workers,
-                            &mut root.clipboard,
-                        ),
                     })?;
                 }
 

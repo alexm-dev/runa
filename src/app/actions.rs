@@ -80,24 +80,15 @@ impl ActionContext {
         mode: &ActionMode,
         input_buffer: &str,
         input_cursor_pos: usize,
-        scroll: &ScrollState,
+        autocomplete_mut => autocomplete: &mut AutoCompleteState,
         prefix_recognizer: &KeyPrefix,
+        prefix_recognizer_mut => prefix_recognizer: &mut KeyPrefix,
         find: &FindState,
-    }
-
-    pub(crate) fn prefix_recognizer_mut(&mut self) -> &mut KeyPrefix {
-        &mut self.prefix_recognizer
-    }
-
-    pub(crate) fn autocomplete_mut(&mut self) -> &mut AutoCompleteState {
-        &mut self.autocomplete
+        find_mut => find: &mut FindState,
+        scroll: &ScrollState,
     }
 
     // Find functions
-
-    pub(crate) fn find_mut(&mut self) -> &mut FindState {
-        &mut self.find
-    }
 
     pub(crate) fn take_query(&mut self) -> Option<String> {
         self.find.take_query(&self.input_buffer)
