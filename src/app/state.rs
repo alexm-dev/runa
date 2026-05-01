@@ -39,6 +39,7 @@ pub(crate) enum KeypressResult {
     Quit,
     OpenedEditor,
     Recovered,
+    ReloadConfig,
     Tab(TabAction),
     Sort(SortConfig),
 }
@@ -69,8 +70,8 @@ impl Default for LayoutMetrics {
 ///
 /// Functions are provided for the core event loop, input handling, file navigationm
 /// worker requests and Notification management.
-pub(crate) struct AppState<'a> {
-    pub(super) config: &'a Config,
+pub(crate) struct AppState {
+    pub(super) config: Arc<Config>,
     pub(super) keymap: Keymap,
 
     pub(super) metrics: LayoutMetrics,
@@ -93,22 +94,22 @@ pub(crate) struct AppState<'a> {
     pub(super) overlays: OverlayStack,
 
     pub(super) tab_id: Option<usize>,
-    pub(super) tab_line: Arc<Vec<Span<'a>>>,
+    pub(super) tab_line: Arc<Vec<Span<'static>>>,
 }
 
-impl<'a> AppState<'a> {
-    pub(crate) fn new(config: &'a Config) -> std::io::Result<Self> {
+impl AppState {
+    pub(crate) fn new(config: Arc<Config>) -> std::io::Result<Self> {
         let current_dir = std::env::current_dir()?;
         Self::from_dir(config, &current_dir)
     }
 
     pub(crate) fn new_current_dir(&self) -> std::io::Result<Self> {
-        let mut app = Self::from_dir(self.config, self.nav.current_dir())?;
+        let mut app = Self::from_dir(Arc::clone(&self.config), self.nav.current_dir())?;
         app.nav.set_sort_config(self.nav.sort_config());
         Ok(app)
     }
 
-    pub(crate) fn from_dir(config: &'a Config, initial_path: &Path) -> std::io::Result<Self> {
+    pub(crate) fn from_dir(config: Arc<Config>, initial_path: &Path) -> std::io::Result<Self> {
         let current_dir = if initial_path.exists() && initial_path.is_dir() {
             initial_path.to_path_buf()
         } else {
@@ -116,8 +117,8 @@ impl<'a> AppState<'a> {
         };
 
         let app = Self {
+            keymap: Keymap::from_config(config.as_ref()),
             config,
-            keymap: Keymap::from_config(config),
             metrics: LayoutMetrics::default(),
             nav: NavState::new(current_dir),
             actions: ActionContext::default(),
@@ -137,6 +138,23 @@ impl<'a> AppState<'a> {
         Ok(app)
     }
 
+    pub(crate) fn apply_new_config(&mut self, config: Arc<Config>, workers: &Workers) {
+        self.config = config;
+        self.keymap = Keymap::from_config(self.config.as_ref());
+
+        self.actions.prefix_recognizer_mut().cancel();
+        self.hide_prefix_help();
+
+        workers.cache().invalidate_path(self.nav.current_dir());
+
+        let focus = self.nav.selected_entry().map(|e| e.name().to_os_string());
+
+        self.request_dir_load(workers, focus);
+        self.request_parent_content(workers);
+
+        self.preview.mark_pending();
+    }
+
     /// Initializes the AppState by requesting the initial directory load and parent content.
     pub(crate) fn initialize(&mut self, workers: &Workers, focus: Option<OsString>) {
         self.request_dir_load(workers, focus);
@@ -144,7 +162,6 @@ impl<'a> AppState<'a> {
     }
 
     crate::getters! {
-        config: &Config,
         nav: &NavState,
         actions: &ActionContext,
         preview: &PreviewState,
@@ -152,6 +169,11 @@ impl<'a> AppState<'a> {
         is_loading: bool,
         worker_time: &Option<Instant>,
         overlays: &OverlayStack,
+    }
+
+    #[inline]
+    pub(crate) fn config(&self) -> &Config {
+        self.config.as_ref()
     }
 
     #[inline]
@@ -757,7 +779,7 @@ mod tests {
     fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
         let temp = tempdir()?;
-        let app = AppState::from_dir(&config, temp.path())?;
+        let app = AppState::from_dir(Arc::new(config), temp.path())?;
         assert_eq!(app.nav().current_dir(), temp.path());
         Ok(())
     }
@@ -767,7 +789,7 @@ mod tests {
         let config = dummy_config();
         let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(Arc::new(config), temp.path())?;
         app.notification_time = Some(Instant::now() - Duration::from_secs(2));
         app.overlays_mut().push(Overlay::Message {
             text: "Timed MSG".to_string(),
@@ -783,7 +805,7 @@ mod tests {
     fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
         let config = dummy_config();
         let temp = tempdir()?;
-        let app = AppState::from_dir(&config, temp.path())?;
+        let app = AppState::from_dir(Arc::new(config), temp.path())?;
         let app_nav = app.nav();
         if app_nav.entries().is_empty() {
             assert_eq!(app.visible_selected(), None);
@@ -803,7 +825,7 @@ mod tests {
 
         let mut clipboard = Clipboard::default();
 
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(Arc::new(config), temp.path())?;
         let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
         let result = app.handle_keypress(key, &workers, &mut clipboard);
         assert!(matches!(result, KeypressResult::Continue));
@@ -815,7 +837,7 @@ mod tests {
         let config = dummy_config();
         let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(Arc::new(config), temp.path())?;
         app.is_loading = false;
         app.request_dir_load(&workers, None);
         assert!(app.is_loading);
@@ -827,7 +849,7 @@ mod tests {
         let config = dummy_config();
         let workers = dummy_workers();
         let temp = tempdir()?;
-        let mut app = AppState::from_dir(&config, temp.path())?;
+        let mut app = AppState::from_dir(Arc::new(config), temp.path())?;
         #[cfg(unix)]
         {
             use std::path::PathBuf;
@@ -852,7 +874,7 @@ mod tests {
         let temp = tempdir()?;
         let subdir = temp.path().join("subdir");
         std::fs::create_dir(&subdir)?;
-        let mut app = AppState::from_dir(&config, &subdir)?;
+        let mut app = AppState::from_dir(Arc::new(config), &subdir)?;
 
         let parent_path = app
             .nav()

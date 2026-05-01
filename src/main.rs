@@ -10,17 +10,18 @@ pub(crate) mod utils;
 
 use std::io;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use crate::cli::{CliAction, handle_args};
 use crate::config::Config;
 use crate::core::workers::Workers;
 use crate::utils::path::{resolve_initial_dir, validate_path};
 
-fn startup_container<'a>(
-    config: &'a Config,
+fn startup_container(
+    config: Arc<Config>,
     workers: &Workers,
     cli_paths: Option<Vec<PathBuf>>,
-) -> io::Result<app::AppContainer<'a>> {
+) -> io::Result<app::AppContainer> {
     let is_cli_request = cli_paths.is_some();
     let paths: Vec<PathBuf> = match cli_paths {
         Some(paths) => paths,
@@ -28,7 +29,7 @@ fn startup_container<'a>(
     };
 
     if paths.is_empty() {
-        let mut app = app::AppState::new(config)?;
+        let mut app = app::AppState::new(Arc::clone(&config))?;
         app.initialize(workers, None);
         return Ok(app::AppContainer::Single(Box::new(app)));
     }
@@ -41,7 +42,7 @@ fn startup_container<'a>(
 
         let path_str = path.to_string_lossy();
         if path_str == "." || path_str == "cwd" {
-            if let Ok(mut state) = app::AppState::new(config) {
+            if let Ok(mut state) = app::AppState::new(Arc::clone(&config)) {
                 state.initialize(workers, None);
                 tabs.push(state);
             }
@@ -52,7 +53,7 @@ fn startup_container<'a>(
                 return Err(io::Error::new(e.kind(), format!("{}: '{}'", e, path_str)));
             }
 
-            let mut state = app::AppState::from_dir(config, &target)?;
+            let mut state = app::AppState::from_dir(Arc::clone(&config), &target)?;
             state.initialize(workers, None);
             tabs.push(state);
         }
@@ -63,7 +64,7 @@ fn startup_container<'a>(
             if is_cli_request {
                 return Err(io::Error::other("The provided paths could not be opened"));
             }
-            let mut app = app::AppState::new(config)?;
+            let mut app = app::AppState::new(Arc::clone(&config))?;
             app.initialize(workers, None);
             Ok(app::AppContainer::Single(Box::new(app)))
         }
@@ -102,7 +103,10 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let config = Config::load();
+    let config = Config::load().unwrap_or_else(|e| {
+        eprintln!("[runa] Config error: {}", e);
+        Config::default()
+    });
 
     let cli_paths = match action {
         CliAction::RunApp => None,
@@ -112,7 +116,7 @@ fn main() -> io::Result<()> {
 
     let workers = Workers::spawn();
 
-    let container = match startup_container(&config, &workers, cli_paths) {
+    let container = match startup_container(Arc::new(config), &workers, cli_paths) {
         Ok(cont) => cont,
         Err(e) => {
             eprintln!("[runa] Error: {}", e);

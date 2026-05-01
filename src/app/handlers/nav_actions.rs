@@ -21,7 +21,7 @@ use crate::app::{
 };
 use crate::utils::{os, path, timings::Timings};
 
-impl<'a> AppState<'a> {
+impl AppState {
     /// Handles navigation actions (up, down, into dir, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
     pub(in crate::app) fn handle_nav_action(

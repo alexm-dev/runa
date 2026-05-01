@@ -351,6 +351,7 @@ const HELP_DATA: &[HelpSection] = &[
         entries: &[
             HelpEntry { key: InputKeys::Quit, desc: "Quit" },
             HelpEntry { key: InputKeys::KeybindHelp, desc: "Toggle keybind help" },
+            HelpEntry { key: InputKeys::Reload, desc: "Reload the configuration" },
         ],
     },
 ];
@@ -447,6 +448,7 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
             InputKeys::SortByAccessed => keys.sort_by_accessed(),
             InputKeys::Quit => keys.quit(),
             InputKeys::KeybindHelp => keys.keybind_help(),
+            InputKeys::Reload => keys.reload(),
         }
     };
 

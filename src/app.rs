@@ -20,19 +20,22 @@ pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
+use crate::config::Config;
 use crate::{app::tab::TabManager, core::workers::Workers};
 use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::Duration;
 
 /// The main container enum to hold either the TabManager or a single boxed AppState to then match
 /// either a single state or a tabs which then hold multiple AppStates.
-pub(crate) enum AppContainer<'a> {
-    Single(Box<AppState<'a>>),
-    Tabs(Box<TabManager<'a>>),
+pub(crate) enum AppContainer {
+    Single(Box<AppState>),
+    Tabs(Box<TabManager>),
 }
 
-impl<'a> AppContainer<'a> {
-    pub(crate) fn create_tabs(tabs: Vec<AppState<'a>>) -> Self {
+impl AppContainer {
+    pub(crate) fn create_tabs(tabs: Vec<AppState>) -> Self {
         Self::Tabs(Box::new(tab::TabManager::from_vec(tabs)))
     }
 }
@@ -53,13 +56,48 @@ impl Clipboard {
 
 /// The main struct of runa
 /// Contains the AppContainer, the shared clipboard and the worker pool
-pub(crate) struct RunaRoot<'a> {
-    pub(crate) container: AppContainer<'a>,
+pub(crate) struct RunaRoot {
+    pub(crate) container: AppContainer,
     pub(crate) clipboard: Clipboard,
     pub(crate) workers: Workers,
 }
 
-impl RunaRoot<'_> {
+impl RunaRoot {
+    pub(crate) fn reload_config(&mut self) {
+        match Config::load() {
+            Ok(config) => {
+                let new_config = Arc::new(config);
+
+                match &mut self.container {
+                    AppContainer::Single(app) => {
+                        app.apply_new_config(Arc::clone(&new_config), &self.workers);
+                        app.push_overlay_message(
+                            " Config reloaded!".into(),
+                            Duration::from_secs(2),
+                        );
+                    }
+                    AppContainer::Tabs(tabs) => {
+                        for tab in &mut tabs.tabs {
+                            tab.apply_new_config(Arc::clone(&new_config), &self.workers);
+                        }
+                        tabs.sync_tab_line();
+                        tabs.tabs[tabs.current].push_overlay_message(
+                            " Config reloaded!".into(),
+                            Duration::from_secs(2),
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                let target_app = match &mut self.container {
+                    AppContainer::Single(app) => app,
+                    AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],
+                };
+                target_app.push_overlay_message(e, Duration::from_secs(5));
+            }
+        }
+    }
+
     pub(crate) fn update(&mut self) -> bool {
         let mut changed = false;
 

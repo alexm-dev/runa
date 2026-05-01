@@ -81,7 +81,7 @@ pub(crate) fn render(
 
         let parent_pane_style = PaneStyles::new(theme_cfg)
             .with_entry(theme_cfg.parent().entry_style_or_theme())
-            .with_selection(theme_cfg.parent().selection_style());
+            .with_selection(theme_cfg.parent_selection_style());
 
         panes::draw_parent(
             frame,
@@ -163,7 +163,7 @@ pub(crate) fn render(
 
         let preview_pane_style = PaneStyles::new(theme_cfg)
             .with_entry(theme_cfg.preview().entry_style_or_theme())
-            .with_selection(theme_cfg.preview().selection_style());
+            .with_selection(theme_cfg.preview_selection_style());
 
         panes::draw_preview(
             frame,
@@ -435,6 +435,7 @@ mod tests {
     use crate::Config;
     use crate::config::load::RawConfig;
     use std::error;
+    use std::sync::Arc;
 
     #[test]
     fn layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
@@ -455,7 +456,7 @@ mod tests {
         let raw: RawConfig = toml::from_str(toml_content)?;
         let config = Config::from(raw);
 
-        let app = AppState::new(&config).expect("Failed to create AppState");
+        let app = AppState::new(Arc::new(config)).expect("Failed to create AppState");
 
         let chunks = layout_chunks(size, &app);
 

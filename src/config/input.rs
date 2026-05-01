@@ -118,7 +118,6 @@ define_keys!(
     TabClose => tab_close = ["<c-w>"],
     TabNext => tab_next = ["<c-n>"],
     TabPrev => tab_prev = ["<c-p>"],
-    KeybindHelp => keybind_help = ["?"],
     ScrollUp => scroll_up = ["pgup"],
     ScrollDown => scroll_down = ["pgdn"],
     Sort => sort = ["o"],
@@ -129,6 +128,8 @@ define_keys!(
     SortByModified => sort_by_modified = ["m"],
     SortByAccessed => sort_by_accessed = ["a"],
     SortByCreated => sort_by_created = ["c"],
+    KeybindHelp => keybind_help = ["?"],
+    Reload => reload = ["<c-r>"],
 );
 
 /// Editor configuration options
