@@ -50,12 +50,12 @@ pub(crate) fn default_config_path() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("runa.toml"))
 }
 
-pub(crate) fn command_exists(program: &str) -> bool {
-    resolve_command(program).is_ok()
+pub(crate) fn command_exists(cmd: &str) -> bool {
+    resolve_command(cmd).is_ok()
 }
 
-pub(crate) fn resolve_command(program: &str) -> io::Result<PathBuf> {
-    let candidate = Path::new(program);
+pub(crate) fn resolve_command(cmd: &str) -> io::Result<PathBuf> {
+    let candidate = Path::new(cmd);
     if candidate.as_os_str().is_empty() {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,
@@ -67,7 +67,7 @@ pub(crate) fn resolve_command(program: &str) -> io::Result<PathBuf> {
         return resolve_command_candidate(candidate).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::NotFound,
-                format!("Command '{}' not found", program),
+                format!("Command '{}' not found", cmd),
             )
         });
     }
@@ -75,7 +75,7 @@ pub(crate) fn resolve_command(program: &str) -> io::Result<PathBuf> {
     let path_var = env::var_os("PATH").ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::NotFound,
-            format!("Command '{}' not found (PATH is empty)", program),
+            format!("Command '{}' not found (PATH is empty)", cmd),
         )
     })?;
 
@@ -88,7 +88,7 @@ pub(crate) fn resolve_command(program: &str) -> io::Result<PathBuf> {
 
     Err(io::Error::new(
         io::ErrorKind::NotFound,
-        format!("Command '{}' not found", program),
+        format!("Command '{}' not found", cmd),
     ))
 }
 
