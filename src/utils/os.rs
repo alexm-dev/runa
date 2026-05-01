@@ -188,7 +188,7 @@ fn is_executable_file(path: &Path) -> bool {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        md.permissions().mode() & 0o111 != 0;
+        md.permissions().mode() & 0o111 != 0
     }
 
     #[cfg(not(unix))]
