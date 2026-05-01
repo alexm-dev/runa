@@ -138,21 +138,9 @@ impl AppState {
         Ok(app)
     }
 
-    pub(crate) fn apply_new_config(&mut self, config: Arc<Config>, workers: &Workers) {
+    pub(crate) fn apply_new_config(&mut self, config: Arc<Config>) {
         self.config = config;
         self.keymap = Keymap::from_config(self.config.as_ref());
-
-        self.actions.prefix_recognizer_mut().cancel();
-        self.hide_prefix_help();
-
-        workers.cache().invalidate_path(self.nav.current_dir());
-
-        let focus = self.nav.selected_entry().map(|e| e.name().to_os_string());
-
-        self.request_dir_load(workers, focus);
-        self.request_parent_content(workers);
-
-        self.preview.mark_pending();
     }
 
     /// Initializes the AppState by requesting the initial directory load and parent content.

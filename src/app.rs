@@ -112,7 +112,7 @@ impl RunaRoot {
 
                 match &mut self.container {
                     AppContainer::Single(app) => {
-                        app.apply_new_config(Arc::clone(&new_config), &self.workers);
+                        app.apply_new_config(Arc::clone(&new_config));
                         app.push_overlay_message(
                             " Config reloaded!".into(),
                             Duration::from_secs(2),
@@ -120,7 +120,7 @@ impl RunaRoot {
                     }
                     AppContainer::Tabs(tabs) => {
                         for tab in &mut tabs.tabs {
-                            tab.apply_new_config(Arc::clone(&new_config), &self.workers);
+                            tab.apply_new_config(Arc::clone(&new_config));
                         }
                         tabs.sync_tab_line();
                         tabs.tabs[tabs.current].push_overlay_message(
