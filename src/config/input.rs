@@ -6,7 +6,6 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::utils::os;
 use serde::Deserialize;
 
 #[derive(Debug)]
@@ -169,7 +168,7 @@ impl Editor {
     pub(crate) fn resolved_path(&self, path: &Path) -> Option<PathBuf> {
         let cmd = self.cmd(path);
         let program = cmd.first()?;
-        os::resolve_command(program).ok()
+        which::which(program).ok()
     }
 
     pub(crate) fn exists(&self, path: &Path) -> bool {
