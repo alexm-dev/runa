@@ -18,7 +18,7 @@ use crate::core::workers::Workers;
 use crate::utils::path::{resolve_initial_dir, validate_path};
 
 #[inline(never)]
-fn install_panic_hook() {
+fn set_panic_hook() {
     std::panic::set_hook(Box::new(handle_panic));
 }
 
@@ -117,7 +117,7 @@ fn startup_container(
 }
 
 fn main() -> io::Result<()> {
-    install_panic_hook();
+    set_panic_hook();
 
     let action = handle_args();
 

@@ -12,7 +12,6 @@ use crate::config::input::InputKeys;
 use crate::core::metadata::FileMetadataCache;
 use crate::ui::widgets::{self, DialogLayout, DialogPosition, DialogSize};
 
-#[inline(never)]
 pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
@@ -105,7 +104,6 @@ pub(crate) fn draw_show_info_dialog(
     );
 }
 
-#[inline(never)]
 pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let widget = app.config().theme().widget();
     let area = frame.area();
@@ -222,7 +220,6 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
 
 /// Draws a simple message overlay dialog at the bottom right
 /// Used for notifications such as "fd is not available" etc.
-#[inline(never)]
 pub(crate) fn draw_message_overlay(
     frame: &mut Frame,
     app: &AppState,
@@ -359,7 +356,6 @@ const HELP_DATA: &[HelpSection] = &[
     },
 ];
 
-#[inline(never)]
 pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let keys = app.config().keys();
     let widget = app.config().theme().widget();
