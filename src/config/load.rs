@@ -75,22 +75,16 @@ impl Config {
     /// Also applies any necessary overrides to the theme after loading.
     ///
     /// Called by entry point to load config at startup.
-    pub(crate) fn load() -> Self {
+    pub(crate) fn load() -> Result<Self, String> {
         let path = Self::default_path();
-        let content = match fs::read_to_string(&path) {
-            Ok(c) => c,
-            Err(_) => return Self::default(),
-        };
+        let content =
+            fs::read_to_string(&path).map_err(|e| format!("Failed to read config file: {}", e))?;
 
-        toml::from_str::<RawConfig>(&content)
-            .map(|mut raw| {
-                raw.theme = raw.theme.with_overrides();
-                raw.into()
-            })
-            .unwrap_or_else(|e| {
-                eprintln!("Error parsing config: {}", e);
-                Self::default()
-            })
+        let mut raw = toml::from_str::<RawConfig>(&content)
+            .map_err(|e| format!("Config syntax error: {}", e))?;
+
+        raw.theme = raw.theme.with_overrides();
+        Ok(raw.into())
     }
 
     crate::getters! {

@@ -103,7 +103,10 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let config = Config::load();
+    let config = Config::load().unwrap_or_else(|e| {
+        eprintln!("[runa] Config error: {}", e);
+        Config::default()
+    });
 
     let cli_paths = match action {
         CliAction::RunApp => None,
