@@ -266,13 +266,13 @@ mod tests {
 
     /// Checks if the `fd` command-line tool is available in the system.
     /// Returns true if `fd` is found, otherwise false.
-    /// Uses which crate to check for the presence of `fd`.
+    /// Uses runa's PATH resolver to check for the presence of `fd`.
     fn fd_available() -> bool {
-        which::which("fd").is_ok() || which::which("fd-find").is_ok()
+        os::command_exists("fd") || os::command_exists("fd-find")
     }
 
     fn bat_available() -> bool {
-        which::which("bat").is_ok()
+        os::command_exists("bat")
     }
 
     /// Macro to skip tests if `fd` is not available.
@@ -298,7 +298,7 @@ mod tests {
         skip_if_no_fd!();
         let bin = os::fd_binary()?;
         assert!(bin == "fd" || bin == "fd-find");
-        assert!(which::which(bin).is_ok());
+        assert!(os::command_exists(bin));
         Ok(())
     }
 
@@ -307,7 +307,7 @@ mod tests {
         skip_if_no_bat!();
         let bin = os::bat_binary()?;
         assert_eq!(bin, "bat");
-        assert!(which::which(bin).is_ok());
+        assert!(os::command_exists(bin));
         Ok(())
     }
 

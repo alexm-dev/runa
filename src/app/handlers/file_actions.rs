@@ -28,6 +28,7 @@ use crate::app::{
     state::{AppState, KeypressResult},
 };
 use crate::config::Editor;
+use crate::utils::os;
 
 /// AppState file action handlers
 impl AppState {
@@ -263,7 +264,7 @@ impl AppState {
             io::Error::new(io::ErrorKind::NotFound, "No editor command configured")
         })?;
         let args = &cmd[1..];
-        let editor_path = which::which(binary).map_err(|_| {
+        let editor_path = os::resolve_command(binary).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::NotFound,
                 format!("Editor '{}' not found", binary),

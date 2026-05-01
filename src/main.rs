@@ -17,6 +17,47 @@ use crate::config::Config;
 use crate::core::workers::Workers;
 use crate::utils::path::{resolve_initial_dir, validate_path};
 
+#[inline(never)]
+fn install_panic_hook() {
+    std::panic::set_hook(Box::new(handle_panic));
+}
+
+#[cold]
+#[inline(never)]
+fn handle_panic(info: &std::panic::PanicHookInfo<'_>) {
+    let _ = crossterm::terminal::disable_raw_mode();
+    let mut stdout = io::stdout();
+    let _ = crossterm::execute!(
+        stdout,
+        crossterm::terminal::LeaveAlternateScreen,
+        crossterm::cursor::Show
+    );
+
+    eprintln!("\n[runa] Error occurred: {}", info);
+
+    #[cfg(debug_assertions)]
+    {
+        let bt = std::backtrace::Backtrace::force_capture();
+        eprintln!("\nStack Backtrace:\n{}", bt);
+    }
+}
+
+#[cold]
+#[inline(never)]
+fn load_config_or_default() -> Config {
+    Config::load().unwrap_or_else(|e| {
+        eprintln!("[runa] Config error: {}", e);
+        Config::default()
+    })
+}
+
+#[cold]
+#[inline(never)]
+fn exit_with_startup_error(error: io::Error) -> ! {
+    eprintln!("[runa] Error: {}", error);
+    std::process::exit(1);
+}
+
 fn startup_container(
     config: Arc<Config>,
     workers: &Workers,
@@ -79,23 +120,7 @@ fn startup_container(
 }
 
 fn main() -> io::Result<()> {
-    std::panic::set_hook(Box::new(|info| {
-        let _ = crossterm::terminal::disable_raw_mode();
-        let mut stdout = io::stdout();
-        let _ = crossterm::execute!(
-            stdout,
-            crossterm::terminal::LeaveAlternateScreen,
-            crossterm::cursor::Show
-        );
-
-        eprintln!("\n[runa] Error occurred: {}", info);
-
-        #[cfg(debug_assertions)]
-        {
-            let bt = std::backtrace::Backtrace::force_capture();
-            eprintln!("\nStack Backtrace:\n{}", bt);
-        }
-    }));
+    install_panic_hook();
 
     let action = handle_args();
 
@@ -103,10 +128,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let config = Config::load().unwrap_or_else(|e| {
-        eprintln!("[runa] Config error: {}", e);
-        Config::default()
-    });
+    let config = load_config_or_default();
 
     let cli_paths = match action {
         CliAction::RunApp => None,
@@ -118,10 +140,7 @@ fn main() -> io::Result<()> {
 
     let container = match startup_container(Arc::new(config), &workers, cli_paths) {
         Ok(cont) => cont,
-        Err(e) => {
-            eprintln!("[runa] Error: {}", e);
-            std::process::exit(1);
-        }
+        Err(e) => exit_with_startup_error(e),
     };
 
     let mut runa = app::RunaRoot::new(container, workers);

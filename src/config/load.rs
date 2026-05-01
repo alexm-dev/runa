@@ -75,6 +75,8 @@ impl Config {
     /// Also applies any necessary overrides to the theme after loading.
     ///
     /// Called by entry point to load config at startup.
+    #[cold]
+    #[inline(never)]
     pub(crate) fn load() -> Result<Self, String> {
         let path = os::default_config_path();
         let content = match fs::read_to_string(&path) {

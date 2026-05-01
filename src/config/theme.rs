@@ -227,6 +227,7 @@ impl Theme {
 
     /// Apply user overrides on top of a preset theme if a known preset name is provided.
     /// If no preset name is provided or the name is unknown, returns the theme as is.
+    #[cold]
     #[inline(never)]
     pub(super) fn with_overrides(mut self) -> Self {
         let preset_name = self.name.clone();

@@ -871,11 +871,11 @@ mod tests {
     const TEST_TAB_ID: Option<usize> = None;
 
     fn fd_available() -> bool {
-        which::which("fd").is_ok()
+        os::command_exists("fd")
     }
 
     fn bat_available() -> bool {
-        which::which("bat").is_ok()
+        os::command_exists("bat")
     }
 
     fn test_list_opts() -> DirListOptions {

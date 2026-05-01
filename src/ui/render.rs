@@ -329,6 +329,15 @@ fn render_separator(
 ///
 /// Calls appropriate widget drawing functions based on the current overlays.
 fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
+    render_input_overlay(frame, app, accent_style);
+
+    for overlay in app.overlays().iter() {
+        render_single_overlay(frame, app, accent_style, overlay);
+    }
+}
+
+#[inline(never)]
+fn render_input_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, .. } = app.actions().mode() {
         if *mode != InputMode::Find {
             widgets::draw_input_dialog(frame, app, accent_style);
@@ -336,21 +345,28 @@ fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
             widgets::draw_find_dialog(frame, app, accent_style);
         }
     }
+}
 
-    for overlay in app.overlays().iter() {
-        match overlay {
-            Overlay::ShowInfo { info } => {
-                widgets::draw_show_info_dialog(frame, app, accent_style, info);
-            }
-            Overlay::Message { text } => {
-                widgets::draw_message_overlay(frame, app, accent_style, text);
-            }
-            Overlay::PrefixHelp => {
-                widgets::draw_prefix_help_overlay(frame, app, accent_style);
-            }
-            Overlay::KeybindHelp => {
-                widgets::draw_keybind_help(frame, app, accent_style);
-            }
+#[cold]
+#[inline(never)]
+fn render_single_overlay(
+    frame: &mut Frame,
+    app: &AppState,
+    accent_style: Style,
+    overlay: &Overlay,
+) {
+    match overlay {
+        Overlay::ShowInfo { info } => {
+            widgets::draw_show_info_dialog(frame, app, accent_style, info);
+        }
+        Overlay::Message { text } => {
+            widgets::draw_message_overlay(frame, app, accent_style, text);
+        }
+        Overlay::PrefixHelp => {
+            widgets::draw_prefix_help_overlay(frame, app, accent_style);
+        }
+        Overlay::KeybindHelp => {
+            widgets::draw_keybind_help(frame, app, accent_style);
         }
     }
 }

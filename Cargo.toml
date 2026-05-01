@@ -16,22 +16,21 @@ name = "rn"
 path = "src/main.rs"
 
 [dependencies]
-ansi-to-tui = "8.0.1"
-chrono = "0.4.44"
+ansi-to-tui = { version = "8.0.1", default-features = false }
+chrono = { version = "0.4.44", default-features = false, features = ["clock", "std"] }
 crossbeam-channel = "0.5.15"
-crossterm = "0.29.0"
+crossterm = { version = "0.29.0", default-features = false, features = ["events", "windows"] }
 dashmap = "6.1.0"
 dirs = "6.0.0"
 fuzzy-matcher = "0.3.7"
 humansize = "2.1.3"
-notify = "8.2.0"
-phf = { version = "0.13.1", features = ["macros"] }
+notify = { version = "8.2.0", default-features = false }
+phf = { version = "0.13.1", default-features = false, features = ["macros"] }
 ratatui = { version = "0.30.0", default-features = false, features = ["crossterm"] }
 serde = { version = "1.0", features = ["derive"] }
-toml = "1.1.2"
-trash = "5.2.5"
+toml = { version = "1.1.2", default-features = false, features = ["parse", "serde", "std"] }
+trash = { version = "5.2.5", default-features = false, features = ["coinit_apartmentthreaded"] }
 unicode-width = "0.2.2"
-which = "8.0.2"
 
 [target.'cfg(unix)'.dependencies]
 uzers = "0.12.2"
