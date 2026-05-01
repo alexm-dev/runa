@@ -76,7 +76,7 @@ impl Config {
     ///
     /// Called by entry point to load config at startup.
     pub(crate) fn load() -> Result<Self, String> {
-        let path = Self::default_path();
+        let path = os::default_config_path();
         let content =
             fs::read_to_string(&path).map_err(|e| format!("Failed to read config file: {}", e))?;
 
@@ -99,20 +99,6 @@ impl Config {
         self.display
             .preview_options()
             .bat_args(self.theme.bat_theme_name(), pane_width)
-    }
-
-    /// Determine the default configuration file path.
-    /// Checks the RUNA_CONFIG environment variable first,
-    /// Checks for XDG_CONFIG_HOME after,
-    /// then defaults to ~/.config/runa/runa.toml,
-    pub(crate) fn default_path() -> PathBuf {
-        std::env::var_os("RUNA_CONFIG")
-            .map(PathBuf::from)
-            .or_else(|| {
-                std::env::var_os("XDG_CONFIG_HOME").map(|s| PathBuf::from(s).join("runa/runa.toml"))
-            })
-            .or_else(|| os::get_home().map(|h| h.join(".config/runa/runa.toml")))
-            .unwrap_or_else(|| PathBuf::from("runa.toml"))
     }
 
     /// Generate a default configuration file at the specified path.

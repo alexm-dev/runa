@@ -236,7 +236,7 @@ pub(crate) fn draw_message_overlay(
         line_count += 1;
     }
 
-    let min_width = 27;
+    let min_width = 12;
     let border_pad = 2;
     let right_pad = 2;
     let area = frame.area();

@@ -39,7 +39,7 @@ pub(crate) enum KeypressResult {
     Quit,
     OpenedEditor,
     Recovered,
-    ReloadConfig,
+    Reloaded,
     Tab(TabAction),
     Sort(SortConfig),
 }
@@ -453,6 +453,8 @@ impl AppState {
                     }
                 }
             }
+
+            WorkerResponse::ConfigChanged => {}
         }
     }
 

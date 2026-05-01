@@ -90,7 +90,7 @@ where
                             // full clear/reset
                             terminal.clear()?;
                         }
-                        KeypressResult::ReloadConfig => {
+                        KeypressResult::Reloaded => {
                             root.reload_config();
                             terminal.clear()?;
                         }

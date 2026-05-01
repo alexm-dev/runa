@@ -7,6 +7,7 @@ use std::io::{self, BufWriter, Write};
 use std::path::PathBuf;
 
 use crate::config::{Config, assets::FULL_TOML};
+use crate::utils::os;
 
 pub(crate) enum CliAction {
     RunApp,
@@ -16,7 +17,7 @@ pub(crate) enum CliAction {
 
 pub(crate) fn handle_args() -> CliAction {
     let mut args: Vec<String> = std::env::args().collect();
-    let config_path = Config::default_path();
+    let config_path = os::default_config_path();
 
     if args.len() < 2 {
         return CliAction::RunApp;

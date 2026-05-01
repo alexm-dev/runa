@@ -32,6 +32,16 @@ pub(crate) fn bat_binary() -> io::Result<&'static str> {
     cached_binary(&BAT_BIN, &["bat"], "bat not found")
 }
 
+pub(crate) fn default_config_path() -> PathBuf {
+    std::env::var_os("RUNA_CONFIG")
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("XDG_CONFIG_HOME").map(|s| PathBuf::from(s).join("runa/runa.toml"))
+        })
+        .or_else(|| get_home().map(|h| h.join(".config/runa/runa.toml")))
+        .unwrap_or_else(|| PathBuf::from("runa.toml"))
+}
+
 pub(crate) fn is_regular_file(path: &Path) -> bool {
     #[cfg(unix)]
     {

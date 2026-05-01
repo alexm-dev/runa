@@ -186,7 +186,7 @@ impl AppState {
                 self.toggle_keybind_help();
                 KeypressResult::Consumed
             }
-            SystemAction::Reload => KeypressResult::ReloadConfig,
+            SystemAction::Reload => KeypressResult::Reloaded,
         }
     }
 

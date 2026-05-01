@@ -22,7 +22,10 @@ pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
 use crate::config::Config;
 use crate::utils::timings::{Throttler, Timings};
-use crate::{app::tab::TabManager, core::workers::Workers};
+use crate::{
+    app::tab::TabManager,
+    core::workers::{WorkerResponse, Workers},
+};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -80,6 +83,11 @@ impl RunaRoot {
 
         while let Ok(response) = self.workers.response_rx().try_recv() {
             changed = true;
+            if matches!(response, WorkerResponse::ConfigChanged) {
+                self.reload_config();
+                continue;
+            }
+
             match &mut self.container {
                 AppContainer::Single(app) => {
                     app.handle_worker_response(response, &self.workers);
@@ -114,7 +122,7 @@ impl RunaRoot {
                     AppContainer::Single(app) => {
                         app.apply_new_config(Arc::clone(&new_config));
                         app.push_overlay_message(
-                            " Config reloaded!".into(),
+                            "Configuration reloaded!".into(),
                             Duration::from_secs(2),
                         );
                     }
@@ -124,7 +132,7 @@ impl RunaRoot {
                         }
                         tabs.sync_tab_line();
                         tabs.tabs[tabs.current].push_overlay_message(
-                            " Config reloaded!".into(),
+                            "Configuration reloaded!".into(),
                             Duration::from_secs(2),
                         );
                     }

@@ -14,8 +14,8 @@
 //! may require corresponding changes throughout state, response-handling code and UI.
 
 use std::collections::HashSet;
-use std::ffi::OsString;
-use std::path::PathBuf;
+use std::ffi::{OsStr, OsString};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
@@ -23,6 +23,9 @@ use std::thread;
 use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use dashmap::DashMap;
+use notify::{
+    Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
+};
 
 use crate::core::{
     FileEntry, FindResult, Formatter,
@@ -32,7 +35,7 @@ use crate::core::{
     proc,
     sort::SortConfig,
 };
-use crate::utils::{os::is_regular_file, text::StrBuffer};
+use crate::utils::{os, text::StrBuffer};
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
@@ -87,6 +90,7 @@ impl Workers {
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
+        start_config_watch_worker(res_tx.clone());
 
         Self {
             nav_io_tx,
@@ -250,6 +254,7 @@ pub(crate) enum WorkerResponse {
         path: PathBuf,
         request_id: u64,
     },
+    ConfigChanged,
     Error(String, Option<u64>),
 }
 
@@ -402,7 +407,7 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                     formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                 }
                 PreviewMode::Bat { args } => {
-                    if !is_regular_file(&path) || fs::is_preview_deny(&path) {
+                    if !os::is_regular_file(&path) || fs::is_preview_deny(&path) {
                         formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
                     } else {
                         match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
@@ -738,6 +743,94 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                             Some(request_id),
                         ));
                     }
+                }
+            }
+        }
+    });
+}
+
+fn is_config_changed(event: &Event, config_path: &Path, config_name: &OsStr) -> bool {
+    matches!(
+        event.kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    ) && event
+        .paths
+        .iter()
+        .any(|p| p == config_path || p.file_name().is_some_and(|name| name == config_name))
+}
+
+fn start_config_watch_worker(res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        let config_path = os::default_config_path();
+        let config_dir = match config_path.parent().map(Path::to_path_buf) {
+            Some(dir) => dir,
+            None => {
+                let _ = res_tx.send(WorkerResponse::Error(
+                    format!(
+                        "Config watch error: invalid config path '{}'",
+                        config_path.display()
+                    ),
+                    None,
+                ));
+                return;
+            }
+        };
+
+        let config_name = match config_path.file_name().map(|n| n.to_os_string()) {
+            Some(name) => name,
+            None => {
+                let _ = res_tx.send(WorkerResponse::Error(
+                    format!(
+                        "Config watch error: invalid config filename '{}'",
+                        config_path.display()
+                    ),
+                    None,
+                ));
+                return;
+            }
+        };
+
+        let (watch_tx, watch_rx) = unbounded::<notify::Result<Event>>();
+        let mut watcher = match RecommendedWatcher::new(
+            move |result| {
+                let _ = watch_tx.send(result);
+            },
+            NotifyConfig::default(),
+        ) {
+            Ok(watcher) => watcher,
+            Err(e) => {
+                let _ = res_tx.send(WorkerResponse::Error(
+                    format!("Config watch error: failed to create watcher: {}", e),
+                    None,
+                ));
+                return;
+            }
+        };
+
+        if let Err(e) = watcher.watch(&config_dir, RecursiveMode::NonRecursive) {
+            let _ = res_tx.send(WorkerResponse::Error(
+                format!(
+                    "Config watch error: failed to watch '{}' : {}",
+                    config_dir.display(),
+                    e
+                ),
+                None,
+            ));
+            return;
+        }
+
+        while let Ok(result) = watch_rx.recv() {
+            match result {
+                Ok(event) => {
+                    if is_config_changed(&event, &config_path, config_name.as_os_str()) {
+                        let _ = res_tx.send(WorkerResponse::ConfigChanged);
+                    }
+                }
+                Err(e) => {
+                    let _ = res_tx.send(WorkerResponse::Error(
+                        format!("Config watch error: {}", e),
+                        None,
+                    ));
                 }
             }
         }

@@ -7,6 +7,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+const DEFAULT_DIR_CAPACITY: usize = 256;
+
 /// Represents a single entry in a directory listing
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
@@ -107,7 +109,7 @@ impl FileEntry {
 /// # Returns
 /// A Result containing a vector of FileEntry structs or an std::io::Error
 pub(crate) fn browse_dir(path: &Path) -> io::Result<Vec<FileEntry>> {
-    let mut entries = Vec::with_capacity(256);
+    let mut entries = Vec::with_capacity(DEFAULT_DIR_CAPACITY);
 
     for entry in fs::read_dir(path)? {
         let entry = match entry {
