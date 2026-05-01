@@ -30,7 +30,7 @@ use crate::app::{
 use crate::config::Editor;
 
 /// AppState file action handlers
-impl<'a> AppState<'a> {
+impl AppState {
     /// Handles file actions (open, delete, copy, etc).
     /// Returns a [KeypressResult] indicating how the action was handled.
     pub(in crate::app) fn handle_file_action(

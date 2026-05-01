@@ -13,7 +13,7 @@ use crate::core::metadata::FileMetadataCache;
 use crate::ui::overlays::{Overlay, OverlayKind};
 
 /// AppState input and action handlers
-impl<'a> AppState<'a> {
+impl AppState {
     pub(in crate::app) fn handle_esc_close_overlays(
         &mut self,
         key: &KeyEvent,

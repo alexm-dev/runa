@@ -15,18 +15,18 @@ use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction};
 use crate::core::{sort::SortConfig, workers::Workers};
 use crate::utils::path;
 
-pub(crate) struct TabManager<'a> {
-    pub(crate) tabs: Vec<AppState<'a>>,
+pub(crate) struct TabManager {
+    pub(crate) tabs: Vec<AppState>,
     pub(crate) current: usize,
     next_tab_id: usize,
 }
 
-impl<'a> TabManager<'a> {
+impl TabManager {
     const MAX_TABS: usize = 9;
 
     pub(crate) fn new(
-        mut existing: AppState<'a>,
-        mut new_tab: AppState<'a>,
+        mut existing: AppState,
+        mut new_tab: AppState,
         workers: &Workers,
         focus: Option<OsString>,
     ) -> Self {
@@ -44,7 +44,7 @@ impl<'a> TabManager<'a> {
         manager
     }
 
-    pub(crate) fn from_vec(mut tabs: Vec<AppState<'a>>) -> Self {
+    pub(crate) fn from_vec(mut tabs: Vec<AppState>) -> Self {
         for (i, tab) in tabs.iter_mut().enumerate() {
             tab.tab_id = Some(i);
         }
@@ -69,17 +69,17 @@ impl<'a> TabManager<'a> {
         self.tabs.is_empty()
     }
 
-    pub(crate) fn current_tab(&self) -> &AppState<'a> {
+    pub(crate) fn current_tab(&self) -> &AppState {
         &self.tabs[self.current]
     }
 
-    pub(crate) fn current_tab_mut(&mut self) -> &mut AppState<'a> {
+    pub(crate) fn current_tab_mut(&mut self) -> &mut AppState {
         &mut self.tabs[self.current]
     }
 
     pub(crate) fn add_tab(
         &mut self,
-        mut tab: AppState<'a>,
+        mut tab: AppState,
         workers: &Workers,
         focus: Option<OsString>,
     ) -> usize {
@@ -134,8 +134,10 @@ impl<'a> TabManager<'a> {
         let tab_spans = if self.tabs.len() <= 1 {
             Vec::new()
         } else {
-            let theme = self.tabs[self.current].config.theme();
-            let tab_theme = &theme.tab();
+            let (tab_theme, separator) = {
+                let theme = self.tabs[self.current].config().theme();
+                (theme.tab().clone(), theme.tab().separator().to_string())
+            };
 
             let mut spans = Vec::with_capacity(self.tabs.len() * 2 - 1);
             for (i, tab) in self.tabs.iter().enumerate() {
@@ -161,7 +163,7 @@ impl<'a> TabManager<'a> {
 
                 spans.push(Span::styled(formatted, style));
                 if i != self.tabs.len() - 1 {
-                    spans.push(Span::raw(tab_theme.separator()));
+                    spans.push(Span::raw(separator.clone()));
                 }
             }
             spans
@@ -173,9 +175,9 @@ impl<'a> TabManager<'a> {
     }
 }
 
-pub(crate) fn handle_tab_action<'a>(
+pub(crate) fn handle_tab_action(
     workers: &Workers,
-    container: &mut AppContainer<'a>,
+    container: &mut AppContainer,
     action: TabAction,
 ) -> KeypressResult {
     match action {

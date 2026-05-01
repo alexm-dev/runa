@@ -27,7 +27,7 @@ use crate::ui::overlays::OverlayKind;
 use crate::utils::{os, path};
 
 /// AppState input handlers
-impl<'a> AppState<'a> {
+impl AppState {
     // AppState core handlers
 
     /// Handles key events when in an input mode (rename, filter, etc).
@@ -186,6 +186,7 @@ impl<'a> AppState<'a> {
                 self.toggle_keybind_help();
                 KeypressResult::Consumed
             }
+            SystemAction::Reload => KeypressResult::ReloadConfig,
         }
     }
 

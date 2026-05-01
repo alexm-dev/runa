@@ -435,6 +435,7 @@ mod tests {
     use crate::Config;
     use crate::config::load::RawConfig;
     use std::error;
+    use std::sync::Arc;
 
     #[test]
     fn layout_chunks_with_config() -> Result<(), Box<dyn error::Error>> {
@@ -455,7 +456,7 @@ mod tests {
         let raw: RawConfig = toml::from_str(toml_content)?;
         let config = Config::from(raw);
 
-        let app = AppState::new(&config).expect("Failed to create AppState");
+        let app = AppState::new(Arc::new(config)).expect("Failed to create AppState");
 
         let chunks = layout_chunks(size, &app);
 
