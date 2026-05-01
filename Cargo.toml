@@ -63,7 +63,3 @@ codegen-units = 1
 panic = "abort"
 strip = true
 debug = false
-
-[profile.release-windows]
-inherits = "release"
-panic = "unwind"
