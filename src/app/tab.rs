@@ -46,7 +46,9 @@ impl TabManager {
 
     pub(crate) fn from_vec(mut tabs: Vec<AppState>) -> Self {
         for (i, tab) in tabs.iter_mut().enumerate() {
-            tab.tab_id = Some(i);
+            if tab.tab_id.is_none() {
+                tab.tab_id = Some(i);
+            }
         }
 
         let next_id = tabs.len();

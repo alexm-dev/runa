@@ -73,7 +73,7 @@ fn startup_container(
     }
 
     let mut tabs = Vec::with_capacity(paths.len());
-    for path in paths {
+    for (tab_index, path) in paths.into_iter().enumerate() {
         if tabs.len() >= 9 {
             break;
         }
@@ -81,6 +81,7 @@ fn startup_container(
         let path_str = path.to_string_lossy();
         if path_str == "." || path_str == "cwd" {
             if let Ok(mut state) = app::AppState::new(Arc::clone(&config)) {
+                state.set_tab_id(tab_index);
                 state.initialize(workers, None);
                 tabs.push(state);
             }
@@ -92,6 +93,7 @@ fn startup_container(
             }
 
             let mut state = app::AppState::from_dir(Arc::clone(&config), &target)?;
+            state.set_tab_id(tab_index);
             state.initialize(workers, None);
             tabs.push(state);
         }

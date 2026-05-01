@@ -180,6 +180,11 @@ impl AppState {
     }
 
     #[inline]
+    pub(crate) fn set_tab_id(&mut self, id: usize) {
+        self.tab_id = Some(id);
+    }
+
+    #[inline]
     pub(crate) fn selected_metadata(&self) -> Option<&FileMetadataCache> {
         self.metadata.selected()
     }
