@@ -50,6 +50,7 @@ pub(crate) struct Workers {
     response_rx: Receiver<WorkerResponse>,
     active: Arc<AtomicUsize>,
     cache: Arc<DirCache>,
+    _config_watcher: Option<RecommendedWatcher>,
 }
 
 /// Manages worker thread channels for different task types.
@@ -90,7 +91,7 @@ impl Workers {
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
-        start_config_watch_worker(res_tx.clone());
+        let config_watcher = start_config_watch_worker(res_tx.clone());
 
         Self {
             nav_io_tx,
@@ -104,6 +105,7 @@ impl Workers {
             response_rx,
             active,
             cache,
+            _config_watcher: config_watcher,
         }
     }
 
@@ -759,82 +761,95 @@ fn is_config_changed(event: &Event, config_path: &Path, config_name: &OsStr) -> 
         .any(|p| p == config_path || p.file_name().is_some_and(|name| name == config_name))
 }
 
-fn start_config_watch_worker(res_tx: Sender<WorkerResponse>) {
-    thread::spawn(move || {
-        let config_path = os::default_config_path();
-        let config_dir = match config_path.parent().map(Path::to_path_buf) {
-            Some(dir) => dir,
-            None => {
-                let _ = res_tx.send(WorkerResponse::Error(
-                    format!(
-                        "Config watch error: invalid config path '{}'",
-                        config_path.display()
-                    ),
-                    None,
-                ));
-                return;
-            }
-        };
+fn resolve_config_watch_dir(config_dir: &Path) -> Option<(PathBuf, bool)> {
+    if config_dir.is_dir() {
+        return Some((config_dir.to_path_buf(), true));
+    }
 
-        let config_name = match config_path.file_name().map(|n| n.to_os_string()) {
-            Some(name) => name,
-            None => {
-                let _ = res_tx.send(WorkerResponse::Error(
-                    format!(
-                        "Config watch error: invalid config filename '{}'",
-                        config_path.display()
-                    ),
-                    None,
-                ));
-                return;
-            }
-        };
+    config_dir
+        .parent()
+        .filter(|parent| parent.is_dir())
+        .map(|parent| (parent.to_path_buf(), false))
+}
 
-        let (watch_tx, watch_rx) = unbounded::<notify::Result<Event>>();
-        let mut watcher = match RecommendedWatcher::new(
-            move |result| {
-                let _ = watch_tx.send(result);
-            },
-            NotifyConfig::default(),
-        ) {
-            Ok(watcher) => watcher,
-            Err(e) => {
-                let _ = res_tx.send(WorkerResponse::Error(
-                    format!("Config watch error: failed to create watcher: {}", e),
-                    None,
-                ));
-                return;
-            }
-        };
-
-        if let Err(e) = watcher.watch(&config_dir, RecursiveMode::NonRecursive) {
+fn start_config_watch_worker(res_tx: Sender<WorkerResponse>) -> Option<RecommendedWatcher> {
+    let config_path = os::default_config_path();
+    let config_dir = match config_path.parent().map(Path::to_path_buf) {
+        Some(dir) => dir,
+        None => {
             let _ = res_tx.send(WorkerResponse::Error(
                 format!(
-                    "Config watch error: failed to watch '{}' : {}",
-                    config_dir.display(),
-                    e
+                    "Config watch error: invalid config path '{}'",
+                    config_path.display()
                 ),
                 None,
             ));
-            return;
+            return None;
         }
+    };
 
-        while let Ok(result) = watch_rx.recv() {
-            match result {
-                Ok(event) => {
-                    if is_config_changed(&event, &config_path, config_name.as_os_str()) {
-                        let _ = res_tx.send(WorkerResponse::ConfigChanged);
-                    }
-                }
-                Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("Config watch error: {}", e),
-                        None,
-                    ));
+    let config_name = match config_path.file_name().map(|n| n.to_os_string()) {
+        Some(name) => name,
+        None => {
+            let _ = res_tx.send(WorkerResponse::Error(
+                format!(
+                    "Config watch error: invalid config filename '{}'",
+                    config_path.display()
+                ),
+                None,
+            ));
+            return None;
+        }
+    };
+
+    let (watched_dir, watching_config_dir) = resolve_config_watch_dir(&config_dir)?;
+
+    let res_tx_cb = res_tx.clone();
+    let mut watcher = match RecommendedWatcher::new(
+        move |result| match result {
+            Ok(event) => {
+                if is_config_changed(&event, &config_path, config_name.as_os_str()) {
+                    let _ = res_tx_cb.send(WorkerResponse::ConfigChanged);
                 }
             }
+            Err(e) => {
+                let _ = res_tx_cb.send(WorkerResponse::Error(
+                    format!("Config watch error: {}", e),
+                    None,
+                ));
+            }
+        },
+        NotifyConfig::default(),
+    ) {
+        Ok(watcher) => watcher,
+        Err(e) => {
+            let _ = res_tx.send(WorkerResponse::Error(
+                format!("Config watch error: failed to create watcher: {}", e),
+                None,
+            ));
+            return None;
         }
-    });
+    };
+
+    let mode = if watching_config_dir {
+        RecursiveMode::NonRecursive
+    } else {
+        RecursiveMode::Recursive
+    };
+
+    if let Err(e) = watcher.watch(&watched_dir, mode) {
+        let _ = res_tx.send(WorkerResponse::Error(
+            format!(
+                "Config watch error: failed to watch '{}' : {}",
+                watched_dir.display(),
+                e
+            ),
+            None,
+        ));
+        return None;
+    }
+
+    Some(watcher)
 }
 
 /// Worker threads integration tests.
@@ -1352,6 +1367,31 @@ mod tests {
             assert_eq!(request_id, 2);
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_config_watch_dir_uses_config_dir_when_present()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempdir()?;
+        let config_dir = temp.path().join("runa");
+        fs::create_dir_all(&config_dir)?;
+
+        let resolved = resolve_config_watch_dir(&config_dir).expect("Expected watch dir");
+        assert_eq!(resolved.0, config_dir);
+        assert!(resolved.1);
+        Ok(())
+    }
+
+    #[test]
+    fn resolve_config_watch_dir_falls_back_to_parent_when_missing()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempdir()?;
+        let config_dir = temp.path().join("runa");
+
+        let resolved = resolve_config_watch_dir(&config_dir).expect("Expected watch dir");
+        assert_eq!(resolved.0, temp.path());
+        assert!(!resolved.1);
         Ok(())
     }
 }

@@ -77,8 +77,11 @@ impl Config {
     /// Called by entry point to load config at startup.
     pub(crate) fn load() -> Result<Self, String> {
         let path = os::default_config_path();
-        let content =
-            fs::read_to_string(&path).map_err(|e| format!("Failed to read config file: {}", e))?;
+        let content = match fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Self::default()),
+            Err(e) => return Err(format!("Failed to read config file: {}", e)),
+        };
 
         let mut raw = toml::from_str::<RawConfig>(&content)
             .map_err(|e| format!("Config syntax error: {}", e))?;
