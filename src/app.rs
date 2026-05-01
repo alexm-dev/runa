@@ -21,6 +21,7 @@ pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
 use crate::config::Config;
+use crate::utils::timings::{Throttler, Timings};
 use crate::{app::tab::TabManager, core::workers::Workers};
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -60,41 +61,17 @@ pub(crate) struct RunaRoot {
     pub(crate) container: AppContainer,
     pub(crate) clipboard: Clipboard,
     pub(crate) workers: Workers,
+    reload_throttler: Throttler,
 }
 
 impl RunaRoot {
-    pub(crate) fn reload_config(&mut self) {
-        match Config::load() {
-            Ok(config) => {
-                let new_config = Arc::new(config);
-
-                match &mut self.container {
-                    AppContainer::Single(app) => {
-                        app.apply_new_config(Arc::clone(&new_config), &self.workers);
-                        app.push_overlay_message(
-                            " Config reloaded!".into(),
-                            Duration::from_secs(2),
-                        );
-                    }
-                    AppContainer::Tabs(tabs) => {
-                        for tab in &mut tabs.tabs {
-                            tab.apply_new_config(Arc::clone(&new_config), &self.workers);
-                        }
-                        tabs.sync_tab_line();
-                        tabs.tabs[tabs.current].push_overlay_message(
-                            " Config reloaded!".into(),
-                            Duration::from_secs(2),
-                        );
-                    }
-                }
-            }
-            Err(e) => {
-                let target_app = match &mut self.container {
-                    AppContainer::Single(app) => app,
-                    AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],
-                };
-                target_app.push_overlay_message(e, Duration::from_secs(5));
-            }
+    #[inline]
+    pub(crate) fn new(container: AppContainer, workers: Workers) -> Self {
+        Self {
+            container,
+            clipboard: Clipboard::default(),
+            workers,
+            reload_throttler: Throttler::default(),
         }
     }
 
@@ -121,5 +98,46 @@ impl RunaRoot {
             }
         }
         changed
+    }
+
+    pub(crate) fn reload_config(&mut self) {
+        if !self.reload_throttler.can_trigger(Timings::CONFIG_RELOAD_MS) {
+            return;
+        }
+
+        match Config::load() {
+            Ok(config) => {
+                self.reload_throttler.touch();
+                let new_config = Arc::new(config);
+
+                match &mut self.container {
+                    AppContainer::Single(app) => {
+                        app.apply_new_config(Arc::clone(&new_config), &self.workers);
+                        app.push_overlay_message(
+                            " Config reloaded!".into(),
+                            Duration::from_secs(2),
+                        );
+                    }
+                    AppContainer::Tabs(tabs) => {
+                        for tab in &mut tabs.tabs {
+                            tab.apply_new_config(Arc::clone(&new_config), &self.workers);
+                        }
+                        tabs.sync_tab_line();
+                        tabs.tabs[tabs.current].push_overlay_message(
+                            " Config reloaded!".into(),
+                            Duration::from_secs(2),
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                self.reload_throttler.touch();
+                let target_app = match &mut self.container {
+                    AppContainer::Single(app) => app,
+                    AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],
+                };
+                target_app.push_overlay_message(e, Duration::from_secs(5));
+            }
+        }
     }
 }

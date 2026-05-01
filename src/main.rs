@@ -124,11 +124,7 @@ fn main() -> io::Result<()> {
         }
     };
 
-    let mut runa = app::RunaRoot {
-        container,
-        clipboard: app::Clipboard::default(),
-        workers,
-    };
+    let mut runa = app::RunaRoot::new(container, workers);
 
     ui::run_terminal(&mut runa)
 }
