@@ -25,6 +25,7 @@ checksum = "e42366bb9d958f042bf58f0a85e1b2d091997c1257ca49bddd7e4827aadc65fd"
 dependencies = [
  "nom",
  "ratatui-core",
+ "simdutf8",
  "smallvec",
  "thiserror",
 ]
@@ -1044,7 +1045,7 @@ dependencies = [
 
 [[package]]
 name = "runa-tui"
-version = "0.11.1-alpha.2"
+version = "0.11.1-beta.1"
 dependencies = [
  "ansi-to-tui",
  "chrono",
@@ -1210,6 +1211,12 @@ dependencies = [
  "errno",
  "libc",
 ]
+
+[[package]]
+name = "simdutf8"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 
 [[package]]
 name = "siphasher"
@@ -1381,6 +1388,7 @@ version = "5.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a9b93a14fcf658568eb11b3ac4cb406822e916e2c55cdebc421beeb0bd7c94d8"
 dependencies = [
+ "chrono",
  "libc",
  "log",
  "objc2",
