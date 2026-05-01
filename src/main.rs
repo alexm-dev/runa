@@ -22,7 +22,6 @@ fn install_panic_hook() {
     std::panic::set_hook(Box::new(handle_panic));
 }
 
-#[cold]
 #[inline(never)]
 fn handle_panic(info: &std::panic::PanicHookInfo<'_>) {
     let _ = crossterm::terminal::disable_raw_mode();
@@ -42,7 +41,6 @@ fn handle_panic(info: &std::panic::PanicHookInfo<'_>) {
     }
 }
 
-#[cold]
 #[inline(never)]
 fn load_config_or_default() -> Config {
     Config::load().unwrap_or_else(|e| {
@@ -51,7 +49,6 @@ fn load_config_or_default() -> Config {
     })
 }
 
-#[cold]
 #[inline(never)]
 fn exit_with_startup_error(error: io::Error) -> ! {
     eprintln!("[runa] Error: {}", error);

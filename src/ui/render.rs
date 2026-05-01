@@ -347,7 +347,6 @@ fn render_input_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) 
     }
 }
 
-#[cold]
 #[inline(never)]
 fn render_single_overlay(
     frame: &mut Frame,
