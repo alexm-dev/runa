@@ -1,7 +1,7 @@
 [package]
 name = "runa-tui"
 description = "A fast, keyboard-focused terminal file manager (TUI). Highly configurable and lightweight."
-version = "0.11.1-alpha.2"
+version = "0.11.1-beta.1"
 edition = "2024"
 rust-version = "1.90"
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ name = "rn"
 path = "src/main.rs"
 
 [dependencies]
-ansi-to-tui = { version = "8.0.1", default-features = false }
+ansi-to-tui = "8.0.1"
 chrono = { version = "0.4.44", default-features = false, features = ["clock", "std"] }
 crossbeam-channel = "0.5.15"
 crossterm = "0.29.0"
@@ -29,7 +29,7 @@ phf = { version = "0.13.1", default-features = false, features = ["macros"] }
 ratatui = { version = "0.30.0", default-features = false, features = ["crossterm"] }
 serde = { version = "1.0", features = ["derive"] }
 toml = { version = "1.1.2", default-features = false, features = ["parse", "serde", "std"] }
-trash = { version = "5.2.5", default-features = false, features = ["coinit_apartmentthreaded"] }
+trash = "5.2.5"
 unicode-width = "0.2.2"
 
 [target.'cfg(unix)'.dependencies]
