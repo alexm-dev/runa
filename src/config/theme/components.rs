@@ -34,7 +34,7 @@ impl PaneTheme {
     /// Returns the selection style, falling back to the provided fallback if not set.
     /// If selection is None, falls back to the provided fallback ColorPair.
     /// If selection is Some, uses its style_or method with the fallback.
-    pub(crate) fn selection_style(&self) -> Style {
+    pub(super) fn selection_style(&self, global: &ColorPair) -> Style {
         if self.selection_mode == SelectionMode::Off {
             return Style::default();
         }
@@ -42,7 +42,7 @@ impl PaneTheme {
         let default = &Theme::builtin().selection;
         match self.selection {
             Some(pane_sel) => pane_sel.style_or(default),
-            None => default.style(),
+            None => global.style_or(default),
         }
     }
 

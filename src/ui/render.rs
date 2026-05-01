@@ -81,7 +81,7 @@ pub(crate) fn render(
 
         let parent_pane_style = PaneStyles::new(theme_cfg)
             .with_entry(theme_cfg.parent().entry_style_or_theme())
-            .with_selection(theme_cfg.parent().selection_style());
+            .with_selection(theme_cfg.parent_selection_style());
 
         panes::draw_parent(
             frame,
@@ -163,7 +163,7 @@ pub(crate) fn render(
 
         let preview_pane_style = PaneStyles::new(theme_cfg)
             .with_entry(theme_cfg.preview().entry_style_or_theme())
-            .with_selection(theme_cfg.preview().selection_style());
+            .with_selection(theme_cfg.preview_selection_style());
 
         panes::draw_preview(
             frame,

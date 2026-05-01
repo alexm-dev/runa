@@ -161,6 +161,14 @@ impl Theme {
         status_line_style => status_line,
     }
 
+    pub(crate) fn preview_selection_style(&self) -> Style {
+        self.preview.selection_style(&self.selection)
+    }
+
+    pub(crate) fn parent_selection_style(&self) -> Style {
+        self.parent.selection_style(&self.selection)
+    }
+
     pub(crate) fn separator_style(&self) -> Style {
         let default = Theme::builtin();
         if self.separator != default.separator {
