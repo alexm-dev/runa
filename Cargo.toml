@@ -33,7 +33,7 @@ trash = "5.2.5"
 unicode-width = "0.2.2"
 
 [target.'cfg(unix)'.dependencies]
-uzers = "0.12.2"
+uzers = { version = "0.12.2", default-features = false, features = ["mock", "logging"] }
 
 [dev-dependencies]
 rand = "0.10.1"
