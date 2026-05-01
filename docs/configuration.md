@@ -187,7 +187,7 @@ sort_date_format = "%b %e %H:%M"
 
 # Options for the preview method used by the preview pane.
 # Options: "internal" and "bat". For "bat" you will need to have `bat` installed otherwise it will fallback to internal.
-[display.previews_options]
+[display.preview_options]
 method = "internal"
 
 # Optionals for when method = "bat" otherwise these will be ignored by runa.
