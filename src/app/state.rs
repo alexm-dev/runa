@@ -152,7 +152,11 @@ impl<'a> AppState<'a> {
         is_loading: bool,
         worker_time: &Option<Instant>,
         overlays: &OverlayStack,
-        overlays_mut => overlays: &mut OverlayStack,
+    }
+
+    #[inline]
+    pub(crate) fn overlays_mut(&mut self) -> &mut OverlayStack {
+        &mut self.overlays
     }
 
     #[inline]

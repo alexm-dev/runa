@@ -40,15 +40,11 @@ impl<'a> AppContainer<'a> {
 /// The shared clipboard used by all tabs and all states.
 #[derive(Default)]
 pub(crate) struct Clipboard {
-    entries: Option<HashSet<PathBuf>>,
-    is_cut: bool,
+    pub(crate) entries: Option<HashSet<PathBuf>>,
+    pub(crate) is_cut: bool,
 }
 
 impl Clipboard {
-    crate::getters!(
-        entries: &Option<HashSet<PathBuf>>,
-    );
-
     pub(crate) fn clear(&mut self) {
         self.entries = None;
         self.is_cut = false;
@@ -58,26 +54,12 @@ impl Clipboard {
 /// The main struct of runa
 /// Contains the AppContainer, the shared clipboard and the worker pool
 pub(crate) struct RunaRoot<'a> {
-    container: AppContainer<'a>,
-    clipboard: Clipboard,
-    workers: Workers,
+    pub(crate) container: AppContainer<'a>,
+    pub(crate) clipboard: Clipboard,
+    pub(crate) workers: Workers,
 }
 
-impl<'a> RunaRoot<'a> {
-    #[inline]
-    pub(crate) fn new(container: AppContainer<'a>, workers: Workers) -> Self {
-        Self {
-            container,
-            clipboard: Clipboard::default(),
-            workers,
-        }
-    }
-
-    #[inline]
-    pub(crate) fn parts(&mut self) -> (&mut AppContainer<'a>, &Workers, &mut Clipboard) {
-        (&mut self.container, &self.workers, &mut self.clipboard)
-    }
-
+impl RunaRoot<'_> {
     pub(crate) fn update(&mut self) -> bool {
         let mut changed = false;
 
@@ -89,9 +71,9 @@ impl<'a> RunaRoot<'a> {
                 }
                 AppContainer::Tabs(tabs) => {
                     let target_app = if let Some(id) = response.tab_id() {
-                        tabs.iter_mut().find(|t| t.tab_id == Some(id))
+                        tabs.tabs.iter_mut().find(|t| t.tab_id == Some(id))
                     } else {
-                        Some(tabs.current_tab_mut())
+                        Some(&mut tabs.tabs[tabs.current])
                     };
 
                     if let Some(app) = target_app {
