@@ -1,7 +1,10 @@
 //! Environment relevant utils.
 
 use std::env;
+
+#[cfg(windows)]
 use std::ffi::OsString;
+
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
