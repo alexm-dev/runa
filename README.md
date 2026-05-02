@@ -18,12 +18,12 @@
 </div>
 <div align="center">
 
-<a href="[https://alexm-dev.github.io/runa/](https://alexm-dev.github.io/runa/)">Documentation Site</a> • 
-<a href="[https://alexm-dev.github.io/runa/configuration.html](https://alexm-dev.github.io/runa/configuration.html)">Configuration Guide</a> • 
+<a href="https://alexm-dev.github.io/runa/">Documentation Site</a> • 
+<a href="https://alexm-dev.github.io/runa/configuration.html">Configuration Guide</a> • 
 <a href="#installation">Installation</a> • 
-<a href="[https://alexm-dev.github.io/runa/config-reference/general.html](https://alexm-dev.github.io/runa/config-reference/general.html)">General Settings</a> • 
-<a href="[https://alexm-dev.github.io/runa/config-reference/theme.html](https://alexm-dev.github.io/runa/config-reference/theme.html)">Theme</a> • 
-<a href="[https://alexm-dev.github.io/runa/config-reference/keys.html](https://alexm-dev.github.io/runa/config-reference/keys.html)">Key Bindings</a>
+<a href="https://alexm-dev.github.io/runa/config-reference/general.html">General Settings</a> • 
+<a href="https://alexm-dev.github.io/runa/config-reference/theme.html">Theme</a> • 
+<a href="https://alexm-dev.github.io/runa/config-reference/keys.html">Key Bindings</a>
 
 </div>
 
