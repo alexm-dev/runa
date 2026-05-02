@@ -1,0 +1,8 @@
+[book]
+title = "Runa Configuration Guide"
+authors = ["Alexandros McCray <alexandros@amccray.com>"]
+language = "en"
+src = "docs"
+
+[output.html]
+git-repository-url = "https://github.com/alexm-dev/runa"
