@@ -20,6 +20,7 @@
 <a href="docs/configuration.md">Configuration Guide</a> • 
 <a href="#installation">Installation</a> • 
 <a href="docs/config-reference/general.md">General Settings</a> • 
+<a href="docs/config-reference/display.md">Display Settings</a> • 
 <a href="docs/config-reference/theme.md">Theme</a> • 
 <a href="docs/config-reference/keys.md">Key Bindings</a>
 
