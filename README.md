@@ -246,21 +246,6 @@ Many thanks to [@lmartinez-mirror](https://github.com/lmartinez-mirror), the mai
 
 Many thanks to [@sharkdp](https://github.com/sharkdp) for `fd` and `bat`, excellent CLI tools runa integrates with for fuzzy finding and syntax preview.
 
-## Credits & Ecosystem
-`runa` stands on the shoulders of these incredible Rust crates:
-
-- **Terminal UI:**
-    - [Ratatui](https://ratatui.rs): Direct, fast terminal rendering.
-    - [Crossterm](https://github.com/crossterm-rs/crossterm): Cross-platform terminal I/O.
-- **Configuration:**
-    - [Serde](https://serde.rs): Data serialization/deserialization.
-    - [toml-rs](https://github.com/toml-rs/toml): TOML parsing.
-- **Concurrency:**
-    - [Crossbeam-channel](https://github.com/crossbeam-rs/crossbeam): Multi-threaded communication (worker threads).
-- **Optional Integrations:**
-    - [fd](https://github.com/sharkdp/fd): High-performance fuzzy finder (search enhancement).
-    - [bat](https://github.com/sharkdp/bat): Syntax-highlighted file previews.
-
 ## License
 This project is dual licensed under the MIT OR Apache-2.0 license.  
 
