@@ -1,661 +1,111 @@
 # Runa Configuration Guide
 
-runa is under active development and options may change over time.
+runa is configured via a TOML file. By default, it looks for your config in the following order:
 
-## Contents
-
-- [Config File Location](#config-file)
-- [Quick Start](#quick-start)
-- [General Settings](#general-settings)
-- [Optional Tool Integration](#optional-tool-integration)
-- [Theme Configuration](#theme-configuration)
-- [Advanced Theme Configuration](#advanced-theme-configuration)
-- [Editor](#editor)
-- [Key Bindings](#key-bindings)
-- [Examples](#examples)
-
-## Config File
-
-`runa` is configured via a TOML file. By default, it looks for your config in the following order:
-
-1. **Custom Path Override**:
-    If the `RUNA_CONFIG` environment variable is set, runa will use its value as the config file path.  
-    **Example:**
-    ```sh
-    export RUNA_CONFIG=/path/to/runa.toml
+1. **Environment Variable**: `RUNA_CONFIG` - If set, runa uses this path as the config file
+   ```sh
+   export RUNA_CONFIG=/path/to/runa.toml
+   ```
 
 2. **XDG Config Directory** (Linux, macOS, and supported environments):
-    If `XDG_CONFIG_HOME` is set, runa looks for
-    ```sh
-    $XDG_CONFIG_HOME/runa/runa.toml
-    ```
+   ```sh
+   $XDG_CONFIG_HOME/runa/runa.toml
+   ```
 
 3. **Default Path**:
-    - `~/.config/runa/runa.toml` (Linux/macOS)
-    - `C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
+   - `~/.config/runa/runa.toml` (Linux/macOS)
+   - `C:\Users\<UserName>\.config\runa\runa.toml` (Windows)
 
-## Optional Tool Integration
-
-Some advanced features like `find`, require external tools to be installed.
-
-- **[bat](https://github.com/sharkdp/bat)**:
-    Used for fast, syntax-highlighted file previews when `[display.previews_options.method]` is set to `"bat"`.  
-    _If `bat` is not installed, runa will fall back to the built-in preview method._
-
-- **[fd](https://github.com/sharkdp/fd)**:
-    Used for blazing fast recursive file/folder search.
-
-**Both tools are completely optional** but highly recommended.
-
-You can install them with your package manager:
-```sh
-sudo pacman -S bat fd           # On Arch
-sudo apt install bat fd-find    # On Debian/Ubuntu
-sudo dnf install bat fd-find    # Fedora/RHEL
-```
+> runa is under active development and configuration options may change over time.
 
 ## Quick Start
 
-Launch `runa` by simply running `rn`. You can also specify a starting directory:
+If you don't have a config file yet, generate one:
 
-- `rn`: Opens up runa at the current directory.
-- `rn /path/to/dir`: Opens runa at the specified location. With multiple path arguments, runa starts each path as an tab.
+- `rn --init` - Generates a minimal configuration
+- `rn --init-full` - Generates a full configuration with all options and inline documentation
 
-If you don't have a config file yet, you can generate one automatically:
+Other useful commands:
 
-### Configuration Setup
-- `rn --init`: Generates the configuration.
-- `rn --init-full`: Creates a full configuration file with all options as shown below.
-- `rn --config-help`: Displays the whole documentation of the `runa.toml`.  
-Possible to specify which section to display. Example: `rn --config-help theme`
+- `rn --help` - Shows the CLI help menu
+- `rn --version` - Displays the current installed version
+- `rn --config-help` - Displays documentation for configuration sections (e.g., `rn --config-help general`)
 
-### Quick Reference
-- `rn --help`: Shows the standard CLI help menu
-- `rn --version`: Displays the current installed version
+## Optional Tool Integration
 
-## General Settings
+Some features require external tools to be installed:
+
+- **[bat](https://github.com/sharkdp/bat)** - Fast, syntax-highlighted file previews (optional, highly recommended)
+- **[fd](https://github.com/sharkdp/fd)** - Blazing fast recursive file/folder search (optional, highly recommended)
+
+Both tools are completely optional. runa falls back to built-in methods if they're not installed.
+
+**Install with your package manager**:
+```sh
+sudo pacman -S bat fd           # Arch
+sudo apt install bat fd-find    # Debian/Ubuntu
+sudo dnf install bat fd-find    # Fedora/RHEL
+brew install bat fd             # macOS
+```
+
+## Configuration Sections
+
+Each section below links to detailed documentation for all available options:
+
+### [General Settings](config-reference/general.md)
+
+File visibility, sorting, search behavior, and startup tabs.
+
+**Options**: `dirs_first`, `show_hidden`, `show_symlink`, `show_system`, `case_insensitive`, `always_show`, `max_find_results`, `move_to_trash`, `[general.startup]`
+
+### [Display Settings](config-reference/display.md)
+
+Pane layout, borders, previews, file information, and UI styling.
+
+**Sections**: `[display]`, `[display.layout]`, `[display.preview_options]`, `[display.info]`, `[display.status]`
+
+### [Theme Configuration](config-reference/theme.md)
+
+Colors, icon coloring, styling, and widget customization.
+
+**Sections**: `[theme]`, color overrides for all UI elements, `[theme.widget]`, `[theme.status_line]`, `[theme.info]`
+
+### [Editor Configuration](config-reference/editor.md)
+
+Editor program selection and per-extension/per-filename overrides.
+
+**Section**: `[editor]`
+
+### [Key Bindings](config-reference/keys.md)
+
+Keyboard shortcuts for all actions and navigation.
+
+**Section**: `[keys]`
+
+## Complete Reference
+
+For the complete list of all options with defaults and inline documentation, see:
+
+- `runa_full.toml` in [assets/config](../assets/config/runa_full.toml)
+- Run `rn --init-full` to generate a full config file with all options
+
+## Examples
+
+### Minimal Configuration
 
 ```toml
-# ANY unused / default options can be removed from runa.toml.
-# Removed / unused options will default to the internal defaults as seen below.
-
 [general]
-# Sort directories before files
 dirs_first = true
-
-# Show hidden files (dotfiles)
 show_hidden = true
 
-# Show symlinks and the targets
-show_symlink = true
-
-# Show hidden system files (mostly for Windows)
-show_system = false
-
-# Ignore case sensitivity when searching or sorting
-case_insensitive = true
-
-# Always show these directories, even if 'show_hidden' is false. Example: always_show = [".config", "Downloads"]
-always_show = []
-
-# Configure the maximum number of find/search results to display.
-# 2000 is the default.
-# Minimum allowed: 15
-# Maximum allowed: 1_000_000 (values above this will be clamped)
-max_find_results = 2000
-
-# Toggle to move deleted files to the recycle bin instead of being permanently deleted.
-# This will set the default delete key, the alternate_delete key will then alternate between the toggle.
-move_to_trash = true
-
-# Configure up to 9 startup tabs by defining the paths of which the tabs will open at startup.
-# Ommiting this starts runa normally at the current directory.
-[general.startup]
-# 'cwd' or '.' starts the tab normally at the current dir.
-# Tab placments are determined by the index of the vector. Meaning ['tab0', 'tab1', 'tab2'].
-# Note: Use single quotes (' ') for paths to avoid backslash escaping issues on Windows.
-# If you use double quotes (" "), remember to escape your backslashes (e.g. "C:\\Path\\") on Windows.
-tabs = ['cwd', '/path/', '/path/', '..']
-
 [display]
-# Show the selection icon next to the file/directory name
-selection_marker = false
-
-# Show the default '/' symbol next to directory names
-dir_marker = true
-
-# Border style: "none", "unified", or "split"
 borders = "unified"
 
-# Border shape: "square", "rounded" or "double"
-border_shape = "square"
-
-# Show pane titles at the top (e.g., "Main", "Preview")
-titles = true
-
-# Show Nerd Font icons. Requires a Nerd Font to be installed and used.
-icons = false
-
-# Draw vertical lines between panes
-separators = true
-
-# Show the parent directory pane (left)
-parent = true
-
-# Show the file preview pane (right)
-preview = true
-
-# Enable underline in the preview pane
-preview_underline = true
-
-# Use independent color for the preview underline
-preview_underline_color = false
-
-# Padding from entry to pane edge (0–4)
-entry_padding = 1
-
-# Scroll padding of the main pane
-scroll_padding = 5
-
-# Toggle if the marker selection should jump to the first entry whenever selection is at the bottom
-toggle_marker_jump = false
-
-# Toggle previews to instantly render on every selection change
-# False results in pending preview when holding down a navigation key.
-instant_preview = true
-
-# Configuration of the sorting date format when sorting by a date (Modified, Created, Accessed).
-# Uses the standard strftime-style format codes.
-# Common specifiers:
-#   %Y - 4 digit year (2026)
-#   %y - 2 digit year (26)
-#   %m - Month number (01-12)
-#   %b - Month name (Jan, Feb, etc.)
-#   %d - Day of the month
-#   %H - Hour
-#   %M - Minute
-#   %S - Second
-#   %p - AM/PM
-#
-# Examples:
-# "%Y-%m-%d"          # 2026-04-04
-# "%d.%m.%Y %H:%M"    # 04.04.2026 14:30
-# "%b %d, %Y"         # Apr 04, 2026
-#
-# This will show up in the sorting column next to entries.
-sort_date_format = "%b %e %H:%M"
-
-# Options for the preview method used by the preview pane.
-# Options: "internal" and "bat". For "bat" you will need to have `bat` installed otherwise it will fallback to internal.
-[display.preview_options]
-method = "internal"
-
-# Optionals for when method = "bat" otherwise these will be ignored by runa.
-# Change the style of the `bat` preview method.
-# Options: "plain", "numbers", "full".
-style = "plain"
-
-# Options to set the bat theme of the bat preview method
-# All available bat themes are supported. See bat --list-themes
-theme = "default"
-
-# Toggle wrapping the bat output to the pane width.
-# If false, long lines stay on one line and go off-screen
-# If true, all the lines are wrapped to the pane width
-wrap = false
-
-# Configure the tab indentation of `bat`.
-# This does not overwrite every file preview indentation.
-tab_width = 4
-
-[display.layout]
-# Display ratios for panes (will be scaled to 100%)
-parent = 20
-main = 40
-preview = 40
-
-# Display the file info attributes.
-[display.info]
-name = true
-file_type = true
-size = true
-modified = true
-created = true
-accessed = false
-perms = true
-position = "bottom_left"
-
-# Enable file information on the status bar on the bottom left
-status_bar = true
-# Configure the format string of the file information on the status bar if enabled.
-# Available keys are:
-# perms, size, mtime/modified, btime/created, atime/accessed, type, and on unix additonally: owner, group.
-format = "{perms} | {size}"
-
-# Configure the date format for file timestamps (Modified, Created, Accessed).
-# Uses the standard strftime-style format codes..
-# Common specifiers:
-#   %Y - 4 digit year (2026)
-#   %y - 2 digit year (26)
-#   %m - Month number (01-12)
-#   %b - Month name (Jan, Feb, etc.)
-#   %d - Day of the month
-#   %H - Hour
-#   %M - Minute
-#   %S - Second
-#   %p - AM/PM
-#
-# Examples:
-# "%Y-%m-%d"          # 2026-04-04
-# "%d.%m.%Y %H:%M"    # 04.04.2026 14:30
-# "%b %d, %Y"         # Apr 04, 2026
-date_format = "%Y-%m-%d %H:%M"
-
-
-
-# Display the status line options on the stauts line (Header or Footer)
-[display.status]
-# Available options: "footer", "header" or "none" to disable
-entry_count = "footer"
-filter = "header"
-markers = "footer"
-clipboard = "footer"
-tasks = "footer"
-tabs = "header"
-```
-
-
-
-
-## Theme Configuration
-
-The easiest way to change colors:  
-Just set the colors you care about directly under `[theme]`, you only need to override what you want.
-
-```toml
-[theme]
-# The name of the preset themes included in runa.
-# Choose a preset, or leave as "default" or omit.
-name = "default"
-# Available options (case-sensitive strings):
-#   "gruvbox-dark"
-#   "gruvbox-dark-hard"
-#   "gruvbox-light"
-#   "catppuccin-mocha"
-#   "catppuccin-frappe"
-#   "catppuccin-macchiato"
-#   "catppuccin-latte"
-#   "nightfox"
-#   "carbonfox"
-#   "tokyonight"
-#   "tokyonight-storm"
-#   "tokyonight-day"
-#   "everforest"
-#   "rose-pine"       # or "rose_pine"
-#   "nord"
-#   "two-dark"
-#   "one-dark"
-#   "solarized-dark"
-#   "solarized-light"
-#   "dracula"
-#   "monokai"
-
-# The symbol for the current selection. Use "" or " " to disable or set [display] selection_marker to false.
-selection_icon = ""
-
-# Set the colors of binaries/executables.
-exe_color = "lightgreen"
-
-# You can set each color field directly in [theme] instead.
-# There is now need to create each [theme] subsection for overriding and or creating custom themes.
-# Example:
-# [theme]
-# selection.fg = "#EEBBAA"
-# directory.fg = "#7BA"
-# widget.border.fg = "#555555"
-# symlink.directory = "#8aA"
-# and so on
-```
-
-
-
-## Advanced Theme Configuration
-
-You can override all these color options for each section down below.  
-These options are optional and can be omitted.  
-```toml
-
-# Color fields support two formats:
-#
-# 1) Flat shorthand which always sets the .fg
-#    accent = "blue"
-#
-# 2) Explicit form using fg/bg
-#    accent.fg = "blue"
-#    accent.bg = "default"
-#
-# Both are equivalent:
-#   accent = "blue"  ==  accent.fg = "blue"
-#
-# Rules:
-# - If only a single value is provided, it maps to `.fg`
-# - `.bg` defaults to "default" unless explicitly set.
-# - `.fg` will always take precedence over the shorthand.
-#
-# Theme color values can be terminal color names ("Red", "Blue", etc.), hex ("#RRGGBB"), or "default".
-
-# The global selection coloring section.
-# Can be overwritten for each pane.
-[theme.selection]     # Selection bar colors
-fg = "default"
-bg = "#303030"
-
-[theme.accent]        # Borders/titles
-fg = "#444444"
-bg = "default"
-
-[theme.entry]         # Normal entries
-fg = "default"
-bg = "default"
-
-[theme.directory]     # Directory entries
-fg = "blue"
-bg = "default"
-
-[theme.separator]     # Vertical separators
-fg = "#444444"
-bg = "default"
-
-[theme.parent]        # Parent pane text
-fg = "default"
-bg = "default"
-
-# Sets the selection coloring mode.
-# If off, then selection.fg and .bg are ignored and off.
-# If on, then selection.bg and .bg are set to "default" or to a specific override.
-selection_mode = "on"
-
-# Overrides the central [theme.selection] for just the parent pane
-selection.fg = "default"
-selection.bg = "default"
-
-[theme.preview]       # Preview pane text
-fg = "default"
-bg = "default"
-
-# Sets the selection coloring mode.
-# If off, then selection.fg and .bg are ignored and off.
-# If on, then selection.bg and .bg are set to "default" or to a specific override.
-selection_mode = "on"
-
-# Overrides the central [theme.selection] for just the preview pane
-selection.fg = "default"
-selection.bg = "default"
-
-# Map icon colors to specific files
-[theme.icon_color]
-"rs" = "#dea584"
-
-# Map entry colors to specific files
-[theme.exact]
-"README.md" = { fg = "yellow", bg = "default" }
-
-# Map entry color for specific file extensions
-[theme.ext]
-"rs" = { fg = "default", bg = "default" }
-
-[theme.symlink]
-# Set the symlink colors for symlinks who are linked to directories
-directory = "default"
-
-# Set color for symlink who are linked to files
-file = "default"
-
-# Set the target path color of the symlink
-target = "default"
-
-[theme.marker]        # Multi-select marker
-# To disable icon set icon = " "
-icon = "*"
-fg = "default"
-bg = "default"
-# Change the color of the clipboard when you copy a entry via multi-select or via normal yank/copy
-clipboard.fg = "default"
-clipboard.bg = "default"
-
-[theme.underline]     # Underline colors (if enabled)
-fg = "default"
-bg = "default"
-
-[theme.path]          # Path bar at the top
-fg = "magenta"
-bg = "default"
-
-# Full widget/dialog theming: position, size, and colors
-
-[theme.widget]
-# Leave blank or omit to use the regular defaults.
-# Widget position: choose one of the following styles
-#   - Preset string:    "center", "top_left", "bottom_right", etc. Also possible to write "topleft", "bottomright", etc..
-#   - List:             [x, y]             # percent of screen, e.g., [38, 32]
-#   - Table/object:     { x = 25, y = 60 } # percent of screen
-position = "center"
-
-# Widget size: choose one of:
-#   - Preset string:    "small", "medium", "large"
-#   - List:             [width, height]    # **cells (columns x rows)**, e.g., [60, 12]
-#   - Table/object:     { w = 60, h = 12 } # **cells**
-# size arrays/tables are now always **cell-based** (not percent-based!)
-size = "medium"
-
-# Confirmation dialog size (for confirmations like deleting files):
-#   - Preset string, list, or table, just like "size" above.
-#   - Leave blank or omit to use the regular `size`.
-confirm_size = "large"
-
-# Move file widget size
-#   - Preset string, list, or table, just like "size" above.
-#   - Leave blank or omit to use the regular `size`. (default is [70, 14])
-move_size = [70, 14]
-
-# Option to specify the maximal `drawn` results of the find widget.
-# Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
-find_visible_results = 8
-
-# Option to configure the find widget width
-find_width = 60
-
-# Coloring for the widgets
-# Styles the overall widget text.
-color.fg = "default"
-color.bg = "default"
-
-border.fg = "default"
-border.bg = "default"
-
-title.fg = "default"
-title.bg = "default"
-
-# Option to change the label color of a widget.
-# Styles the "key" test (e.g. Name:, Size:, Perms:, etc.)
-# Applies to widgets: File Info, Keybind Help.
-label.fg = "blue"
-label.bg = "default"
-
-# Option to change the value color of a widget
-# Styles the content of the widget data (e.g. main.rs, 4 KB, etc.)
-# Applies to widgets: File Info, Keybind Help.
-value.fg = "cyan"
-value.bg = "default"
-
-# Set the size and position of the go to help widet when pressing "g"
-goto_help.size = [58, 3]
-goto_help.position = "bottom"
-
-# Configuration for the status_line
-# For marker and copy status, the configuration from [theme.marker] sets each status line section.
-[theme.status_line]
-fg = "default"
-bg = "default"
-
-# Tab line customization
-[theme.tab]
-marker = ""
-separator = ":"
-active.fg = "yellow"
-active.bg = "default"
-inactive.fg = "gray"
-inactive.bg = "default"
-
-# Customization of the tab line.
-# Possible ways: {idx}, {name}, {marker}, {separator}
-# {name} shows the current directory of the tab
-# Example: line_format = "[{idx}{name}{marker}]"
-line_format = "[{idx}]"
-
-# Customization for the status line File information.
-[theme.info]
-perms.fg = "lightgreen"
-perms.bg = "default"
-
-size.fg = "default"
-size.bg = "default"
-
-# Global color for all date/time fields (acts as default)
-date.fg = "default"
-date.bg = "default"
-
-# Specific overrides for each timestamp field (optional)
-# These will take precedence over date if defined.
-modified.fg = "default"
-modified.bg = "default"
-
-created.fg = "default"
-created.bg = "default"
-
-accessed.fg = "default"
-accessed.bg = "default"
-
-# File type coloring
-file_type.fg = "default"
-file_type.bg = "default"
-
-# Owner and Group are only available on Linux / Unix
-owner.fg = "default"
-owner.bg = "default"
-
-group.fg = "default"
-group.bg = "default"
-
-```
-
-
-
-## Editor
-
-```toml
 [editor]
-# Command to open files (e.g., "nvim", "code", etc.)
 default = "nvim"
-
-# Map file extensions to editors/program commands
-# Use single command or array of command + arguments
-ext = { rs = "nvim", md = "code", txt = ["code", "-d"] }
-
-# Map specific filenames to editors/program commands
-# Use single command or array of command + arguments
-filename = { "Cargo.toml" = "nvim" }
 ```
 
-
-
-
-## Key Bindings
-
-All values are lists (multiple shortcuts per action).  
-
-#### Modifier Syntax
-
-For keys involving Ctrl, Alt/Meta or Shift, use the following syntax:
-| Modifier | Bracketed | Standard | Result |
-| ---      | ---       | ---      | ---    |
-| Control  | `<c-key>`   | `ctrl+key` | Ctrl + Key |
-| Alt/Meta | `<a-key>` or `<m-key>`   | `alt+key` or `meta+key`  | Alt + Key |
-| Shift    | `<s-key>` | `shift+key`  | Shift + Key |
-
-
-```toml
-[keys]
-open_file           = ["enter"]
-go_up               = ["k", "up"]
-go_down             = ["j", "down"]
-go_parent           = ["h", "left", "back"]
-go_into_dir         = ["l", "right"]
-quit                = ["q", "esc"]
-delete              = ["d"]
-copy                = ["y"]
-paste               = ["p"]
-rename              = ["r"]
-create              = ["n"]
-create_directory    = ["N"]
-move_file           = ["m"]
-filter              = ["f"]
-toggle_marker       = ["space"]
-show_info           = ["i"]
-find                = ["s"]
-clear_markers       = ["<c-c>"]
-clear_filter        = ["<c-f>"]
-clear_clipboard     = ["<f2>"]
-clear_all           = ["<c-l>"]
-select_all          = ["<c-a>"]
-alternate_delete    = ["<m-d>"]    # Alternates between move_to_trash and permanently delete
-go_to_bottom        = ["G"]
-keybind_help        = ["?"]
-
-# Tab actions
-tab_new             = ["<c-t>"]
-tab_close           = ["<c-w>"]
-tab_next            = ["<c-n>"]
-tab_prev            = ["<c-p>"]
-
-# Widget scroll
-scroll_up           = ["<c-d>"]
-scroll_down         = ["<c-u>"]
-
-# Keys that are triggered by the "g" prefix
-prefix_go_to        = ["g"]
-go_to_top           = ["g"]
-go_to_home          = ["h"]
-go_to_path          = ["p"]
-
-# Sorting keybinds which are triggered by the "sort" prefix.
-sort                = ["o"]
-sort_by_name        = ["n"]
-sort_by_natural     = ["N"]
-sort_by_extension   = ["e"]
-sort_by_size        = ["s"]
-sort_by_modified    = ["m"]
-sort_by_created     = ["c"]
-sort_by_accessed    = ["a"]
-
-# Also possible to just write a single keybind instead of a vector
-# Example:
-# sort = "o"
-# find = "s"
-```
-
-**Note:**
-- go_to_* actions are triggered by pressing the "g" prefix, then another key. For example, "g" then "p" for go_to_path.
-- sort_by_* actions are triggered by pressing the "o" (sort) prefix, then the sort key. For example, "o" then "e" for sort_by_extension.
-- You can use `" "` for space as well.
-
-You may remove any binding to let it fall back to the default.
-
-
----
-
-
-## EXAMPLES
+### Custom Theme with Layout
 
 ```toml
 [display]
@@ -678,19 +128,18 @@ position = [25, 60]
 size = { w = 36, h = 20 }
 ```
 
-Example custom configuration:
+### Full Custom Setup
+
 ```toml
 [general]
 dirs_first = true
 show_hidden = true
-startup.tabs = ["cwd", '.']
+startup.tabs = ["cwd", "~/Downloads"]
 
 [display]
 borders = "unified"
 titles = true
 icons = true
-parent = true
-preview = true
 preview_underline = false
 
 [display.layout]
@@ -707,17 +156,8 @@ date_format = "%d %b %y %H:%M"
 [theme]
 accent = "#8ac"
 path.bg = "#333333"
-tab.active.fg = "#8ac"
-tab.active.bg = "#555555"
-tab.inactive.bg = "#333333"
-tab.line_format = " {idx} {name} "
 status_line.bg = "#333333"
 status_line.fg = "#8ac"
-widget.border.fg = "green"
-info.date.bg = "#333333"
-info.date.fg = "green"
-info.size.bg = "#333333"
-info.perms.bg = "#333333"
 
 [editor]
 default = "nvim"
@@ -726,3 +166,4 @@ default = "nvim"
 scroll_up = ["pgup"]
 scroll_down = ["pgdn"]
 ```
+
