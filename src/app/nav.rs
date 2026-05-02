@@ -11,6 +11,9 @@ use std::sync::Arc;
 use crate::core::{FileEntry, sort::SortConfig};
 use crate::utils::{path, text::StrBuffer};
 
+const MAX_SAVED_POSITIONS: usize = 100;
+const MAX_SAVED_FILTERS: usize = 50;
+
 /// Holds the navigation, selection and file list state of a pane.
 pub(crate) struct NavState {
     current_dir: PathBuf,
@@ -129,6 +132,12 @@ impl NavState {
         if let Some(entry) = self.selected_entry() {
             self.positions
                 .insert(self.current_dir.clone(), entry.name().to_os_string());
+
+            if self.positions.len() > MAX_SAVED_POSITIONS
+                && let Some(key) = self.positions.keys().next().cloned()
+            {
+                self.positions.remove(&key);
+            }
         }
     }
 
@@ -308,6 +317,12 @@ impl NavState {
         } else {
             self.filters
                 .insert(self.current_dir.clone(), self.filter.clone());
+
+            if self.filters.len() > MAX_SAVED_FILTERS
+                && let Some(key) = self.filters.keys().next().cloned()
+            {
+                self.filters.remove(&key);
+            }
         }
     }
 
