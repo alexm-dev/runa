@@ -336,7 +336,6 @@ fn render_overlays(frame: &mut Frame, app: &AppState, accent_style: Style) {
     }
 }
 
-#[inline(never)]
 fn render_input_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, .. } = app.actions().mode() {
         if *mode != InputMode::Find {
@@ -347,7 +346,6 @@ fn render_input_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) 
     }
 }
 
-#[inline(never)]
 fn render_single_overlay(
     frame: &mut Frame,
     app: &AppState,

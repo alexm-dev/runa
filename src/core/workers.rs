@@ -751,27 +751,6 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
     });
 }
 
-fn is_config_changed(event: &Event, config_path: &Path, config_name: &OsStr) -> bool {
-    matches!(
-        event.kind,
-        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-    ) && event
-        .paths
-        .iter()
-        .any(|p| p == config_path || p.file_name().is_some_and(|name| name == config_name))
-}
-
-fn resolve_config_watch_dir(config_dir: &Path) -> Option<(PathBuf, bool)> {
-    if config_dir.is_dir() {
-        return Some((config_dir.to_path_buf(), true));
-    }
-
-    config_dir
-        .parent()
-        .filter(|parent| parent.is_dir())
-        .map(|parent| (parent.to_path_buf(), false))
-}
-
 fn start_config_watch_worker(res_tx: Sender<WorkerResponse>) -> Option<RecommendedWatcher> {
     let config_path = os::default_config_path();
     let config_dir = match config_path.parent().map(Path::to_path_buf) {
@@ -850,6 +829,27 @@ fn start_config_watch_worker(res_tx: Sender<WorkerResponse>) -> Option<Recommend
     }
 
     Some(watcher)
+}
+
+fn is_config_changed(event: &Event, config_path: &Path, config_name: &OsStr) -> bool {
+    matches!(
+        event.kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    ) && event
+        .paths
+        .iter()
+        .any(|p| p == config_path || p.file_name().is_some_and(|name| name == config_name))
+}
+
+fn resolve_config_watch_dir(config_dir: &Path) -> Option<(PathBuf, bool)> {
+    if config_dir.is_dir() {
+        return Some((config_dir.to_path_buf(), true));
+    }
+
+    config_dir
+        .parent()
+        .filter(|parent| parent.is_dir())
+        .map(|parent| (parent.to_path_buf(), false))
 }
 
 /// Worker threads integration tests.
@@ -1371,8 +1371,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_config_watch_dir_uses_config_dir_when_present()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn resolve_config_watch_dir_config() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempdir()?;
         let config_dir = temp.path().join("runa");
         fs::create_dir_all(&config_dir)?;
@@ -1384,8 +1383,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_config_watch_dir_falls_back_to_parent_when_missing()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn resolve_config_watch_dir_fallback() -> Result<(), Box<dyn std::error::Error>> {
         let temp = tempdir()?;
         let config_dir = temp.path().join("runa");
 

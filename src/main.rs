@@ -17,12 +17,10 @@ use crate::config::Config;
 use crate::core::workers::Workers;
 use crate::utils::path::{resolve_initial_dir, validate_path};
 
-#[inline(never)]
 fn set_panic_hook() {
     std::panic::set_hook(Box::new(handle_panic));
 }
 
-#[inline(never)]
 fn handle_panic(info: &std::panic::PanicHookInfo<'_>) {
     let _ = crossterm::terminal::disable_raw_mode();
     let mut stdout = io::stdout();
@@ -41,7 +39,6 @@ fn handle_panic(info: &std::panic::PanicHookInfo<'_>) {
     }
 }
 
-#[inline(never)]
 fn load_config_or_default() -> Config {
     Config::load().unwrap_or_else(|e| {
         eprintln!("[runa] Config error: {}", e);
@@ -49,7 +46,6 @@ fn load_config_or_default() -> Config {
     })
 }
 
-#[inline(never)]
 fn exit_with_startup_error(error: io::Error) -> ! {
     eprintln!("[runa] Error: {}", error);
     std::process::exit(1);
