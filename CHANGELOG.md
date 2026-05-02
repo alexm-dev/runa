@@ -14,6 +14,10 @@ All the changes made to runa are documented here.
 ### Internal
 - **Moved timings module to utils**
 
+> TODO:  
+>   Update Changelog  
+>   Add feature flag to config-reload  
+
 ---
 
 ## [0.11.0] - 2026-04-19
