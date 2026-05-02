@@ -30,7 +30,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p bin
-          gh release download v0.4.40 \
+          gh release download v0.5.2 \
             --repo rust-lang/mdBook \
             --pattern '*x86_64-unknown-linux-gnu.tar.gz' \
             --output - | tar -xz -C bin
