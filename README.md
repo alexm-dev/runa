@@ -3,6 +3,7 @@
 <div align="center">
 
 [![Build](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=flat-square&logo=github&label=Build)](https://github.com/alexm-dev/runa/actions/workflows/rust.yml)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://alexm-dev.github.io/runa/)
 [![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=Release)](https://github.com/alexm-dev/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?label=AUR&color=blue&style=flat-square&logo=archlinux)](https://aur.archlinux.org/packages/runa)
@@ -17,12 +18,12 @@
 </div>
 <div align="center">
 
-<a href="docs/configuration.md">Configuration Guide</a> • 
+<a href="[https://alexm-dev.github.io/runa/](https://alexm-dev.github.io/runa/)">Documentation Site</a> • 
+<a href="[https://alexm-dev.github.io/runa/configuration.html](https://alexm-dev.github.io/runa/configuration.html)">Configuration Guide</a> • 
 <a href="#installation">Installation</a> • 
-<a href="docs/config-reference/general.md">General Settings</a> • 
-<a href="docs/config-reference/display.md">Display Settings</a> • 
-<a href="docs/config-reference/theme.md">Theme</a> • 
-<a href="docs/config-reference/keys.md">Key Bindings</a>
+<a href="[https://alexm-dev.github.io/runa/config-reference/general.html](https://alexm-dev.github.io/runa/config-reference/general.html)">General Settings</a> • 
+<a href="[https://alexm-dev.github.io/runa/config-reference/theme.html](https://alexm-dev.github.io/runa/config-reference/theme.html)">Theme</a> • 
+<a href="[https://alexm-dev.github.io/runa/config-reference/keys.html](https://alexm-dev.github.io/runa/config-reference/keys.html)">Key Bindings</a>
 
 </div>
 
