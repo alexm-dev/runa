@@ -354,7 +354,7 @@ impl AppState {
 
     /// Prompts the user to enter a filter string.
     pub(super) fn prompt_filter(&mut self) {
-        let current_filter = self.nav.filter().to_string();
+        let current_filter = self.nav.active_filter().to_string();
         self.enter_input_mode(
             InputMode::Filter,
             "Filter: ".to_string(),

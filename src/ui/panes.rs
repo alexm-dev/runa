@@ -181,7 +181,10 @@ pub(super) fn draw_main(
     let selected_idx = app.visible_selected();
     let current_dir = app.nav().current_dir();
 
-    if !app.is_loading() && app.nav().shown_entries_len() == 0 && !app.nav().filter().is_empty() {
+    if !app.is_loading()
+        && app.nav().shown_entries_len() == 0
+        && !app.nav().active_filter().is_empty()
+    {
         let style = context.styles.item;
         let line = Line::from(vec![
             Span::raw(context.padding_str),

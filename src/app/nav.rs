@@ -22,7 +22,7 @@ pub(crate) struct NavState {
     shown_indices: Vec<usize>,
     positions: HashMap<PathBuf, OsString>,
     markers: HashSet<PathBuf>,
-    filter: String,
+    active_filter: String,
     filters: HashMap<PathBuf, String>,
     sort_config: SortConfig,
     request_id: u64,
@@ -42,7 +42,7 @@ impl NavState {
             shown_indices: Vec::new(),
             positions: HashMap::new(),
             markers: HashSet::new(),
-            filter: String::new(),
+            active_filter: String::new(),
             filters: HashMap::new(),
             sort_config: SortConfig::default(),
             sort_column: None,
@@ -59,7 +59,7 @@ impl NavState {
         sort_config: SortConfig,
         sort_column: &Option<Arc<StrBuffer>>,
         markers: &HashSet<PathBuf>,
-        filter: &str,
+        active_filter: &str,
         display_path: &str,
         request_id: u64,
     }
@@ -269,12 +269,12 @@ impl NavState {
 
     /// Sets a new filter string, preserving the selected entry if possible.
     pub(crate) fn set_filter(&mut self, filter: String) {
-        if self.filter == filter {
+        if self.active_filter == filter {
             return;
         }
 
         let target_name = self.selected_entry().map(|e| e.name().to_os_string());
-        self.filter = filter;
+        self.active_filter = filter;
         self.save_filter_for_current_dir();
 
         self.rebuild_shown_cache();
@@ -294,7 +294,7 @@ impl NavState {
     pub(crate) fn clear_filters(&mut self) {
         let prev_abs = self.shown_indices.get(self.selected).cloned();
 
-        self.filter.clear();
+        self.active_filter.clear();
         self.save_filter_for_current_dir();
 
         self.rebuild_shown_cache();
@@ -312,11 +312,11 @@ impl NavState {
 
     /// Saves the current filter for the current directory.
     fn save_filter_for_current_dir(&mut self) {
-        if self.filter.is_empty() {
+        if self.active_filter.is_empty() {
             self.filters.remove(&self.current_dir);
         } else {
             self.filters
-                .insert(self.current_dir.clone(), self.filter.clone());
+                .insert(self.current_dir.clone(), self.active_filter.clone());
 
             if self.filters.len() > MAX_SAVED_FILTERS
                 && let Some(key) = self.filters.keys().next().cloned()
@@ -328,7 +328,7 @@ impl NavState {
 
     /// Restores the saved filter for the current directory, if any.
     fn restore_filter_for_current_dir(&mut self) {
-        self.filter = self
+        self.active_filter = self
             .filters
             .get(&self.current_dir)
             .cloned()
@@ -336,10 +336,10 @@ impl NavState {
     }
 
     fn rebuild_shown_cache(&mut self) {
-        if self.filter.is_empty() {
+        if self.active_filter.is_empty() {
             self.shown_indices = (0..self.entries.len()).collect();
         } else {
-            let filter_lower = self.filter.to_lowercase();
+            let filter_lower = self.active_filter.to_lowercase();
             self.shown_indices = self
                 .entries
                 .iter()

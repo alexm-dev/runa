@@ -203,7 +203,7 @@ pub(crate) fn draw_status_bar(
     }
 
     if status_cfg.filter() == position {
-        let filter = app.nav().filter();
+        let filter = app.nav().active_filter();
         if !filter.is_empty() {
             add_sep(&mut spans);
             spans.push(Span::styled(format!("Filter: \"{}\"", filter), base_style));
