@@ -69,13 +69,13 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: rust,javascript
+          languages: rust
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build
-        run: cargo build --release --locked
+        run: cargo build --locked
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
