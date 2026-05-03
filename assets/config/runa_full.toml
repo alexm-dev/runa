@@ -27,10 +27,10 @@ case_insensitive = true
 always_show = []
 
 # Configure the maximum number of find/search results to display.
-# 2000 is the default.
+# 20000 is the default.
 # Minimum allowed: 15
 # Maximum allowed: 1_000_000 (values above this will be clamped)
-max_find_results = 2000
+max_find_results = 20000
 
 # Toggle to move deleted files to the recycle bin instead of being permanently deleted.
 # This will set the default delete key, the alternate_delete key will then alternate between the toggle.
