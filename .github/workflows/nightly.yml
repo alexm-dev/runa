@@ -2,11 +2,12 @@ name: Nightly Maintenance
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * 0'
   workflow_dispatch:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   security-audit:
@@ -58,3 +59,23 @@ jobs:
       - name: Run Cargo Check
         continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo check --all-targets --release
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ['rust', 'javascript']
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
