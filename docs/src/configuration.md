@@ -18,6 +18,63 @@ runa is configured via a TOML file. By default, it looks for your config in the 
 
 > runa is under active development and configuration options may change over time.
 
+## Installation
+
+### Cargo
+
+You can install runa from [crates.io](https://crates.io/crates/runa-tui)
+
+```bash
+cargo install runa-tui
+```
+
+### Arch Linux (AUR)
+
+You can install runa from the [AUR](https://aur.archlinux.org/packages/runa) using an AUR helper like `paru` or `yay`:
+
+```bash
+yay -S runa
+
+# or for binaries through the AUR
+yay -S runa-bin
+```
+
+### Homebrew
+
+You can install runa via homebrew.
+
+```bash
+brew tap alexm-dev/tap
+brew install runa
+```
+
+### Scoop (Windows)
+
+You can install runa via scoop.
+
+```bash
+scoop add bucket https://github.com/alexm-dev/scoop-bucket
+scoop install runa
+```
+
+### Pre-compiled Binaries
+
+If you'd like to download Pre-compiled binaries instead of installing runa as a crate in cargo or via the AUR,
+you can grab the latest binaries for Linux, Windows and macOS from the [Release](https://github.com/alexm-dev/runa/releases) page.
+
+After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to your system `PATH` to use runa from your terminal.
+
+### Build from source
+
+Clone the repo and build with Cargo:
+
+```bash
+git clone https://github.com/alexm-dev/runa.git
+cd runa
+cargo build --release
+cargo install --path .
+```
+
 ## Quick Start
 
 If you don't have a config file yet, generate one:
@@ -86,7 +143,7 @@ Keyboard shortcuts for all actions and navigation.
 
 For the complete list of all options with defaults and inline documentation, see:
 
-- `runa_full.toml` in [assets/config](../assets/config/runa_full.toml)
+- `runa_full.toml` in [assets/config](https://github.com/alexm-dev/runa/blob/main/assets/config/runa_full.toml)
 - Run `rn --init-full` to generate a full config file with all options
 
 ## Examples

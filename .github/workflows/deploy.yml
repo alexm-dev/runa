@@ -5,6 +5,10 @@ on:
   push:
     tags:
       - 'v*'
+    paths:
+      - 'Cargo.toml'
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -36,13 +40,111 @@ jobs:
             --output - | tar -xz -C bin
           echo "$(pwd)/bin" >> $GITHUB_PATH
 
-      - name: Build
-        run: mdbook build
+      - name: Determine build type
+        id: build_type
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "type=latest" >> $GITHUB_OUTPUT
+          else
+            echo "type=unstable" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build mdBook
+        run: mdbook build --root docs
+
+      - name: Organize artifacts
+        run: |
+          mkdir -p site/${{ steps.build_type.outputs.type }}
+          cp -r docs/book/* site/${{ steps.build_type.outputs.type }}/
+
+      - name: Create version switcher (root only)
+        if: steps.build_type.outputs.type == 'latest'
+        run: |
+          cat > site/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Runa Documentation</title>
+              <style>
+                  * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
+                  }
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 20px;
+                  }
+                  .container {
+                      text-align: center;
+                      background: white;
+                      border-radius: 8px;
+                      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+                      padding: 60px 40px;
+                      max-width: 500px;
+                  }
+                  h1 {
+                      color: #333;
+                      margin-bottom: 20px;
+                      font-size: 2.5em;
+                  }
+                  p {
+                      color: #666;
+                      margin-bottom: 40px;
+                      font-size: 1.1em;
+                  }
+                  .buttons {
+                      display: flex;
+                      gap: 20px;
+                      flex-direction: column;
+                  }
+                  a {
+                      display: inline-block;
+                      padding: 15px 40px;
+                      border-radius: 5px;
+                      text-decoration: none;
+                      font-size: 1.1em;
+                      font-weight: 600;
+                      transition: transform 0.2s, box-shadow 0.2s;
+                  }
+                  a:hover {
+                      transform: translateY(-2px);
+                      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+                  }
+                  .latest {
+                      background: #667eea;
+                      color: white;
+                  }
+                  .unstable {
+                      background: #f093fb;
+                      color: white;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>📚 Runa Docs</h1>
+                  <p>Select a version:</p>
+                  <div class="buttons">
+                      <a href="/runa/latest/" class="latest">Latest Release</a>
+                      <a href="/runa/unstable/" class="unstable">Unstable (Development)</a>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: ./book
+          path: ./site
 
   deploy:
     environment:
