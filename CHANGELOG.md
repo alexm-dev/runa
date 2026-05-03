@@ -15,25 +15,25 @@ All the changes made to runa are documented here.
 ### Changed
 - **[BREAKING] Theme.exact renamed**:
     - `[theme.exact]` has been renamed to `[theme.filename]`
-- **Editor cmd**: Changed how editor filenames and extension mappings resolve the target path of files.
-    - _If you set a custom filename to a certain program/cmd, the actual file path will be handled in the actual file path directory and never in the starting directory of runa._
-    - _Note: `tar -xf`, or similar, wont need special scripting to handle file paths to the actual target directory._
+- **Editor cmd**: Changed how editor filename and extension mappings resolve the target path.
+    - _If you set a custom filename to a specific program/cmd, the file path will be handled in the actual directory of the file rather than in the starting directory of runa._
+    - _Note: `tar -xf`, or similar, won't need special scripting to handle file paths to the actual target directory._
 - **Find results**: Changed the default from `2000` to `20000`
 - **Documentation**: Changed the documentation structure to not mirror the `runa_full.toml` and instead focus more on explanation of all configurable settings.
 - **NavState clearing**: NavState now clears cached positions and filters after hitting a certain limit.
 
 ### Fixed
-- **`preview_options`**: Fixed an typo in `preview_options` inside `runa_full.toml` and inside the documentation.
-- **Startup tabs**: Fixed an issue where the tabs at startup are uninitialized before switching to them.
+- **`preview_options`**: Fixed a typo in `preview_options` inside `runa_full.toml` and inside the documentation.
+- **Startup tabs**: Fixed an issue where the tabs at startup are uninitialized before switching to them. [Issue #62](https://github.com/alexm-dev/runa/issues/62)
 
 ### Internal
-- **Timings module**: Moved `timings` to utils module.
-- **Terminal module**: Moved to ui module.
+- **Timings module**: Moved `timings` to the utils module.
+- **Terminal module**: Moved to the `ui` module.
 - **Render and panes module**: Changed how `PaneStyles`, `PaneContext` is created inside `render()`.
 - **Main**: Adjusted main entry point to not be bloated and instead call helper functions.
 - **Performance**:
-    - NavState indeces rebuild now calls the pre-computed `lowered()` function to not re-compute each entry name string again.
-    - Preview now does not build the `bat args` for when the preview method is set to `internal`.
+    - NavState indices rebuild now calls the pre-computed `lowered()` function to not re-compute each entry name string again.
+    - Preview does not build the `bat args` when the preview method is set to `internal`.
 
 
 ---
