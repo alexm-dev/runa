@@ -66,17 +66,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rust-src
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: rust
-          queries: security-and-quality
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+          build-mode: manual
 
       - name: Build
-        run: cargo build --locked
+        run: cargo build --release --locked
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
