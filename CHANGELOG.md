@@ -2,12 +2,15 @@
 
 All the changes made to runa are documented here.
 
-## [0.11.1] - UNRELEASED
+## [0.11.1] - 2026-05-03
+
+#### Config reload, online documentation and more.
 
 ### Added
-- **Config reloading**: Added a efficient automatic config reloading after changes were made to the `runa.toml`
-- **mdBook documentation**: Added a github pages hosted mdBook documentation for a more complete documentation of all configurations. 
-    - [Documentation](https://alexm-dev.github.io/runa/)
+- **Config reloading**: Added automatic config reloading when `runa.toml` is modified.
+- **mdBook documentation**: Published GitHub Pages-Hosted documentation covering all configurations.
+    - Documentation: https://alexm-dev.github.io/runa/
+    - _Note: Documentation is also included in the release archives and repository._
 
 ### Changed
 - **[BREAKING] Theme.exact renamed**:
@@ -30,10 +33,9 @@ All the changes made to runa are documented here.
     - NavState indeces rebuild now calls the pre-computed `lowered()` function to not re-compute each entry name string again.
     - Preview now does not build the `bat args` for when the preview method is set to `internal`.
 
-> TODO:  
->   Update Changelog  
 
 ---
+
 
 ## [0.11.0] - 2026-04-19
 
