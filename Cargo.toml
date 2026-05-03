@@ -33,11 +33,11 @@ which = "8.0.2"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 crossterm = { version = "0.29.0", default-features = false, features = ["events", "windows"] }
-trash = { version = "5.2.5", default-features = false, features = ["coinit_apartmentthreaded"] }
+trash = { version = "5.2.6", default-features = false, features = ["coinit_apartmentthreaded"] }
 
 [target.'cfg(not(target_os = "windows"))'.dependencies]
 crossterm = { version = "0.29.0", default-features = false, features = ["events"] }
-trash = { version = "5.2.5", default-features = false }
+trash = { version = "5.2.6", default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 notify = "8.2.0"

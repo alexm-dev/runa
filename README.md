@@ -54,7 +54,7 @@ It allows you to navigate directories, view file listings, and perform typical f
 
 </details>
 
-**runa** is very customizable, checkout the [Configuration](docs/configuration.md) docs for all the available options.
+**runa** is very customizable, checkout the [Configuration](https://alexm-dev.github.io/runa/) docs for all the available options.
 
 > [!IMPORTANT]
 > **runa** is a work in progress. It is being actively developed and features may change over time.
