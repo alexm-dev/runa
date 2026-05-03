@@ -90,10 +90,6 @@ where
                             // full clear/reset
                             terminal.clear()?;
                         }
-                        KeypressResult::Reloaded => {
-                            root.reload_config();
-                            terminal.clear()?;
-                        }
                         KeypressResult::Tab(tab_act) => {
                             if let KeypressResult::Quit =
                                 app::handle_tab_action(&root.workers, &mut root.container, tab_act)

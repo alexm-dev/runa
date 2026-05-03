@@ -39,7 +39,6 @@ pub(crate) enum KeypressResult {
     Quit,
     OpenedEditor,
     Recovered,
-    Reloaded,
     Tab(TabAction),
     Sort(SortConfig),
 }
