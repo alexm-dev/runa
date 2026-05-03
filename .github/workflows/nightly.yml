@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
   security-audit:
@@ -58,3 +59,39 @@ jobs:
       - name: Run Cargo Check
         continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo check --all-targets --release
+
+  codeql-rust:
+    name: CodeQL - Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: rust
+          queries: codeql/rust-queries,codeql/rust-all,codeql/threat-models
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:rust
+
+  codeql-actions:
+    name: CodeQL - Actions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: actions
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:actions
