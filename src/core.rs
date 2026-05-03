@@ -4,7 +4,7 @@
 //! - [fm]: directory traversal (see [browse_dir], [FileEntry]).
 //! - [fs]: filesystem functionality and sys-calls functions.
 //! - [formatter]: formatting and sorting logic.
-//! - [worker]: background work and message passing back into the RunaRoot struct.
+//! - [workers]: background work and message passing back into the RunaRoot struct.
 //! - [proc]: process management for running external commands like `bat`, `fd`.
 //! - [metadata]: file metadata extraction and caching, including file properties.
 //! - [cache]: caching of FileEntry data for pane rendering.
