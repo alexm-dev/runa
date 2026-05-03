@@ -70,10 +70,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: rust
-          queries: codeql/rust-queries,codeql/rust-all,codeql/threat-models
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+          build-mode: none
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
@@ -90,6 +87,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: actions
+          build-mode: none
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
