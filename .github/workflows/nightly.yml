@@ -70,6 +70,7 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: rust
+          queries: security-and-quality
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
