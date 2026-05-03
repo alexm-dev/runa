@@ -50,7 +50,7 @@ jobs:
           fi
 
       - name: Build mdBook
-        run: mdbook build --root docs
+        run: mdbook build docs
 
       - name: Organize artifacts
         run: |
