@@ -4,19 +4,34 @@ All the changes made to runa are documented here.
 
 ## [0.11.1] - UNRELEASED
 
+### Added
+- **Config reloading**: Added a efficient automatic config reloading after changes were made to the `runa.toml`
+- **mdBook documentation**: Added a github pages hosted mdBook documentation for a more complete documentation of all configurations. 
+    - [Documentation](https://alexm-dev.github.io/runa/)
+
 ### Changed
 - **[BREAKING] Theme.exact renamed**:
     - `[theme.exact]` has been renamed to `[theme.filename]`
 - **Editor cmd**: Changed how editor filenames and extension mappings resolve the target path of files.
     - _If you set a custom filename to a certain program/cmd, the actual file path will be handled in the actual file path directory and never in the starting directory of runa._
     - _Note: `tar -xf`, or similar, wont need special scripting to handle file paths to the actual target directory._
+- **Find results**: Changed the default from `2000` to `20000`
+- **Documentation**: Changed the documentation structure to not mirror the `runa_full.toml` and instead focus more on explanation of all configurable settings.
+- **NavState clearing**: NavState now clears cached positions and filters after hitting a certain limit.
+
+### Fixed
+- **`preview_options`**: Fixed an typo in `preview_options` inside `runa_full.toml` and inside the documentation.
+- **Startup tabs**: Fixed an issue where the tabs at startup are uninitialized before switching to them.
 
 ### Internal
-- **Moved timings module to utils**
+- **Timings module**: Moved `timings` to utils module.
+- **Terminal module**: Moved to ui module.
+- **Performance**:
+    - NavState indeces rebuild now calls the pre-computed `lowered()` function to not re-compute each entry name string again.
+    - Preview now does not build the `bat args` for when the preview method is set to `internal`.
 
 > TODO:  
 >   Update Changelog  
->   Add feature flag to config-reload  
 
 ---
 
