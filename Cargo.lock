@@ -1005,7 +1005,7 @@ dependencies = [
 
 [[package]]
 name = "runa-tui"
-version = "0.11.1-beta.2"
+version = "0.11.1"
 dependencies = [
  "ansi-to-tui",
  "chrono",
