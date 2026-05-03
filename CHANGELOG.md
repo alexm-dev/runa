@@ -29,7 +29,7 @@ All the changes made to runa are documented here.
 ### Internal
 - **Timings module**: Moved `timings` to the utils module.
 - **Terminal module**: Moved to the `ui` module.
-- **Render and panes module**: Changed how `PaneStyles`, `PaneContext` is created inside `render()`.
+- **Render and panes module**: Changed how `PaneStyles` and `PaneContext` is created inside `render()`.
 - **Main entry**: Adjusted main entry point to not be bloated and instead call helper functions.
 - **Performance**:
     - NavState indices rebuild now calls the pre-computed `lowered()` function to not re-compute each entry name string again.
