@@ -157,7 +157,7 @@ jobs:
               mv "$dir/rn" "$outdir/"
             fi
             cp README.md LICENSE-MIT LICENSE-APACHE "$outdir/"
-            cp -r docs/src/ "$outdir/docs/"
+            cp -r docs/src/* "$outdir/docs/"
             cp CHANGELOG.md "$outdir/docs/"
           done
 
