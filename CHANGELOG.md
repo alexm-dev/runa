@@ -29,6 +29,8 @@ All the changes made to runa are documented here.
 ### Internal
 - **Timings module**: Moved `timings` to utils module.
 - **Terminal module**: Moved to ui module.
+- **Render and panes module**: Changed how `PaneStyle`, `PaneContext` is created inside `render()`.
+- **Main**: Adjusted main entry point to not be bloated and instead call helper functions.
 - **Performance**:
     - NavState indeces rebuild now calls the pre-computed `lowered()` function to not re-compute each entry name string again.
     - Preview now does not build the `bat args` for when the preview method is set to `internal`.
