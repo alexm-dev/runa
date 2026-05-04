@@ -326,7 +326,7 @@ target = "default"
 # "rs" = "#dea584"
 
 # Map entry colors to specific files
-# [theme.exact]
+# [theme.filename]
 # "README.md" = { fg = "yellow", bg = "default" }
 
 # Map entry color for specific file extensions

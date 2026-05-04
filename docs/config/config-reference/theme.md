@@ -171,13 +171,13 @@ Map icon colors to specific file extensions.
 "rs" = "#dea584"
 ```
 
-### `[theme.exact]`
+### `[theme.filename]`
 
 Map entry colors to specific filenames (exact match).
 
 **Example**:
 ```toml
-[theme.exact]
+[theme.filename]
 "README.md" = { fg = "yellow", bg = "default" }
 ```
 

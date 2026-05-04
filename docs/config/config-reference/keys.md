@@ -10,11 +10,11 @@ All actions in runa are configurable via the `[keys]` section. All values are li
 
 For keys involving Ctrl, Alt/Meta or Shift, use the following syntax:
 
-| Modifier | Bracketed | Standard | Result |
-| --- | --- | --- | --- |
-| Control | `<c-key>` | `ctrl+key` | Ctrl+Key |
-| Alt/Meta | `<a-key>` or `<m-key>` | `alt+key` or `meta+key` | Alt+Key |
-| Shift | `<s-key>` | `shift+key` | Shift+Key |
+| Modifier | Bracketed              | Standard                | Result    |
+|----------|------------------------|-------------------------|-----------|
+| Control  | `<c-key>`              | `ctrl+key`              | Ctrl+Key  |
+| Alt/Meta | `<a-key>` or `<m-key>` | `alt+key` or `meta+key` | Alt+Key   |
+| Shift    | `<s-key>`              | `shift+key`             | Shift+Key |
 
 ## File Operations
 
