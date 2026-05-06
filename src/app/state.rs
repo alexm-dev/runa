@@ -28,10 +28,7 @@ use crate::core::{
 };
 
 use crate::ui::overlays::{OverlayKind, OverlayStack};
-use crate::utils::{
-    path,
-    timings::{Throttler, Timings},
-};
+use crate::utils::timings::{Throttler, Timings};
 
 /// Enumeration for each individual keypress result processed.
 ///
@@ -413,10 +410,10 @@ impl AppState {
             WorkerResponse::OperationComplete {
                 need_reload,
                 focus,
-                affected_dirs,
+                touched_dirs,
             } => {
                 if need_reload {
-                    let invalidation_paths = self.fileop_invalidation_paths(affected_dirs);
+                    let invalidation_paths = self.fileop_invalidation_paths(touched_dirs);
 
                     for path in &invalidation_paths {
                         workers.cache().invalidate_path(path);
@@ -747,14 +744,15 @@ impl AppState {
         }
     }
 
-    fn fileop_invalidation_paths(&self, affected_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+    fn fileop_invalidation_paths(&self, touched_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
         let current_dir = self.nav.current_dir().to_path_buf();
-        let mut invalidation_paths = Vec::with_capacity(affected_dirs.len().saturating_mul(2) + 1);
+        let mut invalidation_paths = Vec::with_capacity(touched_dirs.len().saturating_mul(2) + 1);
 
-        for path in affected_dirs {
+        for path in touched_dirs {
             invalidation_paths.push(path.clone());
             #[cfg(windows)]
             {
+                use crate::utils::path;
                 let cleaned = PathBuf::from(path::clean_display_path(&path.to_string_lossy()));
                 if cleaned != path {
                     invalidation_paths.push(cleaned);

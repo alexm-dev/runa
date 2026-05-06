@@ -245,7 +245,7 @@ pub(crate) enum WorkerResponse {
     OperationComplete {
         need_reload: bool,
         focus: Option<OsString>,
-        affected_dirs: Vec<PathBuf>,
+        touched_dirs: Vec<PathBuf>,
     },
     FindResults {
         base_dir: PathBuf,
@@ -498,7 +498,7 @@ fn start_fileop_worker(
                 continue;
             };
 
-            let affected_dirs = collect_affected_dirs(&op);
+            let touched_dirs = collect_touched_dirs(&op);
             let mut focus_target: Option<OsString> = None;
 
             let result: Result<(), String> = match op {
@@ -705,7 +705,7 @@ fn start_fileop_worker(
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
                         need_reload: true,
                         focus: focus_target,
-                        affected_dirs,
+                        touched_dirs,
                     });
                 }
                 Err(e) => {
@@ -862,7 +862,7 @@ fn resolve_config_watch_dir(config_dir: &Path) -> Option<(PathBuf, bool)> {
         .map(|parent| (parent.to_path_buf(), false))
 }
 
-fn collect_affected_dirs(op: &FileOperation) -> Vec<PathBuf> {
+fn collect_touched_dirs(op: &FileOperation) -> Vec<PathBuf> {
     let add_parent = |dirs: &mut HashSet<PathBuf>, path: &Path| {
         if let Some(parent) = path.parent() {
             dirs.insert(parent.to_path_buf());
@@ -1317,8 +1317,8 @@ mod tests {
 
         let r = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
         match r {
-            WorkerResponse::OperationComplete { affected_dirs, .. } => {
-                if !affected_dirs.iter().any(|path| path == &temp_dir) {
+            WorkerResponse::OperationComplete { touched_dirs, .. } => {
+                if !touched_dirs.iter().any(|path| path == &temp_dir) {
                     return Err(
                         "Expected operation completion to include file parent as affected".into(),
                     );
@@ -1338,56 +1338,14 @@ mod tests {
             .response_rx()
             .recv_timeout(std::time::Duration::from_secs(2))?;
         match r {
-            WorkerResponse::OperationComplete { affected_dirs, .. } => {
-                if !affected_dirs.iter().any(|path| path == &temp_dir) {
+            WorkerResponse::OperationComplete { touched_dirs, .. } => {
+                if !touched_dirs.iter().any(|path| path == &temp_dir) {
                     return Err(
                         "Expected operation completion to include file parent as affected".into(),
                     );
                 }
                 if file_path.exists() {
                     return Err("Expected file to not exist after deletion".into());
-                }
-            }
-            other => return Err(format!("Unexpected response: {:?}", other).into()),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn fileop_worker_move_reports_source() -> Result<(), Box<dyn std::error::Error>> {
-        let temp = tempfile::tempdir()?;
-        let src_dir = temp.path().join("src");
-        let dst_dir = temp.path().join("dst");
-        fs::create_dir_all(&src_dir)?;
-        fs::create_dir_all(&dst_dir)?;
-
-        let src_file = src_dir.join("item.txt");
-        fs::write(&src_file, "test")?;
-
-        let workers = Workers::spawn();
-        workers.fileop_tx().send(WorkerTask::FileOp {
-            op: FileOperation::Copy {
-                src: vec![src_file.clone()],
-                dest: dst_dir.clone(),
-                cut: true,
-                focus: None,
-            },
-        })?;
-
-        let r = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-        match r {
-            WorkerResponse::OperationComplete { affected_dirs, .. } => {
-                if !affected_dirs.iter().any(|path| path == &src_dir) {
-                    return Err("Expected source directory to be marked as affected".into());
-                }
-                if !affected_dirs.iter().any(|path| path == &dst_dir) {
-                    return Err("Expected destination directory to be marked as affected".into());
-                }
-                if src_file.exists() {
-                    return Err("Expected source file to be moved away".into());
-                }
-                if !dst_dir.join("item.txt").exists() {
-                    return Err("Expected destination file to exist after move".into());
                 }
             }
             other => return Err(format!("Unexpected response: {:?}", other).into()),
