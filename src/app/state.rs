@@ -4,7 +4,7 @@
 //! information and passes it to relevant UI/Terminal functions
 
 use std::ffi::OsString;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -28,7 +28,10 @@ use crate::core::{
 };
 
 use crate::ui::overlays::{OverlayKind, OverlayStack};
-use crate::utils::timings::{Throttler, Timings};
+use crate::utils::{
+    path,
+    timings::{Throttler, Timings},
+};
 
 /// Enumeration for each individual keypress result processed.
 ///
@@ -407,26 +410,27 @@ impl AppState {
                 }
             }
 
-            WorkerResponse::OperationComplete { need_reload, focus } => {
+            WorkerResponse::OperationComplete {
+                need_reload,
+                focus,
+                affected_dirs,
+            } => {
                 if need_reload {
-                    let preview_dir = self
-                        .preview
-                        .current_path()
-                        .filter(|path| path.is_dir())
-                        .map(ToOwned::to_owned);
+                    let invalidation_paths = self.fileop_invalidation_paths(affected_dirs);
 
-                    let parent_dir = self.nav.current_dir().parent().map(ToOwned::to_owned);
-
-                    workers.cache().invalidate_path(self.nav.current_dir());
-                    if let Some(path) = preview_dir.as_deref() {
-                        workers.cache().invalidate_path(path);
-                    }
-
-                    if let Some(path) = parent_dir.as_deref() {
+                    for path in &invalidation_paths {
                         workers.cache().invalidate_path(path);
                         self.parent.invalidate_if_path(path);
                     }
 
+                    let should_refresh_preview = self.preview.current_path().is_some_and(|path| {
+                        invalidation_paths
+                            .iter()
+                            .any(|dir| path == dir || path.parent() == Some(dir.as_path()))
+                    });
+                    if should_refresh_preview {
+                        self.request_preview_force(workers);
+                    }
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }
@@ -741,6 +745,26 @@ impl AppState {
         } else {
             self.preview.clear();
         }
+    }
+
+    fn fileop_invalidation_paths(&self, affected_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+        let current_dir = self.nav.current_dir().to_path_buf();
+        let mut invalidation_paths = Vec::with_capacity(affected_dirs.len().saturating_mul(2) + 1);
+
+        for path in affected_dirs {
+            invalidation_paths.push(path.clone());
+            #[cfg(windows)]
+            {
+                let cleaned = PathBuf::from(path::clean_display_path(&path.to_string_lossy()));
+                if cleaned != path {
+                    invalidation_paths.push(cleaned);
+                }
+            }
+        }
+        invalidation_paths.push(current_dir);
+        invalidation_paths.sort_unstable();
+        invalidation_paths.dedup();
+        invalidation_paths
     }
 
     fn metadata_needs(&self) -> MetadataNeeds {
