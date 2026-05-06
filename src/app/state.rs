@@ -254,8 +254,9 @@ impl AppState {
             .try_send(WorkerTask::GetFileMetadata {
                 path: path.clone(),
                 date_format: date_format.to_string(),
-                request_id: req_id,
                 needs,
+                request_id: req_id,
+                tab_id: self.tab_id(),
             })
             .is_ok()
         {
@@ -420,6 +421,7 @@ impl AppState {
                 metadata,
                 path,
                 request_id,
+                tab_id: _tab_id,
             } => {
                 if self.metadata.matches_pending(request_id, &path) {
                     if path.parent() == Some(self.nav.current_dir())

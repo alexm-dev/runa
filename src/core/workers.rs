@@ -196,8 +196,9 @@ pub(crate) enum WorkerTask {
     GetFileMetadata {
         path: PathBuf,
         date_format: String,
-        request_id: u64,
         needs: MetadataNeeds,
+        request_id: u64,
+        tab_id: Option<usize>,
     },
 }
 
@@ -255,6 +256,7 @@ pub(crate) enum WorkerResponse {
         metadata: Arc<FileMetadataCache>,
         path: PathBuf,
         request_id: u64,
+        tab_id: Option<usize>,
     },
     ConfigChanged,
     Error(String, Option<u64>),
@@ -266,6 +268,7 @@ impl WorkerResponse {
             WorkerResponse::DirectoryLoaded { tab_id, .. } => *tab_id,
             WorkerResponse::PreviewLoaded { tab_id, .. } => *tab_id,
             WorkerResponse::FindResults { tab_id, .. } => *tab_id,
+            WorkerResponse::FileMetadataLoaded { tab_id, .. } => *tab_id,
             _ => None,
         }
     }
@@ -718,9 +721,10 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
             let now = Local::now();
             if let WorkerTask::GetFileMetadata {
                 path,
-                request_id,
                 date_format,
                 needs,
+                request_id,
+                tab_id,
             } = task
             {
                 match FileMetadata::new(&path) {
@@ -737,6 +741,7 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                             metadata: Arc::new(cache),
                             path,
                             request_id,
+                            tab_id,
                         });
                     }
                     Err(e) => {
