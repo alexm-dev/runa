@@ -380,13 +380,11 @@ impl AppState {
                             .file_name()
                             .map(|n| n.to_string_lossy().to_string())
                             .unwrap_or_default();
-                        let sort_config = self.nav.sort_config();
                         self.parent.update_from_entries(
                             entries,
                             &current_name,
                             request_id,
                             &path,
-                            sort_config,
                             sort_column,
                         );
                     }
@@ -426,6 +424,7 @@ impl AppState {
 
                     if let Some(path) = parent_dir.as_deref() {
                         workers.cache().invalidate_path(path);
+                        self.parent.invalidate_if_path(path);
                     }
 
                     self.request_dir_load(workers, focus);
@@ -565,27 +564,20 @@ impl AppState {
                 .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
-            let req_id = self.parent.prepare_new_request(parent_path, sort_config);
+            let req_id = self.parent.prepare_new_request(parent_path);
             self.parent.update_from_entries(
                 entries_vec,
                 &current_name,
                 req_id,
                 parent_path,
-                sort_config,
                 sort_vec,
             );
             return;
         }
 
-        if self.parent.is_cached(parent_path, sort_config) {
-            return;
-        }
-
         let parent_path_buf = parent_path.to_path_buf();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
-        let req_id = self
-            .parent
-            .prepare_new_request(&parent_path_buf, sort_config);
+        let req_id = self.parent.prepare_new_request(&parent_path_buf);
         let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,
@@ -880,7 +872,8 @@ mod tests {
     }
 
     #[test]
-    fn request_parent_content_uses_cache() -> Result<(), Box<dyn std::error::Error>> {
+    fn request_parent_content_does_not_use_parent_state_as_cache()
+    -> Result<(), Box<dyn std::error::Error>> {
         let config = Config::default();
         let workers = dummy_workers();
         let temp = tempdir()?;
@@ -896,8 +889,6 @@ mod tests {
             .to_path_buf();
 
         let prev_request_id = app.parent.request_id();
-        let sort_config = app.nav.sort_config();
-
         let file_entry = FileEntry::new(OsString::from("test_file"), 0, None);
         let dir_entry = FileEntry::new(OsString::from("test_dir"), 1, None);
 
@@ -906,16 +897,14 @@ mod tests {
             "irrelevant",
             prev_request_id,
             &parent_path,
-            sort_config,
             None,
         );
 
         app.request_parent_content(&workers);
 
-        assert_eq!(
-            app.parent.request_id(),
-            prev_request_id,
-            "request_id changed even though parent was cached. Did not use cache!"
+        assert!(
+            app.parent.request_id() > prev_request_id,
+            "request_id did not change: request_parent_content should schedule a fresh parent request when worker cache misses"
         );
 
         Ok(())

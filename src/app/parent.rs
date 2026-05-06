@@ -6,7 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::core::{FileEntry, sort::SortConfig};
+use crate::core::FileEntry;
 use crate::utils::text::StrBuffer;
 
 /// Holds the state of the parent directory pane
@@ -19,7 +19,6 @@ pub(crate) struct ParentState {
     sort_column: Option<Arc<StrBuffer>>,
     selected_idx: Option<usize>,
     last_path: Option<PathBuf>,
-    last_sort: Option<SortConfig>,
     request_id: u64,
 }
 
@@ -35,19 +34,9 @@ impl ParentState {
         self.last_path.as_deref()
     }
 
-    #[inline]
-    pub(super) fn is_cached(&self, parent_path: &Path, sort: SortConfig) -> bool {
-        matches!(
-            self.last_path(),
-            Some(last) if last == parent_path
-        ) && self.last_sort == Some(sort)
-            && !self.entries.is_empty()
-    }
-
-    pub(super) fn prepare_new_request(&mut self, path: &Path, sort: SortConfig) -> u64 {
+    pub(super) fn prepare_new_request(&mut self, path: &Path) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.last_path = Some(path.to_path_buf());
-        self.last_sort = Some(sort);
         self.request_id
     }
 
@@ -60,7 +49,6 @@ impl ParentState {
         current_name: &str,
         req_id: u64,
         parent_path: &Path,
-        sort: SortConfig,
         sort_column: Option<Arc<StrBuffer>>,
     ) {
         if req_id < self.request_id {
@@ -70,9 +58,14 @@ impl ParentState {
         self.selected_idx = entries.iter().position(|e| e.name_str() == current_name);
         self.entries = entries;
         self.last_path = Some(parent_path.to_path_buf());
-        self.last_sort = Some(sort);
         self.sort_column = sort_column;
         self.request_id = req_id;
+    }
+
+    pub(super) fn invalidate_if_path(&mut self, path: &Path) {
+        if self.last_path() == Some(path) {
+            self.request_id = self.request_id.wrapping_add(1);
+        }
     }
 
     /// Clears all entries, resets the selected entry index,
@@ -81,7 +74,6 @@ impl ParentState {
         self.entries = Arc::default();
         self.selected_idx = None;
         self.last_path = None;
-        self.last_sort = None;
         self.request_id = self.request_id.wrapping_add(1);
     }
 }
