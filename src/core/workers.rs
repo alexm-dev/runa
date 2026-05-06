@@ -245,7 +245,7 @@ pub(crate) enum WorkerResponse {
     OperationComplete {
         need_reload: bool,
         focus: Option<OsString>,
-        touched_dirs: Vec<PathBuf>,
+        modified_dirs: Vec<PathBuf>,
     },
     FindResults {
         base_dir: PathBuf,
@@ -498,7 +498,7 @@ fn start_fileop_worker(
                 continue;
             };
 
-            let touched_dirs = collect_touched_dirs(&op);
+            let modified_dirs = collect_modified_dirs(&op);
             let mut focus_target: Option<OsString> = None;
 
             let result: Result<(), String> = match op {
@@ -705,7 +705,7 @@ fn start_fileop_worker(
                     let _ = res_tx.send(WorkerResponse::OperationComplete {
                         need_reload: true,
                         focus: focus_target,
-                        touched_dirs,
+                        modified_dirs,
                     });
                 }
                 Err(e) => {
@@ -862,7 +862,7 @@ fn resolve_config_watch_dir(config_dir: &Path) -> Option<(PathBuf, bool)> {
         .map(|parent| (parent.to_path_buf(), false))
 }
 
-fn collect_touched_dirs(op: &FileOperation) -> Vec<PathBuf> {
+fn collect_modified_dirs(op: &FileOperation) -> Vec<PathBuf> {
     let add_parent = |dirs: &mut HashSet<PathBuf>, path: &Path| {
         if let Some(parent) = path.parent() {
             dirs.insert(parent.to_path_buf());
@@ -1317,8 +1317,8 @@ mod tests {
 
         let r = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
         match r {
-            WorkerResponse::OperationComplete { touched_dirs, .. } => {
-                if !touched_dirs.iter().any(|path| path == &temp_dir) {
+            WorkerResponse::OperationComplete { modified_dirs, .. } => {
+                if !modified_dirs.iter().any(|path| path == &temp_dir) {
                     return Err(
                         "Expected operation completion to include file parent as affected".into(),
                     );
@@ -1338,8 +1338,8 @@ mod tests {
             .response_rx()
             .recv_timeout(std::time::Duration::from_secs(2))?;
         match r {
-            WorkerResponse::OperationComplete { touched_dirs, .. } => {
-                if !touched_dirs.iter().any(|path| path == &temp_dir) {
+            WorkerResponse::OperationComplete { modified_dirs, .. } => {
+                if !modified_dirs.iter().any(|path| path == &temp_dir) {
                     return Err(
                         "Expected operation completion to include file parent as affected".into(),
                     );

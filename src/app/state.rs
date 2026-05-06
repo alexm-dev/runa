@@ -410,10 +410,10 @@ impl AppState {
             WorkerResponse::OperationComplete {
                 need_reload,
                 focus,
-                touched_dirs,
+                modified_dirs,
             } => {
                 if need_reload {
-                    let invalidation_paths = self.fileop_invalidation_paths(touched_dirs);
+                    let invalidation_paths = self.fileop_invalidation_paths(modified_dirs);
 
                     for path in &invalidation_paths {
                         workers.cache().invalidate_path(path);
@@ -428,6 +428,7 @@ impl AppState {
                     if should_refresh_preview {
                         self.request_preview_force(workers);
                     }
+
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }
@@ -744,11 +745,11 @@ impl AppState {
         }
     }
 
-    fn fileop_invalidation_paths(&self, touched_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
+    fn fileop_invalidation_paths(&self, modified_dirs: Vec<PathBuf>) -> Vec<PathBuf> {
         let current_dir = self.nav.current_dir().to_path_buf();
-        let mut invalidation_paths = Vec::with_capacity(touched_dirs.len().saturating_mul(2) + 1);
+        let mut invalidation_paths = Vec::with_capacity(modified_dirs.len().saturating_mul(2) + 1);
 
-        for path in touched_dirs {
+        for path in modified_dirs {
             invalidation_paths.push(path.clone());
             #[cfg(windows)]
             {
@@ -760,7 +761,6 @@ impl AppState {
             }
         }
         invalidation_paths.push(current_dir);
-        invalidation_paths.sort_unstable();
         invalidation_paths.dedup();
         invalidation_paths
     }
