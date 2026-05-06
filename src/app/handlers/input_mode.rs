@@ -69,7 +69,7 @@ impl AppState {
                     InputMode::ConfirmDelete { .. } => self.confirm_delete(workers),
                     InputMode::ConfirmOverwrite { .. } => self.confirm_overwrite(workers),
                     InputMode::Find => self.handle_find(workers),
-                    InputMode::MoveFile => self.handle_move(workers),
+                    InputMode::MoveFile => self.move_file(workers),
                     InputMode::GoToPath => self.handle_go_to_path(workers),
                 }
                 if self.actions().mode() == &prev_action_mode {
