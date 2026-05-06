@@ -411,7 +411,23 @@ impl AppState {
 
             WorkerResponse::OperationComplete { need_reload, focus } => {
                 if need_reload {
+                    let preview_dir = self
+                        .preview
+                        .current_path()
+                        .filter(|path| path.is_dir())
+                        .map(ToOwned::to_owned);
+
+                    let parent_dir = self.nav.current_dir().parent().map(ToOwned::to_owned);
+
                     workers.cache().invalidate_path(self.nav.current_dir());
+                    if let Some(path) = preview_dir.as_deref() {
+                        workers.cache().invalidate_path(path);
+                    }
+
+                    if let Some(path) = parent_dir.as_deref() {
+                        workers.cache().invalidate_path(path);
+                    }
+
                     self.request_dir_load(workers, focus);
                     self.request_parent_content(workers);
                 }
