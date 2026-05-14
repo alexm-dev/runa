@@ -40,7 +40,7 @@ crossterm = { version = "0.29.0", default-features = false, features = ["events"
 trash = { version = "5.2.6", default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-notify = "8.2.0"
+notify = { version = "8.2.0", default-features = true }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
 notify = { version = "8.2.0", default-features = false }
@@ -51,7 +51,7 @@ uzers = { version = "0.12.2", default-features = false }
 [dev-dependencies]
 rand = "0.10.1"
 tempfile = "3.27.0"
-filetime = "0.2.27"
+filetime = "0.2.29"
 
 [profile.dev]
 opt-level = 0
