@@ -94,6 +94,10 @@ pub(crate) fn find(
         return Ok(());
     }
 
+    if max_results == 0 {
+        return Ok(());
+    }
+
     let max_res_str = max_results.to_string();
 
     let fd_bin = os::fd_binary()?;

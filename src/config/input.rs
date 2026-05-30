@@ -129,6 +129,7 @@ define_keys!(
     SortByAccessed => sort_by_accessed = ["a"],
     SortByCreated => sort_by_created = ["c"],
     KeybindHelp => keybind_help = ["?"],
+    Reload => reload = ["<c-r>"],
 );
 
 /// Editor configuration options

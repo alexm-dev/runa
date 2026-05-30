@@ -72,6 +72,7 @@ pub(crate) enum TabAction {
 pub(crate) enum SystemAction {
     Quit,
     KeyBindHelp,
+    Reload,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -176,6 +177,7 @@ impl Keymap {
         // SystemActions
         bind!(keys.keybind_help(),      Action::System(S::KeyBindHelp));
         bind!(keys.quit(),              Action::System(S::Quit));
+        bind!(keys.reload(),            Action::System(S::Reload));
 
         // Prefix actions
         bind_prefix!(keys.go_to_top(),  Action::Nav(N::GoToTop),  PrefixCommand::Nav(N::GoToTop));
