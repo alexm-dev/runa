@@ -370,6 +370,7 @@ impl AppState {
             self.push_overlay_message(
                 "Fuzzy Find requires the `fd` tool.".to_string(),
                 Duration::from_secs(5),
+                None,
             );
             return;
         }

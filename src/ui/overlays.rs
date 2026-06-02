@@ -8,11 +8,13 @@
 use std::slice;
 use std::sync::Arc;
 
+use ratatui::layout::Alignment;
+
 use crate::core::metadata::FileMetadataCache;
 
 pub(crate) enum Overlay {
     ShowInfo { info: Arc<FileMetadataCache> },
-    Message { text: String },
+    Message { text: String, alignment: Alignment },
     PrefixHelp,
     KeybindHelp,
 }

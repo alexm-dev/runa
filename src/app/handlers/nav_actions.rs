@@ -156,6 +156,7 @@ impl AppState {
             self.push_overlay_message(
                 "Parent directory is unreachable".to_string(),
                 Duration::from_secs(3),
+                None,
             );
             return KeypressResult::Consumed;
         }
@@ -191,7 +192,7 @@ impl AppState {
             }
             Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
                 let msg = format!("Permission Denied: {}", e);
-                self.push_overlay_message(msg, std::time::Duration::from_secs(3));
+                self.push_overlay_message(msg, Duration::from_secs(3), None);
                 KeypressResult::Consumed
             }
             Err(_) => KeypressResult::Continue,
@@ -227,7 +228,7 @@ impl AppState {
 
         if let Err(e) = std::fs::read_dir(&target_dir) {
             let msg = format!("Access Denied: {}", e);
-            self.push_overlay_message(msg, Duration::from_secs(3));
+            self.push_overlay_message(msg, Duration::from_secs(3), None);
             return;
         }
         self.navigate_to(target_dir, focus, workers);
@@ -243,7 +244,11 @@ impl AppState {
     pub(super) fn handle_go_to_path(&mut self, workers: &Workers) {
         let path = self.actions.input_buffer();
         if path.trim().is_empty() {
-            self.push_overlay_message("Error: No path entered".to_string(), Duration::from_secs(3));
+            self.push_overlay_message(
+                "Error: No path entered".to_string(),
+                Duration::from_secs(3),
+                None,
+            );
             return;
         }
 
@@ -261,10 +266,15 @@ impl AppState {
                 self.push_overlay_message(
                     "Error: Not a directory".to_string(),
                     Duration::from_secs(3),
+                    None,
                 );
             }
         } else {
-            self.push_overlay_message("Error: Invalid path".to_string(), Duration::from_secs(3));
+            self.push_overlay_message(
+                "Error: Invalid path".to_string(),
+                Duration::from_secs(3),
+                None,
+            );
         }
     }
 

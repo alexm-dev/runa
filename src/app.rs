@@ -156,11 +156,11 @@ impl RunaRoot {
         execute!(writer, LeaveAlternateScreen, EnterAlternateScreen, Hide,)?;
         match &mut self.container {
             AppContainer::Single(app) => {
-                app.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2));
+                app.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2), None);
             }
             AppContainer::Tabs(tabs) => {
                 for tab in &mut tabs.tabs {
-                    tab.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2));
+                    tab.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2), None);
                 }
             }
         }
@@ -186,6 +186,7 @@ impl RunaRoot {
                         app.push_overlay_message(
                             "Configuration reloaded!".into(),
                             Duration::from_secs(2),
+                            None,
                         );
                     }
                     AppContainer::Tabs(tabs) => {
@@ -196,6 +197,7 @@ impl RunaRoot {
                         tabs.tabs[tabs.current].push_overlay_message(
                             "Configuration reloaded!".into(),
                             Duration::from_secs(2),
+                            None,
                         );
                     }
                 }
@@ -206,7 +208,7 @@ impl RunaRoot {
                     AppContainer::Single(app) => app,
                     AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],
                 };
-                target_app.push_overlay_message(e, Duration::from_secs(5));
+                target_app.push_overlay_message(e, Duration::from_secs(5), None);
             }
         }
     }

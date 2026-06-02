@@ -477,7 +477,7 @@ impl AppState {
                         self.preview.set_error(e);
                     }
                     _ => {
-                        self.push_overlay_message(e.to_string(), Duration::from_secs(7));
+                        self.push_overlay_message(e.to_string(), Duration::from_secs(7), None);
                     }
                 }
             }
@@ -823,6 +823,7 @@ mod tests {
     use crate::core::FileEntry;
     use crate::ui::overlays::Overlay;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+    use ratatui::layout::Alignment;
     use std::ffi::OsString;
     use std::time::{Duration, Instant};
     use tempfile::tempdir;
@@ -853,6 +854,7 @@ mod tests {
         app.notification_time = Some(Instant::now() - Duration::from_secs(2));
         app.overlays_mut().push(Overlay::Message {
             text: "Timed MSG".to_string(),
+            alignment: Alignment::Center,
         });
         let changed = app.tick(&workers);
         assert!(changed);

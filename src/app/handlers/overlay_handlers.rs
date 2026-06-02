@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crossterm::event::{KeyCode::*, KeyEvent};
+use ratatui::layout::Alignment;
 
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::metadata::FileMetadataCache;
@@ -89,14 +90,22 @@ impl AppState {
     }
 
     /// Pushes a message overlay that lasts for the specified duration.
-    pub(crate) fn push_overlay_message(&mut self, text: String, duration: Duration) {
+    pub(crate) fn push_overlay_message(
+        &mut self,
+        text: String,
+        duration: Duration,
+        alignment: Option<Alignment>,
+    ) {
         self.notification_time = Some(Instant::now() + duration);
 
         if self.overlays().is_top(OverlayKind::Message) {
             self.overlays_mut().pop();
         }
 
-        self.overlays_mut().push(Overlay::Message { text });
+        self.overlays_mut().push(Overlay::Message {
+            text,
+            alignment: alignment.unwrap_or(Alignment::Center),
+        });
     }
 
     fn selected_metadata_clone(&self) -> Option<Arc<FileMetadataCache>> {

@@ -87,7 +87,7 @@ impl AppState {
                 let cmd = editor.cmd(&path);
                 let binary = cmd.first().map(|s| s.as_str()).unwrap_or("unknown");
                 let msg = format!("Editor '{}' not found", binary);
-                self.push_overlay_message(msg, Duration::from_secs(3));
+                self.push_overlay_message(msg, Duration::from_secs(3), None);
                 return KeypressResult::Continue;
             }
 
@@ -99,7 +99,7 @@ impl AppState {
                 }
                 Err(e) => {
                     let error_msg = e.to_string();
-                    self.push_overlay_message(error_msg, Duration::from_secs(3));
+                    self.push_overlay_message(error_msg, Duration::from_secs(3), None);
                     KeypressResult::Recovered
                 }
             }
@@ -118,6 +118,7 @@ impl AppState {
             self.push_overlay_message(
                 "Move failed: target directory cannot be empty".to_string(),
                 Duration::from_secs(3),
+                None,
             );
             return;
         }
@@ -136,6 +137,7 @@ impl AppState {
                 self.push_overlay_message(
                     format!("Move failed: {}: {}", e, norm_msg),
                     Duration::from_secs(3),
+                    None,
                 );
                 return;
             }
@@ -145,6 +147,7 @@ impl AppState {
             self.push_overlay_message(
                 "Move failed: not a directory".into(),
                 Duration::from_secs(3),
+                None,
             );
             return;
         }
@@ -154,6 +157,7 @@ impl AppState {
             self.push_overlay_message(
                 format!("Move failed: Permission denied in {}: {}", norm_msg, e),
                 Duration::from_secs(3),
+                None,
             );
             return;
         }
@@ -163,6 +167,7 @@ impl AppState {
             self.push_overlay_message(
                 format!("Move failed: not a directory: {}", norm_msg),
                 Duration::from_secs(3),
+                None,
             );
             return;
         }
@@ -182,7 +187,7 @@ impl AppState {
                         display_path
                     )
                 };
-                self.push_overlay_message(msg, Duration::from_secs(3));
+                self.push_overlay_message(msg, Duration::from_secs(3), None);
                 return;
             }
         }
@@ -197,7 +202,7 @@ impl AppState {
             .actions_move(&mut self.nav, absolute_dest, fileop_tx);
 
         self.exit_input_mode();
-        self.push_overlay_message(move_msg, Duration::from_secs(3));
+        self.push_overlay_message(move_msg, Duration::from_secs(3), None);
     }
 
     /// Creates a new file with the name in the input buffer.

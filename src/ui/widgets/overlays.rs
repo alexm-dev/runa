@@ -225,6 +225,7 @@ pub(crate) fn draw_message_overlay(
     app: &AppState,
     accent_style: Style,
     text: &str,
+    alignment: Alignment,
 ) {
     let position = DialogPosition::BottomRight;
     let border_type = app.config().display().border_shape().as_border_type();
@@ -263,7 +264,7 @@ pub(crate) fn draw_message_overlay(
         border_type,
         &widgets::get_dialog_style(app, accent_style, "Message", None),
         text,
-        Some(Alignment::Left),
+        Some(alignment),
         None,
     );
 }

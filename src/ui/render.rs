@@ -356,8 +356,8 @@ fn render_single_overlay(
         Overlay::ShowInfo { info } => {
             widgets::draw_show_info_dialog(frame, app, accent_style, info);
         }
-        Overlay::Message { text } => {
-            widgets::draw_message_overlay(frame, app, accent_style, text);
+        Overlay::Message { text, alignment } => {
+            widgets::draw_message_overlay(frame, app, accent_style, text, *alignment);
         }
         Overlay::PrefixHelp => {
             widgets::draw_prefix_help_overlay(frame, app, accent_style);
