@@ -22,7 +22,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use chrono::Local;
-use crossbeam_channel::{Receiver, RecvTimeoutError, Sender, bounded, unbounded};
+use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use dashmap::DashMap;
 use notify::{
     Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
@@ -48,7 +48,7 @@ pub(crate) struct Workers {
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
-    watch_cmd_tx: Sender<WatchMsg>,
+    watch_cmd_tx: Sender<WatchCommand>,
     response_rx: Receiver<WorkerResponse>,
     active: Arc<AtomicUsize>,
     cache: Arc<DirCache>,
@@ -78,7 +78,7 @@ impl Workers {
         let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
-        let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchMsg>();
+        let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
         let active = Arc::new(AtomicUsize::new(0));
@@ -93,7 +93,7 @@ impl Workers {
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
-        start_fs_watch_worker(watch_cmd_rx, watch_cmd_tx.clone(), res_tx.clone());
+        start_fs_watch_worker(watch_cmd_rx, res_tx.clone());
 
         Self {
             nav_io_tx,
@@ -129,9 +129,7 @@ impl Workers {
     }
 
     pub(crate) fn retarget_watch(&self, dirs: Vec<PathBuf>) {
-        let _ = self
-            .watch_cmd_tx
-            .send(WatchMsg::Cmd(WatchCommand::Retarget(dirs)));
+        let _ = self.watch_cmd_tx.send(WatchCommand::Retarget(dirs));
     }
 }
 
@@ -286,13 +284,8 @@ impl WorkerResponse {
     }
 }
 
-enum WatchCommand {
+pub(crate) enum WatchCommand {
     Retarget(Vec<PathBuf>),
-}
-
-enum WatchMsg {
-    Cmd(WatchCommand),
-    Event(notify::Result<Event>),
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
@@ -792,15 +785,13 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
 }
 
 /// Starts the filesystem watcher thread.
-fn start_fs_watch_worker(
-    msg_rx: Receiver<WatchMsg>,
-    msg_tx: Sender<WatchMsg>,
-    res_tx: Sender<WorkerResponse>,
-) {
+fn start_fs_watch_worker(cmd_rx: Receiver<WatchCommand>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
+        let (ev_tx, ev_rx) = unbounded::<notify::Result<Event>>();
+
         let mut watcher = match RecommendedWatcher::new(
             move |result| {
-                let _ = msg_tx.send(WatchMsg::Event(result));
+                let _ = ev_tx.send(result);
             },
             NotifyConfig::default(),
         ) {
@@ -846,22 +837,26 @@ fn start_fs_watch_worker(
         let debounce = Duration::from_millis(Timings::FS_WATCH_DEBOUNCE_MS);
 
         loop {
-            let received = match deadline {
-                Some(d) => msg_rx.recv_timeout(d.saturating_duration_since(Instant::now())),
-                None => msg_rx.recv().map_err(|_| RecvTimeoutError::Disconnected),
+            let timer = match deadline {
+                Some(d) => crossbeam_channel::after(d.saturating_duration_since(Instant::now())),
+                None => crossbeam_channel::never(),
             };
 
-            match received {
-                Ok(WatchMsg::Cmd(WatchCommand::Retarget(dirs))) => {
-                    retarget_listing_watch(
-                        &mut watcher,
-                        &mut watched,
-                        dirs,
-                        config_watched_dir.as_deref(),
-                    );
-                }
-                Ok(WatchMsg::Event(result)) => {
-                    if let Ok(event) = result {
+            crossbeam_channel::select! {
+                recv(cmd_rx) -> msg => match msg {
+                    Ok(WatchCommand::Retarget(dirs)) => {
+                        retarget_listing_watch(
+                            &mut watcher,
+                            &mut watched,
+                            dirs,
+                            config_watched_dir.as_deref(),
+                        );
+                    }
+                    // All senders dropped: runa is shutting down.
+                    Err(_) => break,
+                },
+                recv(ev_rx) -> msg => {
+                    if let Ok(Ok(event)) = msg {
                         classify_watch_event(
                             &event,
                             &config_path,
@@ -874,16 +869,14 @@ fn start_fs_watch_worker(
                             deadline = Some(Instant::now() + debounce);
                         }
                     }
-                }
-                Err(RecvTimeoutError::Timeout) => {
+                },
+                recv(timer) -> _ => {
                     if !pending.is_empty() {
                         let dirs: Vec<PathBuf> = pending.drain().collect();
                         let _ = res_tx.send(WorkerResponse::DirsChanged { dirs });
                     }
                     deadline = None;
-                }
-                // All senders dropped: runa is shutting down.
-                Err(RecvTimeoutError::Disconnected) => break,
+                },
             }
         }
     });
