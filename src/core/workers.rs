@@ -19,6 +19,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use chrono::Local;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
@@ -35,7 +36,7 @@ use crate::core::{
     proc,
     sort::SortConfig,
 };
-use crate::utils::{os, text::StrBuffer};
+use crate::utils::{os, text::StrBuffer, timings::Timings};
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
@@ -47,10 +48,10 @@ pub(crate) struct Workers {
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
+    watch_cmd_tx: Sender<WatchCommand>,
     response_rx: Receiver<WorkerResponse>,
     active: Arc<AtomicUsize>,
     cache: Arc<DirCache>,
-    _config_watcher: Option<RecommendedWatcher>,
 }
 
 /// Manages worker thread channels for different task types.
@@ -77,6 +78,7 @@ impl Workers {
         let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
+        let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
         let active = Arc::new(AtomicUsize::new(0));
@@ -91,7 +93,7 @@ impl Workers {
         start_metadata_worker(metadata_rx, res_tx.clone());
         start_find_worker(find_rx, res_tx.clone());
         start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
-        let config_watcher = start_config_watch_worker(res_tx.clone());
+        start_fs_watch_worker(watch_cmd_rx, res_tx.clone());
 
         Self {
             nav_io_tx,
@@ -102,10 +104,10 @@ impl Workers {
             metadata_tx,
             find_tx,
             fileop_tx,
+            watch_cmd_tx,
             response_rx,
             active,
             cache,
-            _config_watcher: config_watcher,
         }
     }
 
@@ -124,6 +126,10 @@ impl Workers {
 
     pub(crate) fn cache(&self) -> Arc<DirCache> {
         Arc::clone(&self.cache)
+    }
+
+    pub(crate) fn retarget_watch(&self, dirs: Vec<PathBuf>) {
+        let _ = self.watch_cmd_tx.send(WatchCommand::Retarget(dirs));
     }
 }
 
@@ -260,6 +266,9 @@ pub(crate) enum WorkerResponse {
         tab_id: Option<usize>,
     },
     ConfigChanged,
+    DirsChanged {
+        dirs: Vec<PathBuf>,
+    },
     Error(String, Option<u64>),
 }
 
@@ -273,6 +282,10 @@ impl WorkerResponse {
             _ => None,
         }
     }
+}
+
+pub(crate) enum WatchCommand {
+    Retarget(Vec<PathBuf>),
 }
 
 /// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
@@ -408,21 +421,28 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
                 continue;
             };
 
-            let lines = match preview_mode {
-                PreviewMode::Internal => {
-                    formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
-                }
-                PreviewMode::Bat { args } => {
-                    if !os::is_regular_file(&path) || fs::is_preview_deny(&path) {
+            let lines = if fs::is_temp_file(&path) {
+                vec![formatter::sanitize_to_exact_width(
+                    "[Temporary file - preview skipped]",
+                    pane_width,
+                )]
+            } else {
+                match preview_mode {
+                    PreviewMode::Internal => {
                         formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
-                    } else {
-                        match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
-                            // Bat preview succeeded
-                            // If bat fails, fallback to internal preview
-                            // If bat is not installed or returns error, we fallback to internal preview
-                            Ok(lines) => lines,
-                            Err(_) => {
-                                formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+                    }
+                    PreviewMode::Bat { args } => {
+                        if !os::is_regular_file(&path) || fs::is_preview_deny(&path) {
+                            formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+                        } else {
+                            match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
+                                // Bat preview succeeded
+                                // If bat fails, fallback to internal preview
+                                // If bat is not installed or returns error, we fallback to internal preview
+                                Ok(lines) => lines,
+                                Err(_) => formatter::safe_read_preview(
+                                    &path, max_lines, pane_width, scroll,
+                                ),
                             }
                         }
                     }
@@ -750,10 +770,13 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
                         });
                     }
                     Err(e) => {
-                        let _ = res_tx.send(WorkerResponse::Error(
-                            format!("Metadata Error: {}", e),
-                            Some(request_id),
-                        ));
+                        let vanished = e.kind() == std::io::ErrorKind::NotFound || !path.exists();
+                        if !vanished {
+                            let _ = res_tx.send(WorkerResponse::Error(
+                                format!("Metadata Error: {}", e),
+                                Some(request_id),
+                            ));
+                        }
                     }
                 }
             }
@@ -761,84 +784,157 @@ fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerRes
     });
 }
 
-fn start_config_watch_worker(res_tx: Sender<WorkerResponse>) -> Option<RecommendedWatcher> {
-    let config_path = os::default_config_path();
-    let config_dir = match config_path.parent().map(Path::to_path_buf) {
-        Some(dir) => dir,
-        None => {
-            let _ = res_tx.send(WorkerResponse::Error(
-                format!(
-                    "Config watch error: invalid config path '{}'",
-                    config_path.display()
-                ),
-                None,
-            ));
-            return None;
-        }
-    };
+/// Starts the filesystem watcher thread.
+fn start_fs_watch_worker(cmd_rx: Receiver<WatchCommand>, res_tx: Sender<WorkerResponse>) {
+    thread::spawn(move || {
+        let (ev_tx, ev_rx) = unbounded::<notify::Result<Event>>();
 
-    let config_name = match config_path.file_name().map(|n| n.to_os_string()) {
-        Some(name) => name,
-        None => {
-            let _ = res_tx.send(WorkerResponse::Error(
-                format!(
-                    "Config watch error: invalid config filename '{}'",
-                    config_path.display()
-                ),
-                None,
-            ));
-            return None;
-        }
-    };
-
-    let (watched_dir, watching_config_dir) = resolve_config_watch_dir(&config_dir)?;
-
-    let res_tx_cb = res_tx.clone();
-    let mut watcher = match RecommendedWatcher::new(
-        move |result| match result {
-            Ok(event) => {
-                if is_config_changed(&event, &config_path, config_name.as_os_str()) {
-                    let _ = res_tx_cb.send(WorkerResponse::ConfigChanged);
-                }
-            }
+        let mut watcher = match RecommendedWatcher::new(
+            move |result| {
+                let _ = ev_tx.send(result);
+            },
+            NotifyConfig::default(),
+        ) {
+            Ok(watcher) => watcher,
             Err(e) => {
-                let _ = res_tx_cb.send(WorkerResponse::Error(
-                    format!("Config watch error: {}", e),
+                let _ = res_tx.send(WorkerResponse::Error(
+                    format!("Watch error: failed to create watcher: {}", e),
                     None,
                 ));
+                return;
             }
-        },
-        NotifyConfig::default(),
-    ) {
-        Ok(watcher) => watcher,
-        Err(e) => {
-            let _ = res_tx.send(WorkerResponse::Error(
-                format!("Config watch error: failed to create watcher: {}", e),
-                None,
-            ));
-            return None;
+        };
+
+        let config_path = os::default_config_path();
+        let config_name = config_path
+            .file_name()
+            .map(|n| n.to_os_string())
+            .unwrap_or_default();
+        let mut config_watched_dir: Option<PathBuf> = None;
+        if let Some(config_dir) = config_path.parent()
+            && let Some((watched_dir, watching_config_dir)) = resolve_config_watch_dir(config_dir)
+        {
+            let mode = if watching_config_dir {
+                RecursiveMode::NonRecursive
+            } else {
+                RecursiveMode::Recursive
+            };
+            match watcher.watch(&watched_dir, mode) {
+                Ok(()) => config_watched_dir = Some(watched_dir),
+                Err(e) => {
+                    let _ = res_tx.send(WorkerResponse::Error(
+                        format!("Config watch error: {}", e),
+                        None,
+                    ));
+                }
+            }
         }
-    };
 
-    let mode = if watching_config_dir {
-        RecursiveMode::NonRecursive
-    } else {
-        RecursiveMode::Recursive
-    };
+        let mut watched: HashSet<PathBuf> = HashSet::new();
+        let mut pending: HashSet<PathBuf> = HashSet::new();
+        let mut deadline: Option<Instant> = None;
+        let debounce = Duration::from_millis(Timings::FS_WATCH_DEBOUNCE_MS);
 
-    if let Err(e) = watcher.watch(&watched_dir, mode) {
-        let _ = res_tx.send(WorkerResponse::Error(
-            format!(
-                "Config watch error: failed to watch '{}' : {}",
-                watched_dir.display(),
-                e
-            ),
-            None,
-        ));
-        return None;
+        loop {
+            let timer = match deadline {
+                Some(d) => crossbeam_channel::after(d.saturating_duration_since(Instant::now())),
+                None => crossbeam_channel::never(),
+            };
+
+            crossbeam_channel::select! {
+                recv(cmd_rx) -> msg => match msg {
+                    Ok(WatchCommand::Retarget(dirs)) => {
+                        retarget_listing_watch(
+                            &mut watcher,
+                            &mut watched,
+                            dirs,
+                            config_watched_dir.as_deref(),
+                        );
+                    }
+                    // All senders dropped: runa is shutting down.
+                    Err(_) => break,
+                },
+                recv(ev_rx) -> msg => {
+                    if let Ok(Ok(event)) = msg {
+                        classify_watch_event(
+                            &event,
+                            &config_path,
+                            config_name.as_os_str(),
+                            &watched,
+                            &res_tx,
+                            &mut pending,
+                        );
+                        if !pending.is_empty() && deadline.is_none() {
+                            deadline = Some(Instant::now() + debounce);
+                        }
+                    }
+                },
+                recv(timer) -> _ => {
+                    if !pending.is_empty() {
+                        let dirs: Vec<PathBuf> = pending.drain().collect();
+                        let _ = res_tx.send(WorkerResponse::DirsChanged { dirs });
+                    }
+                    deadline = None;
+                },
+            }
+        }
+    });
+}
+
+fn retarget_listing_watch(
+    watcher: &mut RecommendedWatcher,
+    watched: &mut HashSet<PathBuf>,
+    dirs: Vec<PathBuf>,
+    config_watched_dir: Option<&Path>,
+) {
+    let new: HashSet<PathBuf> = dirs
+        .into_iter()
+        .filter(|d| config_watched_dir != Some(d.as_path()))
+        .collect();
+
+    for old in watched.iter() {
+        if !new.contains(old) {
+            let _ = watcher.unwatch(old);
+        }
     }
 
-    Some(watcher)
+    for dir in new.iter() {
+        if !watched.contains(dir) {
+            let _ = watcher.watch(dir, RecursiveMode::NonRecursive);
+        }
+    }
+
+    *watched = new;
+}
+
+fn classify_watch_event(
+    event: &Event,
+    config_path: &Path,
+    config_name: &OsStr,
+    watched: &HashSet<PathBuf>,
+    res_tx: &Sender<WorkerResponse>,
+    pending: &mut HashSet<PathBuf>,
+) {
+    if !matches!(
+        event.kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    ) {
+        return;
+    }
+
+    if is_config_changed(event, config_path, config_name) {
+        let _ = res_tx.send(WorkerResponse::ConfigChanged);
+    }
+
+    for path in &event.paths {
+        if watched.contains(path) {
+            pending.insert(path.clone());
+        } else if let Some(parent) = path.parent()
+            && watched.contains(parent)
+        {
+            pending.insert(parent.to_path_buf());
+        }
+    }
 }
 
 fn is_config_changed(event: &Event, config_path: &Path, config_name: &OsStr) -> bool {

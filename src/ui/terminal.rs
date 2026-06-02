@@ -40,11 +40,16 @@ pub(crate) fn run_terminal(root: &mut RunaRoot) -> io::Result<()> {
 
 /// Main event loop of runa: draws UI, polls for events and dispatches them to the app.
 /// Returns on quit
-fn event_loop<B: Backend>(terminal: &mut Terminal<B>, root: &mut RunaRoot) -> io::Result<()>
+fn event_loop<B: Backend + io::Write>(
+    terminal: &mut Terminal<B>,
+    root: &mut RunaRoot,
+) -> io::Result<()>
 where
     io::Error: From<<B as Backend>::Error>,
 {
     loop {
+        root.sync_watch();
+
         let mut changed = root.update();
 
         changed |= match &mut root.container {
@@ -87,7 +92,15 @@ where
                     match result {
                         KeypressResult::Quit => break,
                         KeypressResult::OpenedEditor | KeypressResult::Recovered => {
-                            // full clear/reset
+                            execute!(
+                                terminal.backend_mut(),
+                                LeaveAlternateScreen,
+                                EnterAlternateScreen,
+                                Hide,
+                            )?;
+                            terminal.clear()?;
+                        }
+                        KeypressResult::UiReload if root.reload_ui(terminal.backend_mut())? => {
                             terminal.clear()?;
                         }
                         KeypressResult::Tab(tab_act) => {

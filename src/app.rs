@@ -20,6 +20,12 @@ pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::{handle_sort_action, handle_tab_action};
 
+use crossterm::{
+    cursor::Hide,
+    execute,
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen},
+};
+
 use crate::config::Config;
 use crate::utils::timings::{Throttler, Timings};
 use crate::{
@@ -64,7 +70,9 @@ pub(crate) struct RunaRoot {
     pub(crate) container: AppContainer,
     pub(crate) clipboard: Clipboard,
     pub(crate) workers: Workers,
-    reload_throttler: Throttler,
+    pub(crate) ui_reload_throttler: Throttler,
+    config_reload_throttler: Throttler,
+    last_watch_dir: Option<PathBuf>,
 }
 
 impl RunaRoot {
@@ -74,8 +82,39 @@ impl RunaRoot {
             container,
             clipboard: Clipboard::default(),
             workers,
-            reload_throttler: Throttler::default(),
+            config_reload_throttler: Throttler::default(),
+            ui_reload_throttler: Throttler::default(),
+            last_watch_dir: None,
         }
+    }
+
+    pub(crate) fn sync_watch(&mut self) {
+        {
+            let app = match &self.container {
+                AppContainer::Single(app) => app.as_ref(),
+                AppContainer::Tabs(tabs) => &tabs.tabs[tabs.current],
+            };
+            if self.last_watch_dir.as_deref() == Some(app.nav().current_dir()) {
+                return;
+            }
+        }
+
+        let current = match &self.container {
+            AppContainer::Single(app) => app.as_ref(),
+            AppContainer::Tabs(tabs) => &tabs.tabs[tabs.current],
+        }
+        .nav()
+        .current_dir()
+        .to_path_buf();
+
+        let mut dirs = Vec::with_capacity(2);
+        dirs.push(current.clone());
+        if let Some(parent) = current.parent() {
+            dirs.push(parent.to_path_buf());
+        }
+
+        self.workers.retarget_watch(dirs);
+        self.last_watch_dir = Some(current);
     }
 
     pub(crate) fn update(&mut self) -> bool {
@@ -108,14 +147,37 @@ impl RunaRoot {
         changed
     }
 
+    pub(crate) fn reload_ui(&mut self, writer: &mut impl std::io::Write) -> std::io::Result<bool> {
+        if !self.ui_reload_throttler.can_trigger(Timings::UI_RELOAD_MS) {
+            return Ok(false);
+        }
+
+        self.ui_reload_throttler.touch();
+        execute!(writer, LeaveAlternateScreen, EnterAlternateScreen, Hide,)?;
+        match &mut self.container {
+            AppContainer::Single(app) => {
+                app.push_overlay_message("UI reloaded".into(), Duration::from_secs(2));
+            }
+            AppContainer::Tabs(tabs) => {
+                for tab in &mut tabs.tabs {
+                    tab.push_overlay_message("UI reloaded".into(), Duration::from_secs(2));
+                }
+            }
+        }
+        Ok(true)
+    }
+
     pub(crate) fn reload_config(&mut self) {
-        if !self.reload_throttler.can_trigger(Timings::CONFIG_RELOAD_MS) {
+        if !self
+            .config_reload_throttler
+            .can_trigger(Timings::CONFIG_RELOAD_MS)
+        {
             return;
         }
 
         match Config::load() {
             Ok(config) => {
-                self.reload_throttler.touch();
+                self.config_reload_throttler.touch();
                 let new_config = Arc::new(config);
 
                 match &mut self.container {
@@ -139,7 +201,7 @@ impl RunaRoot {
                 }
             }
             Err(e) => {
-                self.reload_throttler.touch();
+                self.config_reload_throttler.touch();
                 let target_app = match &mut self.container {
                     AppContainer::Single(app) => app,
                     AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],

@@ -39,6 +39,7 @@ pub(crate) enum KeypressResult {
     Quit,
     OpenedEditor,
     Recovered,
+    UiReload,
     Tab(TabAction),
     Sort(SortConfig),
 }
@@ -434,6 +435,10 @@ impl AppState {
                 }
             }
 
+            WorkerResponse::DirsChanged { dirs } => {
+                self.refresh_changed_dirs(workers, &dirs);
+            }
+
             WorkerResponse::FileMetadataLoaded {
                 metadata,
                 path,
@@ -763,6 +768,35 @@ impl AppState {
         invalidation_paths.push(current_dir);
         invalidation_paths.dedup();
         invalidation_paths
+    }
+
+    fn refresh_changed_dirs(&mut self, workers: &Workers, dirs: &[PathBuf]) {
+        for path in dirs {
+            workers.cache().invalidate_path(path);
+            self.parent.invalidate_if_path(path);
+        }
+
+        let current = self.nav.current_dir();
+        let touches_current = dirs.iter().any(|d| d == current);
+        let touches_parent = current
+            .parent()
+            .is_some_and(|parent| dirs.iter().any(|d| d == parent));
+        let touches_preview = self.preview.current_path().is_some_and(|preview| {
+            dirs.iter()
+                .any(|d| preview == d || preview.parent() == Some(d.as_path()))
+        });
+
+        if touches_current {
+            self.request_dir_load(workers, None);
+        }
+
+        if touches_parent {
+            self.request_parent_content(workers);
+        }
+
+        if touches_preview {
+            self.request_preview_force(workers);
+        }
     }
 
     fn metadata_needs(&self) -> MetadataNeeds {

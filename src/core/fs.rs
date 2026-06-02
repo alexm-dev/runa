@@ -6,6 +6,14 @@ use std::{fs, io};
 
 const DENY: &[&str] = &["a", "lib", "ilk", "h5", "zip", "gz", "tar", "pdb"];
 
+/// Extensions used by browsers/downloaders/editors for in-progress or temporary files.
+/// These are skipped for preview: their contents are partial or binary and reading them
+/// races with the writer renaming/removing the file on completion.
+const TEMP_EXTS: &[&str] = &[
+    "crdownload", "part", "partial", "download", "opdownload", "aria2", "tmp", "temp", "swp",
+    "swo", "swx",
+];
+
 /// Recursively copies files and directories from `src` to `dest`, with safety checks.
 ///
 /// Safety checks prevent copying a directory into its own subdirectory,
@@ -195,6 +203,24 @@ pub(crate) fn is_preview_deny(path: &Path) -> bool {
         Some(ext) => DENY.iter().any(|&s| ext == OsStr::new(s)),
         None => false,
     }
+}
+
+/// Reports whether `path` is a temporary/in-progress file (download temp, editor swap, backup).
+///
+/// Such files are never previewed: their bytes are partial or binary and would either corrupt the
+/// host terminal or vanish mid-read when the writer finishes. Matching is case-insensitive on the
+/// extension, plus common editor/Office name markers.
+pub(crate) fn is_temp_file(path: &Path) -> bool {
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        let ext = ext.to_ascii_lowercase();
+        if TEMP_EXTS.contains(&ext.as_str()) {
+            return true;
+        }
+    }
+
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .is_some_and(|name| name.ends_with('~') || name.starts_with("~$") || name.starts_with(".~"))
 }
 
 /// Helper utils integration tests

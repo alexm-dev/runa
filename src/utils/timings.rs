@@ -13,6 +13,8 @@ impl Timings {
     pub(crate) const NAV_THROTTLE_MS: u64 = 15;
     pub(crate) const FILE_INFO_DEBOUNCE_MS: u64 = 60;
     pub(crate) const CONFIG_RELOAD_MS: u64 = 1000;
+    pub(crate) const UI_RELOAD_MS: u64 = 100;
+    pub(crate) const FS_WATCH_DEBOUNCE_MS: u64 = 150;
 }
 
 #[derive(Default, Debug, Clone)]
