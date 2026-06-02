@@ -11,6 +11,7 @@ All the changes made to runa are documented here.
 ### Changed
 - **Config Watcher**: The `runa.toml` config watcher is now tied to the new watcher thread instead.
 - **Cargo update**: Updated dependencies
+- **Message Widget**: Message notifications are now center aligned by default.
 
 ---
 
