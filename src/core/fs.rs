@@ -6,12 +6,10 @@ use std::{fs, io};
 
 const DENY: &[&str] = &["a", "lib", "ilk", "h5", "zip", "gz", "tar", "pdb"];
 
-/// Extensions used by browsers/downloaders/editors for in-progress or temporary files.
-/// These are skipped for preview: their contents are partial or binary and reading them
-/// races with the writer renaming/removing the file on completion.
+#[rustfmt::skip]
 const TEMP_EXTS: &[&str] = &[
-    "crdownload", "part", "partial", "download", "opdownload", "aria2", "tmp", "temp", "swp",
-    "swo", "swx",
+    "crdownload", "part", "partial", "download", "opdownload",
+    "aria2", "tmp", "temp", "swp", "swo", "swx",
 ];
 
 /// Recursively copies files and directories from `src` to `dest`, with safety checks.
@@ -205,11 +203,8 @@ pub(crate) fn is_preview_deny(path: &Path) -> bool {
     }
 }
 
-/// Reports whether `path` is a temporary/in-progress file (download temp, editor swap, backup).
-///
-/// Such files are never previewed: their bytes are partial or binary and would either corrupt the
-/// host terminal or vanish mid-read when the writer finishes. Matching is case-insensitive on the
-/// extension, plus common editor/Office name markers.
+/// Checks if a file is likely a temporary file based on its extension or naming patterns.
+/// Will be used to exclude temp files from file previews.
 pub(crate) fn is_temp_file(path: &Path) -> bool {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
         let ext = ext.to_ascii_lowercase();
