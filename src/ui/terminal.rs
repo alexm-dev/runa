@@ -48,8 +48,6 @@ where
     io::Error: From<<B as Backend>::Error>,
 {
     loop {
-        root.sync_watch();
-
         let mut changed = root.update();
 
         changed |= match &mut root.container {
@@ -58,6 +56,8 @@ where
         };
 
         if changed {
+            root.sync_watch();
+
             if let AppContainer::Tabs(tabs) = &mut root.container {
                 tabs.sync_tab_line();
             }
