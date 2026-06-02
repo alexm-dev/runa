@@ -70,7 +70,7 @@ pub(crate) struct RunaRoot {
     pub(crate) container: AppContainer,
     pub(crate) clipboard: Clipboard,
     pub(crate) workers: Workers,
-    pub(crate) ui_reload_throttler: Throttler,
+    ui_reload_throttler: Throttler,
     config_reload_throttler: Throttler,
     last_watch_dir: Option<PathBuf>,
 }
@@ -156,11 +156,11 @@ impl RunaRoot {
         execute!(writer, LeaveAlternateScreen, EnterAlternateScreen, Hide,)?;
         match &mut self.container {
             AppContainer::Single(app) => {
-                app.push_overlay_message("UI reloaded".into(), Duration::from_secs(2));
+                app.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2));
             }
             AppContainer::Tabs(tabs) => {
                 for tab in &mut tabs.tabs {
-                    tab.push_overlay_message("UI reloaded".into(), Duration::from_secs(2));
+                    tab.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2));
                 }
             }
         }
