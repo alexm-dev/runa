@@ -20,7 +20,7 @@ path = "src/main.rs"
 ansi-to-tui = { version = "8.0.1", default-features = false, features = ["simd"] }
 chrono = { version = "0.4.44", default-features = false, features = ["clock", "std"] }
 crossbeam-channel = "0.5.15"
-dashmap = { version = "6.1.0", default-features = false }
+dashmap = { version = "6.2.1", default-features = false }
 fuzzy-matcher = "0.3.7"
 home = "0.5.12"
 humansize = "2.1.3"

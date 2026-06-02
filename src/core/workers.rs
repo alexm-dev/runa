@@ -810,6 +810,7 @@ fn start_fs_watch_worker(cmd_rx: Receiver<WatchCommand>, res_tx: Sender<WorkerRe
             .file_name()
             .map(|n| n.to_os_string())
             .unwrap_or_default();
+
         let mut config_watched_dir: Option<PathBuf> = None;
         if let Some(config_dir) = config_path.parent()
             && let Some((watched_dir, watching_config_dir)) = resolve_config_watch_dir(config_dir)

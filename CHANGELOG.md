@@ -2,6 +2,19 @@
 
 All the changes made to runa are documented here.
 
+## [0.12.0] - UNRELEASED
+
+### Added
+- **Watcher Thread**: Added a new filesystem watcher thread to correctly updated changes to the filesystem and robustly update the panes.
+- **UI Reloading**: Added a new keybind (default `<c-r>`), to manually update the TUI if needed.
+
+### Changed
+- **Config Watcher**: The `runa.toml` config watcher is now tied to the new watcher thread instead.
+- **Cargo update**: Updated dependencies
+
+---
+
+
 ## [0.11.3] - 2026-05-06
 
 #### Fixes to file actions and tabs
