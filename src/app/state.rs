@@ -787,7 +787,8 @@ impl AppState {
         });
 
         if touches_current {
-            self.request_dir_load(workers, None);
+            let focus = self.nav.selected_entry().map(|e| e.name().to_os_string());
+            self.request_dir_load(workers, focus);
         }
 
         if touches_parent {
