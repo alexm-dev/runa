@@ -32,6 +32,7 @@ pub(crate) struct PreviewState {
     data: PreviewData,
     selected_idx: usize,
     current_path: Option<PathBuf>,
+    loaded_path: Option<PathBuf>,
     request_id: u64,
     pending: bool,
     last_input_time: Instant,
@@ -50,6 +51,10 @@ impl PreviewState {
 
     pub(crate) fn current_path(&self) -> Option<&Path> {
         self.current_path.as_deref()
+    }
+
+    pub(crate) fn loaded_path(&self) -> Option<&Path> {
+        self.loaded_path.as_deref()
     }
 
     // Setters / mutators
@@ -105,6 +110,7 @@ impl PreviewState {
             let raw = lines.join("\n");
             let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
             self.data = PreviewData::File(text);
+            self.loaded_path = self.current_path.clone();
 
             if is_eof {
                 let total_lines = self.scroll().offset() as usize + lines.len();
@@ -134,6 +140,7 @@ impl PreviewState {
                 entries,
                 sort_column,
             };
+            self.loaded_path = self.current_path.clone();
             self.selected_idx = 0;
         }
     }
@@ -141,6 +148,7 @@ impl PreviewState {
     /// Sets an error message as the preview content
     pub(crate) fn set_error(&mut self, err: String) {
         self.data = PreviewData::File(Text::from(err));
+        self.loaded_path = self.current_path.clone();
     }
 
     /// Clears the preview state
@@ -148,6 +156,7 @@ impl PreviewState {
         self.data = PreviewData::Empty;
         self.selected_idx = 0;
         self.current_path = None;
+        self.loaded_path = None;
         self.pending = false;
     }
 
@@ -173,6 +182,7 @@ impl Default for PreviewState {
             data: PreviewData::Empty,
             selected_idx: 0,
             current_path: None,
+            loaded_path: None,
             request_id: 0,
             pending: false,
             last_input_time: Instant::now(),

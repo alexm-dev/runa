@@ -655,8 +655,7 @@ impl AppState {
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
             if !force
-                && let Some(current) = self.preview.current_path()
-                && current == path
+                && self.preview.loaded_path() == Some(path.as_path())
                 && !self.preview.data().is_empty()
                 && self.preview.scroll().offset() == self.preview.loaded_scroll()
             {
