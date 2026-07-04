@@ -45,7 +45,7 @@ It allows you to navigate directories, view file listings, and perform typical f
 
 <summary><strong>What makes runa fast?</strong></summary>
 
-- **Multi-threaded engine:** Spawns 10 lightweight dedicated worker threads for I/O, preview, find, and file operations, so UI is never blocked.
+- **Multi-threaded engine:** Spawns 11 lightweight dedicated worker threads for I/O, preview, find, and file operations, so UI is never blocked.
 - **Essential-only Rust crates:** No external TUI frameworks or bloat.
 - **Direct terminal rendering:** Uses [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
