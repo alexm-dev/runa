@@ -5,16 +5,17 @@ All the changes made to runa are documented here.
 ## [0.12.0] - 2026-07-04
 
 ### Added
-- **Watcher Thread**: Added a new filesystem watcher thread to correctly updated changes to the filesystem and robustly update the panes.
-- **UI Reloading**: Added a new keybind (default `<c-r>`), to manually update the TUI if needed.
+- **Watcher Thread**: Added a dedicated filesystem watcher thread to keep the panes in sync with filesystem changes.
+- **UI Reloading**: Added a manual UI reload keybind (default `<c-r>`).
 
 ### Fixed
-- **Preview Paths**: Fixed an issue where the preview could unreliably or wrongly load a path during app-state updates.
+- **Preview Paths**: Fixed an issue where the preview could unreliably or wrongly load a path during preview changes.
 
 ### Changed
 - **Config Watcher**: The `runa.toml` config watcher is now tied to the new watcher thread instead.
-- **Message Widget**: Message notification text are now center aligned by default.
+- **Message Widget**: Notification message text is now center aligned by default.
 - **Cargo update**: Updated dependencies
+
 
 ---
 
