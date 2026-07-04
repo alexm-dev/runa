@@ -2,7 +2,7 @@
 
 All the changes made to runa are documented here.
 
-## [0.12.0] - UNRELEASED
+## [0.12.0] - 2026-07-04
 
 ### Added
 - **Watcher Thread**: Added a new filesystem watcher thread to correctly updated changes to the filesystem and robustly update the panes.
