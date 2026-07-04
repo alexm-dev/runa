@@ -351,6 +351,7 @@ const HELP_DATA: &[HelpSection] = &[
         name: "System",
         entries: &[
             HelpEntry { key: InputKeys::Quit, desc: "Quit" },
+            HelpEntry { key: InputKeys::Reload, desc: "Reload the UI" },
             HelpEntry { key: InputKeys::KeybindHelp, desc: "Toggle keybind help" },
         ],
     },

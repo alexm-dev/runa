@@ -296,11 +296,18 @@ Scroll down in widgets.
 
 Quit runa.
 
+### `reload`
+
+- **Default**: `["<c-r>"]`
+
+Reload the UI.
+
 ### `keybind_help`
 
 - **Default**: `["?"]`
 
 Show keybinding help dialog.
+
 
 ## Configuration Notes
 
