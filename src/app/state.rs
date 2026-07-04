@@ -393,12 +393,17 @@ impl AppState {
             }
 
             WorkerResponse::PreviewLoaded {
+                path,
                 lines,
                 request_id,
                 is_eof,
                 tab_id: _tab_id,
             } => {
-                if request_id == self.preview.request_id() {
+                if request_id == self.preview.request_id()
+                    && let Some(entry) = self.nav.selected_entry()
+                    && path.parent() == Some(self.nav.current_dir())
+                    && path.file_name() == Some(entry.name())
+                {
                     self.preview.update_content(
                         lines,
                         self.metrics.preview_height,

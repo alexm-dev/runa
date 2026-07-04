@@ -243,6 +243,7 @@ pub(crate) enum WorkerResponse {
         tab_id: Option<usize>,
     },
     PreviewLoaded {
+        path: PathBuf,
         lines: Vec<String>,
         is_eof: bool,
         request_id: u64,
@@ -451,6 +452,7 @@ fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResp
 
             let is_eof = lines.len() < max_lines;
             let _ = res_tx.send(WorkerResponse::PreviewLoaded {
+                path,
                 lines,
                 is_eof,
                 request_id,
