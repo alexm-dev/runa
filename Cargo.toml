@@ -11,10 +11,46 @@ readme = "README.md"
 authors = ["Alexandros McCray <alexandros@amccray.com>"]
 categories = ["filesystem", "command-line-utilities", "command-line-interface"]
 keywords = ["file-browser", "file-manager", "tui", "cli", "search"]
+exclude = ["benches/", "docs/book/"]
+autobenches = false
+
+[features]
+internal = []
+
+[lib]
+name = "runa"
+path = "src/lib.rs"
+bench = false
 
 [[bin]]
 name = "rn"
 path = "src/main.rs"
+bench = false
+
+[[bench]]
+name = "entry"
+harness = false
+required-features = ["internal"]
+
+[[bench]]
+name = "cache"
+harness = false
+required-features = ["internal"]
+
+[[bench]]
+name = "sort"
+harness = false
+required-features = ["internal"]
+
+[[bench]]
+name = "listing"
+harness = false
+required-features = ["internal"]
+
+[[bench]]
+name = "preview"
+harness = false
+required-features = ["internal"]
 
 [dependencies]
 ansi-to-tui = { version = "8.0.1", default-features = false, features = ["simd"] }
@@ -52,6 +88,7 @@ uzers = { version = "0.12.2", default-features = false }
 rand = "0.10.2"
 tempfile = "3.27.0"
 filetime = "0.2.29"
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
 
 [profile.dev]
 opt-level = 0
