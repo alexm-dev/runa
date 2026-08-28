@@ -28,9 +28,8 @@ impl MetadataState {
     }
 
     pub(super) fn prepare_new_request(&mut self) -> u64 {
-        let id = self.request_id;
         self.request_id = self.request_id.wrapping_add(1);
-        id
+        self.request_id
     }
 
     pub(super) fn is_pending_path(&self, path: &Path) -> bool {

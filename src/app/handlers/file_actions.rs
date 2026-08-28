@@ -144,8 +144,9 @@ impl AppState {
         };
 
         if !absolute_dest.is_dir() {
+            let norm_msg = path::format_display_path(&absolute_dest);
             self.push_overlay_message(
-                "Move failed: not a directory".into(),
+                format!("Move failed: not a directory: {}", norm_msg),
                 Duration::from_secs(3),
                 None,
             );
@@ -156,16 +157,6 @@ impl AppState {
             let norm_msg = path::format_display_path(&absolute_dest);
             self.push_overlay_message(
                 format!("Move failed: Permission denied in {}: {}", norm_msg, e),
-                Duration::from_secs(3),
-                None,
-            );
-            return;
-        }
-
-        if !absolute_dest.is_dir() {
-            let norm_msg = path::format_display_path(&absolute_dest);
-            self.push_overlay_message(
-                format!("Move failed: not a directory: {}", norm_msg),
                 Duration::from_secs(3),
                 None,
             );
