@@ -1,12 +1,8 @@
 //! The internal preview reader. The `bat` path is not benchmarked - it is a
 //! process spawn runa does not control.
 //!
-//! `cargo bench --features internal --bench preview`
-//!
 //! Both cases render the same 50 lines, so the difference between them is
 //! purely the cost of skipping to the scroll offset.
-
-mod common;
 
 use std::hint::black_box;
 use std::path::Path;
@@ -14,22 +10,32 @@ use std::path::Path;
 use criterion::Criterion;
 use runa::bench_api::PreviewFixture;
 
-use common::{Scratch, bytes, memory_header};
+use crate::common::{Scratch, bytes, memory_header};
 
 const LINES: usize = 20_000;
 const VISIBLE: usize = 50;
 const WIDTH: usize = 80;
 const DEEP: usize = 10_000;
 
-fn main() {
+pub fn register(c: &mut Criterion) {
     let scratch = Scratch::new();
     let file = scratch.text_file("preview.txt", LINES);
 
     memory_report(&file);
 
-    let mut c = Criterion::default().configure_from_args();
-    bench_preview(&mut c, &file);
-    c.final_summary();
+    let mut group = c.benchmark_group("preview");
+
+    let head = PreviewFixture::new(&file, VISIBLE, WIDTH);
+    group.bench_function(format!("head/{VISIBLE}lines"), |b| {
+        b.iter(|| black_box(head.run()))
+    });
+
+    let deep = PreviewFixture::new(&file, VISIBLE, WIDTH).with_scroll(DEEP);
+    group.bench_function(format!("scrolled-10k/{VISIBLE}lines"), |b| {
+        b.iter(|| black_box(deep.run()))
+    });
+
+    group.finish();
 }
 
 fn memory_report(file: &Path) {
@@ -54,20 +60,4 @@ fn memory_report(file: &Path) {
         );
     }
     println!();
-}
-
-fn bench_preview(c: &mut Criterion, file: &Path) {
-    let mut group = c.benchmark_group("preview");
-
-    let head = PreviewFixture::new(file, VISIBLE, WIDTH);
-    group.bench_function(format!("head/{VISIBLE}lines"), |b| {
-        b.iter(|| black_box(head.run()))
-    });
-
-    let deep = PreviewFixture::new(file, VISIBLE, WIDTH).with_scroll(DEEP);
-    group.bench_function(format!("scrolled-10k/{VISIBLE}lines"), |b| {
-        b.iter(|| black_box(deep.run()))
-    });
-
-    group.finish();
 }

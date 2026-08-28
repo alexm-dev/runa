@@ -1,5 +1,4 @@
-//! Shared helpers for the bench targets. Each pulls it in with `mod common;`,
-//! so most see functions they do not use.
+//! Shared helpers for the bench areas.
 
 #![allow(dead_code)]
 
@@ -77,8 +76,4 @@ pub fn bytes(n: usize) -> String {
 
 pub fn memory_header(title: &str) {
     println!("\n=== {title}: memory (computed, deterministic) ===\n");
-}
-
-pub fn report_bytes(label: &str, total: usize) {
-    println!("  {label:<46} {:>12}", bytes(total));
 }
