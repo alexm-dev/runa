@@ -14,18 +14,20 @@ keywords = ["file-browser", "file-manager", "tui", "cli", "search"]
 exclude = ["benches/", "docs/book/"]
 autobenches = false
 
-[features]
-internal = []
-
 [lib]
 name = "runa"
 path = "src/lib.rs"
 bench = false
+doctest = false
 
 [[bin]]
 name = "rn"
 path = "src/main.rs"
 bench = false
+test = false
+
+[features]
+internal = []
 
 [[bench]]
 name = "suite"
