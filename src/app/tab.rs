@@ -8,6 +8,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 
 use ratatui::text::Span;
 
@@ -190,20 +191,25 @@ pub(crate) fn handle_tab_action(
                         .nav()
                         .selected_entry()
                         .map(|entry| entry.name().to_os_string());
-                    let original = std::mem::replace(
-                        app_state,
-                        Box::new(
-                            app_state
-                                .new_current_dir()
-                                .expect("Failed to create temp tab"),
-                        ),
-                    );
-                    let new_tab = original
-                        .new_current_dir()
-                        .expect("Failed to create new blank tab");
+
+                    let (placeholder, new_tab) =
+                        match (app_state.new_current_dir(), app_state.new_current_dir()) {
+                            (Ok(placeholder), Ok(new_tab)) => (placeholder, new_tab),
+                            (Err(e), _) | (_, Err(e)) => {
+                                app_state.push_overlay_message(
+                                    format!("Could not open a new tab: {e}"),
+                                    Duration::from_secs(3),
+                                    None,
+                                );
+                                return KeypressResult::Consumed;
+                            }
+                        };
+
+                    let original = std::mem::replace(app_state, Box::new(placeholder));
                     *container = AppContainer::Tabs(Box::new(TabManager::new(
                         *original, new_tab, workers, focus,
                     )));
+
                     if let AppContainer::Tabs(tabs) = container {
                         tabs.current_tab_mut().tick(workers);
                     }
@@ -214,10 +220,19 @@ pub(crate) fn handle_tab_action(
                         .nav()
                         .selected_entry()
                         .map(|entry| entry.name().to_os_string());
-                    let new_tab = tabs
-                        .current_tab()
-                        .new_current_dir()
-                        .expect("Failed to create new blank tab");
+
+                    let new_tab = match tabs.current_tab().new_current_dir() {
+                        Ok(tab) => tab,
+                        Err(e) => {
+                            tabs.current_tab_mut().push_overlay_message(
+                                format!("Could not open a new tab: {e}"),
+                                Duration::from_secs(3),
+                                None,
+                            );
+                            return KeypressResult::Consumed;
+                        }
+                    };
+
                     tabs.add_tab(new_tab, workers, focus);
                 }
             }
