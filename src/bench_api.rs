@@ -66,10 +66,6 @@ fn str_buffer_footprint(buffer: &StrBuffer) -> usize {
     data + buffer.len() * std::mem::size_of::<u32>()
 }
 
-/// Mirrors `FileEntry::IS_DIR`, which is `pub(super)` and unreachable from here.
-/// Keep in sync if the flag layout changes.
-const FLAG_IS_DIR: u8 = 1 << 0;
-
 /// Fixed-seed LCG so every run produces byte-identical input.
 fn synthetic_entries(count: usize) -> Vec<FileEntry> {
     const EXTS: [&str; 8] = ["rs", "txt", "md", "toml", "png", "log", "tar.gz", ""];
@@ -90,7 +86,11 @@ fn synthetic_entries(count: usize) -> Vec<FileEntry> {
             format!("entry_{}_{}.{}", r % 100_000, i, ext)
         };
 
-        let flags = if r.is_multiple_of(5) { FLAG_IS_DIR } else { 0 };
+        let flags = if r.is_multiple_of(5) {
+            FileEntry::IS_DIR
+        } else {
+            0
+        };
         entries.push(FileEntry::new(OsString::from(name), flags, None));
     }
 
@@ -237,38 +237,6 @@ impl CacheFixture {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum Sort {
-    Name,
-    Natural,
-    Extension,
-    Size,
-    Modified,
-}
-
-impl Sort {
-    pub fn label(self) -> &'static str {
-        match self {
-            Sort::Name => "name",
-            Sort::Natural => "natural",
-            Sort::Extension => "extension",
-            Sort::Size => "size",
-            Sort::Modified => "modified",
-        }
-    }
-
-    fn to_config(self) -> SortConfig {
-        let mode = match self {
-            Sort::Name => SortMode::Name,
-            Sort::Natural => SortMode::Natural,
-            Sort::Extension => SortMode::Extension,
-            Sort::Size => SortMode::Size,
-            Sort::Modified => SortMode::Modified,
-        };
-        SortConfig::from((mode, SortOrder::Ascending))
-    }
-}
-
 /// Sorting via `Formatter::sort_entries`.
 ///
 /// `Size` and `Modified` stat every entry, and synthetic paths do not exist, so
@@ -284,15 +252,36 @@ pub struct SortFixture {
 }
 
 impl SortFixture {
-    /// `root` is only read by the metadata sort modes.
-    pub fn new<P: AsRef<Path>>(root: P, count: usize, sort: Sort) -> Self {
+    /// Sorts by plain name comparison.
+    pub fn by_name(root: &Path, count: usize) -> Self {
+        Self::build(root, count, SortMode::Name)
+    }
+
+    /// Sorts with the natural (digit-aware) comparator.
+    pub fn by_natural(root: &Path, count: usize) -> Self {
+        Self::build(root, count, SortMode::Natural)
+    }
+
+    /// Sorts by file extension.
+    pub fn by_extension(root: &Path, count: usize) -> Self {
+        Self::build(root, count, SortMode::Extension)
+    }
+
+    /// `root` is read only by the metadata sort modes, which are not exposed
+    /// here: synthetic entries have no files behind them, so those would
+    /// measure a fast failure path rather than real work.
+    fn build(root: &Path, count: usize, mode: SortMode) -> Self {
         let pristine = synthetic_entries(count);
         Self {
-            formatter: Formatter::new(list_options(), sort.to_config(), Arc::new(HashSet::new())),
+            formatter: Formatter::new(
+                list_options(),
+                SortConfig::from((mode, SortOrder::Ascending)),
+                Arc::new(HashSet::new()),
+            ),
             working: pristine.clone(),
             pristine,
             cache: DashMap::new(),
-            dir: root.as_ref().to_path_buf(),
+            dir: root.to_path_buf(),
             date_format: "%Y-%m-%d".to_string(),
         }
     }
@@ -357,10 +346,14 @@ pub struct ListingFixture {
 }
 
 impl ListingFixture {
-    pub fn new<P: AsRef<Path>>(dir: P, sort: Sort) -> Self {
+    pub fn new<P: AsRef<Path>>(dir: P) -> Self {
         Self {
             dir: dir.as_ref().to_path_buf(),
-            formatter: Formatter::new(list_options(), sort.to_config(), Arc::new(HashSet::new())),
+            formatter: Formatter::new(
+                list_options(),
+                SortConfig::from((SortMode::Natural, SortOrder::Ascending)),
+                Arc::new(HashSet::new()),
+            ),
             cache: DashMap::new(),
             date_format: "%Y-%m-%d".to_string(),
         }

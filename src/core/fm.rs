@@ -23,12 +23,12 @@ pub(crate) struct FileEntry {
 impl FileEntry {
     // Bitflags definitions
     // These are used to set and check attributes in the flags field
-    pub(super) const IS_DIR: u8 = 1 << 0;
-    pub(super) const IS_HIDDEN: u8 = 1 << 1;
-    pub(super) const IS_SYSTEM: u8 = 1 << 2;
-    pub(super) const IS_SYMLINK: u8 = 1 << 3;
-    pub(super) const IS_BROKEN_SYM: u8 = 1 << 4;
-    pub(super) const IS_EXECUTABLE: u8 = 1 << 5;
+    pub(crate) const IS_DIR: u8 = 1 << 0;
+    pub(crate) const IS_HIDDEN: u8 = 1 << 1;
+    pub(crate) const IS_SYSTEM: u8 = 1 << 2;
+    pub(crate) const IS_SYMLINK: u8 = 1 << 3;
+    pub(crate) const IS_BROKEN_SYM: u8 = 1 << 4;
+    pub(crate) const IS_EXECUTABLE: u8 = 1 << 5;
 
     /// Used to set the IS_EXECUTABLE flag for files which can be executed.
     /// Used for coloring executable files in UI

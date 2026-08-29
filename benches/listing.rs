@@ -6,7 +6,7 @@
 use std::hint::black_box;
 
 use criterion::{Criterion, Throughput};
-use runa::bench_api::{ListingFixture, Sort};
+use runa::bench_api::ListingFixture;
 
 use crate::common::{Scratch, bytes, memory_header, size};
 
@@ -15,7 +15,7 @@ const ENTRIES: usize = 2_000;
 pub fn register(c: &mut Criterion) {
     let scratch = Scratch::new();
     let dir = scratch.listing_dir(ENTRIES);
-    let fixture = ListingFixture::new(&dir, Sort::Natural);
+    let fixture = ListingFixture::new(&dir);
 
     memory_report(&fixture);
 

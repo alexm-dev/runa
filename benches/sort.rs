@@ -1,30 +1,32 @@
 //! Sorting and filtering a directory listing.
-//!
-//! Both mutate in place, so `reset()` runs outside the timer. With it inside,
-//! `filter/10000` measured 2.75 ms instead of 31 us - a deep clone, not a
-//! filter. `Size` and `Modified` are excluded; they stat entries that do not
-//! exist on disk.
 
 use std::hint::black_box;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use criterion::{Criterion, Throughput};
-use runa::bench_api::{FilterFixture, Sort, SortFixture};
+use runa::bench_api::{FilterFixture, SortFixture};
 
 use crate::common::{SIZES, Scratch, size};
 
-const SORTS: [Sort; 3] = [Sort::Name, Sort::Natural, Sort::Extension];
+type Build = fn(&Path, usize) -> SortFixture;
+
+const MODES: [(&str, Build); 3] = [
+    ("by-name", SortFixture::by_name),
+    ("by-natural", SortFixture::by_natural),
+    ("by-extension", SortFixture::by_extension),
+];
 
 pub fn register(c: &mut Criterion) {
     let scratch = Scratch::new();
 
     let mut group = c.benchmark_group("sort");
-    for sort in SORTS {
+    for (label, build) in MODES {
         for n in SIZES {
             group.throughput(Throughput::Elements(n as u64));
             group.sample_size(if n >= 10_000 { 30 } else { 100 });
-            let mut fixture = SortFixture::new(scratch.path(), n, sort);
-            group.bench_function(format!("by-{}/{}", sort.label(), size(n)), |b| {
+            let mut fixture = build(scratch.path(), n);
+            group.bench_function(format!("{label}/{}", size(n)), |b| {
                 b.iter_custom(|iters| {
                     let mut total = Duration::ZERO;
                     for _ in 0..iters {
