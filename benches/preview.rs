@@ -26,14 +26,10 @@ pub fn register(c: &mut Criterion) {
     let mut group = c.benchmark_group("preview");
 
     let head = PreviewFixture::new(&file, VISIBLE, WIDTH);
-    group.bench_function(format!("head/{VISIBLE}lines"), |b| {
-        b.iter(|| black_box(head.run()))
-    });
+    group.bench_function("from-top", |b| b.iter(|| black_box(head.run())));
 
     let deep = PreviewFixture::new(&file, VISIBLE, WIDTH).with_scroll(DEEP);
-    group.bench_function(format!("scrolled-10k/{VISIBLE}lines"), |b| {
-        b.iter(|| black_box(deep.run()))
-    });
+    group.bench_function("scrolled-10k", |b| b.iter(|| black_box(deep.run())));
 
     group.finish();
 }

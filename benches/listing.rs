@@ -8,7 +8,7 @@ use std::hint::black_box;
 use criterion::{Criterion, Throughput};
 use runa::bench_api::{ListingFixture, Sort};
 
-use crate::common::{Scratch, bytes, memory_header};
+use crate::common::{Scratch, bytes, memory_header, size};
 
 const ENTRIES: usize = 2_000;
 
@@ -23,10 +23,10 @@ pub fn register(c: &mut Criterion) {
     group.sample_size(50);
     group.throughput(Throughput::Elements(ENTRIES as u64));
 
-    group.bench_function(format!("browse/{ENTRIES}"), |b| {
+    group.bench_function(format!("browse/{}", size(ENTRIES)), |b| {
         b.iter(|| black_box(fixture.run_browse()))
     });
-    group.bench_function(format!("browse+filter+sort/{ENTRIES}"), |b| {
+    group.bench_function(format!("browse-filter-sort/{}", size(ENTRIES)), |b| {
         b.iter(|| black_box(fixture.run_full()))
     });
 

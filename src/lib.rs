@@ -10,8 +10,9 @@
 //! Nothing here is a supported interface; anything may change or be removed in any release,
 //! including patch releases.
 //!
-//! Every module below is `pub(crate)`. The only externally reachable function is `run()`, which is
-//! the entry point for the `rn` binary, and the `internals` feature gate, which exposes the `bench_api` module for benchmarking purposes.
+//! Every module below is `pub(crate)`. The only externally reachable items are `run()`, the entry
+//! point for the `rn` binary, and `bench_api`, which `benches/` needs because it is a separate
+//! crate. `bench_api` is `#[doc(hidden)]` and nothing in `rn` reaches it.
 //!
 //! If you added `runa_tui` to your depenencies expecting a library, it will not give you one.
 
@@ -25,7 +26,7 @@ pub(crate) mod core;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
-#[cfg(feature = "internal")]
+#[doc(hidden)]
 pub mod bench_api;
 
 use std::io;

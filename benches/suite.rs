@@ -1,12 +1,17 @@
 //! runa benchmark suite.
 //!
-//! `cargo bench --features internal`
+//! ```text
+//! cargo bench
+//! cargo bench -- "^cache"                       one area, Criterion filter
+//! cargo bench -- --save-baseline before         then: -- --baseline before
+//! ```
 //!
-//! Select an area with Criterion's filter, e.g. `-- "^cache"` or `-- sort/natural`.
-//! Compare a change with `-- --save-baseline before` then `-- --baseline before`,
-//! taking both in one session - idle medians run 3-5% faster than loaded ones.
+//! Take before/after in one session - idle medians run 3-5% faster than loaded
+//! ones. The report lands in `target/criterion/report/index.html`.
 //!
-//! To keep a readable log (bench-logs/ is gitignored):
+//! Each area prints a computed memory table before its timings. Those figures
+//! are deterministic; the timings are wall-clock, with a measured noise floor
+//! under 7.3%. Treat a change under 5% as noise and one over 10% as real.
 
 mod common;
 

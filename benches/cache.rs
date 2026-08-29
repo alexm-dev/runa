@@ -16,14 +16,14 @@ pub fn register(c: &mut Criterion) {
     let mut group = c.benchmark_group("cache");
 
     let mut warm = CacheFixture::new(10, 1_000);
-    group.bench_function("hit/10dirs", |b| b.iter(|| black_box(warm.run_hit())));
-    group.bench_function("miss/10dirs", |b| b.iter(|| black_box(warm.run_miss())));
-    group.bench_function("insert/10dirs", |b| b.iter(|| warm.run_insert()));
+    group.bench_function("hit-below-cap", |b| b.iter(|| black_box(warm.run_hit())));
+    group.bench_function("miss", |b| b.iter(|| black_box(warm.run_miss())));
+    group.bench_function("insert-below-cap", |b| b.iter(|| warm.run_insert()));
 
     let mut full = CacheFixture::new(30, 1_000);
-    group.bench_function("hit/30dirs", |b| b.iter(|| black_box(full.run_hit())));
-    group.bench_function("insert-at-cap/30dirs", |b| b.iter(|| full.run_insert()));
-    group.bench_function("invalidate/30dirs", |b| b.iter(|| full.run_invalidate()));
+    group.bench_function("hit-at-cap", |b| b.iter(|| black_box(full.run_hit())));
+    group.bench_function("insert-at-cap", |b| b.iter(|| full.run_insert()));
+    group.bench_function("invalidate", |b| b.iter(|| full.run_invalidate()));
 
     group.finish();
 }

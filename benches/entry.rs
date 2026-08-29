@@ -5,7 +5,7 @@ use std::hint::black_box;
 use criterion::{Criterion, Throughput};
 use runa::bench_api::EntryFootprint;
 
-use crate::common::{SIZES, bytes, memory_header};
+use crate::common::{SIZES, bytes, memory_header, size};
 
 pub fn register(c: &mut Criterion) {
     memory_report();
@@ -14,7 +14,7 @@ pub fn register(c: &mut Criterion) {
     for n in SIZES {
         group.throughput(Throughput::Elements(n as u64));
         group.sample_size(if n >= 10_000 { 50 } else { 100 });
-        group.bench_function(format!("build/{n}"), |b| {
+        group.bench_function(format!("construct/{}", size(n)), |b| {
             b.iter(|| black_box(EntryFootprint::measure(black_box(n))))
         });
     }

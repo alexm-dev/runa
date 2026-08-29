@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use criterion::{Criterion, Throughput};
 use runa::bench_api::{FilterFixture, Sort, SortFixture};
 
-use crate::common::{SIZES, Scratch};
+use crate::common::{SIZES, Scratch, size};
 
 const SORTS: [Sort; 3] = [Sort::Name, Sort::Natural, Sort::Extension];
 
@@ -24,7 +24,7 @@ pub fn register(c: &mut Criterion) {
             group.throughput(Throughput::Elements(n as u64));
             group.sample_size(if n >= 10_000 { 30 } else { 100 });
             let mut fixture = SortFixture::new(scratch.path(), n, sort);
-            group.bench_function(format!("{}/{n}", sort.label()), |b| {
+            group.bench_function(format!("by-{}/{}", sort.label(), size(n)), |b| {
                 b.iter_custom(|iters| {
                     let mut total = Duration::ZERO;
                     for _ in 0..iters {
@@ -45,7 +45,7 @@ pub fn register(c: &mut Criterion) {
         group.throughput(Throughput::Elements(n as u64));
         group.sample_size(if n >= 10_000 { 30 } else { 100 });
         let mut fixture = FilterFixture::new(n);
-        group.bench_function(format!("{n}"), |b| {
+        group.bench_function(size(n), |b| {
             b.iter_custom(|iters| {
                 let mut total = Duration::ZERO;
                 for _ in 0..iters {

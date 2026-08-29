@@ -1,4 +1,5 @@
-//! Benchmark facade, compiled only with `--features internal`.
+//! Benchmark facade for `benches/`. `#[doc(hidden)]` and unreachable from `rn`,
+//! so LTO strips it from the shipped binary.
 //!
 //! `benches/` is a separate crate and cannot see `pub(crate)` items, so fixtures
 //! here expose them as public types with private fields.

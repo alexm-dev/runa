@@ -74,6 +74,14 @@ pub fn bytes(n: usize) -> String {
     }
 }
 
+/// Compact size for benchmark ids: 100 -> "100", 10_000 -> "10k".
+pub fn size(n: usize) -> String {
+    if n >= 1_000 && n.is_multiple_of(1_000) {
+        format!("{}k", n / 1_000)
+    } else {
+        n.to_string()
+    }
+}
 pub fn memory_header(title: &str) {
     println!("\n=== {title}: memory (computed, deterministic) ===\n");
 }
