@@ -1,7 +1,13 @@
-//! Real-disk timings at 10k entries: `cargo bench --bench disk`.
+//! Disk benchmarks for runa.
 //!
-//! Opt-in (`bench = false`). Works in a temporary sandbox that is deleted
-//! when the run ends.
+//! Measures directory loads and previews on real files with 10k entries.
+//! Only runs when named directly, a plain cargo bench skips it.
+//! The files live in a temporary directory which is deleted at the end.
+//!
+//! Commands:
+//!     cargo bench --bench disk                              run all disk benches
+//!     cargo bench --bench disk -- --save-baseline before    save a baseline named before
+//!     cargo bench --bench disk -- --baseline before         compare against the baseline
 
 mod common;
 
@@ -19,7 +25,7 @@ use common::config;
 const ENTRIES: usize = 10_000;
 const LINES: usize = 20_000;
 
-/// Deleted on drop.
+/// Temporary directory with the bench files, deleted when dropped.
 struct Sandbox {
     dir: TempDir,
 }
@@ -35,7 +41,7 @@ impl Sandbox {
         let listing = sandbox.listing();
         fs::create_dir(&listing).expect("create listing dir");
         for i in 0..ENTRIES {
-            // One entry in five is a subdirectory, to exercise `dirs_first`.
+            // Every fifth entry is a subdirectory for dirs_first
             if i % 5 == 0 {
                 fs::create_dir(listing.join(format!("subdir_{i}"))).expect("create subdir");
             } else {
@@ -66,8 +72,8 @@ impl Sandbox {
         self.dir.path().join("preview.txt")
     }
 
-    /// Reads every file once, so on-access scanning and cold reads happen
-    /// before measuring.
+    /// Reads every file once before measuring.
+    /// Lets the virus scanner and the first cold reads finish beforehand.
     fn settle(&self) {
         let mut buf = Vec::new();
         for entry in fs::read_dir(self.listing())
@@ -88,7 +94,7 @@ fn disk(c: &mut Criterion) {
     let listing = sandbox.listing();
 
     let mut group = c.benchmark_group("disk");
-    // A 10k load takes milliseconds; fewer flat samples keep runs short.
+    // Fewer equal sized samples to keep the run short
     group.sampling_mode(SamplingMode::Flat);
     group.sample_size(30);
     group.measurement_time(Duration::from_secs(10));

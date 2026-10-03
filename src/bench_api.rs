@@ -1,12 +1,13 @@
-//! Benchmark fixtures for `benches/`. Not part of runa's API; LTO strips it
-//! from `rn`.
+//! Benchmark fixtures for the runa benches.
 //!
-//! Fixtures wrap `pub(crate)` types so `benches/` can use them:
-//! - `new(..)`: setup, not measured.
-//! - `input()`: fresh input when `run` consumes or mutates it, not measured.
-//! - `run(..)`: the measured call.
+//! Wraps internal types so the benches can use them. Not part of the runa API
+//! and stripped from the rn binary.
 //!
-//! Nothing here writes to disk.
+//! Each fixture has a new function for the setup, an input function for a fresh input
+//! and a run function which is the measured part. Only fixtures whose run consumes
+//! or changes its input have an input function.
+//!
+//! Nothing in here writes to disk.
 
 use std::collections::HashSet;
 use std::ffi::OsString;
@@ -25,19 +26,21 @@ use crate::core::workers::Workers;
 use crate::core::{FileEntry, Formatter, fm, formatter};
 use crate::utils::text::StrBuffer;
 
-/// Directory the synthetic entries pretend to live in. Never touched on disk.
+/// Directory the generated entries pretend to live in. Never touched on disk.
 const SYNTHETIC_DIR: &str = "/bench";
 
-/// Includes the year, so the formatted dates do not change with the current date.
+/// Date format with the year.
+/// Keeps the formatted dates the same, no matter the current date.
 const DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
 
-/// Owned entries, opaque to `benches/`.
+/// Holds owned entries for the benches.
 pub struct Entries(Vec<FileEntry>);
 
-/// Raw names and flags, the input `FileEntry::new` consumes.
+/// Raw names and flags used to create entries.
 pub type Names = Vec<(OsString, u8)>;
 
-/// Fixed-seed LCG, so every run gets byte-identical input.
+/// Random number generator with a fixed seed.
+/// Creates the same input on every run.
 struct Lcg(u64);
 
 impl Lcg {
@@ -84,8 +87,8 @@ fn build_entries(names: Names) -> Vec<FileEntry> {
         .collect()
 }
 
-/// Metadata for the synthetic entries, keyed like `sort_entries` looks it up,
-/// so metadata sorts never touch the disk.
+/// Creates metadata for the generated entries, keyed like sort_entries looks it up.
+/// Metadata sorts then never touch the disk.
 fn synthetic_metadata(entries: &[FileEntry]) -> DashMap<PathBuf, CachedMetaKey> {
     const START: u64 = 1_420_070_400; // 2015-01-01
     const SPAN: u64 = 6 * 365 * 24 * 60 * 60;
@@ -123,7 +126,8 @@ fn formatter_for(mode: SortMode) -> Formatter {
     )
 }
 
-/// Created and accessed are left out: they run the modified code path.
+/// Sort modes measured by the benches.
+/// Created and accessed are left out, since they run the same code as modified.
 #[derive(Debug, Clone, Copy)]
 pub enum SortBy {
     Name,
@@ -145,7 +149,7 @@ impl SortBy {
     }
 }
 
-/// `FileEntry::new`: the per-entry cost of every directory listing.
+/// Creates file entries, the cost paid for every entry of a directory.
 pub struct EntryFixture {
     names: Names,
 }
@@ -166,7 +170,7 @@ impl EntryFixture {
     }
 }
 
-/// `Formatter::sort_entries` on unsorted synthetic entries.
+/// Sorts generated entries with the formatter.
 pub struct SortFixture {
     formatter: Formatter,
     entries: Vec<FileEntry>,
@@ -198,7 +202,7 @@ impl SortFixture {
     }
 }
 
-/// `Formatter::filter_entries`, the pass that runs before every sort.
+/// Filters generated entries, which runs before every sort.
 pub struct FilterFixture {
     formatter: Formatter,
     entries: Vec<FileEntry>,
@@ -222,7 +226,7 @@ impl FilterFixture {
     }
 }
 
-/// `DirCache` lookup, insertion and eviction.
+/// Looks up, inserts and evicts directories in the directory cache.
 pub struct CacheFixture {
     cache: DirCache,
     dirs: Vec<PathBuf>,
@@ -234,7 +238,7 @@ pub struct CacheFixture {
 }
 
 impl CacheFixture {
-    /// Fills the cache with `dirs` directories sharing one listing.
+    /// Fills the cache with directories which share one listing.
     pub fn new(dirs: usize, entries_per_dir: usize) -> Self {
         let entries: Arc<[FileEntry]> = Arc::from(build_entries(synthetic_names(entries_per_dir)));
         let sort_column = Some(Arc::new(StrBuffer::from_iter(
@@ -283,22 +287,23 @@ impl CacheFixture {
             .is_some()
     }
 
-    /// Re-inserts the directories in turn. At capacity (30) this includes the
-    /// eviction scan.
+    /// Inserts the directories again one after another.
+    /// Includes the eviction once the cache is full at 30 directories.
     pub fn insert(&mut self) {
         let index = (self.next_id as usize) % self.dirs.len();
         self.insert_at(index);
     }
 
-    /// Measures the key scan; the key itself is gone after the first run.
+    /// Invalidates the last directory and measures the scan over all keys.
+    /// The key itself is gone after the first run.
     pub fn invalidate(&self) {
         let last = self.dirs.len().saturating_sub(1);
         self.cache.invalidate_path(&self.dirs[last]);
     }
 }
 
-/// A directory load as the io worker runs it: browse, filter, sort. Metadata
-/// sorts stat every entry, like the worker.
+/// Loads a directory like the io worker does, with browsing, filtering and sorting.
+/// Metadata sorts read the metadata of every entry, like the worker.
 pub struct LoadFixture {
     dir: PathBuf,
     formatter: Formatter,
@@ -312,12 +317,12 @@ impl LoadFixture {
         }
     }
 
-    /// `browse_dir` alone.
+    /// Reads the directory without filtering or sorting.
     pub fn browse(&self) -> usize {
         fm::browse_dir(&self.dir).map_or(0, |e| e.len())
     }
 
-    /// The full load.
+    /// Runs the full directory load.
     pub fn run(&self) -> Entries {
         let Ok(mut entries) = fm::browse_dir(&self.dir) else {
             return Entries(Vec::new());
@@ -331,7 +336,8 @@ impl LoadFixture {
     }
 }
 
-/// The internal preview reader. `bat` is an external process and not covered.
+/// Reads a file preview with the internal reader.
+/// Previews through bat are not measured, since bat is an external process.
 pub struct PreviewFixture {
     path: PathBuf,
     lines: usize,
@@ -354,14 +360,14 @@ impl PreviewFixture {
     }
 }
 
-/// A running `AppState` with real workers, for measuring idle behaviour.
+/// Runs the app state with real workers to check the idle behaviour.
 pub struct IdleFixture {
     app: AppState,
     workers: Workers,
 }
 
 impl IdleFixture {
-    /// Opens `dir` and lets the initial loads and previews finish.
+    /// Opens the directory and waits for the first loads and previews to finish.
     pub fn new(dir: &Path) -> std::io::Result<Self> {
         let workers = Workers::spawn();
         let mut app = AppState::from_dir(Arc::new(Config::default()), dir)?;
@@ -371,10 +377,10 @@ impl IdleFixture {
         Ok(fixture)
     }
 
-    /// Runs the event loop with no input and returns how many frames would
-    /// have been redrawn. Should be zero.
+    /// Runs the event loop without input and returns the number of redraws.
+    /// Should always be zero.
     pub fn run(&mut self, duration: Duration) -> usize {
-        // The real loop wakes at least every 16 ms to poll for input.
+        // Same 16 ms poll interval as the real event loop
         const FRAME: Duration = Duration::from_millis(16);
 
         let end = Instant::now() + duration;
@@ -393,8 +399,8 @@ impl IdleFixture {
     }
 }
 
-/// `FileEntry` size in bytes, and heap allocations per entry without and with
-/// a symlink target.
+/// Returns the size of a file entry in bytes and its heap allocations,
+/// without and with a symlink.
 pub fn entry_layout() -> (usize, usize, usize) {
     (std::mem::size_of::<FileEntry>(), 3, 4)
 }

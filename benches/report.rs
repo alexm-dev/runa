@@ -1,7 +1,11 @@
-//! Allocations and memory per operation: `cargo bench --bench report`.
+//! Allocation and memory report for runa.
 //!
-//! Counted, not timed, so the output is identical between runs of the same
-//! code. Reads `src/` and `LICENSE-APACHE`.
+//! Counts the allocations and retained memory of each operation instead of timing it.
+//! The output is the same on every run of the same code.
+//! Only reads the src directory and LICENSE-APACHE.
+//!
+//! Commands:
+//!     cargo bench --bench report    print the report
 
 use std::alloc::System;
 use std::path::Path;
@@ -82,8 +86,8 @@ fn main() {
     println!();
 }
 
-/// Runs `op` once and prints its allocations. `retained` is what the result
-/// keeps alive.
+/// Runs the operation once and prints its allocation counts.
+/// Retained is the memory the result still holds.
 fn measure<T>(name: &str, items: usize, op: impl FnOnce() -> T) {
     let region = Region::new(GLOBAL);
     let out = op();

@@ -1,13 +1,24 @@
-//! Timings.
+//! Timing benchmarks for runa.
 //!
-//! ```text
-//! cargo bench --bench time -- --save-baseline before    record
-//! cargo bench --bench time -- --baseline before         compare
-//! cargo bench --bench time -- sort                      one area
-//! ```
+//! Measures entry creation, sorting, filtering, the directory cache, directory loads and previews.
+//! Runs on generated input in memory. Only the load and preview benches read files,
+//! the src directory and LICENSE-APACHE.
 //!
-//! In-memory input, except `load` and `preview`, which read `src/` and
-//! `LICENSE-APACHE`. Compare baselines taken in the same session.
+//! Save a baseline before a change and compare against it after the change.
+//! Both runs should happen in the same session.
+//!
+//! Commands:
+//!     cargo bench --bench time                              run all timing benches
+//!     cargo bench --bench time -- sort                      run only the sort benches
+//!     cargo bench --bench time -- --save-baseline before    save a baseline named before
+//!     cargo bench --bench time -- --baseline before         compare against the baseline
+//!
+//! A full check of a change:
+//!     cargo bench --bench report
+//!     cargo bench --bench time -- --save-baseline before
+//!     (make the change)
+//!     cargo bench --bench report
+//!     cargo bench --bench time -- --baseline before
 
 mod common;
 
@@ -55,7 +66,7 @@ fn sort(c: &mut Criterion) {
 
 fn filter(c: &mut Criterion) {
     let mut group = c.benchmark_group("filter");
-    // Cloning the input dominates the wall time.
+    // Extra time for cloning the input
     group.measurement_time(std::time::Duration::from_secs(8));
     for n in SIZES {
         let fixture = FilterFixture::new(n);
@@ -82,8 +93,8 @@ fn cache(c: &mut Criterion) {
     group.finish();
 }
 
-/// The real load path on `src/`. Large sizes are covered by `entry`,
-/// `filter` and `sort`, and by the `disk` bench.
+/// Measures loading the src directory of the repo.
+/// Larger directories are measured by the entry, filter and sort benches and the disk bench.
 fn load(c: &mut Criterion) {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
 
