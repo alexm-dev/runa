@@ -27,8 +27,17 @@ bench = false
 test = false
 
 [[bench]]
-name = "suite"
+name = "time"
 harness = false
+
+[[bench]]
+name = "report"
+harness = false
+
+[[bench]]
+name = "disk"
+harness = false
+bench = false
 
 [dependencies]
 ansi-to-tui = { version = "8.0.1", default-features = false, features = ["simd"] }
@@ -66,7 +75,8 @@ uzers = { version = "0.12.2", default-features = false }
 rand = "0.10.2"
 tempfile = "3.27.0"
 filetime = "0.2.29"
-criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support", "html_reports", "plotters"] }
+criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+stats_alloc = "0.1.10"
 
 [profile.dev]
 opt-level = 0

@@ -1,87 +1,32 @@
-//! Shared helpers for the bench areas.
+//! Shared Criterion settings for the `time` and `disk` benches.
 
 #![allow(dead_code)]
 
-use std::fs;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::time::Duration;
 
-use tempfile::TempDir;
+use criterion::{BatchSize, Criterion};
 
-/// Scratch directory, removed when it drops. Benches touch nothing outside it.
-pub struct Scratch {
-    dir: TempDir,
+/// Inputs per timed batch. Fixed, so memory stays small (~10 MiB at 10k
+/// entries) however long Criterion measures.
+pub const BATCH: BatchSize = BatchSize::NumIterations(8);
+
+pub const SIZES: [usize; 2] = [1_000, 10_000];
+
+pub fn config() -> Criterion {
+    Criterion::default()
+        .warm_up_time(Duration::from_secs(2))
+        .measurement_time(Duration::from_secs(4))
+        // Machine noise is a few percent; smaller changes count as noise.
+        .noise_threshold(0.05)
+        .significance_level(0.01)
+        .confidence_level(0.99)
 }
 
-impl Scratch {
-    pub fn new() -> Self {
-        Self {
-            dir: TempDir::new().expect("failed to create scratch directory"),
-        }
-    }
-
-    pub fn path(&self) -> &Path {
-        self.dir.path()
-    }
-
-    /// One entry in five is a subdirectory, to exercise `dirs_first`.
-    pub fn listing_dir(&self, files: usize) -> PathBuf {
-        let dir = self.dir.path().join("listing");
-        fs::create_dir_all(&dir).expect("create listing dir");
-        for i in 0..files {
-            if i % 5 == 0 {
-                let _ = fs::create_dir(dir.join(format!("subdir_{i}")));
-            } else {
-                let _ = fs::write(dir.join(format!("entry_{i}.txt")), b"x");
-            }
-        }
-        dir
-    }
-
-    pub fn text_file(&self, name: &str, lines: usize) -> PathBuf {
-        let path = self.dir.path().join(name);
-        let file = fs::File::create(&path).expect("create text file");
-        let mut out = std::io::BufWriter::new(file);
-        for i in 0..lines {
-            writeln!(
-                out,
-                "line {i:06} - the quick brown fox jumps over the lazy dog"
-            )
-            .expect("write line");
-        }
-        out.flush().expect("flush");
-        path
-    }
-}
-
-impl Default for Scratch {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-pub const SIZES: [usize; 3] = [100, 1_000, 10_000];
-
-pub fn bytes(n: usize) -> String {
-    const KIB: f64 = 1024.0;
-    let n = n as f64;
-    if n < KIB {
-        format!("{n:.0} B")
-    } else if n < KIB * KIB {
-        format!("{:.1} KiB", n / KIB)
-    } else {
-        format!("{:.2} MiB", n / (KIB * KIB))
-    }
-}
-
-/// Compact size for benchmark ids: 100 -> "100", 10_000 -> "10k".
-pub fn size(n: usize) -> String {
-    if n >= 1_000 && n.is_multiple_of(1_000) {
+/// Compact size for benchmark ids: 1_000 -> "1k".
+pub fn label(n: usize) -> String {
+    if n >= 1_000 {
         format!("{}k", n / 1_000)
     } else {
         n.to_string()
     }
-}
-pub fn memory_header(title: &str) {
-    println!("\n=== {title}: memory (computed, deterministic) ===\n");
 }

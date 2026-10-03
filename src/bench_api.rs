@@ -1,100 +1,108 @@
-//! Benchmark facade for `benches/`. `#[doc(hidden)]` and unreachable from `rn`,
-//! so LTO strips it from the shipped binary.
+//! Benchmark fixtures for `benches/`. Not part of runa's API; LTO strips it
+//! from `rn`.
 //!
-//! `benches/` is a separate crate and cannot see `pub(crate)` items, so fixtures
-//! here expose them as public types with private fields.
+//! Fixtures wrap `pub(crate)` types so `benches/` can use them:
+//! - `new(..)`: setup, not measured.
+//! - `input()`: fresh input when `run` consumes or mutates it, not measured.
+//! - `run(..)`: the measured call.
 //!
-//! # Adding a fixture
-//!
-//! Give it `new` for setup, `run` for the measured call, and `reset` if `run`
-//! mutates its input. Only `run` is timed; see `benches/sort.rs` for the loop.
+//! Nothing here writes to disk.
 
 use std::collections::HashSet;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{Duration, Instant, UNIX_EPOCH};
 
 use dashmap::DashMap;
 
+use crate::app::AppState;
+use crate::config::Config;
 use crate::core::cache::{DirCache, DirListOptions};
 use crate::core::metadata::CachedMetaKey;
 use crate::core::sort::{SortConfig, SortMode, SortOrder};
+use crate::core::workers::Workers;
 use crate::core::{FileEntry, Formatter, fm, formatter};
 use crate::utils::text::StrBuffer;
 
-/// Payload bytes held by a structure, excluding allocator overhead.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Footprint {
-    pub inline: usize,
-    pub heap: usize,
-    pub items: usize,
-}
+/// Directory the synthetic entries pretend to live in. Never touched on disk.
+const SYNTHETIC_DIR: &str = "/bench";
 
-impl Footprint {
-    pub fn total(&self) -> usize {
-        self.inline + self.heap
+/// Includes the year, so the formatted dates do not change with the current date.
+const DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
+
+/// Owned entries, opaque to `benches/`.
+pub struct Entries(Vec<FileEntry>);
+
+/// Raw names and flags, the input `FileEntry::new` consumes.
+pub type Names = Vec<(OsString, u8)>;
+
+/// Fixed-seed LCG, so every run gets byte-identical input.
+struct Lcg(u64);
+
+impl Lcg {
+    fn new() -> Self {
+        Self(0x2545_F491_4F6C_DD1D)
     }
 
-    pub fn per_item(&self) -> f64 {
-        if self.items == 0 {
-            return 0.0;
-        }
-        self.total() as f64 / self.items as f64
-    }
-}
-
-fn entries_footprint(entries: &[FileEntry], capacity: usize) -> Footprint {
-    let heap = entries
-        .iter()
-        .map(|e| {
-            e.name().len()
-                + e.name_str().len()
-                + e.lowered().len()
-                + e.symlink().map_or(0, |p| p.as_os_str().len())
-        })
-        .sum();
-
-    Footprint {
-        inline: capacity * std::mem::size_of::<FileEntry>(),
-        heap,
-        items: entries.len(),
-    }
-}
-
-fn str_buffer_footprint(buffer: &StrBuffer) -> usize {
-    let data: usize = buffer.iter().map(|s| s.len()).sum();
-    data + buffer.len() * std::mem::size_of::<u32>()
-}
-
-/// Fixed-seed LCG so every run produces byte-identical input.
-fn synthetic_entries(count: usize) -> Vec<FileEntry> {
-    const EXTS: [&str; 8] = ["rs", "txt", "md", "toml", "png", "log", "tar.gz", ""];
-
-    let mut state: u64 = 0x2545_F491_4F6C_DD1D;
-    let mut entries = Vec::with_capacity(count);
-
-    for i in 0..count {
-        state = state
+    fn next(&mut self) -> usize {
+        self.0 = self
+            .0
             .wrapping_mul(6_364_136_223_846_793_005)
             .wrapping_add(1_442_695_040_888_963_407);
-        let r = (state >> 33) as usize;
-
-        let ext = EXTS[r % EXTS.len()];
-        let name = if ext.is_empty() {
-            format!("entry_{}_{}", r % 100_000, i)
-        } else {
-            format!("entry_{}_{}.{}", r % 100_000, i, ext)
-        };
-
-        let flags = if r.is_multiple_of(5) {
-            FileEntry::IS_DIR
-        } else {
-            0
-        };
-        entries.push(FileEntry::new(OsString::from(name), flags, None));
+        (self.0 >> 33) as usize
     }
+}
 
-    entries
+fn synthetic_names(count: usize) -> Names {
+    const EXTS: [&str; 8] = ["rs", "txt", "md", "toml", "png", "log", "tar.gz", ""];
+
+    let mut rng = Lcg::new();
+    (0..count)
+        .map(|i| {
+            let r = rng.next();
+            let ext = EXTS[r % EXTS.len()];
+            let name = if ext.is_empty() {
+                format!("entry_{}_{}", r % 100_000, i)
+            } else {
+                format!("entry_{}_{}.{}", r % 100_000, i, ext)
+            };
+            let flags = if r.is_multiple_of(5) {
+                FileEntry::IS_DIR
+            } else {
+                0
+            };
+            (OsString::from(name), flags)
+        })
+        .collect()
+}
+
+fn build_entries(names: Names) -> Vec<FileEntry> {
+    names
+        .into_iter()
+        .map(|(name, flags)| FileEntry::new(name, flags, None))
+        .collect()
+}
+
+/// Metadata for the synthetic entries, keyed like `sort_entries` looks it up,
+/// so metadata sorts never touch the disk.
+fn synthetic_metadata(entries: &[FileEntry]) -> DashMap<PathBuf, CachedMetaKey> {
+    const START: u64 = 1_420_070_400; // 2015-01-01
+    const SPAN: u64 = 6 * 365 * 24 * 60 * 60;
+
+    let mut rng = Lcg::new();
+    let mut time = || Some(UNIX_EPOCH + Duration::from_secs(START + rng.next() as u64 % SPAN));
+    let cache = DashMap::with_capacity(entries.len());
+    for entry in entries {
+        let key = CachedMetaKey {
+            size: (!entry.is_dir()).then(|| entry.name_str().len() as u64 * 4_099),
+            modified: time(),
+            created: time(),
+            accessed: time(),
+        };
+        cache.insert(Path::new(SYNTHETIC_DIR).join(entry.name()), key);
+    }
+    cache
 }
 
 fn list_options() -> DirListOptions {
@@ -107,38 +115,110 @@ fn list_options() -> DirListOptions {
     }
 }
 
-/// Memory cost of `FileEntry`, one of which exists per directory entry.
-pub struct EntryFootprint;
-
-impl EntryFootprint {
-    pub fn measure(count: usize) -> Footprint {
-        let entries = synthetic_entries(count);
-        entries_footprint(&entries, entries.capacity())
-    }
-
-    pub fn struct_size() -> usize {
-        std::mem::size_of::<FileEntry>()
-    }
-
-    /// One allocation per boxed field: `name`, `name_str`, `lowered`, `symlink`.
-    pub fn allocations_per_entry(is_symlink: bool) -> usize {
-        if is_symlink { 4 } else { 3 }
-    }
+fn formatter_for(mode: SortMode) -> Formatter {
+    Formatter::new(
+        list_options(),
+        SortConfig::from((mode, SortOrder::Ascending)),
+        Arc::new(HashSet::new()),
+    )
 }
 
-/// Entries are `Arc`-shared, so many keys pointing at one listing pay for it
-/// once. The per-directory cost is the key.
+/// Created and accessed are left out: they run the modified code path.
 #[derive(Debug, Clone, Copy)]
-pub struct CacheFootprint {
-    pub directories: usize,
-    pub key_bytes: usize,
-    pub shared_entry_bytes: usize,
-    pub shared_column_bytes: usize,
+pub enum SortBy {
+    Name,
+    Natural,
+    Extension,
+    Size,
+    Modified,
 }
 
-impl CacheFootprint {
-    pub fn total(&self) -> usize {
-        self.key_bytes + self.shared_entry_bytes + self.shared_column_bytes
+impl SortBy {
+    fn mode(self) -> SortMode {
+        match self {
+            SortBy::Name => SortMode::Name,
+            SortBy::Natural => SortMode::Natural,
+            SortBy::Extension => SortMode::Extension,
+            SortBy::Size => SortMode::Size,
+            SortBy::Modified => SortMode::Modified,
+        }
+    }
+}
+
+/// `FileEntry::new`: the per-entry cost of every directory listing.
+pub struct EntryFixture {
+    names: Names,
+}
+
+impl EntryFixture {
+    pub fn new(count: usize) -> Self {
+        Self {
+            names: synthetic_names(count),
+        }
+    }
+
+    pub fn input(&self) -> Names {
+        self.names.clone()
+    }
+
+    pub fn run(&self, names: Names) -> Entries {
+        Entries(build_entries(names))
+    }
+}
+
+/// `Formatter::sort_entries` on unsorted synthetic entries.
+pub struct SortFixture {
+    formatter: Formatter,
+    entries: Vec<FileEntry>,
+    metadata: DashMap<PathBuf, CachedMetaKey>,
+}
+
+impl SortFixture {
+    pub fn new(by: SortBy, count: usize) -> Self {
+        let entries = build_entries(synthetic_names(count));
+        Self {
+            formatter: formatter_for(by.mode()),
+            metadata: synthetic_metadata(&entries),
+            entries,
+        }
+    }
+
+    pub fn input(&self) -> Entries {
+        Entries(self.entries.clone())
+    }
+
+    pub fn run(&self, input: &mut Entries) -> usize {
+        let column = self.formatter.sort_entries(
+            Path::new(SYNTHETIC_DIR),
+            &mut input.0,
+            DATE_FORMAT,
+            &self.metadata,
+        );
+        input.0.len() + column.map_or(0, |c| c.len())
+    }
+}
+
+/// `Formatter::filter_entries`, the pass that runs before every sort.
+pub struct FilterFixture {
+    formatter: Formatter,
+    entries: Vec<FileEntry>,
+}
+
+impl FilterFixture {
+    pub fn new(count: usize) -> Self {
+        Self {
+            formatter: formatter_for(SortMode::Natural),
+            entries: build_entries(synthetic_names(count)),
+        }
+    }
+
+    pub fn input(&self) -> Entries {
+        Entries(self.entries.clone())
+    }
+
+    pub fn run(&self, input: &mut Entries) -> usize {
+        self.formatter.filter_entries(&mut input.0);
+        input.0.len()
     }
 }
 
@@ -154,8 +234,9 @@ pub struct CacheFixture {
 }
 
 impl CacheFixture {
+    /// Fills the cache with `dirs` directories sharing one listing.
     pub fn new(dirs: usize, entries_per_dir: usize) -> Self {
-        let entries: Arc<[FileEntry]> = Arc::from(synthetic_entries(entries_per_dir));
+        let entries: Arc<[FileEntry]> = Arc::from(build_entries(synthetic_names(entries_per_dir)));
         let sort_column = Some(Arc::new(StrBuffer::from_iter(
             entries.iter().map(|e| e.name_str()),
         )));
@@ -163,7 +244,7 @@ impl CacheFixture {
         let mut fixture = Self {
             cache: DirCache::new(),
             dirs: (0..dirs)
-                .map(|i| PathBuf::from(format!("/bench/dir_{i}")))
+                .map(|i| Path::new(SYNTHETIC_DIR).join(format!("dir_{i}")))
                 .collect(),
             entries,
             sort_column,
@@ -171,7 +252,6 @@ impl CacheFixture {
             sort: SortConfig::default(),
             next_id: 0,
         };
-
         for i in 0..fixture.dirs.len() {
             fixture.insert_at(i);
         }
@@ -190,250 +270,131 @@ impl CacheFixture {
         );
     }
 
-    pub fn run_hit(&self) -> bool {
+    pub fn hit(&self) -> bool {
         let last = self.dirs.len().saturating_sub(1);
         self.cache
             .get(&self.dirs[last], self.sort, &self.list)
             .is_some()
     }
 
-    pub fn run_miss(&self) -> bool {
+    pub fn miss(&self) -> bool {
         self.cache
             .get(Path::new("/bench/absent"), self.sort, &self.list)
             .is_some()
     }
 
-    /// At capacity this includes the `min_by_key` eviction scan.
-    pub fn run_insert(&mut self) {
+    /// Re-inserts the directories in turn. At capacity (30) this includes the
+    /// eviction scan.
+    pub fn insert(&mut self) {
         let index = (self.next_id as usize) % self.dirs.len();
         self.insert_at(index);
     }
 
-    pub fn run_invalidate(&self) {
+    /// Measures the key scan; the key itself is gone after the first run.
+    pub fn invalidate(&self) {
         let last = self.dirs.len().saturating_sub(1);
         self.cache.invalidate_path(&self.dirs[last]);
     }
-
-    pub fn footprint(&self) -> CacheFootprint {
-        let key_bytes = self
-            .dirs
-            .iter()
-            .map(|p| p.as_os_str().len() + std::mem::size_of::<DirListOptions>())
-            .sum();
-
-        CacheFootprint {
-            directories: self.dirs.len(),
-            key_bytes,
-            shared_entry_bytes: entries_footprint(&self.entries, self.entries.len()).total(),
-            shared_column_bytes: self
-                .sort_column
-                .as_ref()
-                .map_or(0, |b| str_buffer_footprint(b)),
-        }
-    }
-
-    pub fn measure_footprint(dirs: usize, entries_per_dir: usize) -> CacheFootprint {
-        Self::new(dirs, entries_per_dir).footprint()
-    }
 }
 
-/// Sorting via `Formatter::sort_entries`.
-///
-/// `Size` and `Modified` stat every entry, and synthetic paths do not exist, so
-/// those modes measure a fast failure path rather than real work. Use a real
-/// directory for them.
-pub struct SortFixture {
-    formatter: Formatter,
-    pristine: Vec<FileEntry>,
-    working: Vec<FileEntry>,
-    cache: DashMap<PathBuf, CachedMetaKey>,
-    dir: PathBuf,
-    date_format: String,
-}
-
-impl SortFixture {
-    /// Sorts by plain name comparison.
-    pub fn by_name(root: &Path, count: usize) -> Self {
-        Self::build(root, count, SortMode::Name)
-    }
-
-    /// Sorts with the natural (digit-aware) comparator.
-    pub fn by_natural(root: &Path, count: usize) -> Self {
-        Self::build(root, count, SortMode::Natural)
-    }
-
-    /// Sorts by file extension.
-    pub fn by_extension(root: &Path, count: usize) -> Self {
-        Self::build(root, count, SortMode::Extension)
-    }
-
-    /// `root` is read only by the metadata sort modes, which are not exposed
-    /// here: synthetic entries have no files behind them, so those would
-    /// measure a fast failure path rather than real work.
-    fn build(root: &Path, count: usize, mode: SortMode) -> Self {
-        let pristine = synthetic_entries(count);
-        Self {
-            formatter: Formatter::new(
-                list_options(),
-                SortConfig::from((mode, SortOrder::Ascending)),
-                Arc::new(HashSet::new()),
-            ),
-            working: pristine.clone(),
-            pristine,
-            cache: DashMap::new(),
-            dir: root.to_path_buf(),
-            date_format: "%Y-%m-%d".to_string(),
-        }
-    }
-
-    /// Restores the unsorted input. Must run outside the timer.
-    pub fn reset(&mut self) {
-        self.working.clear();
-        self.working.extend_from_slice(&self.pristine);
-    }
-
-    pub fn run(&mut self) -> usize {
-        let _ = self.formatter.sort_entries(
-            &self.dir,
-            &mut self.working,
-            &self.date_format,
-            &self.cache,
-        );
-        self.working.len()
-    }
-}
-
-/// The filter pass that runs before every sort.
-pub struct FilterFixture {
-    formatter: Formatter,
-    pristine: Vec<FileEntry>,
-    working: Vec<FileEntry>,
-}
-
-impl FilterFixture {
-    pub fn new(count: usize) -> Self {
-        let pristine = synthetic_entries(count);
-        Self {
-            formatter: Formatter::new(
-                list_options(),
-                SortConfig::default(),
-                Arc::new(HashSet::new()),
-            ),
-            working: pristine.clone(),
-            pristine,
-        }
-    }
-
-    /// Restores the unfiltered input. Must run outside the timer.
-    pub fn reset(&mut self) {
-        self.working.clear();
-        self.working.extend_from_slice(&self.pristine);
-    }
-
-    pub fn run(&mut self) -> usize {
-        self.formatter.filter_entries(&mut self.working);
-        self.working.len()
-    }
-}
-
-/// `browse_dir` alone, and the full pipeline the io worker runs on a directory
-/// change. I/O bound, so comparable run-to-run on one machine only.
-pub struct ListingFixture {
+/// A directory load as the io worker runs it: browse, filter, sort. Metadata
+/// sorts stat every entry, like the worker.
+pub struct LoadFixture {
     dir: PathBuf,
     formatter: Formatter,
-    cache: DashMap<PathBuf, CachedMetaKey>,
-    date_format: String,
 }
 
-impl ListingFixture {
-    pub fn new<P: AsRef<Path>>(dir: P) -> Self {
+impl LoadFixture {
+    pub fn new(dir: &Path, by: SortBy) -> Self {
         Self {
-            dir: dir.as_ref().to_path_buf(),
-            formatter: Formatter::new(
-                list_options(),
-                SortConfig::from((SortMode::Natural, SortOrder::Ascending)),
-                Arc::new(HashSet::new()),
-            ),
-            cache: DashMap::new(),
-            date_format: "%Y-%m-%d".to_string(),
+            dir: dir.to_path_buf(),
+            formatter: formatter_for(by.mode()),
         }
     }
 
-    pub fn run_browse(&self) -> usize {
-        fm::browse_dir(&self.dir).map(|e| e.len()).unwrap_or(0)
+    /// `browse_dir` alone.
+    pub fn browse(&self) -> usize {
+        fm::browse_dir(&self.dir).map_or(0, |e| e.len())
     }
 
-    pub fn run_full(&self) -> usize {
-        self.load().len()
-    }
-
-    fn load(&self) -> Vec<FileEntry> {
+    /// The full load.
+    pub fn run(&self) -> Entries {
         let Ok(mut entries) = fm::browse_dir(&self.dir) else {
-            return Vec::new();
+            return Entries(Vec::new());
         };
+        let metadata = DashMap::with_capacity(entries.len());
         self.formatter.filter_entries(&mut entries);
-        let _ =
-            self.formatter
-                .sort_entries(&self.dir, &mut entries, &self.date_format, &self.cache);
-        entries
-    }
-
-    pub fn footprint(&self) -> Footprint {
-        let entries = self.load();
-        entries_footprint(&entries, entries.capacity())
+        let _ = self
+            .formatter
+            .sort_entries(&self.dir, &mut entries, DATE_FORMAT, &metadata);
+        Entries(entries)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct PreviewFootprint {
-    pub lines: usize,
-    pub text_bytes: usize,
-    pub inline_bytes: usize,
-}
-
-impl PreviewFootprint {
-    pub fn total(&self) -> usize {
-        self.text_bytes + self.inline_bytes
-    }
-}
-
-/// The internal preview reader, `formatter::safe_read_preview`.
+/// The internal preview reader. `bat` is an external process and not covered.
 pub struct PreviewFixture {
     path: PathBuf,
-    max_lines: usize,
-    pane_width: usize,
+    lines: usize,
+    width: usize,
     scroll: usize,
 }
 
 impl PreviewFixture {
-    pub fn new<P: AsRef<Path>>(path: P, max_lines: usize, pane_width: usize) -> Self {
+    pub fn new(path: &Path, lines: usize, width: usize, scroll: usize) -> Self {
         Self {
-            path: path.as_ref().to_path_buf(),
-            max_lines,
-            pane_width,
-            scroll: 0,
+            path: path.to_path_buf(),
+            lines,
+            width,
+            scroll,
         }
     }
 
-    pub fn with_scroll(mut self, scroll: usize) -> Self {
-        self.scroll = scroll;
-        self
+    pub fn run(&self) -> Vec<String> {
+        formatter::safe_read_preview(&self.path, self.lines, self.width, self.scroll)
+    }
+}
+
+/// A running `AppState` with real workers, for measuring idle behaviour.
+pub struct IdleFixture {
+    app: AppState,
+    workers: Workers,
+}
+
+impl IdleFixture {
+    /// Opens `dir` and lets the initial loads and previews finish.
+    pub fn new(dir: &Path) -> std::io::Result<Self> {
+        let workers = Workers::spawn();
+        let mut app = AppState::from_dir(Arc::new(Config::default()), dir)?;
+        app.initialize(&workers, None);
+        let mut fixture = Self { app, workers };
+        fixture.run(Duration::from_millis(500));
+        Ok(fixture)
     }
 
-    fn read(&self) -> Vec<String> {
-        formatter::safe_read_preview(&self.path, self.max_lines, self.pane_width, self.scroll)
-    }
+    /// Runs the event loop with no input and returns how many frames would
+    /// have been redrawn. Should be zero.
+    pub fn run(&mut self, duration: Duration) -> usize {
+        // The real loop wakes at least every 16 ms to poll for input.
+        const FRAME: Duration = Duration::from_millis(16);
 
-    pub fn run(&self) -> usize {
-        self.read().len()
-    }
-
-    pub fn footprint(&self) -> PreviewFootprint {
-        let lines = self.read();
-        PreviewFootprint {
-            lines: lines.len(),
-            text_bytes: lines.iter().map(|l| l.len()).sum(),
-            inline_bytes: lines.capacity() * std::mem::size_of::<String>(),
+        let end = Instant::now() + duration;
+        let mut redraws = 0;
+        while Instant::now() < end {
+            let mut changed = false;
+            while let Ok(response) = self.workers.response_rx().try_recv() {
+                self.app.handle_worker_response(response, &self.workers);
+                changed = true;
+            }
+            changed |= self.app.tick(&self.workers);
+            redraws += usize::from(changed);
+            std::thread::sleep(FRAME);
         }
+        redraws
     }
+}
+
+/// `FileEntry` size in bytes, and heap allocations per entry without and with
+/// a symlink target.
+pub fn entry_layout() -> (usize, usize, usize) {
+    (std::mem::size_of::<FileEntry>(), 3, 4)
 }
