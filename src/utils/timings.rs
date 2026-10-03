@@ -5,6 +5,7 @@
 
 use std::time::{Duration, Instant};
 
+/// Timings constants for various actions.
 pub(crate) struct Timings;
 
 impl Timings {
@@ -17,16 +18,23 @@ impl Timings {
     pub(crate) const FS_WATCH_DEBOUNCE_MS: u64 = 150;
 }
 
+/// Throttler to handle timings and debounce for relevant actions.
+/// Tracks latest timings and whether a request is queued for later.
 #[derive(Default, Debug, Clone)]
 pub(crate) struct Throttler {
     last_timing: Option<Instant>,
+    queued: bool,
 }
 
 impl Throttler {
     pub(crate) fn new() -> Self {
-        Self { last_timing: None }
+        Self {
+            last_timing: None,
+            queued: false,
+        }
     }
 
+    /// Check if the throttler can trigger an action based on the last timing
     pub(crate) fn can_trigger(&self, ms: u64) -> bool {
         let now = Instant::now();
         match self.last_timing {
@@ -35,7 +43,30 @@ impl Throttler {
         }
     }
 
+    /// Leading Edge: Try to trigger an action, returning whether it was allowed or not.
+    /// true if a call is allowed, false if it is queued for later.
+    /// A refused call is remembered and can be taken later with `take_queued`.
+    pub(crate) fn try_trigger(&mut self, ms: u64) -> bool {
+        let allowed = self.can_trigger(ms);
+        if !allowed {
+            self.queued = true;
+        }
+        allowed
+    }
+
+    /// Trailing Edge: Check if a queued action can be taken based on the last timing.
+    /// Take a queued action if it is allowed based on the last timing.
+    pub(crate) fn take_queued(&mut self, ms: u64) -> bool {
+        if self.queued && self.can_trigger(ms) {
+            self.queued = false;
+            return true;
+        }
+        false
+    }
+
+    /// Update the last timings to now and reset queued state.
     pub(crate) fn touch(&mut self) {
         self.last_timing = Some(Instant::now());
+        self.queued = false;
     }
 }

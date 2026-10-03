@@ -77,6 +77,12 @@ impl PreviewState {
         }
     }
 
+    /// Clears the pending state to indicate
+    /// that a new preview request can be made
+    pub(crate) fn clear_pending(&mut self) {
+        self.pending = false;
+    }
+
     // Debounce timing for preview render
     pub(crate) fn should_trigger(&self) -> bool {
         self.pending

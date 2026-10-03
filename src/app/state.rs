@@ -312,6 +312,15 @@ impl AppState {
             changed = true;
         }
 
+        // Handle preview request throttling for a tick
+        if self
+            .preview_request_time
+            .take_queued(Timings::PREVIEW_REQUEST_MS)
+        {
+            self.request_preview(workers);
+            changed = true;
+        }
+
         // Find handling with debounce
         if let ActionMode::Input {
             mode: InputMode::Find,
@@ -664,13 +673,14 @@ impl AppState {
                 && !self.preview.data().is_empty()
                 && self.preview.scroll().offset() == self.preview.loaded_scroll()
             {
+                self.preview.clear_pending();
                 return;
             }
 
             if !force
                 && !self
                     .preview_request_time
-                    .can_trigger(Timings::PREVIEW_REQUEST_MS)
+                    .try_trigger(Timings::PREVIEW_REQUEST_MS)
             {
                 return;
             }
