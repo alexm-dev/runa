@@ -20,6 +20,7 @@ All the changes made to runa are documented here.
     - `disk` uses a temporary sandbox directory to bench directory loads and previews on 10k entries.
     - `time` benches entry creation, sorting, filtering, the directory cache and previews.
 - **Library crate**: Moved the code into a library target so the benchmarks can link against it. `rn` is now a wrapper around it.
+- **CI**: Scheduled maintenance checks now run weekly instead of daily.
 
 
 ---

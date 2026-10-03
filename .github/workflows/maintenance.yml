@@ -1,9 +1,8 @@
 name: Weekly Maintenance
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 0 * * 1'
+    - cron: '17 0 * * 1'
 
 permissions:
   contents: read
