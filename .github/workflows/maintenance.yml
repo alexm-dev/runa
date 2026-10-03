@@ -1,13 +1,12 @@
-name: Nightly Maintenance
+name: Weekly Maintenance
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: '15 2 * * *'
+    - cron: '0 0 * * 1'
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   security-audit:
@@ -19,50 +18,51 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Get month
+        id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
       - name: Cache cargo-audit
         id: cache-audit
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/cargo-audit
-          key: ${{ runner.os }}-cargo-audit-v1
+          key: ${{ runner.os }}-cargo-audit-${{ steps.month.outputs.month }}
 
       - name: Install cargo-audit
         if: steps.cache-audit.outputs.cache-hit != 'true'
         run: cargo install cargo-audit
 
       - name: Run Audit
-        run: |
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-          cargo audit --deny warnings
+        run: cargo audit --deny warnings
 
-  rust-future-check:
-    name: Check Rust (${{ matrix.os }} - ${{ matrix.toolchain }})
+  rust-beta-check:
+    name: Check Rust beta (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        toolchain: [beta, nightly]
 
     steps:
       - uses: actions/checkout@v6
       - name: Install Rust Toolchain
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ matrix.toolchain }}
+        uses: dtolnay/rust-toolchain@beta
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          key: ${{ matrix.toolchain }}-${{ matrix.os }}
+          key: beta-${{ matrix.os }}
 
       - name: Run Cargo Check
-        continue-on-error: ${{ matrix.toolchain == 'nightly' }}
         run: cargo check --all-targets --release
 
   codeql-rust:
     name: CodeQL - Rust
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v6
 
@@ -80,6 +80,9 @@ jobs:
   codeql-actions:
     name: CodeQL - Actions
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v6
 
