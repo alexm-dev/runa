@@ -2,6 +2,29 @@
 
 All the changes made to runa are documented here.
 
+## [0.12.1] - UNRELEASED
+
+### Fixed
+- **Preview**: Throttled preview requests are now not dropped. Fixes the delaying of preview requests.
+- **Idling**: Fixed constant redrawing after actions like clearing markers while the preview was already loaded.
+- **File Entries**: Fixed a crash on file names containing certain Unicode characters whose lowercase form has a different length.
+- **Tabs**: Fixed a crash when opening a new tab while the current directory could not be openend.
+
+### Changed
+- **Move file**: The "not a directory" error now shows the target path.
+- **Dependencies**: Updated dependencies.
+
+### Internal
+- **Benchmarks**: Added a benchmarking suite for `time`, `report` and `disk`.
+    - `report` counts allocations and memory per operation
+    - `disk` uses a temporary sandbox directory to bench directory loads and previews on 10k entries.
+    - `time` benches entry creation, sorting, filtering, the directory cache and previews.
+- **Library crate**: Moved the code into a library target so the benchmarks can link against it. `rn` is now a wrapper around it.
+
+
+---
+
+
 ## [0.12.0] - 2026-07-04
 
 #### Stability improvements and pane synchronization.
