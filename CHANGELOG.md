@@ -2,7 +2,9 @@
 
 All the changes made to runa are documented here.
 
-## [0.12.1] - UNRELEASED
+## [0.12.1] - 2026-10-03
+
+#### Stability fixes, plus a benchmarking suite.
 
 ### Fixed
 - **Preview**: Throttled preview requests are now not dropped. Fixes the delaying of preview requests.
