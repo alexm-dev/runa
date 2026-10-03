@@ -42,7 +42,7 @@ impl FileEntry {
 
         let ext_offset = lowered.rsplit_once('.').and_then(|(base, ext)| {
             if !base.is_empty() && !ext.is_empty() {
-                Some((name_str.len() - ext.len()) as u16)
+                Some((lowered.len() - ext.len()) as u16)
             } else {
                 None
             }
