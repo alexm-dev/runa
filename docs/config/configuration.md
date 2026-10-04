@@ -53,7 +53,7 @@ brew install runa
 You can install runa via scoop.
 
 ```bash
-scoop add bucket https://github.com/alexm-dev/scoop-bucket
+scoop bucket add alexm-dev https://github.com/alexm-dev/scoop-bucket
 scoop install runa
 ```
 

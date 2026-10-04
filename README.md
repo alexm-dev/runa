@@ -54,7 +54,7 @@ It allows you to navigate directories, view file listings, and perform typical f
 
 </details>
 
-**runa** is very customizable, checkout the [Configuration](https://alexm-dev.github.io/runa/) docs for all the available options.
+**runa** is very customizable, check out the [Configuration](https://alexm-dev.github.io/runa/) docs for all the available options.
 
 > [!NOTE]
 > **runa** is stable for daily use and actively developed, with new releases expanding its features while keeping it fast and lightweight.  
@@ -96,7 +96,7 @@ brew install runa
 You can install runa via scoop.
 
 ```bash
-scoop add bucket https://github.com/alexm-dev/scoop-bucket
+scoop bucket add alexm-dev https://github.com/alexm-dev/scoop-bucket
 scoop install runa
 ```
 
@@ -210,8 +210,6 @@ This will generate a config in the default config path.
 
 ## Roadmap
 
-runa is in active development, with future releases focusing on expanding functionality while keeping it fast and lightweight.  
-
 ### Planned Features
 
 - [ ] Image Previews: Support for Sixel/Kitty graphics protocols
@@ -240,7 +238,7 @@ If you enjoy using **runa**, you can help the project grow:
 * ⭐ **Star the Repo:** It helps more people discover runa :)
 * 🐛 **Report Bugs:** Open an issue if something doesn't work as expected.
 * 💡 **Feature Requests:** Suggest new ideas in the [Discussions](https://github.com/alexm-dev/runa/discussions) tab.
-* 🦀 **Contribute:** Pull requests are always welcome! Checkout the [CONTRIBUTING guide](CONTRIBUTING.md) for more info.
+* 🦀 **Contribute:** Pull requests are always welcome! Check out the [CONTRIBUTING guide](CONTRIBUTING.md) for more info.
 
 
 ## Special Thanks
