@@ -291,7 +291,7 @@ impl AppState {
         if workers.active_fileops().load(Ordering::Relaxed) > 0 {
             let start = *self.worker_time.get_or_insert_with(Instant::now);
 
-            if start.elapsed() >= Duration::from_millis(200) {
+            if start.elapsed() >= Duration::from_millis(Timings::WORKER_INDICATOR_MS) {
                 changed = true;
             }
         } else if self.worker_time.is_some() {

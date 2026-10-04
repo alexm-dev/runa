@@ -16,6 +16,14 @@ impl Timings {
     pub(crate) const CONFIG_RELOAD_MS: u64 = 1000;
     pub(crate) const UI_RELOAD_MS: u64 = 200;
     pub(crate) const FS_WATCH_DEBOUNCE_MS: u64 = 150;
+    pub(crate) const WORKER_INDICATOR_MS: u64 = 200;
+
+    /// How long short confirmations stay visible.
+    pub(crate) const MESSAGE_SHORT: Duration = Duration::from_secs(2);
+    /// Default message and errors duration.
+    pub(crate) const MESSAGE: Duration = Duration::from_secs(3);
+    /// How long important messages stay visible.
+    pub(crate) const MESSAGE_LONG: Duration = Duration::from_secs(5);
 }
 
 /// Throttler to handle timings and debounce for relevant actions.

@@ -11,10 +11,13 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph},
 };
 
-use crate::app::{AppState, Clipboard};
 use crate::config::display::{StatusSegment, StatusTag};
 use crate::core::workers::Workers;
 use crate::ui::widgets::StatusPosition;
+use crate::{
+    app::{AppState, Clipboard},
+    utils::Timings,
+};
 
 pub(crate) fn draw_separator(frame: &mut Frame, area: Rect, style: Style, border_type: BorderType) {
     frame.render_widget(
@@ -140,7 +143,7 @@ pub(crate) fn draw_status_bar(
 
         if total_ops > 0
             && let Some(start) = app.worker_time()
-            && start.elapsed() >= Duration::from_millis(200)
+            && start.elapsed() >= Duration::from_millis(Timings::WORKER_INDICATOR_MS)
         {
             if active_ops > 0 {
                 let symbols: &[&str] = if use_icons {

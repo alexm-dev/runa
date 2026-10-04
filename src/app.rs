@@ -35,7 +35,6 @@ use crate::{
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 /// The main container enum to hold either the TabManager or a single boxed AppState to then match
 /// either a single state or a tabs which then hold multiple AppStates.
@@ -156,11 +155,11 @@ impl RunaRoot {
         execute!(writer, LeaveAlternateScreen, EnterAlternateScreen, Hide,)?;
         match &mut self.container {
             AppContainer::Single(app) => {
-                app.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2), None);
+                app.push_overlay_message("UI reloaded!".into(), Timings::MESSAGE_SHORT, None);
             }
             AppContainer::Tabs(tabs) => {
                 for tab in &mut tabs.tabs {
-                    tab.push_overlay_message("UI reloaded!".into(), Duration::from_secs(2), None);
+                    tab.push_overlay_message("UI reloaded!".into(), Timings::MESSAGE_SHORT, None);
                 }
             }
         }
@@ -185,7 +184,7 @@ impl RunaRoot {
                         app.apply_new_config(Arc::clone(&new_config));
                         app.push_overlay_message(
                             "Configuration reloaded!".into(),
-                            Duration::from_secs(2),
+                            Timings::MESSAGE_SHORT,
                             None,
                         );
                     }
@@ -196,7 +195,7 @@ impl RunaRoot {
                         tabs.sync_tab_line();
                         tabs.tabs[tabs.current].push_overlay_message(
                             "Configuration reloaded!".into(),
-                            Duration::from_secs(2),
+                            Timings::MESSAGE_SHORT,
                             None,
                         );
                     }
@@ -208,7 +207,7 @@ impl RunaRoot {
                     AppContainer::Single(app) => app,
                     AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],
                 };
-                target_app.push_overlay_message(e, Duration::from_secs(5), None);
+                target_app.push_overlay_message(e, Timings::MESSAGE_LONG, None);
             }
         }
     }
