@@ -136,6 +136,7 @@ impl AppState {
             self.nav_time.touch();
         } else {
             self.preview.mark_pending();
+            self.update_file_info_cache(workers);
         }
     }
 

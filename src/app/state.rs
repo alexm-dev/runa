@@ -225,7 +225,7 @@ impl AppState {
         if !status_info && !info_overlay {
             return;
         }
-        if !self.metadata.can_request(Timings::FILE_INFO_THROTTLE_MS) {
+        if !self.metadata.try_request(Timings::FILE_INFO_THROTTLE_MS) {
             return;
         }
 
@@ -318,6 +318,11 @@ impl AppState {
             .take_queued(Timings::PREVIEW_REQUEST_MS)
         {
             self.request_preview(workers);
+            changed = true;
+        }
+
+        if self.metadata.take_queued(Timings::FILE_INFO_THROTTLE_MS) {
+            self.update_file_info_cache(workers);
             changed = true;
         }
 
@@ -460,10 +465,7 @@ impl AppState {
                 tab_id: _tab_id,
             } => {
                 if self.metadata.matches_pending(request_id, &path) {
-                    if path.parent() == Some(self.nav.current_dir())
-                        && let Some(sel) = self.nav.selected_entry()
-                        && path.file_name() == Some(sel.name())
-                    {
+                    if path.parent() == Some(self.nav.current_dir()) {
                         self.metadata.set_selected(Some(metadata));
                         self.refresh_show_info_if_open();
                     }
