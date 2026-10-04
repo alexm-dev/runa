@@ -47,6 +47,24 @@ impl AppContainer {
     pub(crate) fn create_tabs(tabs: Vec<AppState>) -> Self {
         Self::Tabs(Box::new(tab::TabManager::from_vec(tabs)))
     }
+
+    /// Returns the active app state, the single one or the current tab.
+    #[inline]
+    pub(crate) fn current(&self) -> &AppState {
+        match self {
+            AppContainer::Single(app) => app,
+            AppContainer::Tabs(tabs) => tabs.current_tab(),
+        }
+    }
+
+    /// Returns the mutable app state, the single or the current tab.
+    #[inline]
+    pub(crate) fn current_mut(&mut self) -> &mut AppState {
+        match self {
+            AppContainer::Single(app) => app,
+            AppContainer::Tabs(tabs) => tabs.current_tab_mut(),
+        }
+    }
 }
 
 /// The shared clipboard used by all tabs and all states.
@@ -88,23 +106,12 @@ impl RunaRoot {
     }
 
     pub(crate) fn sync_watch(&mut self) {
-        {
-            let app = match &self.container {
-                AppContainer::Single(app) => app.as_ref(),
-                AppContainer::Tabs(tabs) => &tabs.tabs[tabs.current],
-            };
-            if self.last_watch_dir.as_deref() == Some(app.nav().current_dir()) {
-                return;
-            }
+        let current = self.container.current().nav().current_dir();
+        if self.last_watch_dir.as_deref() == Some(current) {
+            return;
         }
 
-        let current = match &self.container {
-            AppContainer::Single(app) => app.as_ref(),
-            AppContainer::Tabs(tabs) => &tabs.tabs[tabs.current],
-        }
-        .nav()
-        .current_dir()
-        .to_path_buf();
+        let current = current.to_path_buf();
 
         let mut dirs = Vec::with_capacity(2);
         dirs.push(current.clone());
@@ -134,7 +141,7 @@ impl RunaRoot {
                     let target_app = if let Some(id) = response.tab_id() {
                         tabs.tabs.iter_mut().find(|t| t.tab_id == Some(id))
                     } else {
-                        Some(&mut tabs.tabs[tabs.current])
+                        Some(tabs.current_tab_mut())
                     };
 
                     if let Some(app) = target_app {
@@ -193,7 +200,7 @@ impl RunaRoot {
                             tab.apply_new_config(Arc::clone(&new_config));
                         }
                         tabs.sync_tab_line();
-                        tabs.tabs[tabs.current].push_overlay_message(
+                        tabs.current_tab_mut().push_overlay_message(
                             "Configuration reloaded!".into(),
                             Timings::MESSAGE_SHORT,
                             None,
@@ -203,11 +210,9 @@ impl RunaRoot {
             }
             Err(e) => {
                 self.config_reload_throttler.touch();
-                let target_app = match &mut self.container {
-                    AppContainer::Single(app) => app,
-                    AppContainer::Tabs(tabs) => &mut tabs.tabs[tabs.current],
-                };
-                target_app.push_overlay_message(e, Timings::MESSAGE_LONG, None);
+                self.container
+                    .current_mut()
+                    .push_overlay_message(e, Timings::MESSAGE_LONG, None);
             }
         }
     }

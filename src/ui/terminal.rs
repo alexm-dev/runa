@@ -52,10 +52,7 @@ where
     loop {
         let mut changed = root.update();
 
-        changed |= match &mut root.container {
-            AppContainer::Single(app) => app.tick(&root.workers),
-            AppContainer::Tabs(tabs) => tabs.current_tab_mut().tick(&root.workers),
-        };
+        changed |= root.container.current_mut().tick(&root.workers);
 
         if changed {
             root.sync_watch();
@@ -64,15 +61,7 @@ where
                 tabs.sync_tab_line();
             }
 
-            terminal.draw(|f| match &mut root.container {
-                AppContainer::Single(app) => ui::render(f, app, &root.workers, &mut root.clipboard),
-                AppContainer::Tabs(tabs) => ui::render(
-                    f,
-                    tabs.current_tab_mut(),
-                    &root.workers,
-                    &mut root.clipboard,
-                ),
-            })?;
+            draw(terminal, root)?;
         }
 
         // Event Polling
@@ -80,16 +69,11 @@ where
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    let result = match &mut root.container {
-                        AppContainer::Single(app) => {
-                            app.handle_keypress(key, &root.workers, &mut root.clipboard)
-                        }
-                        AppContainer::Tabs(tabs) => tabs.current_tab_mut().handle_keypress(
-                            key,
-                            &root.workers,
-                            &mut root.clipboard,
-                        ),
-                    };
+                    let result = root.container.current_mut().handle_keypress(
+                        key,
+                        &root.workers,
+                        &mut root.clipboard,
+                    );
 
                     match result {
                         KeypressResult::Quit => break,
@@ -118,37 +102,32 @@ where
                         _ => {}
                     }
                     // Redraw after state change
-                    terminal.draw(|f| match &mut root.container {
-                        AppContainer::Single(app) => {
-                            ui::render(f, app, &root.workers, &mut root.clipboard)
-                        }
-                        AppContainer::Tabs(tabs) => ui::render(
-                            f,
-                            tabs.current_tab_mut(),
-                            &root.workers,
-                            &mut root.clipboard,
-                        ),
-                    })?;
+                    draw(terminal, root)?;
                 }
 
                 // handle resize
-                Event::Resize(_, _) => {
-                    terminal.draw(|f| match &mut root.container {
-                        AppContainer::Single(app) => {
-                            ui::render(f, app, &root.workers, &mut root.clipboard)
-                        }
-                        AppContainer::Tabs(tabs) => ui::render(
-                            f,
-                            tabs.current_tab_mut(),
-                            &root.workers,
-                            &mut root.clipboard,
-                        ),
-                    })?;
-                }
+                Event::Resize(_, _) => draw(terminal, root)?,
 
                 _ => {}
             }
         }
     }
+    Ok(())
+}
+
+/// Draws the active app state to the terminal.
+fn draw<B>(terminal: &mut Terminal<B>, root: &mut RunaRoot) -> io::Result<()>
+where
+    B: Backend,
+    io::Error: From<<B as Backend>::Error>,
+{
+    terminal.draw(|f| {
+        ui::render(
+            f,
+            root.container.current_mut(),
+            &root.workers,
+            &mut root.clipboard,
+        );
+    })?;
     Ok(())
 }
