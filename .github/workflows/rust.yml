@@ -72,12 +72,12 @@ jobs:
           mkdir -p "$INSTALL_DIR"
 
           echo "Downloading cross $CROSS_VERSION using gh CLI..."
-          gh release download "v0.2.5" \
+          gh release download "$CROSS_VERSION" \
             --repo cross-rs/cross \
-            --pattern "cross-x86_64-unknown-linux-gnu.tar.gz" \
+            --pattern "$PACKAGE_NAME" \
             -D "$INSTALL_DIR"
 
-          tar -xzf "$INSTALL_DIR/cross-x86_64-unknown-linux-gnu.tar.gz" -C "$INSTALL_DIR"
+          tar -xzf "$INSTALL_DIR/$PACKAGE_NAME" -C "$INSTALL_DIR"
           echo "$INSTALL_DIR" >> $GITHUB_PATH
 
       - name: Install dependencies (Linux)
@@ -150,19 +150,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: Swatinem/rust-cache@v2
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+
+      - name: Get month
+        id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+
       - name: Cache cargo-audit
+        id: cache-audit
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/cargo-audit
-          key: cargo-audit-bin-v1
-      - name: Install cargo-audit (if missing)
-        run: |
-          if ! command -v cargo-audit &> /dev/null; then
-            cargo install cargo-audit
-          fi
+          key: ${{ runner.os }}-cargo-audit-${{ steps.month.outputs.month }}
+
+      - name: Install cargo-audit
+        if: steps.cache-audit.outputs.cache-hit != 'true'
+        run: cargo install cargo-audit
+
       - name: Run Audit
         run: cargo audit --deny warnings

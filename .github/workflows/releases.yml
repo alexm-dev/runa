@@ -77,12 +77,12 @@ jobs:
           mkdir -p "$INSTALL_DIR"
 
           echo "Downloading cross $CROSS_VERSION using gh CLI..."
-          gh release download "v0.2.5" \
+          gh release download "$CROSS_VERSION" \
             --repo cross-rs/cross \
-            --pattern "cross-x86_64-unknown-linux-gnu.tar.gz" \
+            --pattern "$PACKAGE_NAME" \
             -D "$INSTALL_DIR"
 
-          tar -xzf "$INSTALL_DIR/cross-x86_64-unknown-linux-gnu.tar.gz" -C "$INSTALL_DIR"
+          tar -xzf "$INSTALL_DIR/$PACKAGE_NAME" -C "$INSTALL_DIR"
           echo "$INSTALL_DIR" >> $GITHUB_PATH
 
       - name: Build
