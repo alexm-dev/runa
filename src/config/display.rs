@@ -9,6 +9,17 @@ use serde::{Deserialize, Deserializer};
 
 use crate::ui::widgets::DialogPosition;
 
+/// Default date format of the sort column.
+const SORT_DATE_FORMAT: &str = "%b %e %H:%M";
+/// Default date format of the info dialog and status line.
+const INFO_DATE_FORMAT: &str = "%Y-%m-%d %H:%M";
+/// Default format of the status line.
+const STATUS_FORMAT: &str = "{perms} | {size}";
+/// Longest accepted sort date format, it has to fit in the sort column.
+const MAX_SORT_DATE_FORMAT_LEN: usize = 32;
+/// Longest accepted info date format.
+const MAX_INFO_DATE_FORMAT_LEN: usize = 64;
+
 /// Display configuration options
 ///
 /// This struct holds various options related to the display of the file manager,
@@ -37,10 +48,7 @@ pub(crate) struct Display {
     scroll_padding: usize,
     toggle_marker_jump: bool,
     instant_preview: bool,
-    #[serde(
-        default = "Display::default_sort_date_format",
-        deserialize_with = "deserialize_sort_date_format"
-    )]
+    #[serde(deserialize_with = "deserialize_sort_date_format")]
     sort_date_format: String,
     preview_options: PreviewOptions,
     layout: LayoutConfig,
@@ -100,10 +108,6 @@ impl Display {
         self.layout.preview_ratio()
     }
 
-    fn default_sort_date_format() -> String {
-        "%b %e %H:%M".to_string()
-    }
-
     /// Get padding string based on entry_padding
     pub(crate) fn padding_str(&self) -> &'static str {
         // ASCII whitespaces
@@ -136,7 +140,7 @@ impl Default for Display {
             scroll_padding: 5,
             toggle_marker_jump: false,
             instant_preview: true,
-            sort_date_format: Display::default_sort_date_format(),
+            sort_date_format: SORT_DATE_FORMAT.to_string(),
             layout: LayoutConfig::default(),
             preview_options: PreviewOptions::default(),
             info: ShowInfoOptions::default(),
@@ -179,7 +183,8 @@ impl Default for LayoutConfig {
 /// that can be displayed, as well as an optional position for the dialog
 ///
 /// Positions can be specified using the DialogPosition enum
-#[derive(Debug)]
+#[derive(Deserialize, Debug)]
+#[serde(default)]
 pub(crate) struct ShowInfoOptions {
     name: bool,
     file_type: bool,
@@ -194,18 +199,13 @@ pub(crate) struct ShowInfoOptions {
     group: bool,
     position: Option<DialogPosition>,
     status_bar: bool,
-    format: Option<String>,
-    date_format: String,
+    #[serde(rename = "format", deserialize_with = "deserialize_status_format")]
     segments: Vec<StatusSegment>,
+    #[serde(deserialize_with = "deserialize_info_date_format")]
+    date_format: String,
 }
 
 impl ShowInfoOptions {
-    pub(crate) fn init_status_format(&mut self) {
-        if let Some(fmt) = &self.format {
-            self.segments = parse_status_format(fmt);
-        }
-    }
-
     crate::getters! {
         name: bool,
         file_type: bool,
@@ -226,90 +226,12 @@ impl ShowInfoOptions {
         segments: &[StatusSegment],
 
     }
-
-    fn validate_date_format(fmt: Option<String>) -> String {
-        validate_strftime_format(fmt, "%Y-%m-%d %H:%M", 64)
-    }
-}
-
-impl<'de> Deserialize<'de> for ShowInfoOptions {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(default)]
-        struct Helper {
-            name: bool,
-            file_type: bool,
-            size: bool,
-            modified: bool,
-            created: bool,
-            accessed: bool,
-            perms: bool,
-            #[cfg(unix)]
-            owner: bool,
-            #[cfg(unix)]
-            group: bool,
-            position: Option<DialogPosition>,
-            status_bar: bool,
-            format: Option<String>,
-            date_format: Option<String>,
-        }
-
-        impl Default for Helper {
-            fn default() -> Self {
-                let def = ShowInfoOptions::default();
-                Self {
-                    name: def.name,
-                    file_type: def.file_type,
-                    size: def.size,
-                    modified: def.modified,
-                    created: def.created,
-                    accessed: def.accessed,
-                    perms: def.perms,
-                    #[cfg(unix)]
-                    owner: def.owner,
-                    #[cfg(unix)]
-                    group: def.group,
-                    position: def.position,
-                    status_bar: def.status_bar,
-                    format: def.format,
-                    date_format: Some(def.date_format),
-                }
-            }
-        }
-
-        let h = Helper::deserialize(deserializer)?;
-
-        let mut info = ShowInfoOptions {
-            name: h.name,
-            file_type: h.file_type,
-            size: h.size,
-            modified: h.modified,
-            created: h.created,
-            accessed: h.accessed,
-            perms: h.perms,
-            #[cfg(unix)]
-            owner: h.owner,
-            #[cfg(unix)]
-            group: h.group,
-            position: h.position,
-            status_bar: h.status_bar,
-            format: h.format,
-            date_format: ShowInfoOptions::validate_date_format(h.date_format),
-            segments: Vec::new(),
-        };
-
-        info.init_status_format();
-        Ok(info)
-    }
 }
 
 // Default show info configuration options
 impl Default for ShowInfoOptions {
     fn default() -> Self {
-        let mut options = ShowInfoOptions {
+        ShowInfoOptions {
             name: true,
             file_type: false,
             size: true,
@@ -323,13 +245,9 @@ impl Default for ShowInfoOptions {
             group: true,
             position: None,
             status_bar: true,
-            format: Some("{perms} | {size}".to_string()),
-            date_format: "%Y-%m-%d %H:%M".to_string(),
-            segments: Vec::new(),
-        };
-
-        options.init_status_format();
-        options
+            segments: parse_status_format(STATUS_FORMAT),
+            date_format: INFO_DATE_FORMAT.to_string(),
+        }
     }
 }
 
@@ -612,5 +530,29 @@ where
     D: Deserializer<'de>,
 {
     let raw: Option<String> = Option::<String>::deserialize(deserializer)?;
-    Ok(validate_strftime_format(raw, "%b %e %H:%M", 32))
+    Ok(validate_strftime_format(
+        raw,
+        SORT_DATE_FORMAT,
+        MAX_SORT_DATE_FORMAT_LEN,
+    ))
+}
+
+fn deserialize_status_format<'de, D>(deserializer: D) -> Result<Vec<StatusSegment>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let format = String::deserialize(deserializer)?;
+    Ok(parse_status_format(&format))
+}
+
+fn deserialize_info_date_format<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = Option::<String>::deserialize(deserializer)?;
+    Ok(validate_strftime_format(
+        raw,
+        INFO_DATE_FORMAT,
+        MAX_INFO_DATE_FORMAT_LEN,
+    ))
 }
