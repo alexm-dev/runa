@@ -45,7 +45,7 @@ pub(crate) fn render(
 
     let accent_style = theme_cfg.accent_style();
 
-    let border_type = display_cfg.border_shape().as_border_type();
+    let border_type = display_cfg.border_type();
 
     let markers = app.nav().markers();
     let marker_theme = theme_cfg.marker();
@@ -266,7 +266,7 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
     let display_cfg = cfg.display();
     let theme_cfg = cfg.theme();
     let path_str = app.nav().display_path();
-    let border_type = display_cfg.border_shape().as_border_type();
+    let border_type = display_cfg.border_type();
 
     if display_cfg.is_unified() {
         let mut outer_block = Block::default()

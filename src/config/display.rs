@@ -19,6 +19,8 @@ const STATUS_FORMAT: &str = "{perms} | {size}";
 const MAX_SORT_DATE_FORMAT_LEN: usize = 32;
 /// Longest accepted info date format.
 const MAX_INFO_DATE_FORMAT_LEN: usize = 64;
+/// Info widget dialog position default variable.
+const DEFAULT_INFO_POSITION: DialogPosition = DialogPosition::BottomLeft;
 
 /// Display configuration options
 ///
@@ -61,7 +63,6 @@ impl Display {
     crate::getters! {
         selection_marker: bool,
         dir_marker: bool,
-        border_shape: &BorderShape,
         titles: bool,
         icons: bool,
         separators: bool,
@@ -91,6 +92,11 @@ impl Display {
     #[inline]
     pub(crate) fn is_no_borders(&self) -> bool {
         matches!(self.borders, BorderStyle::None)
+    }
+
+    #[inline]
+    pub(crate) fn border_type(&self) -> BorderType {
+        self.border_shape.as_border_type()
     }
 
     #[inline]
@@ -220,11 +226,16 @@ impl ShowInfoOptions {
         #[cfg(unix)]
         group: bool,
 
-        position: &Option<DialogPosition>,
         status_bar: bool,
         date_format: &str,
         segments: &[StatusSegment],
 
+    }
+
+    /// Returns the info widget dialog position with the default as a fallback
+    #[inline]
+    pub(crate) fn position(&self) -> DialogPosition {
+        self.position.unwrap_or(DEFAULT_INFO_POSITION)
     }
 }
 

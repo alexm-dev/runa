@@ -27,9 +27,8 @@ pub(crate) fn draw_show_info_dialog(
     let label_style = theme.widget().label_style_or_theme();
     let value_style = theme.widget().value_style_or_theme();
 
-    let position =
-        widgets::dialog_position_unified(info_cfg.position(), app, DialogPosition::BottomLeft);
-    let border_type = app.config().display().border_shape().as_border_type();
+    let position = widgets::dialog_position_unified(info_cfg.position(), app);
+    let border_type = app.config().display().border_type();
 
     let mut lines: Vec<Line> = Vec::with_capacity(9);
 
@@ -110,7 +109,7 @@ pub(crate) fn draw_show_info_dialog(
 pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent_style: Style) {
     let widget = app.config().theme().widget();
     let area = frame.area();
-    let border_type = app.config().display().border_shape().as_border_type();
+    let border_type = app.config().display().border_type();
     let keys = app.config().keys();
     let go_to_top_keys = keys.go_to_top();
     let go_to_home_keys = keys.go_to_home();
@@ -231,7 +230,7 @@ pub(crate) fn draw_message_overlay(
     alignment: Alignment,
 ) {
     let position = DialogPosition::BottomRight;
-    let border_type = app.config().display().border_shape().as_border_type();
+    let border_type = app.config().display().border_type();
 
     let mut max_line_width = 0;
     let mut line_count = 0;
@@ -365,9 +364,9 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
     let widget = app.config().theme().widget();
     let area = frame.area();
 
-    let position = widgets::dialog_position_unified(widget.position(), app, DialogPosition::Center);
+    let position = widgets::dialog_position_unified(widget.position(), app);
 
-    let border_type = app.config().display().border_shape().as_border_type();
+    let border_type = app.config().display().border_type();
     let dim_style = Style::default().add_modifier(Modifier::DIM);
     let header_style = app.config().theme().widget().label_style_or_theme();
     let key_style = app.config().theme().widget().value_style_or_theme();

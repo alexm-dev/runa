@@ -12,7 +12,7 @@ use crate::app::{
     AppState,
     actions::{ActionMode, InputMode},
 };
-use crate::config::dialog::{DialogPosition, DialogSize};
+use crate::config::dialog::DialogSize;
 use crate::ui::widgets::{self, DialogLayout};
 use crate::utils::path;
 
@@ -21,11 +21,10 @@ use crate::utils::path;
 pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style: Style) {
     if let ActionMode::Input { mode, prompt } = &app.actions().mode() {
         let widget = app.config().theme().widget();
-        let position =
-            widgets::dialog_position_unified(widget.position(), app, DialogPosition::Center);
+        let position = widgets::dialog_position_unified(widget.position(), app);
         let size = widget.size();
         let move_size = widget.move_size();
-        let border_type = app.config().display().border_shape().as_border_type();
+        let border_type = app.config().display().border_type();
 
         match mode {
             InputMode::ConfirmDelete { is_trash } => {
@@ -285,14 +284,14 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     let base_dir = app.nav().current_dir();
     let area = frame.area();
 
-    let position = widgets::dialog_position_unified(widget.position(), app, DialogPosition::Center);
+    let position = widgets::dialog_position_unified(widget.position(), app);
     let columns = widget.find_width().min(area.width).max(20);
 
     let max_visible = widget.find_visible_results();
     let rows = max_visible as u16 + 4;
 
     let size = DialogSize::Custom(columns, rows);
-    let border_type = app.config().display().border_shape().as_border_type();
+    let border_type = app.config().display().border_type();
 
     let input_text = actions.input_buffer();
     let cursor_pos = actions.input_cursor_pos();

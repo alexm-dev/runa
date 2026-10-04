@@ -51,12 +51,6 @@ pub(super) fn adjusted_dialog_position(pos: DialogPosition, is_unified: bool) ->
     }
 }
 
-pub(super) fn dialog_position_unified(
-    configured: &Option<DialogPosition>,
-    app: &AppState,
-    fallback: DialogPosition,
-) -> DialogPosition {
-    let display_cfg = app.config().display();
-    let base = configured.unwrap_or(fallback);
-    adjusted_dialog_position(base, display_cfg.is_unified())
+pub(super) fn dialog_position_unified(position: DialogPosition, app: &AppState) -> DialogPosition {
+    adjusted_dialog_position(position, app.config().display().is_unified())
 }

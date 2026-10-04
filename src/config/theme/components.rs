@@ -135,10 +135,6 @@ pub(crate) struct WidgetTheme {
 }
 
 impl WidgetTheme {
-    crate::getters! {
-        position: &Option<DialogPosition>,
-    }
-
     builtin_styles! { in widget:
         title_style_or_theme => title,
         value_style_or_theme => value,
@@ -146,8 +142,15 @@ impl WidgetTheme {
     }
 
     /// Dialog size for widgets.
+    #[inline]
     pub(crate) fn size(&self) -> DialogSize {
         self.size.unwrap_or(DEFAULT_DIALOG_SIZE)
+    }
+
+    /// Returns the position for widgets with default position as fallback
+    #[inline]
+    pub(crate) fn position(&self) -> DialogPosition {
+        self.position.unwrap_or(DEFAULT_DIALOG_POSITION)
     }
 
     /// Returns the confirm dialog widget size, falling back to the default size
