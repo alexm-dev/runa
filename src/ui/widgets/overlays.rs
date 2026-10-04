@@ -8,9 +8,12 @@ use ratatui::{
 };
 
 use crate::app::AppState;
-use crate::config::input::InputKeys;
+use crate::config::{
+    dialog::{DialogPosition, DialogSize},
+    input::InputKeys,
+};
 use crate::core::metadata::FileMetadataCache;
-use crate::ui::widgets::{self, DialogLayout, DialogPosition, DialogSize};
+use crate::ui::widgets::{self, DialogLayout};
 
 pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,

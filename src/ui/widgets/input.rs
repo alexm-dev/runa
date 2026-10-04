@@ -12,7 +12,8 @@ use crate::app::{
     AppState,
     actions::{ActionMode, InputMode},
 };
-use crate::ui::widgets::{self, DialogLayout, DialogPosition, DialogSize};
+use crate::config::dialog::{DialogPosition, DialogSize};
+use crate::ui::widgets::{self, DialogLayout};
 use crate::utils::path;
 
 /// Either for ConfirmDelete or for anything else that requires input.
@@ -22,13 +23,13 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
         let widget = app.config().theme().widget();
         let position =
             widgets::dialog_position_unified(widget.position(), app, DialogPosition::Center);
-        let size = widget.size().unwrap_or(DialogSize::Small);
-        let move_size = widget.move_size_or(DialogSize::Custom(70, 14));
+        let size = widget.size();
+        let move_size = widget.move_size();
         let border_type = app.config().display().border_shape().as_border_type();
 
         match mode {
             InputMode::ConfirmDelete { is_trash } => {
-                let confirm_size = widget.confirm_size_or(DialogSize::Large);
+                let confirm_size = widget.confirm_size();
                 let mut targets: Vec<String> = app
                     .nav()
                     .get_action_targets()
@@ -175,7 +176,7 @@ pub(crate) fn draw_input_dialog(frame: &mut Frame, app: &AppState, accent_style:
             }
 
             InputMode::ConfirmOverwrite { is_dir, old, new } => {
-                let confirm_size = widget.confirm_size_or(DialogSize::Large);
+                let confirm_size = widget.confirm_size();
 
                 let target_name = new
                     .as_ref()
@@ -285,12 +286,9 @@ pub(crate) fn draw_find_dialog(frame: &mut Frame, app: &AppState, accent_style: 
     let area = frame.area();
 
     let position = widgets::dialog_position_unified(widget.position(), app, DialogPosition::Center);
-    let columns = widget
-        .find_width_or(area.width.saturating_sub(8).clamp(20, 80))
-        .min(area.width)
-        .max(20);
+    let columns = widget.find_width().min(area.width).max(20);
 
-    let max_visible = widget.find_visible_or(5);
+    let max_visible = widget.find_visible_results();
     let rows = max_visible as u16 + 4;
 
     let size = DialogSize::Custom(columns, rows);

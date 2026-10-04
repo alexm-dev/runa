@@ -7,7 +7,7 @@ use chrono::format::{Item, StrftimeItems};
 use ratatui::widgets::BorderType;
 use serde::{Deserialize, Deserializer};
 
-use crate::ui::widgets::DialogPosition;
+use crate::config::dialog::DialogPosition;
 
 /// Default date format of the sort column.
 const SORT_DATE_FORMAT: &str = "%b %e %H:%M";

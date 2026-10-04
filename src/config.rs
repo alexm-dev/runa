@@ -4,6 +4,7 @@
 //! configuration options for runa, including display settings, input keybindings,
 
 pub(crate) mod assets;
+pub(crate) mod dialog;
 pub(crate) mod display;
 pub(crate) mod general;
 pub(crate) mod input;

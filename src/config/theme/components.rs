@@ -5,9 +5,18 @@ use serde::Deserialize;
 
 use crate::config::{
     Theme,
+    dialog::{DialogPosition, DialogSize},
     theme::{ColorFallback, ColorPair, builtin_styles, deserialize_color_field},
 };
-use crate::ui::widgets::{DialogPosition, DialogSize};
+
+const DEFAULT_DIALOG_POSITION: DialogPosition = DialogPosition::Center;
+const DEFAULT_DIALOG_SIZE: DialogSize = DialogSize::Small;
+const DEFAULT_CONFIRM_SIZE: DialogSize = DialogSize::Large;
+const DEFAULT_MOVE_SIZE: DialogSize = DialogSize::Custom(70, 14);
+const DEFAULT_FIND_VISIBLE_RESULTS: usize = 8;
+const DEFAULT_FIND_WIDTH: u16 = 60;
+const DEFAULT_GO_TO_HELP_SIZE: DialogSize = DialogSize::Custom(58, 3);
+const DEFAULT_GO_TO_HELP_POSITION: DialogPosition = DialogPosition::Bottom;
 
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
@@ -128,9 +137,6 @@ pub(crate) struct WidgetTheme {
 impl WidgetTheme {
     crate::getters! {
         position: &Option<DialogPosition>,
-        size: &Option<DialogSize>,
-        confirm_size: &Option<DialogSize>,
-        move_size: &Option<DialogSize>,
     }
 
     builtin_styles! { in widget:
@@ -139,21 +145,21 @@ impl WidgetTheme {
         label_style_or_theme => label,
     }
 
-    /// Returns the confirm dialog size, falling back to the general size, and then to the provided fallback.
-    pub(crate) fn confirm_size_or(&self, fallback: DialogSize) -> DialogSize {
-        self.confirm_size()
-            .as_ref()
-            .or_else(|| self.size().as_ref())
-            .copied()
-            .unwrap_or(fallback)
+    /// Dialog size for widgets.
+    pub(crate) fn size(&self) -> DialogSize {
+        self.size.unwrap_or(DEFAULT_DIALOG_SIZE)
     }
 
-    pub(crate) fn move_size_or(&self, fallback: DialogSize) -> DialogSize {
-        self.move_size()
-            .as_ref()
-            .or_else(|| self.size().as_ref())
-            .copied()
-            .unwrap_or(fallback)
+    /// Returns the confirm dialog widget size, falling back to the default size
+    pub(crate) fn confirm_size(&self) -> DialogSize {
+        self.confirm_size
+            .or(self.size)
+            .unwrap_or(DEFAULT_CONFIRM_SIZE)
+    }
+
+    /// Returns the move widget dialog size, falling back to the default size
+    pub(crate) fn move_size(&self) -> DialogSize {
+        self.move_size.or(self.size).unwrap_or(DEFAULT_MOVE_SIZE)
     }
 
     /// Returns the border style, falling back to the provided style for Reset colors.
@@ -176,28 +182,26 @@ impl WidgetTheme {
         self.color_or(Theme::builtin().widget.color.bg_style())
     }
 
-    /// Returns the number of visible results in the find dialog, falling back to the provided fallback.
-    pub(crate) fn find_visible_or(&self, fallback: usize) -> usize {
-        self.find_visible_results.unwrap_or(fallback)
+    /// Returns the number of visible results in the find dialog,
+    /// falling back to the default result count
+    pub(crate) fn find_visible_results(&self) -> usize {
+        self.find_visible_results
+            .unwrap_or(DEFAULT_FIND_VISIBLE_RESULTS)
     }
 
-    /// Returns the width of the find dialog, falling back to the provided fallback.
-    pub(crate) fn find_width_or(&self, fallback: u16) -> u16 {
-        self.find_width.unwrap_or(fallback)
+    /// Returns the width of the find dialog, falling back to the default find widget width
+    pub(crate) fn find_width(&self) -> u16 {
+        self.find_width.unwrap_or(DEFAULT_FIND_WIDTH)
     }
 
     pub(crate) fn go_to_help_size(&self) -> DialogSize {
-        self.go_to_help
-            .size
-            .or(Theme::builtin().widget.go_to_help.size)
-            .unwrap_or(DialogSize::Custom(38, 3))
+        self.go_to_help.size.unwrap_or(DEFAULT_GO_TO_HELP_SIZE)
     }
 
     pub(crate) fn go_to_help_position(&self) -> DialogPosition {
         self.go_to_help
             .position
-            .or(Theme::builtin().widget.go_to_help.position)
-            .unwrap_or(DialogPosition::Bottom)
+            .unwrap_or(DEFAULT_GO_TO_HELP_POSITION)
     }
 
     pub(crate) fn from_palette(primary: Color, secondary: Color, surface: Color) -> Self {
@@ -220,12 +224,12 @@ impl Default for WidgetTheme {
             title: ColorPair::new(Color::Magenta, Color::Reset),
             label: ColorPair::new(Color::Blue, Color::Reset),
             value: ColorPair::new(Color::Cyan, Color::Reset),
-            position: Some(DialogPosition::Center),
-            size: Some(DialogSize::Small),
-            confirm_size: Some(DialogSize::Large),
-            move_size: Some(DialogSize::Custom(70, 14)),
-            find_visible_results: Some(8),
-            find_width: Some(60),
+            position: Some(DEFAULT_DIALOG_POSITION),
+            size: Some(DEFAULT_DIALOG_SIZE),
+            confirm_size: Some(DEFAULT_CONFIRM_SIZE),
+            move_size: Some(DEFAULT_MOVE_SIZE),
+            find_visible_results: Some(DEFAULT_FIND_VISIBLE_RESULTS),
+            find_width: Some(DEFAULT_FIND_WIDTH),
             go_to_help: GoToHelpTheme::default(),
         }
     }
@@ -412,8 +416,8 @@ pub(super) struct GoToHelpTheme {
 impl Default for GoToHelpTheme {
     fn default() -> Self {
         GoToHelpTheme {
-            size: Some(DialogSize::Custom(58, 3)),
-            position: Some(DialogPosition::Bottom),
+            size: Some(DEFAULT_GO_TO_HELP_SIZE),
+            position: Some(DEFAULT_GO_TO_HELP_POSITION),
         }
     }
 }
