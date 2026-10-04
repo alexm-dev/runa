@@ -56,8 +56,9 @@ It allows you to navigate directories, view file listings, and perform typical f
 
 **runa** is very customizable, checkout the [Configuration](https://alexm-dev.github.io/runa/) docs for all the available options.
 
-> [!IMPORTANT]
-> **runa** is a work in progress. It is being actively developed and features may change over time.
+> [!NOTE]
+> **runa** is stable for daily use and actively developed, with new releases expanding its features while keeping it fast and lightweight.  
+> Configuration options may still change between releases.
 
 ## Changelog
 For a detailed list of changes and release notes, see [CHANGELOG.md](./CHANGELOG.md).
