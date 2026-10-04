@@ -15,11 +15,12 @@ use std::sync::Arc;
 use serde::Deserialize;
 
 /// The minimum results which is set to if the maximum is overset in the runa.toml.
-pub(crate) const MIN_FIND_RESULTS: usize = 15;
+const MIN_FIND_RESULTS: usize = 15;
 /// The maximum find result limit which is possible.
 /// Can be set higher, but better to set it to a big limit instead of usize::MAX
-pub(crate) const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
-pub(crate) const DEFAULT_FIND_RESULTS: usize = 20000;
+const MAX_FIND_RESULTS_LIMIT: usize = 1000000;
+/// Find result limit when nothing is configured.
+const DEFAULT_FIND_RESULTS: usize = 20000;
 
 #[derive(Deserialize, Debug)]
 #[serde(default)]

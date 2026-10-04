@@ -225,7 +225,7 @@ impl AppState {
         if !status_info && !info_overlay {
             return;
         }
-        if !self.metadata.can_request(Timings::FILE_INFO_DEBOUNCE_MS) {
+        if !self.metadata.can_request(Timings::FILE_INFO_THROTTLE_MS) {
             return;
         }
 

@@ -28,16 +28,27 @@ use crate::core::{
 };
 use crate::utils::os;
 
-// Minimum number of lines shown in any preview
+/// Minimum number of lines shown in any preview
 const MIN_PREVIEW_LINES: usize = 3;
-// Maximum file size allowed for preview (5gb)
+/// Maximum file size allowed for preview (5gb)
 const MAX_PREVIEW_SIZE: u64 = 5_000 * 1024 * 1024;
-// Number of bytes to peek from file start for header checks (eg. PNG, ZIP, etc..)
+/// Number of bytes to peek from file start for header checks (eg. PNG, ZIP, etc..)
 const HEADER_PEEK_BYTES: usize = 8;
-// Bytes to peek for null bytes in binary detections
+/// Bytes to peek for null bytes in binary detections
 const BINARY_PEEK_BYTES: usize = 1024;
-// CachedMetaKey limit to prevent memory growth during sorting by metadata.
+/// CachedMetaKey limit to prevent memory growth during sorting by metadata.
 const HARD_SORT_CACHE_LIMIT: usize = 40_000;
+
+/// Size of the buffer used to read files for previews.
+const READ_BUFFER_SIZE: usize = 64 * 1024;
+/// Maximum bytes kept per preview lines.
+/// Longer lines are cut to keep previews for minified files fast.
+const MAX_LINE_BYTES: usize = 1024;
+
+/// Message shown instead of a preview for anything that is not a regular file.
+const NOT_REGULAR_FILE_MSG: &str = "[Not a regular file - preview skipped]";
+/// Message shown instead of a preview for binary files.
+const BINARY_FILE_PREVIEW_MSG: &str = "[Binary file - preview hidden]";
 
 #[derive(Clone, Copy)]
 enum MetadataSortField {
@@ -563,10 +574,7 @@ pub(crate) fn safe_read_preview(
     let max_lines = std::cmp::max(max_lines, MIN_PREVIEW_LINES);
 
     if !os::is_regular_file(path) {
-        return vec![sanitize_to_exact_width(
-            "[Not a regular file - preview skipped]",
-            pane_width,
-        )];
+        return vec![sanitize_to_exact_width(NOT_REGULAR_FILE_MSG, pane_width)];
     }
 
     // File Read and binary Check
@@ -574,10 +582,7 @@ pub(crate) fn safe_read_preview(
         Ok(mut file) => {
             if let Ok(metadata) = file.metadata() {
                 if !metadata.is_file() {
-                    return vec![sanitize_to_exact_width(
-                        "[Not a regular file - preview skipped]",
-                        pane_width,
-                    )];
+                    return vec![sanitize_to_exact_width(NOT_REGULAR_FILE_MSG, pane_width)];
                 }
 
                 if metadata.len() > MAX_PREVIEW_SIZE {
@@ -596,24 +601,18 @@ pub(crate) fn safe_read_preview(
             let header = &buffer[..header_len];
 
             if header.len() >= 5 && &header[..5] == b"%PDF-" {
-                return vec![sanitize_to_exact_width(
-                    "[Binary file - preview hidden]",
-                    pane_width,
-                )];
+                return vec![sanitize_to_exact_width(BINARY_FILE_PREVIEW_MSG, pane_width)];
             }
 
             if buffer[..n].contains(&0) {
-                return vec![sanitize_to_exact_width(
-                    "[Binary file - preview hidden]",
-                    pane_width,
-                )];
+                return vec![sanitize_to_exact_width(BINARY_FILE_PREVIEW_MSG, pane_width)];
             }
 
             // Rewind to start for full read
             let _ = file.rewind();
 
-            let mut reader = BufReader::with_capacity(64 * 1024, file);
-            let mut buf = [0u8; 64 * 1024];
+            let mut reader = BufReader::with_capacity(READ_BUFFER_SIZE, file);
+            let mut buf = [0u8; READ_BUFFER_SIZE];
 
             let mut preview_lines = Vec::with_capacity(max_lines);
             let mut current_line = Vec::with_capacity(256);
@@ -649,7 +648,7 @@ pub(crate) fn safe_read_preview(
                         current_line.clear();
                         line_idx += 1;
                     } else {
-                        if current_line.len() < 1024 {
+                        if current_line.len() < MAX_LINE_BYTES {
                             current_line.push(b);
                         }
                     }

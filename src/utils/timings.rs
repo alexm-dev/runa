@@ -1,7 +1,7 @@
-//! Timings module for AppState, handling the throttling
-//! and or debounce for relevant actions.
+//! Timings for runa.
 //!
-//! Throttler to wrap each timing into a check first before debouncing a request.
+//! Holds the throttle times, delays and message durations used across the codebase,
+//! and the Throttler that enforces throttle times.
 
 use std::time::{Duration, Instant};
 
@@ -9,15 +9,30 @@ use std::time::{Duration, Instant};
 pub(crate) struct Timings;
 
 impl Timings {
+    // Throttlers
+    /// Minimum time between two preview requests.
+    /// Refused requests are sent once the time has passed.
     pub(crate) const PREVIEW_REQUEST_MS: u64 = 30;
-    pub(crate) const PREVIEW_DEBOUNCE_MS: u64 = 35;
+    /// Minimum time between two navigation moves that refresh the preview
+    /// and file info right away.
     pub(crate) const NAV_THROTTLE_MS: u64 = 15;
-    pub(crate) const FILE_INFO_DEBOUNCE_MS: u64 = 60;
+    /// Minimum time between two file info requests.
+    pub(crate) const FILE_INFO_THROTTLE_MS: u64 = 60;
+    /// Minimum time between two config reloads.
     pub(crate) const CONFIG_RELOAD_MS: u64 = 1000;
+    /// Minimum time between two manual UI reloads.
     pub(crate) const UI_RELOAD_MS: u64 = 200;
+
+    // Delays
+    /// Time a pending preview refresh waits before it is requested.
+    pub(crate) const PREVIEW_DEBOUNCE_MS: u64 = 35;
+    /// Time the watcher collects file system events
+    /// before it reports the changed directories.
     pub(crate) const FS_WATCH_DEBOUNCE_MS: u64 = 150;
+    /// Time a file operation runs before the status line shows it.
     pub(crate) const WORKER_INDICATOR_MS: u64 = 200;
 
+    // Message durations
     /// How long short confirmations stay visible.
     pub(crate) const MESSAGE_SHORT: Duration = Duration::from_secs(2);
     /// Default message and errors duration.

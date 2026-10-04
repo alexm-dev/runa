@@ -24,6 +24,7 @@ use crate::core::metadata::CachedMetaKey;
 use crate::core::sort::{SortConfig, SortMode, SortOrder};
 use crate::core::workers::Workers;
 use crate::core::{FileEntry, Formatter, fm, formatter};
+use crate::ui::terminal::POLL_INTERVAL;
 use crate::utils::text::StrBuffer;
 
 /// Directory the generated entries pretend to live in. Never touched on disk.
@@ -380,9 +381,6 @@ impl IdleFixture {
     /// Runs the event loop without input and returns the number of redraws.
     /// Should always be zero.
     pub fn run(&mut self, duration: Duration) -> usize {
-        // Same 16 ms poll interval as the real event loop
-        const FRAME: Duration = Duration::from_millis(16);
-
         let end = Instant::now() + duration;
         let mut redraws = 0;
         while Instant::now() < end {
@@ -393,7 +391,7 @@ impl IdleFixture {
             }
             changed |= self.app.tick(&self.workers);
             redraws += usize::from(changed);
-            std::thread::sleep(FRAME);
+            std::thread::sleep(POLL_INTERVAL);
         }
         redraws
     }

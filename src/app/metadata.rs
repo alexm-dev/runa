@@ -36,8 +36,8 @@ impl MetadataState {
         self.pending.as_ref().is_some_and(|(_, p)| p == path)
     }
 
-    pub(super) fn can_request(&self, debounce_ms: u64) -> bool {
-        self.last_request_time.can_trigger(debounce_ms)
+    pub(super) fn can_request(&self, throttle_ms: u64) -> bool {
+        self.last_request_time.can_trigger(throttle_ms)
     }
 
     pub(super) fn touch(&mut self) {
