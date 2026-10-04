@@ -2,6 +2,13 @@
 
 All the changes made to runa are documented here.
 
+## [0.12.2] - UNRELEASED
+
+### Internal
+- **Workers**: Moved worker thread Implementations to sub-modules of core.
+
+---
+
 ## [0.12.1] - 2026-10-03
 
 #### Stability fixes, plus a benchmarking suite.
