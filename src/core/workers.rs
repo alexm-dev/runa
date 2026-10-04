@@ -13,44 +13,43 @@
 //! This module is a central protocol boundary. Small changes (adding or editing variants, fields, or error handling)
 //! may require corresponding changes throughout state, response-handling code and UI.
 
-use std::collections::HashSet;
-use std::ffi::{OsStr, OsString};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::thread;
-use std::time::{Duration, Instant};
+mod fileop;
+mod find;
+mod io;
+mod metadata;
+mod preview;
+mod sort;
+mod watch;
 
-use chrono::Local;
+use std::collections::HashSet;
+use std::ffi::OsString;
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
+
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
-use dashmap::DashMap;
-use notify::{
-    Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
-};
 
 use crate::core::{
-    FileEntry, FindResult, Formatter,
+    FileEntry, FindResult,
     cache::{DirCache, DirListOptions},
-    fm, formatter, fs,
-    metadata::{FileMetadata, FileMetadataCache, MetadataNeeds},
-    proc,
+    metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
 };
-use crate::utils::{os, text::StrBuffer, timings::Timings};
+use crate::utils::text::StrBuffer;
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
     parent_io_tx: Sender<WorkerTask>,
-    preview_io_tx: Sender<WorkerTask>,
-    sort_io_tx: Sender<WorkerTask>,
+    preview_dir_tx: Sender<WorkerTask>,
+    sort_tx: Sender<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     watch_cmd_tx: Sender<WatchCommand>,
     response_rx: Receiver<WorkerResponse>,
-    active: Arc<AtomicUsize>,
+    active_fileops: Arc<AtomicUsize>,
     cache: Arc<DirCache>,
 }
 
@@ -71,8 +70,8 @@ impl Workers {
 
         let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
-        let (preview_io_tx, preview_io_rx) = bounded::<WorkerTask>(1);
-        let (sort_io_tx, sort_io_rx) = bounded::<WorkerTask>(1);
+        let (preview_dir_tx, preview_dir_rx) = bounded::<WorkerTask>(1);
+        let (sort_tx, sort_rx) = bounded::<WorkerTask>(1);
 
         let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
         let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
@@ -81,32 +80,31 @@ impl Workers {
         let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
-        let active = Arc::new(AtomicUsize::new(0));
-        let fileop_active_for_worker = Arc::clone(&active);
+        let active_fileops = Arc::new(AtomicUsize::new(0));
 
-        start_io_worker(nav_io_rx, res_tx.clone(), Arc::clone(&cache));
-        start_io_worker(parent_io_rx, res_tx.clone(), Arc::clone(&cache));
-        start_io_worker(preview_io_rx, res_tx.clone(), Arc::clone(&cache));
+        io::start(nav_io_rx, res_tx.clone(), Arc::clone(&cache));
+        io::start(parent_io_rx, res_tx.clone(), Arc::clone(&cache));
+        io::start(preview_dir_rx, res_tx.clone(), Arc::clone(&cache));
 
-        start_sort_worker(sort_io_rx, res_tx.clone(), Arc::clone(&cache));
-        start_preview_worker(preview_file_rx, res_tx.clone());
-        start_metadata_worker(metadata_rx, res_tx.clone());
-        start_find_worker(find_rx, res_tx.clone());
-        start_fileop_worker(fileop_rx, res_tx.clone(), fileop_active_for_worker);
-        start_fs_watch_worker(watch_cmd_rx, res_tx.clone());
+        sort::start(sort_rx, res_tx.clone(), Arc::clone(&cache));
+        preview::start(preview_file_rx, res_tx.clone());
+        metadata::start(metadata_rx, res_tx.clone());
+        find::start(find_rx, res_tx.clone());
+        fileop::start(fileop_rx, res_tx.clone(), Arc::clone(&active_fileops));
+        watch::start(watch_cmd_rx, res_tx.clone());
 
         Self {
             nav_io_tx,
             parent_io_tx,
-            preview_io_tx,
-            sort_io_tx,
+            preview_dir_tx,
+            sort_tx,
             preview_file_tx,
             metadata_tx,
             find_tx,
             fileop_tx,
             watch_cmd_tx,
             response_rx,
-            active,
+            active_fileops,
             cache,
         }
     }
@@ -114,14 +112,14 @@ impl Workers {
     crate::getters! {
         nav_io_tx: &Sender<WorkerTask>,
         parent_io_tx: &Sender<WorkerTask>,
-        preview_io_tx: &Sender<WorkerTask>,
-        sort_io_tx: &Sender<WorkerTask>,
+        preview_dir_tx: &Sender<WorkerTask>,
+        sort_tx: &Sender<WorkerTask>,
         preview_file_tx: &Sender<WorkerTask>,
         metadata_tx: &Sender<WorkerTask>,
         find_tx: &Sender<WorkerTask>,
         fileop_tx: &Sender<WorkerTask>,
         response_rx: &Receiver<WorkerResponse>,
-        active: &Arc<AtomicUsize>,
+        active_fileops: &Arc<AtomicUsize>,
     }
 
     pub(crate) fn cache(&self) -> Arc<DirCache> {
@@ -130,21 +128,6 @@ impl Workers {
 
     pub(crate) fn retarget_watch(&self, dirs: Vec<PathBuf>) {
         let _ = self.watch_cmd_tx.send(WatchCommand::Retarget(dirs));
-    }
-}
-
-struct ActiveOpGuard(Arc<AtomicUsize>);
-
-impl ActiveOpGuard {
-    fn new(counter: Arc<AtomicUsize>) -> Self {
-        counter.fetch_add(1, Ordering::SeqCst);
-        Self(counter)
-    }
-}
-
-impl Drop for ActiveOpGuard {
-    fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::SeqCst);
     }
 }
 
@@ -287,713 +270,6 @@ impl WorkerResponse {
 
 pub(crate) enum WatchCommand {
     Retarget(Vec<PathBuf>),
-}
-
-/// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
-fn start_io_worker(
-    task_rx: Receiver<WorkerTask>,
-    res_tx: Sender<WorkerResponse>,
-    cache: Arc<DirCache>,
-) {
-    thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadDirectory {
-                path,
-                focus,
-                list,
-                sort_config,
-                sort_date_format,
-                always_show,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-            match fm::browse_dir(&path) {
-                Ok(mut entries) => {
-                    let meta_cache = DashMap::with_capacity(entries.len());
-                    let formatter = Formatter::new(list.clone(), sort_config, always_show);
-                    formatter.filter_entries(&mut entries);
-                    let sort_column =
-                        formatter.sort_entries(&path, &mut entries, &sort_date_format, &meta_cache);
-
-                    let entries_arc: Arc<[FileEntry]> = Arc::from(entries);
-                    let sort_column_arc: Option<Arc<StrBuffer>> =
-                        sort_column.map(|v| Arc::new(StrBuffer::from_iter(v)));
-
-                    cache.insert_if_newer(
-                        &path,
-                        sort_config,
-                        &list,
-                        Arc::clone(&entries_arc),
-                        sort_column_arc.clone(),
-                        request_id,
-                    );
-
-                    let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
-                        path,
-                        entries: entries_arc,
-                        focus,
-                        sort_column: sort_column_arc,
-                        request_id,
-                        tab_id,
-                    });
-                }
-                Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("I/O Error: {}", e),
-                        Some(request_id),
-                    ));
-                }
-            }
-        }
-    });
-}
-
-fn start_sort_worker(
-    task_rx: Receiver<WorkerTask>,
-    res_tx: Sender<WorkerResponse>,
-    cache: Arc<DirCache>,
-) {
-    thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::SortDirectory {
-                path,
-                entries,
-                focus,
-                list,
-                sort_config,
-                sort_date_format,
-                always_show,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
-            let mut entries_vec = entries.to_vec();
-            let meta_cache = DashMap::with_capacity(entries.len());
-
-            let formatter = Formatter::new(list.clone(), sort_config, always_show);
-            formatter.filter_entries(&mut entries_vec);
-            let sort_column =
-                formatter.sort_entries(&path, &mut entries_vec, &sort_date_format, &meta_cache);
-
-            let entries_arc: Arc<[FileEntry]> = Arc::from(entries_vec);
-            let sort_column_arc: Option<Arc<StrBuffer>> =
-                sort_column.map(|v| Arc::new(StrBuffer::from_iter(v)));
-
-            cache.insert_if_newer(
-                &path,
-                sort_config,
-                &list,
-                Arc::clone(&entries_arc),
-                sort_column_arc.clone(),
-                request_id,
-            );
-
-            let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
-                path,
-                entries: entries_arc,
-                focus,
-                sort_column: sort_column_arc,
-                request_id,
-                tab_id,
-            });
-        }
-    });
-}
-
-fn start_preview_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
-    thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadPreview {
-                path,
-                max_lines,
-                pane_width,
-                scroll,
-                preview_mode,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
-            let lines = if fs::is_temp_file(&path) {
-                vec![formatter::sanitize_to_exact_width(
-                    "[Temporary file - preview skipped]",
-                    pane_width,
-                )]
-            } else {
-                match preview_mode {
-                    PreviewMode::Internal => {
-                        formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
-                    }
-                    PreviewMode::Bat { args } => {
-                        if !os::is_regular_file(&path) || fs::is_preview_deny(&path) {
-                            formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
-                        } else {
-                            match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
-                                // Bat preview succeeded
-                                // If bat fails, fallback to internal preview
-                                // If bat is not installed or returns error, we fallback to internal preview
-                                Ok(lines) => lines,
-                                Err(_) => formatter::safe_read_preview(
-                                    &path, max_lines, pane_width, scroll,
-                                ),
-                            }
-                        }
-                    }
-                }
-            };
-
-            let is_eof = lines.len() < max_lines;
-            let _ = res_tx.send(WorkerResponse::PreviewLoaded {
-                path,
-                lines,
-                is_eof,
-                request_id,
-                tab_id,
-            });
-        }
-    });
-}
-
-/// Starts the find worker thread
-fn start_find_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
-    thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::FindRecursive {
-                base_dir,
-                query,
-                max_results,
-                cancel,
-                show_hidden,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
-            let mut results = Vec::new();
-            let _ = proc::find(
-                &base_dir,
-                &query,
-                &mut results,
-                Arc::clone(&cancel),
-                max_results,
-                show_hidden,
-            );
-            if results.len() > max_results {
-                results.truncate(max_results);
-            }
-
-            if cancel.load(Ordering::Acquire) {
-                continue;
-            }
-
-            let _ = res_tx.send(WorkerResponse::FindResults {
-                base_dir,
-                results,
-                request_id,
-                tab_id,
-            });
-        }
-    });
-}
-
-/// Starts the file operation worker thread
-fn start_fileop_worker(
-    task_rx: Receiver<WorkerTask>,
-    res_tx: Sender<WorkerResponse>,
-    active_count: Arc<AtomicUsize>,
-) {
-    thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let _guard = ActiveOpGuard::new(Arc::clone(&active_count));
-
-            let WorkerTask::FileOp { op } = task else {
-                continue;
-            };
-
-            let modified_dirs = collect_modified_dirs(&op);
-            let mut focus_target: Option<OsString> = None;
-
-            let result: Result<(), String> = match op {
-                FileOperation::Delete(paths, move_to_trash) => {
-                    let mut op_result = Ok(());
-                    for p in paths {
-                        let res = if move_to_trash {
-                            trash::delete(&p).map_err(|e| e.to_string())
-                        } else if p.is_dir() {
-                            std::fs::remove_dir_all(&p).map_err(|e| e.to_string())
-                        } else {
-                            std::fs::remove_file(&p).map_err(|e| e.to_string())
-                        };
-
-                        if let Err(e) = res {
-                            op_result = Err(format!("{}: {}", p.display(), e));
-                            break;
-                        }
-                    }
-                    op_result
-                }
-                FileOperation::Rename {
-                    old,
-                    new,
-                    overwrite,
-                } => {
-                    let target = new;
-                    let is_case_rename = old.to_string_lossy().to_lowercase()
-                        == target.to_string_lossy().to_lowercase();
-
-                    if target.exists() && !is_case_rename && !overwrite {
-                        Err(format!(
-                            "Rename failed: '{}' already exists",
-                            target.file_name().unwrap_or_default().to_string_lossy()
-                        ))
-                    } else {
-                        if target.exists() && !is_case_rename && overwrite {
-                            if old.is_dir() && target.is_dir() {
-                                match fs::merge_dir(&old, &target, true) {
-                                    Ok(()) => {
-                                        focus_target = target.file_name().map(|n| n.to_os_string());
-                                        Ok(())
-                                    }
-                                    Err(e) => Err(format!(
-                                        "Could not merge directories '{}' -> '{}': {}",
-                                        old.display(),
-                                        target.display(),
-                                        e
-                                    )),
-                                }
-                            } else {
-                                let remove_res = if target.is_dir() {
-                                    std::fs::remove_dir_all(&target)
-                                } else {
-                                    std::fs::remove_file(&target)
-                                };
-
-                                if let Err(e) = remove_res {
-                                    Err(format!(
-                                        "Could not remove existing target before rename: {}: {}",
-                                        target.display(),
-                                        e
-                                    ))
-                                } else {
-                                    focus_target = target.file_name().map(|n| n.to_os_string());
-                                    fs::rename_with_fallback(&old, &target, old.is_dir())
-                                        .map_err(|e| e.to_string())
-                                }
-                            }
-                        } else {
-                            focus_target = target.file_name().map(|n| n.to_os_string());
-                            fs::rename_with_fallback(&old, &target, old.is_dir())
-                                .map_err(|e| e.to_string())
-                        }
-                    }
-                }
-                FileOperation::Create {
-                    path,
-                    is_dir,
-                    overwrite,
-                } => {
-                    let target = if overwrite {
-                        path
-                    } else {
-                        fs::get_unused_path(&path)
-                    };
-
-                    if target.exists() {
-                        if target.is_dir() {
-                            if is_dir {
-                                focus_target = target.file_name().map(|n| n.to_os_string());
-                                Ok(())
-                            } else {
-                                Err(format!(
-                                    "Create failed: '{}' is an existing directory",
-                                    target.display()
-                                ))
-                            }
-                        } else {
-                            let remove_res = std::fs::remove_file(&target);
-                            if let Err(e) = remove_res {
-                                Err(format!(
-                                    "Could not remove existing file before create: {}: {}",
-                                    target.display(),
-                                    e
-                                ))
-                            } else {
-                                focus_target = target.file_name().map(|n| n.to_os_string());
-                                if is_dir {
-                                    std::fs::create_dir_all(&target).map_err(|e| e.to_string())
-                                } else {
-                                    std::fs::OpenOptions::new()
-                                        .write(true)
-                                        .create_new(true)
-                                        .open(&target)
-                                        .map(|_| ())
-                                        .map_err(|e| e.to_string())
-                                }
-                            }
-                        }
-                    } else {
-                        focus_target = target.file_name().map(|n| n.to_os_string());
-                        if is_dir {
-                            std::fs::create_dir_all(&target).map_err(|e| e.to_string())
-                        } else {
-                            std::fs::OpenOptions::new()
-                                .write(true)
-                                .create_new(true)
-                                .open(&target)
-                                .map(|_| ())
-                                .map_err(|e| e.to_string())
-                        }
-                    }
-                }
-                FileOperation::Copy {
-                    src,
-                    dest,
-                    cut,
-                    focus,
-                } => {
-                    focus_target = focus;
-                    let mut op_result = Ok(());
-
-                    for s in src {
-                        if let Some(name) = s.file_name() {
-                            let target = fs::get_unused_path(&dest.join(name));
-
-                            if let Some(ref ft) = focus_target
-                                && ft == name
-                            {
-                                focus_target = target.file_name().map(|n| n.to_os_string());
-                            }
-
-                            if cut {
-                                if std::fs::rename(&s, &target).is_err() {
-                                    let copy_res = if s.is_dir() {
-                                        fs::copy_recursive(&s, &target)
-                                    } else {
-                                        std::fs::copy(&s, &target).map(|_| ())
-                                    };
-
-                                    match copy_res {
-                                        Ok(_) => {
-                                            let remove_res = if s.is_dir() {
-                                                std::fs::remove_dir_all(&s)
-                                            } else {
-                                                std::fs::remove_file(&s)
-                                            };
-
-                                            if let Err(err) = remove_res {
-                                                op_result = Err(format!(
-                                                    "Copied to destination, but could not remove source: {}",
-                                                    err
-                                                ));
-                                                break;
-                                            }
-                                        }
-                                        Err(e) => {
-                                            op_result = Err(format!("{}: {}", s.display(), e));
-                                            break;
-                                        }
-                                    }
-                                }
-                            } else {
-                                let res = if s.is_dir() {
-                                    fs::copy_recursive(&s, &target)
-                                } else {
-                                    std::fs::copy(&s, &target).map(|_| ())
-                                };
-
-                                if let Err(e) = res {
-                                    op_result = Err(format!("{}: {}", s.display(), e));
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    op_result
-                }
-            };
-
-            match result {
-                Ok(_) => {
-                    let _ = res_tx.send(WorkerResponse::OperationComplete {
-                        need_reload: true,
-                        focus: focus_target,
-                        modified_dirs,
-                    });
-                }
-                Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), None));
-                }
-            }
-        }
-    });
-}
-
-/// Starts the file metadata worker thread.
-fn start_metadata_worker(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
-    thread::spawn(move || {
-        #[cfg(unix)]
-        let mut ug_cache = crate::core::metadata::unix_meta::UserGroupCache::new();
-
-        while let Ok(task) = task_rx.recv() {
-            let now = Local::now();
-            if let WorkerTask::GetFileMetadata {
-                path,
-                date_format,
-                needs,
-                request_id,
-                tab_id,
-            } = task
-            {
-                match FileMetadata::new(&path) {
-                    Ok(meta) => {
-                        let cache = FileMetadataCache::from(
-                            &meta,
-                            &date_format,
-                            &needs,
-                            now,
-                            #[cfg(unix)]
-                            &mut ug_cache,
-                        );
-                        let _ = res_tx.send(WorkerResponse::FileMetadataLoaded {
-                            metadata: Arc::new(cache),
-                            path,
-                            request_id,
-                            tab_id,
-                        });
-                    }
-                    Err(e) => {
-                        let vanished = e.kind() == std::io::ErrorKind::NotFound || !path.exists();
-                        if !vanished {
-                            let _ = res_tx.send(WorkerResponse::Error(
-                                format!("Metadata Error: {}", e),
-                                Some(request_id),
-                            ));
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-/// Starts the filesystem watcher thread.
-fn start_fs_watch_worker(cmd_rx: Receiver<WatchCommand>, res_tx: Sender<WorkerResponse>) {
-    thread::spawn(move || {
-        let (ev_tx, ev_rx) = unbounded::<notify::Result<Event>>();
-
-        let mut watcher = match RecommendedWatcher::new(
-            move |result| {
-                let _ = ev_tx.send(result);
-            },
-            NotifyConfig::default(),
-        ) {
-            Ok(watcher) => watcher,
-            Err(e) => {
-                let _ = res_tx.send(WorkerResponse::Error(
-                    format!("Watch error: failed to create watcher: {}", e),
-                    None,
-                ));
-                return;
-            }
-        };
-
-        let config_path = os::default_config_path();
-        let config_name = config_path
-            .file_name()
-            .map(|n| n.to_os_string())
-            .unwrap_or_default();
-
-        let mut config_watched_dir: Option<PathBuf> = None;
-        if let Some(config_dir) = config_path.parent()
-            && let Some((watched_dir, watching_config_dir)) = resolve_config_watch_dir(config_dir)
-        {
-            let mode = if watching_config_dir {
-                RecursiveMode::NonRecursive
-            } else {
-                RecursiveMode::Recursive
-            };
-            match watcher.watch(&watched_dir, mode) {
-                Ok(()) => config_watched_dir = Some(watched_dir),
-                Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("Config watch error: {}", e),
-                        None,
-                    ));
-                }
-            }
-        }
-
-        let mut watched: HashSet<PathBuf> = HashSet::new();
-        let mut pending: HashSet<PathBuf> = HashSet::new();
-        let mut deadline: Option<Instant> = None;
-        let debounce = Duration::from_millis(Timings::FS_WATCH_DEBOUNCE_MS);
-
-        loop {
-            let timer = match deadline {
-                Some(d) => crossbeam_channel::after(d.saturating_duration_since(Instant::now())),
-                None => crossbeam_channel::never(),
-            };
-
-            crossbeam_channel::select! {
-                recv(cmd_rx) -> msg => match msg {
-                    Ok(WatchCommand::Retarget(dirs)) => {
-                        retarget_listing_watch(
-                            &mut watcher,
-                            &mut watched,
-                            dirs,
-                            config_watched_dir.as_deref(),
-                        );
-                    }
-                    // All senders dropped: runa is shutting down.
-                    Err(_) => break,
-                },
-                recv(ev_rx) -> msg => {
-                    if let Ok(Ok(event)) = msg {
-                        classify_watch_event(
-                            &event,
-                            &config_path,
-                            config_name.as_os_str(),
-                            &watched,
-                            &res_tx,
-                            &mut pending,
-                        );
-                        if !pending.is_empty() && deadline.is_none() {
-                            deadline = Some(Instant::now() + debounce);
-                        }
-                    }
-                },
-                recv(timer) -> _ => {
-                    if !pending.is_empty() {
-                        let dirs: Vec<PathBuf> = pending.drain().collect();
-                        let _ = res_tx.send(WorkerResponse::DirsChanged { dirs });
-                    }
-                    deadline = None;
-                },
-            }
-        }
-    });
-}
-
-fn retarget_listing_watch(
-    watcher: &mut RecommendedWatcher,
-    watched: &mut HashSet<PathBuf>,
-    dirs: Vec<PathBuf>,
-    config_watched_dir: Option<&Path>,
-) {
-    let new: HashSet<PathBuf> = dirs
-        .into_iter()
-        .filter(|d| config_watched_dir != Some(d.as_path()))
-        .collect();
-
-    for old in watched.iter() {
-        if !new.contains(old) {
-            let _ = watcher.unwatch(old);
-        }
-    }
-
-    for dir in new.iter() {
-        if !watched.contains(dir) {
-            let _ = watcher.watch(dir, RecursiveMode::NonRecursive);
-        }
-    }
-
-    *watched = new;
-}
-
-fn classify_watch_event(
-    event: &Event,
-    config_path: &Path,
-    config_name: &OsStr,
-    watched: &HashSet<PathBuf>,
-    res_tx: &Sender<WorkerResponse>,
-    pending: &mut HashSet<PathBuf>,
-) {
-    if !matches!(
-        event.kind,
-        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-    ) {
-        return;
-    }
-
-    if is_config_changed(event, config_path, config_name) {
-        let _ = res_tx.send(WorkerResponse::ConfigChanged);
-    }
-
-    for path in &event.paths {
-        if watched.contains(path) {
-            pending.insert(path.clone());
-        } else if let Some(parent) = path.parent()
-            && watched.contains(parent)
-        {
-            pending.insert(parent.to_path_buf());
-        }
-    }
-}
-
-fn is_config_changed(event: &Event, config_path: &Path, config_name: &OsStr) -> bool {
-    matches!(
-        event.kind,
-        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-    ) && event
-        .paths
-        .iter()
-        .any(|p| p == config_path || p.file_name().is_some_and(|name| name == config_name))
-}
-
-fn resolve_config_watch_dir(config_dir: &Path) -> Option<(PathBuf, bool)> {
-    if config_dir.is_dir() {
-        return Some((config_dir.to_path_buf(), true));
-    }
-
-    config_dir
-        .parent()
-        .filter(|parent| parent.is_dir())
-        .map(|parent| (parent.to_path_buf(), false))
-}
-
-fn collect_modified_dirs(op: &FileOperation) -> Vec<PathBuf> {
-    let add_parent = |dirs: &mut HashSet<PathBuf>, path: &Path| {
-        if let Some(parent) = path.parent() {
-            dirs.insert(parent.to_path_buf());
-        }
-    };
-
-    let mut dirs = HashSet::new();
-
-    match op {
-        FileOperation::Delete(paths, _) => {
-            for p in paths {
-                add_parent(&mut dirs, p);
-            }
-        }
-        FileOperation::Rename { old, new, .. } => {
-            add_parent(&mut dirs, old);
-            add_parent(&mut dirs, new);
-        }
-        FileOperation::Copy { src, dest, cut, .. } => {
-            dirs.insert(dest.clone());
-            if *cut {
-                for s in src {
-                    add_parent(&mut dirs, s);
-                }
-            }
-        }
-        FileOperation::Create { path, .. } => {
-            add_parent(&mut dirs, path);
-        }
-    }
-
-    dirs.into_iter().collect()
 }
 
 /// Worker threads integration tests.
@@ -1522,29 +798,6 @@ mod tests {
             assert_eq!(request_id, 2);
         }
 
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_config_watch_dir_config() -> Result<(), Box<dyn std::error::Error>> {
-        let temp = tempdir()?;
-        let config_dir = temp.path().join("runa");
-        fs::create_dir_all(&config_dir)?;
-
-        let resolved = resolve_config_watch_dir(&config_dir).expect("Expected watch dir");
-        assert_eq!(resolved.0, config_dir);
-        assert!(resolved.1);
-        Ok(())
-    }
-
-    #[test]
-    fn resolve_config_watch_dir_fallback() -> Result<(), Box<dyn std::error::Error>> {
-        let temp = tempdir()?;
-        let config_dir = temp.path().join("runa");
-
-        let resolved = resolve_config_watch_dir(&config_dir).expect("Expected watch dir");
-        assert_eq!(resolved.0, temp.path());
-        assert!(!resolved.1);
         Ok(())
     }
 }

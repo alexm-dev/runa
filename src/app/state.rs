@@ -288,7 +288,7 @@ impl AppState {
             changed = true;
         }
 
-        if workers.active().load(Ordering::Relaxed) > 0 {
+        if workers.active_fileops().load(Ordering::Relaxed) > 0 {
             let start = *self.worker_time.get_or_insert_with(Instant::now);
 
             if start.elapsed() >= Duration::from_millis(200) {
@@ -641,7 +641,7 @@ impl AppState {
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let entries = self.nav.entries_arc();
 
-        let _ = workers.sort_io_tx().try_send(WorkerTask::SortDirectory {
+        let _ = workers.sort_tx().try_send(WorkerTask::SortDirectory {
             path: self.nav.current_dir().to_path_buf(),
             entries,
             focus,
@@ -707,7 +707,7 @@ impl AppState {
                 }
 
                 if workers
-                    .preview_io_tx()
+                    .preview_dir_tx()
                     .try_send(WorkerTask::LoadDirectory {
                         path,
                         focus: None,

@@ -135,7 +135,7 @@ pub(crate) fn draw_status_bar(
 
     if status_cfg.tasks() == position {
         let queued_ops = workers.fileop_tx().len();
-        let active_ops = workers.active().load(Ordering::Relaxed);
+        let active_ops = workers.active_fileops().load(Ordering::Relaxed);
         let total_ops = queued_ops + active_ops;
 
         if total_ops > 0
