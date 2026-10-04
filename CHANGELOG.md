@@ -4,10 +4,18 @@ All the changes made to runa are documented here.
 
 ## [0.12.2] - UNRELEASED
 
+### Changed
+- **Dependencies**:
+    - Removed `home` crate to instead use the `std::env::home_dir` function.
+    - Updated dependencies.
+
 ### Internal
-- **Workers**: Moved worker thread Implementations to sub-modules of core.
+- **Workers**: Moved worker thread implementations to sub-modules of `core::workers`.
+- **CI**: `cross` version now set in one place.
+
 
 ---
+
 
 ## [0.12.1] - 2026-10-03
 
