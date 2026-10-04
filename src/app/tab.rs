@@ -16,6 +16,9 @@ use crate::app::{AppContainer, AppState, KeypressResult, keymap::TabAction};
 use crate::core::{sort::SortConfig, workers::Workers};
 use crate::utils::path;
 
+/// Maximum number of tabs runa opens.
+pub(crate) const MAX_TABS: usize = 9;
+
 pub(crate) struct TabManager {
     pub(crate) tabs: Vec<AppState>,
     pub(crate) current: usize,
@@ -23,8 +26,6 @@ pub(crate) struct TabManager {
 }
 
 impl TabManager {
-    const MAX_TABS: usize = 9;
-
     pub(crate) fn new(
         mut existing: AppState,
         mut new_tab: AppState,
@@ -86,7 +87,7 @@ impl TabManager {
         workers: &Workers,
         focus: Option<OsString>,
     ) -> usize {
-        if self.tabs.len() >= Self::MAX_TABS {
+        if self.tabs.len() >= MAX_TABS {
             return self.current;
         }
 

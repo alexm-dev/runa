@@ -6,6 +6,7 @@
 use std::io::{self, BufWriter, Write};
 use std::path::PathBuf;
 
+use crate::app::MAX_TABS;
 use crate::config::{Config, assets::FULL_TOML};
 use crate::utils::os;
 
@@ -109,7 +110,7 @@ pub(crate) fn handle_args() -> CliAction {
         return CliAction::Exit;
     }
 
-    if paths.len() > 9 {
+    if paths.len() > MAX_TABS {
         eprintln!("[runa] Note: runa supports a maximum of 9 tabs. Extra paths will be ignored.");
         paths.truncate(9);
     }

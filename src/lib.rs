@@ -33,6 +33,7 @@ use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use crate::app::MAX_TABS;
 use crate::cli::{CliAction, handle_args};
 use crate::config::Config;
 use crate::core::workers::Workers;
@@ -91,7 +92,7 @@ fn startup_container(
 
     let mut tabs = Vec::with_capacity(paths.len());
     for (tab_index, path) in paths.into_iter().enumerate() {
-        if tabs.len() >= 9 {
+        if tabs.len() >= MAX_TABS {
             break;
         }
 
