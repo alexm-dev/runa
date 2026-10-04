@@ -1,3 +1,9 @@
+//! File metadata worker thread.
+//!
+//! Module contains the implementation for the file metadata worker thread,
+//! which is responsible for loading file metadata in a separate thread.
+//! Used by the FileInfo UI component to load file metadata asynchronously.
+
 use std::sync::Arc;
 use std::thread;
 

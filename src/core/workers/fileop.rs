@@ -1,4 +1,7 @@
 //! File Operation worker module
+//!
+//! Implementation of the file operation worker,
+//! which handles file operations such as delete, rename, create, and copy.
 
 use std::collections::HashSet;
 use std::ffi::OsString;

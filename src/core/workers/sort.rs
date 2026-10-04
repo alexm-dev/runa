@@ -1,3 +1,8 @@
+//! Sort worker thread module
+//!
+//! Module contains the implementation for the sort worker thread,
+//! which is responsible for sorting the directory entries in a separate thread.
+
 use std::sync::Arc;
 use std::thread;
 
