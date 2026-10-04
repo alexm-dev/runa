@@ -17,7 +17,7 @@ If you find a bug, please open an issue and include:
 
 ## Feature Requests
 
-Feature ideas are welcomed.  
+Ideas and feature requests are welcome in the [Discussions](https://github.com/alexm-dev/runa/discussions) tab.
 
 Please explain:
 - The problem your feature solves
