@@ -19,6 +19,8 @@ use ratatui::{
 use crate::app::{self, AppContainer, KeypressResult, RunaRoot};
 use crate::ui;
 
+pub(crate) const POLL_INTERVAL: Duration = Duration::from_millis(16);
+
 /// Initializes the terminal in raw mode and alternate sceen and runs the main event loop.
 ///
 /// Blocks until quit. Handles all input and UI rendering.
@@ -74,7 +76,7 @@ where
         }
 
         // Event Polling
-        if event::poll(Duration::from_millis(16))? {
+        if event::poll(POLL_INTERVAL)? {
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
