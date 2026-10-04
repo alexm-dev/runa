@@ -3,7 +3,7 @@
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
 
-use crate::config::theme::deserialize_color_field;
+use crate::config::theme::{ColorFallback, deserialize_color_field};
 use crate::utils::text;
 
 /// ColorPair struct to hold foreground and background colors.
@@ -67,16 +67,8 @@ impl ColorPair {
 
     pub(super) fn resolve(&self, other: &ColorPair) -> Self {
         Self {
-            fg: if self.fg == Color::Reset {
-                other.fg
-            } else {
-                self.fg
-            },
-            bg: if self.bg == Color::Reset {
-                other.bg
-            } else {
-                self.bg
-            },
+            fg: self.fg.or(other.fg),
+            bg: self.bg.or(other.bg),
         }
     }
 

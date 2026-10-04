@@ -115,15 +115,24 @@ macro_rules! override_themes {
     };
 }
 
-macro_rules! define_styles {
+macro_rules! builtin_styles {
+    (in $section:ident: $($(#[$meta:meta])* $fn_name:ident => $field:ident),* $(,)?) => {
+        $(
+            $(#[$meta])*
+            pub(crate) fn $fn_name(&self) -> ::ratatui::style::Style {
+                self.$field.style_or(&$crate::config::Theme::builtin().$section.$field)
+            }
+        )*
+    };
     ($($fn_name:ident => $field:ident),* $(,)?) => {
         $(
-            pub(crate) fn $fn_name(&self) -> Style {
-                self.$field.style_or(&Theme::builtin().$field)
+            pub(crate) fn $fn_name(&self) -> ::ratatui::style::Style {
+                self.$field.style_or(&$crate::config::Theme::builtin().$field)
             }
         )*
     };
 }
+pub(super) use builtin_styles;
 
 /// Theme implementation
 /// Provides methods to access theme properties and apply user overrides.
@@ -151,7 +160,7 @@ impl Theme {
 
     // Getters for various theme properties with fallbacks to internal defaults
     // _style methods for getting Style instances with fallbacks to internal defaults
-    define_styles! {
+    builtin_styles! {
         accent_style => accent,
         selection_style => selection,
         underline_style => underline,
