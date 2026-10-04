@@ -19,7 +19,7 @@ static BAT_BIN: OnceLock<Option<&'static str>> = OnceLock::new();
 /// Thread safe for getting home_dir once.
 #[inline]
 pub(crate) fn get_home() -> Option<&'static PathBuf> {
-    HOME_DIR_CACHE.get_or_init(home::home_dir).as_ref()
+    HOME_DIR_CACHE.get_or_init(std::env::home_dir).as_ref()
 }
 
 #[inline]
