@@ -6,6 +6,7 @@ All the changes made to runa are documented here.
 
 ### Fixed
 - **File Info**: File info now always matches the selected entry after very fast navigation.
+- **Input**: Moving the input cursor over non-ASCII characters no longer crashes.
 - **Documentation**: Fixed the `Scoop` install command in the configuration docs and in the README.
 
 ### Changed
