@@ -177,20 +177,20 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
         return;
     }
 
-    let mut g_prefixes: Vec<(String, &'static str)> =
+    let mut go_to_prefixes: Vec<(String, &'static str)> =
         Vec::with_capacity(go_to_top_keys.len() + go_to_path_keys.len());
     if let Some(k) = go_to_top_keys.first() {
-        g_prefixes.push((k.clone(), "Go to top"));
+        go_to_prefixes.push((k.clone(), "Go to top"));
     }
     if let Some(k) = go_to_home_keys.first() {
-        g_prefixes.push((k.clone(), "Go to home"));
+        go_to_prefixes.push((k.clone(), "Go to home"));
     }
     if let Some(k) = go_to_path_keys.first() {
-        g_prefixes.push((k.clone(), "Go to path"));
+        go_to_prefixes.push((k.clone(), "Go to path"));
     }
 
-    let mut spans = Vec::with_capacity(4 * g_prefixes.len() + 2);
-    for (i, (ch, desc)) in g_prefixes.iter().enumerate() {
+    let mut spans = Vec::with_capacity(4 * go_to_prefixes.len() + 2);
+    for (i, (ch, desc)) in go_to_prefixes.iter().enumerate() {
         if i > 0 {
             spans.push(Span::raw("    "));
         }

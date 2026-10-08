@@ -195,18 +195,19 @@ impl AppState {
         workers: &Workers,
         key: &KeyEvent,
     ) -> Option<KeypressResult> {
-        let gmap = self.keymap.gmap();
-        let sort_map = self.keymap.sortmap();
+        let go_to_map = self.keymap.go_to_map();
+        let sort_map = self.keymap.sort_map();
 
         let (started, exited, result, consumed) = {
             let prefix = self.actions.prefix_recognizer_mut();
-            let was_g = prefix.is_g_state() || prefix.is_sort_state();
-            let g_prefix = self.keymap.g_prefix();
+            let was_active = prefix.is_active();
+
+            let go_to_prefix = self.keymap.go_to_prefix();
             let sort_prefix = self.keymap.sort_prefix();
 
-            let result = prefix.feed(key, gmap, sort_map, sort_prefix, g_prefix);
+            let result = prefix.feed(key, go_to_map, sort_map, sort_prefix, go_to_prefix);
 
-            let consumed = was_g && key.code == Esc;
+            let consumed = was_active && key.code == Esc;
 
             (
                 prefix.started_prefix(),

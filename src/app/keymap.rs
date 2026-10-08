@@ -91,9 +91,9 @@ pub(crate) struct Key {
 /// Stores the mapping from Key to action, which is built in the config
 pub(crate) struct Keymap {
     map: HashMap<Key, Action>,
-    gmap: HashMap<KeyCode, PrefixCommand>,
-    sortmap: HashMap<KeyCode, PrefixCommand>,
-    g_prefix: Vec<Key>,
+    go_to_map: HashMap<KeyCode, PrefixCommand>,
+    sort_map: HashMap<KeyCode, PrefixCommand>,
+    go_to_prefix: Vec<Key>,
     sort_prefix: Vec<Key>,
 }
 
@@ -102,15 +102,15 @@ impl Keymap {
     #[rustfmt::skip]
     pub(crate) fn from_config(config: &Config) -> Self {
         let mut map = HashMap::new();
-        let mut gmap = HashMap::new();
-        let mut sortmap = HashMap::new();
+        let mut go_to_map = HashMap::new();
+        let mut sort_map = HashMap::new();
         let keys = config.keys();
         let sort_prefix: Vec<Key> = keys
             .sort().iter()
             .filter_map(|k| parse_key(k))
             .collect();
 
-        let g_prefix: Vec<Key> = keys
+        let go_to_prefix: Vec<Key> = keys
             .prefix_go_to()
             .iter()
             .filter_map(|k| parse_key(k))
@@ -124,13 +124,13 @@ impl Keymap {
 
         macro_rules! bind_prefix {
             ($keys:expr, $action:expr, $prefix:expr) => {
-                bind_prefix($keys, $prefix, &mut gmap);
+                bind_prefix($keys, $prefix, &mut go_to_map);
             };
         }
 
         macro_rules! bind_sort {
             ($keys:expr, $mode:expr) => {
-                bind_prefix($keys, PrefixCommand::Sort($mode), &mut sortmap);
+                bind_prefix($keys, PrefixCommand::Sort($mode), &mut sort_map);
             };
         }
 
@@ -192,7 +192,7 @@ impl Keymap {
         bind_sort!(keys.sort_by_size(),         SortMode::Size);
         bind_sort!(keys.sort_by_extension(),    SortMode::Extension);
 
-        Keymap { map, gmap, sortmap, g_prefix, sort_prefix }
+        Keymap { map, go_to_map, sort_map, go_to_prefix, sort_prefix }
     }
 
     /// Looks up the action for a given key event
@@ -224,17 +224,17 @@ impl Keymap {
         None
     }
 
-    pub(crate) fn gmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
-        &self.gmap
+    pub(crate) fn go_to_map(&self) -> &HashMap<KeyCode, PrefixCommand> {
+        &self.go_to_map
     }
 
-    pub(crate) fn sortmap(&self) -> &HashMap<KeyCode, PrefixCommand> {
-        &self.sortmap
+    pub(crate) fn sort_map(&self) -> &HashMap<KeyCode, PrefixCommand> {
+        &self.sort_map
     }
 
     crate::getters! {
         sort_prefix: &[Key],
-        g_prefix: &[Key],
+        go_to_prefix: &[Key],
     }
 }
 
@@ -249,7 +249,7 @@ pub(crate) struct KeyPrefix {
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum PrefixState {
     None,
-    G,
+    GoTo,
     Sort,
 }
 
@@ -267,10 +267,10 @@ impl KeyPrefix {
     pub(crate) fn feed(
         &mut self,
         key: &KeyEvent,
-        gmap: &HashMap<KeyCode, PrefixCommand>,
-        sortmap: &HashMap<KeyCode, PrefixCommand>,
+        go_to_map: &HashMap<KeyCode, PrefixCommand>,
+        sort_map: &HashMap<KeyCode, PrefixCommand>,
         sort_prefix: &[Key],
-        g_prefix: &[Key],
+        go_to_prefix: &[Key],
     ) -> Option<PrefixCommand> {
         self.started = false;
         self.exited = false;
@@ -282,16 +282,16 @@ impl KeyPrefix {
                     modifiers: key.modifiers,
                 };
 
-                if g_prefix.contains(&k) {
-                    self.start(PrefixState::G);
+                if go_to_prefix.contains(&k) {
+                    self.start(PrefixState::GoTo);
                 } else if sort_prefix.contains(&k) {
                     self.start(PrefixState::Sort);
                 }
 
                 None
             }
-            PrefixState::G => self.finish(key, gmap),
-            PrefixState::Sort => self.finish(key, sortmap),
+            PrefixState::GoTo => self.finish(key, go_to_map),
+            PrefixState::Sort => self.finish(key, sort_map),
         }
     }
 
@@ -305,8 +305,8 @@ impl KeyPrefix {
         self.exited
     }
 
-    pub(crate) fn is_g_state(&self) -> bool {
-        self.state == PrefixState::G
+    pub(crate) fn is_active(&self) -> bool {
+        self.state != PrefixState::None
     }
 
     pub(crate) fn is_sort_state(&self) -> bool {
@@ -314,7 +314,7 @@ impl KeyPrefix {
     }
 
     pub(crate) fn expired(&self) -> bool {
-        (self.state == PrefixState::G || self.state == PrefixState::Sort)
+        self.is_active()
             && self
                 .last_time
                 .is_some_and(|time| time.elapsed() >= self.timeout)
