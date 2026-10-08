@@ -300,7 +300,7 @@ impl AppState {
         }
 
         let prefix_recognizer = self.actions.prefix_recognizer_mut();
-        if prefix_recognizer.is_g_state() && prefix_recognizer.expired() {
+        if prefix_recognizer.expired() {
             prefix_recognizer.cancel();
             self.hide_prefix_help();
             changed = true;
