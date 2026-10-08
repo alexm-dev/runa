@@ -7,6 +7,7 @@ All the changes made to runa are documented here.
 ### Fixed
 - **File Info**: File info now always matches the selected entry after very fast navigation.
 - **Input**: Moving the input cursor over non-ASCII characters no longer crashes.
+- **Sort**: The sort help widget now closes after its timeout, similar to the `go to` helper.
 - **Documentation**: Fixed the `Scoop` install command in the configuration docs and in the README.
 
 ### Changed
