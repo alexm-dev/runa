@@ -293,17 +293,20 @@ impl ActionContext {
 
     // Cursor actions
 
-    /// Moves the input cursor one position to the left, if possible.
+    /// Moves the input cursor by one character to the left, if possible.
     pub(crate) fn action_move_cursor_left(&mut self) {
-        if self.input_cursor_pos > 0 {
-            self.input_cursor_pos -= 1;
+        if let Some((previous, _)) = self.input_buffer[..self.input_cursor_pos]
+            .char_indices()
+            .next_back()
+        {
+            self.input_cursor_pos = previous;
         }
     }
 
-    /// Moves the input cursor one position to the right, if possible.
+    /// Moves the input cursor by one character to the right, if possible.
     pub(crate) fn action_move_cursor_right(&mut self) {
-        if self.input_cursor_pos < self.input_buffer.len() {
-            self.input_cursor_pos += 1;
+        if let Some(ch) = self.input_buffer[self.input_cursor_pos..].chars().next() {
+            self.input_cursor_pos += ch.len_utf8();
         }
     }
 
@@ -558,5 +561,23 @@ impl ScrollState {
     pub(crate) fn reset(&self) {
         self.offset.set(0);
         self.max_offset.set(0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cursor_moves_by_char() {
+        let mut ctx = ActionContext::default();
+        ctx.action_insert_at_cursor('è');
+        ctx.action_move_cursor_left();
+        ctx.action_insert_at_cursor('a');
+        ctx.action_move_cursor_right();
+        ctx.action_backspace_at_cursor();
+
+        assert_eq!(ctx.input_buffer, "a");
+        assert_eq!(ctx.input_cursor_pos, 1);
     }
 }
