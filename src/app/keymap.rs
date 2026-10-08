@@ -274,7 +274,7 @@ impl KeyPrefix {
     ) -> Option<PrefixCommand> {
         self.started = false;
         self.exited = false;
-        let now = Instant::now();
+
         match self.state {
             PrefixState::None => {
                 let k = Key {
@@ -283,45 +283,15 @@ impl KeyPrefix {
                 };
 
                 if g_prefix.contains(&k) {
-                    self.state = PrefixState::G;
-                    self.last_time = Some(now);
-                    self.started = true;
-                    None
+                    self.start(PrefixState::G);
                 } else if sort_prefix.contains(&k) {
-                    self.state = PrefixState::Sort;
-                    self.last_time = Some(now);
-                    self.started = true;
-                    None
-                } else {
-                    None
+                    self.start(PrefixState::Sort);
                 }
+
+                None
             }
-            PrefixState::G => {
-                let elapsed = self
-                    .last_time
-                    .map_or(Duration::MAX, |t| now.duration_since(t));
-                self.state = PrefixState::None;
-                self.last_time = None;
-                self.exited = true;
-                if elapsed <= self.timeout {
-                    gmap.get(&key.code).copied()
-                } else {
-                    None
-                }
-            }
-            PrefixState::Sort => {
-                let elapsed = self
-                    .last_time
-                    .map_or(Duration::MAX, |t| now.duration_since(t));
-                self.state = PrefixState::None;
-                self.last_time = None;
-                self.exited = true;
-                if elapsed <= self.timeout {
-                    sortmap.get(&key.code).copied()
-                } else {
-                    None
-                }
-            }
+            PrefixState::G => self.finish(key, gmap),
+            PrefixState::Sort => self.finish(key, sortmap),
         }
     }
 
@@ -354,6 +324,27 @@ impl KeyPrefix {
         self.state = PrefixState::None;
         self.last_time = None;
         self.exited = true;
+    }
+
+    fn start(&mut self, state: PrefixState) {
+        self.state = state;
+        self.last_time = Some(Instant::now());
+        self.started = true;
+    }
+
+    fn finish(
+        &mut self,
+        key: &KeyEvent,
+        map: &HashMap<KeyCode, PrefixCommand>,
+    ) -> Option<PrefixCommand> {
+        let in_time = !self.expired();
+
+        self.cancel();
+        if !in_time {
+            return None;
+        }
+
+        map.get(&key.code).copied()
     }
 }
 
