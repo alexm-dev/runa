@@ -189,7 +189,7 @@ impl Formatter {
                 return ord;
             }
 
-            let result = a.lowered().cmp(b.lowered());
+            let result = a.lowered_bytes().cmp(b.lowered_bytes());
 
             if sort_order == SortOrder::Ascending {
                 result
@@ -210,9 +210,9 @@ impl Formatter {
             }
 
             let result = if case_insensitive {
-                natural_cmp_ascii_ci(a.lowered(), b.lowered())
+                natural_cmp_bytes(a.lowered_bytes(), b.lowered_bytes(), true)
             } else {
-                natural_cmp_ascii(a.lowered(), b.lowered())
+                natural_cmp_bytes(a.lowered_bytes(), b.lowered_bytes(), false)
             };
 
             if sort_order == SortOrder::Ascending {
@@ -240,7 +240,7 @@ impl Formatter {
 
             if result == std::cmp::Ordering::Equal {
                 result = if case_insensitive {
-                    a.lowered().cmp(b.lowered())
+                    a.lowered_bytes().cmp(b.lowered_bytes())
                 } else {
                     a.name().cmp(b.name())
                 };
@@ -330,7 +330,7 @@ impl Formatter {
                 let a = &entries[left.2];
                 let b = &entries[right.2];
                 m_ord = if self.list.case_insensitive {
-                    a.lowered().cmp(b.lowered())
+                    a.lowered_bytes().cmp(b.lowered_bytes())
                 } else {
                     a.name().cmp(b.name())
                 };
@@ -696,14 +696,6 @@ fn system_time_to_key(system_time: Option<SystemTime>) -> u128 {
         .and_then(|st| st.duration_since(UNIX_EPOCH).ok())
         .map(|duration| duration.as_nanos())
         .unwrap_or(0)
-}
-
-fn natural_cmp_ascii(a: &str, b: &str) -> Ordering {
-    natural_cmp_bytes(a.as_bytes(), b.as_bytes(), false)
-}
-
-fn natural_cmp_ascii_ci(a: &str, b: &str) -> Ordering {
-    natural_cmp_bytes(a.as_bytes(), b.as_bytes(), true)
 }
 
 fn natural_cmp_bytes(a: &[u8], b: &[u8], fold_case: bool) -> Ordering {

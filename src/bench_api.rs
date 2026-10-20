@@ -400,5 +400,5 @@ impl IdleFixture {
 /// Returns the size of a file entry in bytes and its heap allocations,
 /// without and with a symlink.
 pub fn entry_layout() -> (usize, usize, usize) {
-    (std::mem::size_of::<FileEntry>(), 3, 4)
+    (std::mem::size_of::<FileEntry>(), 1, 2)
 }

@@ -12,13 +12,18 @@ const DEFAULT_DIR_CAPACITY: usize = 256;
 /// Represents a single entry in a directory listing
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FileEntry {
-    name: Box<OsStr>,
-    name_str: Box<str>,
-    lowered: Box<str>,
+    buf: Box<str>,
+    lower_len: u16,
+    name_start: u16,
+    raw_name: Option<Box<OsStr>>,
     symlink: Option<Box<Path>>,
-    ext_offset: Option<u16>,
+    ext_offset: u16,
     flags: u8,
 }
+
+/// Keep FileEntry small, it exists once per listed entry.
+#[cfg(target_pointer_width = "64")]
+const _: () = assert!(std::mem::size_of::<FileEntry>() == 56);
 
 impl FileEntry {
     // Bitflags definitions
@@ -36,9 +41,38 @@ impl FileEntry {
     pub(super) const EXEC_FLAG: u32 = 0o111;
 
     pub(crate) fn new(name: OsString, flags: u8, symlink: Option<Box<Path>>) -> Self {
-        let lossy_str = name.to_string_lossy();
-        let lowered: Box<str> = lossy_str.to_lowercase().into_boxed_str();
-        let name_str: Box<str> = lossy_str.into_owned().into_boxed_str();
+        let (mut buf, raw_name) = match name.into_string() {
+            Ok(s) => (s, None),
+            Err(raw) => (
+                raw.to_string_lossy().into_owned(),
+                Some(raw.into_boxed_os_str()),
+            ),
+        };
+
+        let mut name_start = 0;
+        if buf.is_ascii() {
+            if buf.bytes().any(|b| b.is_ascii_uppercase()) {
+                let len = buf.len();
+                buf.reserve_exact(len);
+                buf.extend_from_within(..len);
+                buf[..len].make_ascii_lowercase();
+                name_start = len;
+            }
+        } else {
+            let mut lowered = buf.to_lowercase();
+            if lowered != buf {
+                name_start = lowered.len();
+                lowered.push_str(&buf);
+                buf = lowered;
+            }
+        }
+
+        let lower_len = if name_start == 0 {
+            buf.len()
+        } else {
+            name_start
+        };
+        let lowered = &buf[..lower_len];
 
         let ext_offset = lowered.rsplit_once('.').and_then(|(base, ext)| {
             if !base.is_empty() && !ext.is_empty() {
@@ -49,26 +83,55 @@ impl FileEntry {
         });
 
         FileEntry {
-            name: name.into_boxed_os_str(),
-            name_str,
-            lowered,
-            ext_offset,
+            buf: buf.into_boxed_str(),
+            lower_len: lower_len as u16,
+            name_start: name_start as u16,
+            raw_name,
+            ext_offset: ext_offset.unwrap_or(0),
             flags,
             symlink,
         }
     }
 
     crate::getters! {
-        name: &OsStr,
-        name_str: &str,
-        lowered: &str,
         flags: u8,
+    }
+
+    /// Returns the name of a entry in FileEntry from the raw version of the name.
+    /// If no raw version of the name exists, it creates a new OsStr for the name string.
+    #[inline]
+    pub(crate) fn name(&self) -> &OsStr {
+        match &self.raw_name {
+            Some(raw) => raw,
+            None => OsStr::new(self.name_str()),
+        }
+    }
+
+    /// Returns the name of a entry in FileEntry as a string.
+    #[inline]
+    pub(crate) fn name_str(&self) -> &str {
+        &self.buf[self.name_start as usize..]
+    }
+
+    /// Returns the lowercase name of a entry in FileEntry as a string
+    #[inline]
+    pub(crate) fn lowered(&self) -> &str {
+        &self.buf[..self.lower_len as usize]
+    }
+
+    /// Returns the lowercase name of a entry in FileEntry as bytes.
+    #[inline]
+    pub(crate) fn lowered_bytes(&self) -> &[u8] {
+        &self.buf.as_bytes()[..self.lower_len as usize]
     }
 
     #[inline]
     pub(crate) fn ext(&self) -> Option<&str> {
-        self.ext_offset
-            .map(|offset| &self.lowered[offset as usize..])
+        if self.ext_offset == 0 {
+            return None;
+        }
+
+        Some(&self.lowered()[self.ext_offset as usize..])
     }
 
     #[inline]
@@ -226,5 +289,62 @@ mod tests {
         assert!(fe_dir.is_dir());
         assert!(!fe_dir.is_symlink());
         Ok(())
+    }
+
+    #[test]
+    fn names_stay_identical() {
+        let names = [
+            "file.txt",
+            "README.md",
+            ".Hidden",
+            "noext",
+            "archive.tar.GZ",
+            "Äpfel.TXT",
+            "µ.md",
+            "ΟΣ.md",
+            "\u{212A}elvin.TXT",
+            "a.",
+            ".b",
+        ];
+
+        for name in names {
+            let entry = FileEntry::new(OsString::from(name), 0, None);
+            let lowered = name.to_lowercase();
+            assert_eq!(entry.name(), OsStr::new(name));
+            assert_eq!(entry.name_str(), name);
+            assert_eq!(entry.lowered(), lowered);
+            assert_eq!(entry.lowered_bytes(), lowered.as_bytes());
+        }
+
+        let ext = |n: &str| {
+            FileEntry::new(OsString::from(n), 0, None)
+                .ext()
+                .map(str::to_string)
+        };
+        assert_eq!(ext("archive.tar.GZ").as_deref(), Some("gz"));
+        assert_eq!(ext("\u{212A}elvin.TXT").as_deref(), Some("txt"));
+        assert_eq!(ext("a."), None);
+        assert_eq!(ext(".b"), None);
+    }
+
+    #[test]
+    fn non_utf8_name_keeps_raw_name() {
+        #[cfg(windows)]
+        let raw = {
+            use std::os::windows::ffi::OsStringExt;
+            OsString::from_wide(&[0xD800, 0x41, 0x2E, 0x54])
+        };
+
+        #[cfg(unix)]
+        let raw = {
+            use std::os::unix::ffi::OsStringExt;
+            OsString::from_vec(b"\xffA.T".to_vec())
+        };
+
+        let entry = FileEntry::new(raw.clone(), 0, None);
+        assert_eq!(entry.name(), raw.as_os_str());
+        assert_eq!(entry.name_str(), "\u{FFFD}A.T");
+        assert_eq!(entry.lowered(), "\u{FFFD}a.t");
+        assert_eq!(entry.ext(), Some("t"));
     }
 }
