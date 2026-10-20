@@ -11,6 +11,7 @@ All the changes made to runa are documented here.
 - **Documentation**: Fixed the `Scoop` install command in the configuration docs and in the README.
 
 ### Changed
+- **FileEntry**: Entry names are now stored in a single allocation, improving efficiency.
 - **Dependencies**:
     - Removed `home` crate to instead use the `std::env::home_dir` function.
     - Updated dependencies.
