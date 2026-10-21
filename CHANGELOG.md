@@ -2,6 +2,12 @@
 
 All the changes made to runa are documented here.
 
+## [0.12.4] - UNRELEASED
+
+
+---
+
+
 ## [0.12.3] - 2026-10-21
 
 #### Smooth preview scrolling, preview fixes and better version output.
