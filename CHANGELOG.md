@@ -2,7 +2,9 @@
 
 All the changes made to runa are documented here.
 
-## [0.12.3] - UNRELEASED
+## [0.12.3] - 2026-10-21
+
+#### Smooth preview scrolling, preview fixes and better version output.
 
 ### Added
 - **CLI**: Version output now includes the git commit hash and date when built from a git checkout.
@@ -11,19 +13,20 @@ All the changes made to runa are documented here.
 ### Fixed
 - **Preview**:
     - File preview no longer stays a few lines behind when scrolling.
-    - Scrolling to the end a file no longer makes the preview bounce back and forth.
+    - Scrolling to the end of a file no longer makes the preview bounce back and forth.
     - File previews can now scroll past line 65,535.
 
 ### Changed
-- **Previews** Scrolling a file preview is now smooth.
+- **Preview**: Scrolling a file preview is now smooth and no longer jumps several lines at once.
 - **CLI**: `-V` is now the flag for `--version`. `-v` alone no longer prints the version, as it is now the `--verbose` modifier.
 
 ### Internal
 - **Build**: Added a `build.rs` to generate the version output with the git commit, `rustc` version and the target.
-- **CI**: Pushing a release tag now runs the full release automatically
+- **CI**: Pushing a release tag now runs the full release automatically:
     - First the CI, then the documentation, then the release, for the tag that was pushed.
     - Release now publishes the binaries built and tested by the CI run, instead of building them a second time.
-    - Added manual dry-runs that builds and packages the release without publishing.
+    - Added manual dry runs that build and package the release without publishing.
+
 
 ---
 
