@@ -126,7 +126,8 @@ style = "plain"
 
 # Options to set the bat theme of the bat preview method
 # All available bat themes are supported. See bat --list-themes
-theme = "default"
+# If omitted, the bat theme follows [theme] name, otherwise "TwoDark".
+# theme = "gruvbox-dark"
 
 # Toggle wrapping the bat output to the pane width.
 # If false, long lines stay on one line and go off-screen
@@ -146,7 +147,7 @@ preview = 40
 # Display the file info attributes.
 [display.info]
 name = true
-file_type = true
+file_type = false
 size = true
 modified = true
 created = true
@@ -379,10 +380,10 @@ move_size = [70, 14]
 
 # Option to specify the maximal `drawn` results of the find widget.
 # Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
-find_visible_results = 5
+find_visible_results = 8
 
 # Option to configure the find widget width
-find_width = 40
+find_width = 60
 
 # Coloring for the widgets
 # Styles the overall widget text.
@@ -407,9 +408,9 @@ label.bg = "default"
 value.fg = "cyan"
 value.bg = "default"
 
-# Set the size and position of the go to help widet when pressing "g"
-goto_help.size = [58, 3]
-goto_help.position = "bottom"
+# Set the size and position of the go to help widget when pressing "g"
+go_to_help.size = [58, 3]
+go_to_help.position = "bottom"
 
 # Configuration for the status_line
 # For marker and copy status, the configuration from [theme.marker] sets each status line section.
@@ -420,7 +421,7 @@ bg = "default"
 # Tab line customization
 [theme.tab]
 marker = ""
-separator = ":"
+separator = ""
 active.fg = "yellow"
 active.bg = "default"
 inactive.fg = "gray"
@@ -430,7 +431,7 @@ inactive.bg = "default"
 # Possible ways: {idx}, {name}, {marker}, {separator}
 # {name} shows the current directory of the tab
 # Example: line_format = "[{idx}{name}{marker}]"
-line_format = "[{idx}]"
+line_format = "[{idx}{marker}]"
 
 # Customization for the status line File information.
 [theme.info]
@@ -476,11 +477,13 @@ default = "nvim"
 
 # Map file extensions to editors/program commands
 # Use single command or array of command + arguments
-ext = { rs = "nvim", md = "code", txt = ["code", "-d"] }
+# Example:
+# ext = { rs = "nvim", md = "code", txt = ["code", "-d"] }
 
 # Map specific filenames to editors/program commands
 # Use single command or array of command + arguments
-filename = { "Cargo.toml" = "nvim" }
+# Example:
+# filename = { "Cargo.toml" = "nvim" }
 
 # ===========================
 #          KEYBINDS
@@ -509,7 +512,7 @@ create              = ["n"]
 create_directory    = ["N"]
 move_file           = ["m"]
 filter              = ["f"]
-toggle_marker       = ["space"]
+toggle_marker       = ["<space>"]
 show_info           = ["i"]
 find                = ["s"]
 clear_markers       = ["<c-c>"]
@@ -527,9 +530,9 @@ tab_close           = ["<c-w>"]
 tab_next            = ["<c-n>"]
 tab_prev            = ["<c-p>"]
 
-# Widget scroll
-scroll_up           = ["<c-d>"]
-scroll_down         = ["<c-u>"]
+# Scroll the preview pane and widgets
+scroll_up           = ["pgup"]
+scroll_down         = ["pgdn"]
 
 # Keys that are triggered by the "g" prefix
 prefix_go_to        = ["g"]
