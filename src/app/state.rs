@@ -409,8 +409,9 @@ impl AppState {
             WorkerResponse::PreviewLoaded {
                 path,
                 lines,
-                request_id,
+                scroll,
                 is_eof,
+                request_id,
                 tab_id: _tab_id,
             } => {
                 if request_id == self.preview.request_id()
@@ -421,6 +422,7 @@ impl AppState {
                     self.preview.update_content(
                         lines,
                         self.metrics.preview_height,
+                        scroll,
                         is_eof,
                         request_id,
                     );
@@ -673,7 +675,7 @@ impl AppState {
             if !force
                 && self.preview.loaded_path() == Some(path.as_path())
                 && !self.preview.data().is_empty()
-                && self.preview.scroll().offset() == self.preview.loaded_scroll()
+                && usize::from(self.preview.scroll().offset()) == self.preview.loaded_scroll()
             {
                 self.preview.clear_pending();
                 return;

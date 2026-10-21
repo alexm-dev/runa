@@ -37,7 +37,7 @@ pub(crate) struct PreviewState {
     pending: bool,
     last_input_time: Instant,
     scroll: ScrollState,
-    loaded_scroll: u16,
+    loaded_scroll: usize,
 }
 
 impl PreviewState {
@@ -45,7 +45,7 @@ impl PreviewState {
         data: &PreviewData,
         selected_idx: usize,
         scroll: &ScrollState,
-        loaded_scroll: u16,
+        loaded_scroll: usize,
         request_id: u64,
     }
 
@@ -109,17 +109,18 @@ impl PreviewState {
         &mut self,
         lines: Vec<String>,
         view_height: usize,
+        loaded_scroll: usize,
         is_eof: bool,
         request_id: u64,
     ) {
         if request_id == self.request_id {
+            let total_lines = loaded_scroll + lines.len();
             let raw = lines.join("\n");
             let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
             self.data = PreviewData::File(text);
             self.loaded_path = self.current_path.clone();
 
             if is_eof {
-                let total_lines = self.scroll().offset() as usize + lines.len();
                 let max_offset = total_lines.saturating_sub(view_height) as u16;
                 self.scroll.set_max_offset(max_offset);
                 if self.scroll().offset() > max_offset {
@@ -129,7 +130,7 @@ impl PreviewState {
                 self.scroll.set_max_offset(u16::MAX);
             }
 
-            self.loaded_scroll = self.scroll().offset();
+            self.loaded_scroll = loaded_scroll;
         }
     }
 
@@ -207,5 +208,26 @@ impl PreviewData {
             PreviewData::File(text) => text.lines.is_empty(),
             PreviewData::Empty => true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn late_preview_keeps_its_window() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("file.txt"));
+        preview.scroll.set_max_offset(u16::MAX);
+
+        preview.scroll_down();
+        preview.scroll_down();
+
+        let lines = (0..10).map(|i| i.to_string()).collect();
+        preview.update_content(lines, 5, 0, false, id);
+
+        assert_eq!(preview.loaded_scroll(), 0);
+        assert_eq!(preview.scroll().offset(), 2);
     }
 }

@@ -228,6 +228,7 @@ pub(crate) enum WorkerResponse {
     PreviewLoaded {
         path: PathBuf,
         lines: Vec<String>,
+        scroll: usize,
         is_eof: bool,
         request_id: u64,
         tab_id: Option<usize>,

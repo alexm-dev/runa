@@ -60,6 +60,7 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
             let _ = res_tx.send(WorkerResponse::PreviewLoaded {
                 path,
                 lines,
+                scroll,
                 is_eof,
                 request_id,
                 tab_id,
