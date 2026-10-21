@@ -185,22 +185,28 @@ position = [25, 60]
 size = { w = 36, h = 20 }
 ```
 
-### Full Custom Setup
+### Showcase
+
+This is the setup shown in the README screenshot. It needs a Nerd Font and a terminal with truecolor support.
+
+![runa setup](https://github.com/user-attachments/assets/b02a5190-3e0a-45d3-ace1-f1d067f4bdaa)
 
 ```toml
 [general]
 dirs_first = true
 show_hidden = true
-startup.tabs = ["cwd", "~/Downloads"]
+startup.tabs = ["cwd", '~']
 
 [display]
-borders = "unified"
+borders = "split"
 titles = true
 icons = true
+parent = true
+preview = true
 preview_underline = false
 
 [display.layout]
-preview = 70
+preview = 100
 
 [display.preview_options]
 method = "bat"
@@ -211,16 +217,19 @@ format = "{perms} | {size} | {mtime}"
 date_format = "%d %b %y %H:%M"
 
 [theme]
-accent = "#8ac"
+accent = "#8acccc"
 path.bg = "#333333"
+selection.bg = "#262626"
+tab.active.fg = "#8ac"
+tab.active.bg = "#555555"
+tab.inactive.bg = "#444444"
+tab.line_format = " {idx} {name} "
 status_line.bg = "#333333"
 status_line.fg = "#8ac"
-
-[editor]
-default = "nvim"
-
-[keys]
-scroll_up = ["pgup"]
-scroll_down = ["pgdn"]
+widget.border.fg = "yellow"
+info.date.bg = "#333333"
+info.date.fg = "green"
+info.size.bg = "#333333"
+info.perms.bg = "#333333"
 ```
 
