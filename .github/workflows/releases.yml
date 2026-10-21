@@ -1,12 +1,10 @@
 name: Release runa Cross-Platform Binaries
 
-# Pushing a v* tag runs CI, deploys the docs and publishes the release, all for that tag.
-# Manual runs default to a dry run: CI builds and packages the release without publishing.
-# To publish an existing tag manually: gh workflow run releases.yml --ref <tag> -f dry_run=false
 on:
   push:
     tags:
       - 'v*'
+  # Publish an existing tag manually: gh workflow run releases.yml --ref <tag> -f dry_run=false
   workflow_dispatch:
     inputs:
       dry_run:
