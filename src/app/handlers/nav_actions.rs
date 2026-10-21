@@ -292,11 +292,9 @@ impl AppState {
         let list_opts = self.dir_list_options();
 
         if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
-            let (entries, sort_col, _rid, _ts) = &*val;
-            let entries_vec = entries.clone();
-            let sort_vec = sort_col.clone();
+            let (entries, sort_column, _, _) = &*val;
             self.nav
-                .update_from_worker(path, entries_vec, sort_vec, focus.clone());
+                .update_from_worker(path, entries.clone(), sort_column.clone(), focus.clone());
             self.is_loading = false;
         } else if let Some(parent) = self.nav.current_dir().parent()
             && path == parent
@@ -305,11 +303,9 @@ impl AppState {
                     .cache()
                     .get(parent, self.nav.sort_config(), &self.dir_list_options())
         {
-            let (entries, sort_col, _rid, _ts) = &*val;
-            let entries_vec = entries.clone();
-            let sort_vec = sort_col.clone();
+            let (entries, sort_column, _, _) = &*val;
             self.nav
-                .update_from_worker(path, entries_vec, sort_vec, focus.clone());
+                .update_from_worker(path, entries.clone(), sort_column.clone(), focus.clone());
             self.is_loading = false;
         } else {
             self.is_loading = true;

@@ -47,11 +47,11 @@ impl ParentState {
         &mut self,
         entries: Arc<[FileEntry]>,
         current_name: &str,
-        req_id: u64,
+        request_id: u64,
         parent_path: &Path,
         sort_column: Option<Arc<StrBuffer>>,
     ) {
-        if req_id < self.request_id {
+        if request_id < self.request_id {
             return;
         }
         // Find the index of the folder we are currently inside to highlight it
@@ -59,7 +59,7 @@ impl ParentState {
         self.entries = entries;
         self.last_path = Some(parent_path.to_path_buf());
         self.sort_column = sort_column;
-        self.request_id = req_id;
+        self.request_id = request_id;
     }
 
     pub(super) fn invalidate_if_path(&mut self, path: &Path) {

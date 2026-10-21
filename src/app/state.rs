@@ -245,7 +245,7 @@ impl AppState {
             return;
         }
 
-        let req_id = self.metadata.prepare_new_request();
+        let request_id = self.metadata.prepare_new_request();
         let date_format = self.config.display().info().date_format();
 
         let needs = self.metadata_needs();
@@ -256,13 +256,13 @@ impl AppState {
                 path: path.clone(),
                 date_format: date_format.to_string(),
                 needs,
-                request_id: req_id,
+                request_id,
                 tab_id: self.tab_id(),
             })
             .is_ok()
         {
             self.metadata.touch();
-            self.metadata.set_pending(req_id, path);
+            self.metadata.set_pending(request_id, path);
         }
     }
 
@@ -584,29 +584,27 @@ impl AppState {
         let list_opts = self.dir_list_options();
 
         if let Some(val) = workers.cache().get(parent_path, sort_config, &list_opts) {
-            let (entries, sort_col, _rid, _ts) = &*val;
-            let entries_vec = entries.clone();
-            let sort_vec = sort_col.clone();
+            let (entries, sort_column, _, _) = &*val;
             let current_name = self
                 .nav
                 .current_dir()
                 .file_name()
                 .map(|n| n.to_string_lossy().to_string())
                 .unwrap_or_default();
-            let req_id = self.parent.prepare_new_request(parent_path);
+            let request_id = self.parent.prepare_new_request(parent_path);
             self.parent.update_from_entries(
-                entries_vec,
+                entries.clone(),
                 &current_name,
-                req_id,
+                request_id,
                 parent_path,
-                sort_vec,
+                sort_column.clone(),
             );
             return;
         }
 
         let parent_path_buf = parent_path.to_path_buf();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
-        let req_id = self.parent.prepare_new_request(&parent_path_buf);
+        let request_id = self.parent.prepare_new_request(&parent_path_buf);
         let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,
@@ -614,7 +612,7 @@ impl AppState {
             sort_config,
             sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
-            request_id: req_id,
+            request_id,
             tab_id: self.tab_id(),
         });
     }
@@ -695,14 +693,14 @@ impl AppState {
                 return;
             }
 
-            let req_id = self.preview.prepare_new_request(path.clone());
+            let request_id = self.preview.prepare_new_request(path.clone());
             let sort_config = self.nav.sort_config();
             let list_opts = self.dir_list_options();
             let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
 
             if entry.is_dir() || entry.is_symlink() {
                 if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
-                    let (entries, sort_col, _rid, _ts) = &*val;
+                    let (entries, sort_column, _, _) = &*val;
                     let pos = self
                         .nav
                         .get_position()
@@ -712,10 +710,10 @@ impl AppState {
 
                     self.preview.update_from_entries(
                         entries.clone(),
-                        sort_col.clone(),
+                        sort_column.clone(),
                         pos,
                         self.metrics.preview_height,
-                        req_id,
+                        request_id,
                     );
 
                     self.preview_request_time.touch();
@@ -731,7 +729,7 @@ impl AppState {
                         sort_config,
                         sort_date_format,
                         always_show: Arc::clone(self.config.general().always_show()),
-                        request_id: req_id,
+                        request_id,
                         tab_id: self.tab_id(),
                     })
                     .is_ok()
@@ -765,7 +763,7 @@ impl AppState {
                         pane_width: self.metrics.preview_width,
                         scroll,
                         preview_mode,
-                        request_id: req_id,
+                        request_id,
                         tab_id: self.tab_id(),
                     })
                     .is_ok()

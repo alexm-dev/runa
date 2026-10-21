@@ -88,8 +88,8 @@ impl DirCache {
         match self.inner.entry(key) {
             Entry::Occupied(mut occ) => {
                 let existing = occ.get();
-                let exisiting_req = existing.2;
-                if request_id >= exisiting_req {
+                let existing_request_id = existing.2;
+                if request_id >= existing_request_id {
                     occ.insert(new_value);
                 }
             }
