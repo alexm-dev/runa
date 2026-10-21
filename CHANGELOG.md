@@ -4,6 +4,13 @@ All the changes made to runa are documented here.
 
 ## [0.12.3] - UNRELEASED
 
+### Added
+- **CLI**: Version output now includes the git commit hash and date when built from a git checkout.
+    - Combine `-V` or `--version` with `-v/--verbose` (example: `-vV`) to also show the `rustc` version, target and build profile.
+
+### Changed
+- **CLI**: `-V` is now the flag for `--version`. `-v` alone no longer prints the version, as it is now the `--verbose` modifier.
+
 
 ---
 

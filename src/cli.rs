@@ -27,11 +27,13 @@ pub(crate) fn handle_args() -> CliAction {
     let first_arg = &args[1];
     if first_arg.starts_with("-") {
         return match first_arg.as_str() {
-            "--version" | "-v" => {
-                if check_no_extra_args(first_arg, &args) {
-                    return CliAction::Exit;
+            "--version" | "-V" | "--verbose" | "-v" | "-vV" | "-Vv" => {
+                match version_request(&args[1..]) {
+                    Some(verbose) => print_version(verbose),
+                    None => eprintln!(
+                        "[runa] Error: use -V or --version, optionally with -v or --verbose."
+                    ),
                 }
-                print_version();
                 CliAction::Exit
             }
             "-h" | "--help" => {
@@ -118,8 +120,45 @@ pub(crate) fn handle_args() -> CliAction {
     CliAction::RunAppAtPath(paths)
 }
 
-fn print_version() {
-    println!("runa {}", env!("CARGO_PKG_VERSION"));
+fn version_request(flags: &[String]) -> Option<bool> {
+    let mut version = false;
+    let mut verbose = false;
+
+    for flag in flags {
+        match flag.as_str() {
+            "-V" | "--version" => version = true,
+            "-v" | "--verbose" => verbose = true,
+            "-vV" | "-Vv" => {
+                version = true;
+                verbose = true;
+            }
+            _ => return None,
+        }
+    }
+
+    version.then_some(verbose)
+}
+
+fn print_version(verbose: bool) {
+    let version = env!("CARGO_PKG_VERSION");
+    match option_env!("RUNA_GIT_INFO") {
+        Some(git) => println!("runa {version} ({git})"),
+        None => println!("runa {version}"),
+    }
+
+    if !verbose {
+        return;
+    }
+
+    let profile = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "release"
+    };
+
+    println!("rustc: {}", option_env!("RUNA_RUSTC").unwrap_or("unknown"));
+    println!("target: {}", env!("RUNA_TARGET"));
+    println!("profile: {profile}");
 }
 
 fn print_help() {
@@ -139,7 +178,8 @@ OPTIONS:
       --config-help       Display all the configuration options. Use '--config-help [SECTION]'
                           to show a specific part (e.g. 'theme' or 'keys')
   -h, --help              Print help information
-  -v, --version           Display the current installed version of runa
+  -V, --version           Display the current installed version of runa
+  -v, --verbose           With -V, also display build details
 
 ENVIRONMENT:
   RUNA_CONFIG             Override the default config path
