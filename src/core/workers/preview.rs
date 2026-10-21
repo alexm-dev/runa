@@ -28,6 +28,8 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                 continue;
             };
 
+            let read_lines = max_lines + 1;
+
             let lines = if fs::is_temp_file(&path) {
                 vec![formatter::sanitize_to_exact_width(
                     "[Temporary file - preview skipped]",
@@ -36,19 +38,19 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
             } else {
                 match preview_mode {
                     PreviewMode::Internal => {
-                        formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+                        formatter::safe_read_preview(&path, read_lines, pane_width, scroll)
                     }
                     PreviewMode::Bat { args } => {
                         if !os::is_regular_file(&path) || fs::is_preview_deny(&path) {
-                            formatter::safe_read_preview(&path, max_lines, pane_width, scroll)
+                            formatter::safe_read_preview(&path, read_lines, pane_width, scroll)
                         } else {
-                            match proc::preview_bat(&path, max_lines, args.as_slice(), scroll) {
+                            match proc::preview_bat(&path, read_lines, args.as_slice(), scroll) {
                                 // Bat preview succeeded
                                 // If bat fails, fallback to internal preview
                                 // If bat is not installed or returns error, we fallback to internal preview
                                 Ok(lines) => lines,
                                 Err(_) => formatter::safe_read_preview(
-                                    &path, max_lines, pane_width, scroll,
+                                    &path, read_lines, pane_width, scroll,
                                 ),
                             }
                         }
@@ -56,7 +58,7 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                 }
             };
 
-            let is_eof = lines.len() < max_lines;
+            let (lines, is_eof) = split_eof(lines, max_lines);
             let _ = res_tx.send(WorkerResponse::PreviewLoaded {
                 path,
                 lines,
@@ -67,4 +69,10 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
             });
         }
     });
+}
+
+fn split_eof(mut lines: Vec<String>, max_lines: usize) -> (Vec<String>, bool) {
+    let is_eof = lines.len() <= max_lines;
+    lines.truncate(max_lines);
+    (lines, is_eof)
 }
