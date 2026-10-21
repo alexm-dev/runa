@@ -54,7 +54,7 @@ The name of the preset themes included in runa. Choose a preset, or leave as "de
 - `"catppuccin-latte"`
 - `"nightfox"`
 - `"carbonfox"`
-- `"tokyonight"`
+- `"tokyonight"` (or `"tokyonight-night"`)
 - `"tokyonight-storm"`
 - `"tokyonight-day"`
 - `"everforest"`
@@ -248,7 +248,7 @@ Widget size. Choose one of:
 #### `confirm_size`
 
 - **Type**: `string or array or table`
-- **Default**: inherits `size`
+- **Default**: `"large"`
 
 Confirmation dialog size (for confirmations like deleting files). Same format options as `size`.
 
@@ -262,14 +262,14 @@ Move file widget size. Same format options as `size`.
 #### `find_visible_results`
 
 - **Type**: `integer`
-- **Default**: `5`
+- **Default**: `8`
 
 Option to specify the maximal `drawn` results of the find widget. Not to be confused with `max_find_results` which calculates the overall maximal results fd will generate.
 
 #### `find_width`
 
 - **Type**: `integer`
-- **Default**: `40`
+- **Default**: `60`
 
 Option to configure the find widget width.
 
@@ -291,8 +291,8 @@ Option to configure the find widget width.
 
 #### Go-to Help Widget
 
-- `goto_help.size` - Set the size of the go to help widget when pressing "g"
-- `goto_help.position` - Set the position of the go to help widget
+- `go_to_help.size` - Set the size of the go to help widget when pressing "g" (default `[58, 3]`)
+- `go_to_help.position` - Set the position of the go to help widget (default `"bottom"`)
 
 ### `[theme.status_line]`
 
@@ -317,7 +317,7 @@ Tab line customization.
 #### `line_format`
 
 - **Type**: `string`
-- **Default**: `"[{idx}]"`
+- **Default**: `"[{idx}{marker}]"`
 
 Customization of the tab line. Possible placeholders: `{idx}`, `{name}`, `{marker}`, `{separator}`
 

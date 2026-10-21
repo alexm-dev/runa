@@ -34,7 +34,7 @@ Border style for the panes.
 
 - **Type**: `string`
 - **Default**: `"square"`
-- **Options**: `"square"`, `"rounded"`, `"double"`
+- **Options**: `"square"`, `"rounded"`, `"double"`, `"thick"`
 
 Border shape for the panes.
 
@@ -43,7 +43,7 @@ Border shape for the panes.
 - **Type**: `boolean`
 - **Default**: `true`
 
-Show pane titles at the top (e.g., "Main", "Preview").
+Show titles at the top. With `borders = "split"`, each pane shows its title ("Parent", "Files", "Preview"). With `borders = "unified"`, the outer border shows the current path.
 
 ### `icons`
 
@@ -167,7 +167,7 @@ Change the style of the `bat` preview method.
 #### `theme` (when method = "bat")
 
 - **Type**: `string`
-- **Default**: `"default"`
+- **Default**: follows `[theme] name` (e.g. `"gruvbox-dark"` uses bat's `gruvbox-dark`), otherwise `"TwoDark"`
 
 Options to set the bat theme of the bat preview method. All available bat themes are supported. See `bat --list-themes`
 
@@ -230,7 +230,7 @@ Show file/directory name.
 #### `file_type`
 
 - **Type**: `boolean`
-- **Default**: `true`
+- **Default**: `false`
 
 Show file type.
 

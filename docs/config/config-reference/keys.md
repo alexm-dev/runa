@@ -16,6 +16,23 @@ For keys involving Ctrl, Alt/Meta or Shift, use the following syntax:
 | Alt/Meta | `<a-key>` or `<m-key>` | `alt+key` or `meta+key` | Alt+Key   |
 | Shift    | `<s-key>`              | `shift+key`             | Shift+Key |
 
+## Key Names
+
+| Key        | Names                           |
+|------------|---------------------------------|
+| Arrows     | `up`, `down`, `left`, `right`   |
+| Enter      | `enter`                         |
+| Escape     | `esc`                           |
+| Backspace  | `backspace`, `back`             |
+| Tab        | `tab`                           |
+| Space      | `space`, `spc`, `" "`           |
+| Page Up    | `pgup`, `pageup`, `page_up`     |
+| Page Down  | `pgdn`, `pagedown`, `page_down` |
+| Home / End | `home`, `end`                   |
+| F-keys     | `f1` … `f12`                    |
+
+Names are case-insensitive and also work with modifiers, e.g. `<c-pgup>`. Any other single character binds that character, e.g. `"g"` or `"?"`.
+
 ## File Operations
 
 ### `open_file`
@@ -158,7 +175,7 @@ Show detailed file information widget.
 
 ### `toggle_marker`
 
-- **Default**: `["space"]`
+- **Default**: `["<space>"]`
 
 Toggle marker on current entry (multi-select).
 
@@ -278,15 +295,15 @@ Switch to previous tab.
 
 ### `scroll_up`
 
-- **Default**: `["<c-d>"]`
+- **Default**: `["pgup"]`
 
-Scroll up in widgets.
+Scrolls up in the preview pane, for files and directories, and in widgets.
 
 ### `scroll_down`
 
-- **Default**: `["<c-u>"]`
+- **Default**: `["pgdn"]`
 
-Scroll down in widgets.
+Scrolls down in the preview pane, for files and directories, and in widgets.
 
 ## General
 
