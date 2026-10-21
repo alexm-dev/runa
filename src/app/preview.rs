@@ -64,14 +64,9 @@ impl PreviewState {
 
     // Setters / mutators
 
-    /// Sets the selected index, clamped to the length of the current data
-    pub(crate) fn set_selected_idx(&mut self, idx: usize) {
-        let len = match &self.data {
-            PreviewData::Directory { entries, .. } => entries.len(),
-            PreviewData::File(_) => 1,
-            PreviewData::Empty => 0,
-        };
-        self.selected_idx = idx.min(len.saturating_sub(1));
+    /// Marks a file load as sent, so no other request for the same file overtakes it
+    pub(crate) fn set_in_flight(&mut self) {
+        self.in_flight = true;
     }
 
     /// Marks the preview as pending and updates the last input time
@@ -86,11 +81,6 @@ impl PreviewState {
     /// that a new preview request can be made
     pub(crate) fn clear_pending(&mut self) {
         self.pending = false;
-    }
-
-    /// Marks a file load as sent, so no other request for the same file overtakes it
-    pub(crate) fn set_in_flight(&mut self) {
-        self.in_flight = true;
     }
 
     // Debounce timing for preview render
@@ -153,15 +143,30 @@ impl PreviewState {
         &mut self,
         entries: Arc<[FileEntry]>,
         sort_column: Option<Arc<StrBuffer>>,
+        selected_idx: usize,
+        preview_height: usize,
         request_id: u64,
     ) {
         if request_id == self.request_id {
+            let is_reload = self.loaded_path == self.current_path;
+            let len = entries.len();
+
             self.data = PreviewData::Directory {
                 entries,
                 sort_column,
             };
             self.loaded_path = self.current_path.clone();
-            self.selected_idx = 0;
+            self.selected_idx = selected_idx.min(len.saturating_sub(1));
+
+            let max_offset = len.saturating_sub(preview_height);
+            self.scroll.set_max_offset(max_offset);
+            let offset = if is_reload {
+                self.scroll.offset()
+            } else {
+                (self.selected_idx + 1).saturating_sub(preview_height)
+            };
+
+            self.scroll.set_offset(offset.min(max_offset));
         }
     }
 
@@ -227,12 +232,13 @@ impl PreviewState {
             || (!self.loaded_eof && offset + preview_height + margin > end)
     }
 
-    /// Returns how many loaded lines lie above the view
+    /// Returns how many loaded lines lie or entries lie above the view.
     pub(crate) fn window_offset(&self) -> usize {
         let skip = self.scroll.offset().saturating_sub(self.loaded_scroll);
         match &self.data {
             PreviewData::File(text) => skip.min(text.lines.len().saturating_sub(1)),
-            _ => 0,
+            PreviewData::Directory { .. } => self.scroll.offset(),
+            PreviewData::Empty => 0,
         }
     }
 
@@ -277,6 +283,14 @@ impl PreviewData {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::ffi::OsString;
+
+    fn dir_entries(count: usize) -> Arc<[FileEntry]> {
+        (0..count)
+            .map(|i| FileEntry::new(OsString::from(i.to_string()), 0, None))
+            .collect()
+    }
 
     #[test]
     fn late_preview_keeps_its_window() {
@@ -329,5 +343,56 @@ mod tests {
         };
         let first_visible = &text.lines[preview.window_offset()];
         assert_eq!(first_visible.spans[0].content, "15");
+    }
+
+    #[test]
+    fn dir_scroll_stops_at_last_page() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("dir"));
+        preview.update_from_entries(dir_entries(30), None, 0, 10, id);
+
+        for _ in 0..25 {
+            preview.scroll_down(10);
+        }
+        assert_eq!(preview.window_offset(), 20);
+        assert!(!preview.pending);
+    }
+
+    #[test]
+    fn dir_preview_opens_at_saved_entry() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("dir"));
+        preview.update_from_entries(dir_entries(30), None, 25, 10, id);
+
+        assert_eq!(preview.window_offset(), 16);
+        assert_eq!(preview.selected_idx(), 25);
+    }
+
+    #[test]
+    fn dir_reload_keeps_scroll() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("dir"));
+        preview.update_from_entries(dir_entries(30), None, 0, 10, id);
+        for _ in 0..5 {
+            preview.scroll_down(10);
+        }
+
+        let id = preview.prepare_new_request(PathBuf::from("dir"));
+        preview.update_from_entries(dir_entries(30), None, 0, 10, id);
+        assert_eq!(preview.window_offset(), 5);
+    }
+
+    #[test]
+    fn new_dir_starts_at_top() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("a"));
+        preview.update_from_entries(dir_entries(30), None, 0, 10, id);
+        for _ in 0..5 {
+            preview.scroll_down(10);
+        }
+
+        let id = preview.prepare_new_request(PathBuf::from("b"));
+        preview.update_from_entries(dir_entries(30), None, 0, 10, id);
+        assert_eq!(preview.window_offset(), 0);
     }
 }

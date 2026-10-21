@@ -330,8 +330,11 @@ pub(super) fn draw_preview(
             let inner_w = pane_inner_width(&context);
             let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
 
-            let mut items = Vec::with_capacity(entries.len());
-            for (idx, entry) in entries.iter().enumerate() {
+            let offset = app.preview().window_offset();
+            let rows = context.block.inner(context.area).height as usize;
+
+            let mut items = Vec::with_capacity(rows.min(entries.len()));
+            for (idx, entry) in entries.iter().enumerate().skip(offset).take(rows) {
                 let is_selected = Some(idx) == selected_idx;
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
                 let right = right_col_for(show_col, right_w, sort_column.as_deref(), idx);
@@ -348,7 +351,11 @@ pub(super) fn draw_preview(
             }
 
             let mut state = ListState::default();
-            state.select(selected_idx.map(|idx| idx.min(entries.len().saturating_sub(1))));
+            state.select(
+                selected_idx
+                    .and_then(|idx| idx.checked_sub(offset))
+                    .filter(|&row| row < items.len()),
+            );
 
             frame.render_stateful_widget(
                 List::new(items)

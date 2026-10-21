@@ -372,9 +372,6 @@ impl AppState {
                     && path.parent() == Some(self.nav.current_dir())
                     && path.file_name() == Some(entry.name())
                 {
-                    self.preview
-                        .update_from_entries(entries.clone(), sort_column, request_id);
-
                     let pos = self
                         .nav
                         .get_position()
@@ -382,7 +379,14 @@ impl AppState {
                         .and_then(|saved| entries.iter().position(|e| e.name() == saved))
                         .unwrap_or(0);
 
-                    self.preview.set_selected_idx(pos);
+                    self.preview.update_from_entries(
+                        entries.clone(),
+                        sort_column,
+                        pos,
+                        self.metrics.preview_height,
+                        request_id,
+                    );
+
                     return;
                 }
                 // PARENT CHECK: Must match the current parent request
@@ -699,15 +703,21 @@ impl AppState {
             if entry.is_dir() || entry.is_symlink() {
                 if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
                     let (entries, sort_col, _rid, _ts) = &*val;
-                    self.preview
-                        .update_from_entries(entries.clone(), sort_col.clone(), req_id);
                     let pos = self
                         .nav
                         .get_position()
                         .get(&path)
                         .and_then(|saved| entries.iter().position(|e| e.name() == saved))
                         .unwrap_or(0);
-                    self.preview.set_selected_idx(pos);
+
+                    self.preview.update_from_entries(
+                        entries.clone(),
+                        sort_col.clone(),
+                        pos,
+                        self.metrics.preview_height,
+                        req_id,
+                    );
+
                     self.preview_request_time.touch();
                     return;
                 }
