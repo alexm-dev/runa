@@ -672,10 +672,12 @@ impl AppState {
     fn do_request_preview(&mut self, workers: &Workers, force: bool) {
         if let Some(entry) = self.nav.selected_entry() {
             let path = self.nav.current_dir().join(entry.name());
+
             if !force
                 && self.preview.loaded_path() == Some(path.as_path())
                 && !self.preview.data().is_empty()
-                && usize::from(self.preview.scroll().offset()) == self.preview.loaded_scroll()
+                && (self.preview.in_flight()
+                    || !self.preview.needs_load(self.metrics.preview_height))
             {
                 self.preview.clear_pending();
                 return;
@@ -743,13 +745,13 @@ impl AppState {
                         PreviewMode::Bat { args }
                     }
                 };
-                let scroll = self.preview.scroll().offset() as usize;
+                let (scroll, max_lines) = self.preview.load_window(self.metrics.preview_height);
 
                 if workers
                     .preview_file_tx()
                     .try_send(WorkerTask::LoadPreview {
                         path,
-                        max_lines: self.metrics.preview_height,
+                        max_lines,
                         pane_width: self.metrics.preview_width,
                         scroll,
                         preview_mode,
@@ -759,6 +761,7 @@ impl AppState {
                     .is_ok()
                 {
                     self.preview_request_time.touch();
+                    self.preview.set_in_flight();
                 } else {
                     self.preview.mark_pending();
                 }

@@ -14,6 +14,9 @@ use crate::app::actions::ScrollState;
 use crate::core::FileEntry;
 use crate::utils::{text::StrBuffer, timings::Timings};
 
+/// Pages loaded above and below the visible part of a file preview.
+const PRELOAD_PAGES: usize = 1;
+
 /// Preview content for the preview pane
 ///
 /// Holds loaded lines for file preview, directory entries for folder preview or empty if nothing.
@@ -38,6 +41,8 @@ pub(crate) struct PreviewState {
     last_input_time: Instant,
     scroll: ScrollState,
     loaded_scroll: usize,
+    loaded_eof: bool,
+    in_flight: bool,
 }
 
 impl PreviewState {
@@ -45,8 +50,8 @@ impl PreviewState {
         data: &PreviewData,
         selected_idx: usize,
         scroll: &ScrollState,
-        loaded_scroll: usize,
         request_id: u64,
+        in_flight: bool,
     }
 
     pub(crate) fn current_path(&self) -> Option<&Path> {
@@ -83,6 +88,11 @@ impl PreviewState {
         self.pending = false;
     }
 
+    /// Marks a file load as sent, so no other request for the same file overtakes it
+    pub(crate) fn set_in_flight(&mut self) {
+        self.in_flight = true;
+    }
+
     // Debounce timing for preview render
     pub(crate) fn should_trigger(&self) -> bool {
         self.pending
@@ -95,11 +105,13 @@ impl PreviewState {
         self.request_id = self.request_id.wrapping_add(1);
 
         if self.current_path.as_ref() != Some(&path) {
+            self.keep_visible_lines();
             self.reset_scroll();
             self.current_path = Some(path);
         }
 
         self.pending = false;
+        self.in_flight = false;
         self.request_id
     }
 
@@ -108,29 +120,30 @@ impl PreviewState {
     pub(crate) fn update_content(
         &mut self,
         lines: Vec<String>,
-        view_height: usize,
+        preview_height: usize,
         loaded_scroll: usize,
         is_eof: bool,
         request_id: u64,
     ) {
         if request_id == self.request_id {
+            self.in_flight = false;
             let total_lines = loaded_scroll + lines.len();
             let raw = lines.join("\n");
             let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
             self.data = PreviewData::File(text);
             self.loaded_path = self.current_path.clone();
 
-            if is_eof {
-                let max_offset = total_lines.saturating_sub(view_height) as u16;
-                self.scroll.set_max_offset(max_offset);
-                if self.scroll().offset() > max_offset {
-                    self.scroll().set_offset(max_offset);
-                }
-            } else {
-                self.scroll.set_max_offset(u16::MAX);
+            let max_offset = total_lines.saturating_sub(preview_height);
+            self.scroll.set_max_offset(max_offset);
+            if self.scroll().offset() > max_offset {
+                self.scroll().set_offset(max_offset);
             }
 
             self.loaded_scroll = loaded_scroll;
+            self.loaded_eof = is_eof;
+            if self.needs_load(preview_height) {
+                self.mark_pending();
+            }
         }
     }
 
@@ -156,6 +169,7 @@ impl PreviewState {
     pub(crate) fn set_error(&mut self, err: String) {
         self.data = PreviewData::File(Text::from(err));
         self.loaded_path = self.current_path.clone();
+        self.in_flight = false;
     }
 
     /// Clears the preview state
@@ -167,19 +181,66 @@ impl PreviewState {
         self.pending = false;
     }
 
-    pub(crate) fn scroll_up(&mut self) {
+    pub(crate) fn scroll_up(&mut self, preview_height: usize) {
         self.scroll.scroll_up();
-        self.mark_pending();
+        if self.needs_load(preview_height) {
+            self.mark_pending();
+        }
     }
 
-    pub(crate) fn scroll_down(&mut self) {
+    pub(crate) fn scroll_down(&mut self, preview_height: usize) {
         self.scroll.scroll_down();
-        self.mark_pending();
+        if self.needs_load(preview_height) {
+            self.mark_pending();
+        }
     }
 
     pub(crate) fn reset_scroll(&mut self) {
         self.scroll.reset();
         self.loaded_scroll = 0;
+        self.loaded_eof = false;
+    }
+
+    /// Returns the first line and line count to load: the view plus the preloaded pages around it
+    pub(crate) fn load_window(&self, preview_height: usize) -> (usize, usize) {
+        let offset = self.scroll.offset();
+        let preload = preview_height * PRELOAD_PAGES;
+        (
+            offset.saturating_sub(preload),
+            preload + preview_height + preload,
+        )
+    }
+
+    /// Returns true when the view has used up half of the preloaded lines on either side
+    pub(crate) fn needs_load(&self, preview_height: usize) -> bool {
+        let PreviewData::File(text) = &self.data else {
+            return false;
+        };
+
+        let offset = self.scroll.offset();
+        let start = self.loaded_scroll;
+        let end = start + text.lines.len();
+        let preload = preview_height * PRELOAD_PAGES;
+        let margin = preload / 2;
+
+        (start > 0 && offset < start + margin)
+            || (!self.loaded_eof && offset + preview_height + margin > end)
+    }
+
+    /// Returns how many loaded lines lie above the view
+    pub(crate) fn window_offset(&self) -> usize {
+        let skip = self.scroll.offset().saturating_sub(self.loaded_scroll);
+        match &self.data {
+            PreviewData::File(text) => skip.min(text.lines.len().saturating_sub(1)),
+            _ => 0,
+        }
+    }
+
+    fn keep_visible_lines(&mut self) {
+        let skip = self.window_offset();
+        if let PreviewData::File(text) = &mut self.data {
+            text.lines.drain(..skip);
+        }
     }
 }
 
@@ -195,6 +256,8 @@ impl Default for PreviewState {
             last_input_time: Instant::now(),
             scroll: ScrollState::default(),
             loaded_scroll: 0,
+            loaded_eof: false,
+            in_flight: false,
         }
     }
 }
@@ -219,15 +282,52 @@ mod tests {
     fn late_preview_keeps_its_window() {
         let mut preview = PreviewState::default();
         let id = preview.prepare_new_request(PathBuf::from("file.txt"));
-        preview.scroll.set_max_offset(u16::MAX);
+        preview.scroll.set_max_offset(usize::MAX);
 
-        preview.scroll_down();
-        preview.scroll_down();
+        preview.scroll_down(5);
+        preview.scroll_down(5);
 
         let lines = (0..10).map(|i| i.to_string()).collect();
         preview.update_content(lines, 5, 0, false, id);
 
-        assert_eq!(preview.loaded_scroll(), 0);
+        assert_eq!(preview.loaded_scroll, 0);
         assert_eq!(preview.scroll().offset(), 2);
+    }
+
+    #[test]
+    fn scrolling_inside_window_stays_local() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("file.txt"));
+        let lines = (0..30).map(|i| i.to_string()).collect();
+        preview.update_content(lines, 10, 0, false, id);
+
+        for _ in 0..15 {
+            preview.scroll_down(10);
+        }
+        assert!(!preview.pending);
+        assert_eq!(preview.window_offset(), 15);
+
+        preview.scroll_down(10);
+        assert!(preview.pending);
+    }
+
+    #[test]
+    fn switching_file_keeps_old_view() {
+        let mut preview = PreviewState::default();
+        let id = preview.prepare_new_request(PathBuf::from("a.txt"));
+        let lines = (0..30).map(|i| i.to_string()).collect();
+        preview.update_content(lines, 10, 0, false, id);
+        for _ in 0..15 {
+            preview.scroll_down(10);
+        }
+
+        // Switch files; the new content has not arrived yet.
+        preview.prepare_new_request(PathBuf::from("b.txt"));
+
+        let PreviewData::File(text) = preview.data() else {
+            panic!("expected the old file preview to stay");
+        };
+        let first_visible = &text.lines[preview.window_offset()];
+        assert_eq!(first_visible.spans[0].content, "15");
     }
 }

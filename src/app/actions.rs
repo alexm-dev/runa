@@ -529,20 +529,20 @@ impl AutoCompleteState {
 
 #[derive(Default)]
 pub(crate) struct ScrollState {
-    offset: Cell<u16>,
-    max_offset: Cell<u16>,
+    offset: Cell<usize>,
+    max_offset: Cell<usize>,
 }
 
 impl ScrollState {
-    pub(crate) fn offset(&self) -> u16 {
+    pub(crate) fn offset(&self) -> usize {
         self.offset.get()
     }
 
-    pub(crate) fn set_offset(&self, offset: u16) {
+    pub(crate) fn set_offset(&self, offset: usize) {
         self.offset.set(offset);
     }
 
-    pub(crate) fn set_max_offset(&self, max: u16) {
+    pub(crate) fn set_max_offset(&self, max: usize) {
         self.max_offset.set(max);
     }
 

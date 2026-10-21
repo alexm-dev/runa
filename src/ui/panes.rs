@@ -15,7 +15,7 @@ use ratatui::{
     Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
-    text::{Line, Span},
+    text::{Line, Span, Text},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
@@ -287,8 +287,16 @@ pub(super) fn draw_preview(
         }
 
         PreviewData::File(text) => {
+            let visible: Vec<_> = text
+                .lines
+                .iter()
+                .skip(app.preview().window_offset())
+                .take(context.area.height as usize)
+                .cloned()
+                .collect();
+
             frame.render_widget(
-                Paragraph::new(text.clone()).block(
+                Paragraph::new(Text::from(visible)).block(
                     context
                         .block
                         .border_style(context.accent_style)

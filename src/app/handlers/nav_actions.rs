@@ -80,14 +80,14 @@ impl AppState {
                 if self.actions.is_input_mode() || self.overlays.needs_scroll() {
                     self.actions.scroll().scroll_up();
                 } else {
-                    self.preview.scroll_up();
+                    self.preview.scroll_up(self.metrics.preview_height);
                 }
             }
             NavAction::ScrollDown => {
                 if self.actions.is_input_mode() || self.overlays.needs_scroll() {
                     self.actions.scroll().scroll_down();
                 } else {
-                    self.preview.scroll_down();
+                    self.preview.scroll_down(self.metrics.preview_height);
                 }
             }
             NavAction::SelectAll => {
