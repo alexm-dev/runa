@@ -4,6 +4,9 @@ All the changes made to runa are documented here.
 
 ## [0.12.4] - UNRELEASED
 
+### Fixed
+**UI**: Last line of a file preview is now correctly drawn while in `split` border mode.
+
 
 ---
 
