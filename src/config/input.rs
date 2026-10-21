@@ -143,23 +143,26 @@ pub(crate) struct Editor {
 
 /// Public methods for accessing editor configuration options
 impl Editor {
+    /// Returns the command that opens the path
+    /// Checks the file name first then the extension from longest to shorted, then default.
     pub(crate) fn cmd(&self, path: &Path) -> &[String] {
-        if let Some(name) = path.file_name().and_then(|s| s.to_str())
-            && let Some(cmd) = self
-                .filename
-                .get(name)
-                .or_else(|| self.filename.get(&name.to_lowercase()))
-        {
+        let Some(name) = path.file_name().map(|name| name.to_string_lossy()) else {
+            return &self.default.0;
+        };
+
+        if let Some(cmd) = self.filename.get(name.as_ref()) {
             return &cmd.0;
         }
 
-        if let Some(cmd) = path
-            .extension()
-            .and_then(|s| s.to_str())
-            .map(|s| s.to_lowercase())
-            .and_then(|ext| self.ext.get(&ext))
-        {
+        let lower = name.to_lowercase();
+        if let Some(cmd) = self.filename.get(&lower) {
             return &cmd.0;
+        }
+
+        for (dot, _) in lower.match_indices('.').filter(|&(dot, _)| dot > 0) {
+            if let Some(cmd) = self.ext.get(&lower[dot + 1..]) {
+                return &cmd.0;
+            }
         }
 
         &self.default.0
@@ -184,5 +187,45 @@ impl Default for Editor {
             ext: HashMap::new(),
             filename: HashMap::new(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn editor(ext: &[(&str, &str)], filename: &[(&str, &str)]) -> Editor {
+        let map = |pairs: &[(&str, &str)]| {
+            pairs
+                .iter()
+                .map(|&(key, cmd)| (key.to_string(), InputKeyLists(Box::new([cmd.to_string()]))))
+                .collect()
+        };
+        Editor {
+            default: InputKeyLists(Box::new(["nvim".to_string()])),
+            ext: map(ext),
+            filename: map(filename),
+        }
+    }
+
+    #[test]
+    fn longest_extension_wins() {
+        let editor = editor(&[("gz", "gunzip"), ("tar.gz", "tar")], &[]);
+        assert_eq!(editor.cmd(Path::new("/x/release.tar.gz")), ["tar"]);
+        assert_eq!(editor.cmd(Path::new("/x/access.log.gz")), ["gunzip"]);
+        assert_eq!(editor.cmd(Path::new("/x/RELEASE.TAR.GZ")), ["tar"]);
+    }
+
+    #[test]
+    fn hidden_file_has_no_extension() {
+        let editor = editor(&[("bashrc", "code")], &[]);
+        assert_eq!(editor.cmd(Path::new("/x/.bashrc")), ["nvim"]);
+    }
+
+    #[test]
+    fn filename_beats_extension() {
+        let editor = editor(&[("toml", "code")], &[("Cargo.toml", "vim")]);
+        assert_eq!(editor.cmd(Path::new("/x/Cargo.toml")), ["vim"]);
+        assert_eq!(editor.cmd(Path::new("/x/rustfmt.toml")), ["code"]);
     }
 }
