@@ -20,18 +20,8 @@ jobs:
     if: github.actor == 'alexm-dev' && (github.ref_type == 'tag' || inputs.dry_run)
     uses: ./.github/workflows/rust.yml
 
-  docs:
-    needs: ci
-    if: github.ref_type == 'tag' && !inputs.dry_run
-    uses: ./.github/workflows/docs.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
   release:
-    needs: [ci, docs]
-    if: ${{ !cancelled() && needs.ci.result == 'success' && (needs.docs.result == 'success' || needs.docs.result == 'skipped') }}
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -140,3 +130,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
+
+  docs:
+    needs: release
+    if: github.ref_type == 'tag' && !inputs.dry_run
+    uses: ./.github/workflows/docs.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
