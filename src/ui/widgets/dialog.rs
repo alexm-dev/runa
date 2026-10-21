@@ -190,13 +190,20 @@ pub(crate) fn draw_dialog<'a, T>(
     frame.render_widget(para, dialog);
 }
 
+/// Returns the borders of a pane. Only the split border layout draws them.
+pub(crate) fn pane_borders(app: &AppState) -> Borders {
+    if app.config().display().is_split() {
+        Borders::ALL
+    } else {
+        Borders::NONE
+    }
+}
+
 /// Getter for the overall pane block,
 pub(crate) fn get_pane_block(title: &str, app: &AppState) -> Block<'static> {
-    let mut block = Block::default();
+    let mut block = Block::default().borders(pane_borders(app));
     if app.config().display().is_split() {
-        block = block
-            .borders(Borders::ALL)
-            .border_style(app.config().theme().accent_style());
+        block = block.border_style(app.config().theme().accent_style());
         if app.config().display().titles() {
             block = block.title(title.to_string());
         }

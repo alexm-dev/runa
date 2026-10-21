@@ -15,7 +15,9 @@ mod status;
 
 use crate::config::dialog::DialogPosition;
 pub(crate) use crate::config::display::StatusPosition;
-pub(crate) use dialog::{DialogLayout, DialogStyle, dialog_area, draw_dialog, get_pane_block};
+pub(crate) use dialog::{
+    DialogLayout, DialogStyle, dialog_area, draw_dialog, get_pane_block, pane_borders,
+};
 pub(super) use input::*;
 pub(super) use overlays::*;
 pub(super) use status::*;

@@ -34,9 +34,10 @@ pub(crate) fn render(
     workers: &Workers,
     clipboard: &mut Clipboard,
 ) {
-    let mut root_area = frame.area();
-    let outer_area = root_area;
-    let metrics = calculate_layout_metrics(frame.area(), app);
+    let outer_area = frame.area();
+    let root_area = render_root_and_header(frame, app, outer_area);
+    let chunks = layout_chunks(root_area, app);
+    let metrics = calculate_layout_metrics(outer_area, chunks.last().copied(), app);
     app.update_layout_metrics(workers, metrics);
 
     let cfg = app.config();
@@ -54,13 +55,7 @@ pub(crate) fn render(
 
     let clipboard_style = marker_theme.clipboard_style_or_theme();
 
-    root_area = render_root_and_header(frame, app, root_area);
-    if display_cfg.is_no_borders() {
-        root_area.height = root_area.height.saturating_sub(1);
-    }
-
     // Render Panes
-    let chunks = layout_chunks(root_area, app);
     let mut pane_idx = 0;
     let show_separators = display_cfg.separators() && !display_cfg.is_split();
 
@@ -298,7 +293,12 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
             ])),
             header_layout[0],
         );
-        header_layout[1]
+
+        let mut content = header_layout[1];
+        if display_cfg.is_no_borders() {
+            content.height = content.height.saturating_sub(1);
+        }
+        content
     }
 }
 
@@ -371,7 +371,12 @@ fn render_single_overlay(
 /// Helper function to calculate and return layout metrics
 ///
 /// Used to store pane widths and heights in the AppState for later use.
-fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
+/// Preview height comes from the drawn pane, so it matches the rows.
+fn calculate_layout_metrics(
+    area: Rect,
+    preview_area: Option<Rect>,
+    app: &AppState,
+) -> LayoutMetrics {
     let chunks = layout_chunks(area, app);
     let mut metrics = LayoutMetrics::default();
     let display_cfg = app.config().display();
@@ -379,24 +384,23 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
     let mut idx = 0;
     let has_sep = display_cfg.separators() && !display_cfg.is_split();
 
-    let get_inner = |rect: Rect| {
+    let get_width = |rect: Rect| {
         let width = if display_cfg.is_split() || display_cfg.is_unified() {
             rect.width.saturating_sub(2)
         } else {
             rect.width
         };
 
-        let height = rect.height.saturating_sub(2);
-        (width as usize, height as usize)
+        width as usize
     };
 
     if display_cfg.parent() && idx < chunks.len() {
-        metrics.parent_width = get_inner(chunks[idx]).0;
+        metrics.parent_width = get_width(chunks[idx]);
         idx += if has_sep { 2 } else { 1 };
     }
 
     if idx < chunks.len() {
-        metrics.main_width = get_inner(chunks[idx]).0;
+        metrics.main_width = get_width(chunks[idx]);
         idx += if has_sep && display_cfg.preview() {
             2
         } else {
@@ -405,9 +409,14 @@ fn calculate_layout_metrics(area: Rect, app: &AppState) -> LayoutMetrics {
     }
 
     if display_cfg.preview() && idx < chunks.len() {
-        let (width, height) = get_inner(chunks[idx]);
-        metrics.preview_width = width;
-        metrics.preview_height = height;
+        metrics.preview_width = get_width(chunks[idx]);
+    }
+
+    if display_cfg.preview()
+        && let Some(preview_area) = preview_area
+    {
+        let block = Block::default().borders(widgets::pane_borders(app));
+        metrics.preview_height = block.inner(preview_area).height as usize;
     }
     metrics
 }
@@ -447,6 +456,7 @@ mod tests {
 
     use crate::Config;
     use crate::config::load::RawConfig;
+    use ratatui::{Terminal, backend::TestBackend};
     use std::error;
     use std::sync::Arc;
 
@@ -478,6 +488,27 @@ mod tests {
 
         assert!(total_width <= 100);
         assert!(chunks[0].width >= 33 && chunks[0].width <= 34);
+        Ok(())
+    }
+
+    #[test]
+    fn preview_height_matches_drawn_rows() -> Result<(), Box<dyn error::Error>> {
+        let mut terminal = Terminal::new(TestBackend::new(120, 40))?;
+
+        for (borders, rows) in [("none", 38), ("unified", 38), ("split", 37)] {
+            let toml_content = format!("[display]\nborders = \"{borders}\"");
+            let raw: RawConfig = toml::from_str(&toml_content)?;
+            let app = AppState::new(Arc::new(Config::from(raw)))?;
+
+            let mut metrics = LayoutMetrics::default();
+            terminal.draw(|frame| {
+                let root_area = render_root_and_header(frame, &app, frame.area());
+                let chunks = layout_chunks(root_area, &app);
+                metrics = calculate_layout_metrics(frame.area(), chunks.last().copied(), &app);
+            })?;
+
+            assert_eq!(metrics.preview_height, rows, "borders = {borders}");
+        }
         Ok(())
     }
 }
