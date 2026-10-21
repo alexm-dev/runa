@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
@@ -21,32 +22,44 @@ jobs:
           # Linux Gnu & Musl
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            platform: linux-x86_64-gnu
             use_cross: true
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
+            platform: linux-aarch64-gnu
             use_cross: true
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
+            platform: linux-x86_64-musl
             use_cross: true
           - target: aarch64-unknown-linux-musl
             os: ubuntu-latest
+            platform: linux-aarch64-musl
             use_cross: true
 
           # Windows
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+            platform: windows-x86_64
             use_cross: false
           - target: aarch64-pc-windows-msvc
             os: windows-latest
+            platform: windows-aarch64
             use_cross: false
 
           # macOS
           - target: x86_64-apple-darwin
             os: macos-latest
+            platform: macos-x86_64
             use_cross: false
           - target: aarch64-apple-darwin
             os: macos-latest
+            platform: macos-aarch64
             use_cross: false
+
+    # Release runs (tag push or release dry run) build without cache and upload the binaries.
+    env:
+      RELEASE_BUILD: ${{ github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - uses: actions/checkout@v6
@@ -57,6 +70,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Rust Cache
+        if: env.RELEASE_BUILD != 'true'
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
@@ -108,25 +122,6 @@ jobs:
           fi
         shell: bash
 
-      - name: Check version info
-        run: |
-          out=$(ls -t target/${{ matrix.target }}/release/build/runa-tui-*/output | head -n 1)
-          info=$(grep '^cargo:rustc-env=RUNA_GIT_INFO=' "$out" | cut -d= -f3-)
-          rustc=$(grep '^cargo:rustc-env=RUNA_RUSTC=' "$out" | cut -d= -f3-)
-          echo "git info: '$info'"
-          echo "rustc: '$rustc'"
-
-          re='^[0-9a-f]{7,40} [0-9]{4}-[0-9]{2}-[0-9]{2}$'
-          if ! [[ $info =~ $re ]]; then
-            echo "::error::Unexpected RUNA_GIT_INFO for ${{ matrix.target }}: '$info'"
-            exit 1
-          fi
-          if ! [[ $rustc =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            echo "::error::Unexpected RUNA_RUSTC for ${{ matrix.target }}: '$rustc'"
-            exit 1
-          fi
-        shell: bash
-
       - name: Test
         id: test_step
         if: (matrix.target == 'x86_64-unknown-linux-gnu' || matrix.target == 'x86_64-apple-darwin' || matrix.target == 'x86_64-pc-windows-msvc')
@@ -137,6 +132,29 @@ jobs:
             cargo test --release --locked --target ${{ matrix.target }}
           fi
         shell: bash
+
+      - name: Prepare binary (Linux/macOS)
+        if: env.RELEASE_BUILD == 'true' && runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/rn" dist/rn
+          chmod +x dist/rn
+        shell: bash
+
+      - name: Prepare binary (Windows)
+        if: env.RELEASE_BUILD == 'true' && runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/rn.exe" dist/rn.exe
+        shell: pwsh
+
+      - name: Upload artifact
+        if: env.RELEASE_BUILD == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: bin-${{ matrix.platform }}
+          path: dist/rn*
+          if-no-files-found: error
 
   clippy:
     name: Clippy

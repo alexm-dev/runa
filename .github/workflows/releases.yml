@@ -1,140 +1,47 @@
 name: Release runa Cross-Platform Binaries
 
+# Pushing a v* tag runs CI, deploys the docs and publishes the release, all for that tag.
+# Manual runs default to a dry run: CI builds and packages the release without publishing.
+# To publish an existing tag manually: gh workflow run releases.yml --ref <tag> -f dry_run=false
 on:
+  push:
+    tags:
+      - 'v*'
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Release tag (e.g., v0.3.4)'
-        required: true
+      dry_run:
+        description: 'Build and package only, skip docs deploy and publishing'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    if: github.actor == 'alexm-dev'
-    name: Build (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # Linux
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux-x86_64-gnu
-            use_cross: true
-          - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            platform: linux-aarch64-gnu
-            use_cross: true
-          - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux-x86_64-musl
-            use_cross: true
-          - target: aarch64-unknown-linux-musl
-            os: ubuntu-latest
-            platform: linux-aarch64-musl
-            use_cross: true
-          # Windows
-          - target: x86_64-pc-windows-msvc
-            os: windows-latest
-            platform: windows-x86_64
-            use_cross: false
-          - target: aarch64-pc-windows-msvc
-            os: windows-latest
-            platform: windows-aarch64
-            use_cross: false
-          # macOS
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            platform: macos-x86_64
-            use_cross: false
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            platform: macos-aarch64
-            use_cross: false
+  ci:
+    if: github.actor == 'alexm-dev' && (github.ref_type == 'tag' || inputs.dry_run)
+    uses: ./.github/workflows/rust.yml
 
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event.inputs.tag }}
-          fetch-depth: 0
+  docs:
+    needs: ci
+    if: github.ref_type == 'tag' && !inputs.dry_run
+    uses: ./.github/workflows/docs.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cross
-        if: ${{ matrix.use_cross }}
-        env:
-          CROSS_VERSION: "v0.2.5"
-          PACKAGE_NAME: "cross-x86_64-unknown-linux-gnu.tar.gz"
-          GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-        run: |
-          INSTALL_DIR="$HOME/.local/bin"
-          mkdir -p "$INSTALL_DIR"
-
-          echo "Downloading cross $CROSS_VERSION using gh CLI..."
-          gh release download "$CROSS_VERSION" \
-            --repo cross-rs/cross \
-            --pattern "$PACKAGE_NAME" \
-            -D "$INSTALL_DIR"
-
-          tar -xzf "$INSTALL_DIR/$PACKAGE_NAME" -C "$INSTALL_DIR"
-          echo "$INSTALL_DIR" >> $GITHUB_PATH
-
-      - name: Build
-        shell: bash
-        run: |
-          if [[ "${{ matrix.use_cross }}" == "true" ]]; then
-            cross build --release --locked --target ${{ matrix.target }}
-          else
-            cargo build --release --locked --target ${{ matrix.target }}
-          fi
-
-      - name: Prepare binary (Linux/macOS)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          mkdir -p dist
-          BIN_SRC="target/${{ matrix.target }}/release/rn"
-          BIN_DEST="dist/$(basename $BIN_SRC)"
-          cp "$BIN_SRC" "$BIN_DEST"
-          chmod +x "$BIN_DEST"
-
-      - name: Prepare binary (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $targetDir = "target/${{ matrix.target }}/release"
-          $binName = "rn.exe"
-          $binPath = Join-Path $targetDir $binName
-
-          Write-Host "Looking for binary at $binPath"
-          if (-Not (Test-Path $binPath)) {
-            Write-Error "Binary not found: $binPath"
-            exit 1
-          }
-
-          mkdir dist -ErrorAction SilentlyContinue
-          Copy-Item $binPath "dist\$binName" -Force
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: bin-${{ matrix.platform }}
-          path: dist/rn*
-
-  checksums_and_archives:
-    if: github.actor == 'alexm-dev'
-    needs: build
+  release:
+    needs: [ci, docs]
+    if: ${{ !cancelled() && needs.ci.result == 'success' && (needs.docs.result == 'success' || needs.docs.result == 'skipped') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
       attestations: write
+    env:
+      TAG: ${{ github.ref_name }}
+      PUBLISH: ${{ github.ref_type == 'tag' && !inputs.dry_run }}
     steps:
       - uses: actions/checkout@v6
 
@@ -142,6 +49,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: artifacts
+          pattern: bin-*
 
       - name: Organize release assets for archiving
         shell: bash
@@ -183,7 +91,15 @@ jobs:
           sha256sum runa-* > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
+      - name: Upload dry run assets
+        if: env.PUBLISH != 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run
+          path: dist/*
+
       - uses: actions/attest@v4
+        if: env.PUBLISH == 'true'
         with:
           subject-path: |
             dist/runa-*
@@ -191,9 +107,10 @@ jobs:
 
       - name: Extract changelog section
         id: extract_changelog
+        if: env.PUBLISH == 'true'
         shell: bash
         run: |
-          VERSION=$(echo "${{ github.event.inputs.tag }}" | sed 's/^v//')
+          VERSION="${TAG#v}"
           sed 's/\r//' CHANGELOG.md > clean_changelog.md
           awk -v ver="$VERSION" '
             BEGIN { ver_pattern = "\\[v?" ver "\\]" }
@@ -208,10 +125,10 @@ jobs:
           fi
 
       - name: Fail if release exists
+        if: env.PUBLISH == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists. Aborting."
@@ -219,9 +136,9 @@ jobs:
           fi
 
       - name: Create release and upload assets
+        if: env.PUBLISH == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag }}
         run: |
           gh release create "$TAG" dist/* --title "runa $TAG" --notes-file release_notes.md
