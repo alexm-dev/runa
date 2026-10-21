@@ -13,7 +13,7 @@ use std::process::Command;
 fn main() {
     // Ask git only in runa checkouts
     if Path::new(".git").exists()
-        && let Some(git) = run("git", &["log", "-1", "--format=%h %cs"])
+        && let Some(git) = run("git", &["log", "-1", "--date=short", "--format=%h %cd"])
     {
         println!("cargo:rustc-env=RUNA_GIT_INFO={git}");
         println!("cargo:rerun-if-changed=.git/HEAD");
