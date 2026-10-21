@@ -198,7 +198,7 @@ show_hidden = true
 startup.tabs = ["cwd", '~']
 
 [display]
-borders = "split"
+borders = "unified"
 titles = true
 icons = true
 parent = true
@@ -226,7 +226,7 @@ tab.inactive.bg = "#444444"
 tab.line_format = " {idx} {name} "
 status_line.bg = "#333333"
 status_line.fg = "#8ac"
-widget.border.fg = "yellow"
+widget.border.fg = "green"
 info.date.bg = "#333333"
 info.date.fg = "green"
 info.size.bg = "#333333"
