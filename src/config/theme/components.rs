@@ -1,6 +1,6 @@
 //! theme configuration components
 
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use serde::Deserialize;
 
 use crate::config::{
@@ -421,6 +421,43 @@ impl Default for GoToHelpTheme {
         GoToHelpTheme {
             size: Some(DEFAULT_GO_TO_HELP_SIZE),
             position: Some(DEFAULT_GO_TO_HELP_POSITION),
+        }
+    }
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+enum ArchiveModifier {
+    #[default]
+    None,
+    Dim,
+    Italic,
+    Bold,
+}
+
+#[derive(Deserialize, Debug, Clone, Default, PartialEq)]
+#[serde(default)]
+pub(crate) struct ArchiveTheme {
+    guide: ColorPair,
+    modifier: ArchiveModifier,
+}
+
+impl ArchiveTheme {
+    pub(crate) fn guide_style(&self, accent: Style) -> Style {
+        let default = &Theme::builtin().archive;
+        if self.guide != default.guide {
+            self.guide.style_or(&default.guide)
+        } else {
+            accent
+        }
+    }
+
+    pub(crate) fn modifier(&self) -> Modifier {
+        match self.modifier {
+            ArchiveModifier::None => Modifier::empty(),
+            ArchiveModifier::Dim => Modifier::DIM,
+            ArchiveModifier::Italic => Modifier::ITALIC,
+            ArchiveModifier::Bold => Modifier::BOLD,
         }
     }
 }

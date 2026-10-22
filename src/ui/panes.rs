@@ -313,11 +313,12 @@ pub(super) fn draw_preview(
         PreviewData::Listing(rows) => {
             let offset = app.preview().window_offset();
             let height = context.block.inner(context.area).height as usize;
+            let guide_style = context.theme.archive_guide_style();
             let items: Vec<_> = rows
                 .iter()
                 .skip(offset)
                 .take(height)
-                .map(|row| make_tree_row(row, &context))
+                .map(|row| make_tree_row(row, &context, guide_style))
                 .collect();
 
             frame.render_widget(
@@ -745,7 +746,11 @@ fn make_entry_row<'a>(
     ListItem::new(Line::from(spans)).style(row_style)
 }
 
-fn make_tree_row<'a>(row: &'a ListingRow, context: &PaneContext) -> ListItem<'a> {
+fn make_tree_row<'a>(
+    row: &'a ListingRow,
+    context: &PaneContext,
+    guide_style: Style,
+) -> ListItem<'a> {
     let is_dir = row.is_dir();
     let mut style = context.styles.get_style(is_dir, false);
     if let Some(color) = context
@@ -758,7 +763,7 @@ fn make_tree_row<'a>(row: &'a ListingRow, context: &PaneContext) -> ListItem<'a>
     let mut spans = Vec::with_capacity(TREE_ROW_SPANS + TREE_GUIDE_SPANS * row.depth());
     spans.push(Span::raw(context.padding_str));
     for _ in 0..row.depth() {
-        spans.push(Span::styled(line::VERTICAL, context.accent_style));
+        spans.push(Span::styled(line::VERTICAL, guide_style));
         spans.push(Span::raw(" "));
     }
     let mut used_w = UnicodeWidthStr::width(context.padding_str) + TREE_GUIDE_WIDTH * row.depth();
