@@ -28,6 +28,7 @@ use crate::core::{
 };
 
 use crate::ui::overlays::{OverlayKind, OverlayStack};
+use crate::utils::command;
 use crate::utils::timings::{Throttler, Timings};
 
 /// Enumeration for each individual keypress result processed.
@@ -742,16 +743,27 @@ impl AppState {
             } else {
                 let preview_options = self.config.display().preview_options();
                 let preview_method = preview_options.method();
-                let preview_mode = match preview_method {
-                    PreviewMethod::Internal => PreviewMode::Internal,
-                    PreviewMethod::Bat => {
-                        let args = self
-                            .config
-                            .bat_args_for_preview(self.metrics.preview_width)
-                            .into_iter()
-                            .map(OsString::from)
-                            .collect();
-                        PreviewMode::Bat { args }
+                let preview_mode = if let Some(archive) = preview_options.archive_cmd(&path)
+                    && let Some(program) = archive.args().first()
+                {
+                    let target = std::path::absolute(&path).unwrap_or_else(|_| path.clone());
+                    PreviewMode::Command {
+                        program: program.into(),
+                        args: command::expand_args(archive.args(), archive.ext_parts(), &target),
+                        dir: target.parent().map(Path::to_path_buf),
+                    }
+                } else {
+                    match preview_method {
+                        PreviewMethod::Internal => PreviewMode::Internal,
+                        PreviewMethod::Bat => {
+                            let args = self
+                                .config
+                                .bat_args_for_preview(self.metrics.preview_width)
+                                .into_iter()
+                                .map(OsString::from)
+                                .collect();
+                            PreviewMode::Bat { args }
+                        }
                     }
                 };
                 let (scroll, max_lines) = self.preview.load_window(self.metrics.preview_height);

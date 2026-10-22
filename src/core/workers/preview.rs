@@ -2,15 +2,19 @@
 //!
 //! This module holds the implementation of the preview worker thread.
 
+use std::ffi::{OsStr, OsString};
+use std::path::Path;
 use std::thread;
+use std::time::Duration;
 
 use crossbeam_channel::{Receiver, Sender};
 
 use crate::core::{
-    formatter, fs, proc,
-    workers::{PreviewMode, WorkerResponse, WorkerTask},
+    formatter::{self, ListingRow},
+    fs, proc,
+    workers::{PreviewLines, PreviewMode, WorkerResponse, WorkerTask},
 };
-use crate::utils::os;
+use crate::utils::{os, timings::Timings};
 
 pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
@@ -30,14 +34,19 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
 
             let read_lines = max_lines + 1;
 
-            let lines = if fs::is_temp_file(&path) {
-                vec![formatter::sanitize_to_exact_width(
+            let mut lines = if fs::is_temp_file(&path) {
+                PreviewLines::Text(vec![formatter::sanitize_to_exact_width(
                     "[Temporary file - preview skipped]",
                     pane_width,
-                )]
+                )])
+            } else if let PreviewMode::Command { program, args, dir } = &preview_mode
+                && let Some(rows) =
+                    archive_rows(&path, program, args, dir.as_deref(), scroll, read_lines)
+            {
+                PreviewLines::Listing(rows)
             } else {
-                match preview_mode {
-                    PreviewMode::Internal => {
+                PreviewLines::Text(match preview_mode {
+                    PreviewMode::Internal | PreviewMode::Command { .. } => {
                         formatter::safe_read_preview(&path, read_lines, pane_width, scroll)
                     }
                     PreviewMode::Bat { args } => {
@@ -55,10 +64,13 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                             }
                         }
                     }
-                }
+                })
             };
 
-            let (lines, is_eof) = split_eof(lines, max_lines);
+            let is_eof = match &mut lines {
+                PreviewLines::Text(lines) => split_eof(lines, max_lines),
+                PreviewLines::Listing(rows) => split_eof(rows, max_lines),
+            };
             let _ = res_tx.send(WorkerResponse::PreviewLoaded {
                 path,
                 lines,
@@ -71,16 +83,35 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
     });
 }
 
-fn split_eof(mut lines: Vec<String>, max_lines: usize) -> (Vec<String>, bool) {
+fn archive_rows(
+    path: &Path,
+    program: &OsStr,
+    args: &[OsString],
+    dir: Option<&Path>,
+    scroll: usize,
+    read_lines: usize,
+) -> Option<Vec<ListingRow>> {
+    if !os::is_regular_file(path) {
+        return None;
+    }
+
+    let timeout = Duration::from_millis(Timings::PREVIEW_COMMAND_TIMEOUT_MS);
+    let paths = proc::preview_command(program, args, dir, scroll + read_lines, timeout).ok()?;
+    let mut rows = formatter::tree_rows(&paths);
+    rows.drain(..scroll.min(rows.len()));
+    Some(rows)
+}
+
+fn split_eof<T>(lines: &mut Vec<T>, max_lines: usize) -> bool {
     let is_eof = lines.len() <= max_lines;
     lines.truncate(max_lines);
-    (lines, is_eof)
+    is_eof
 }
 
 #[cfg(test)]
 mod tests {
     use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, bat_available};
-    use crate::core::workers::{PreviewMode, WorkerResponse, WorkerTask, Workers};
+    use crate::core::workers::{PreviewLines, PreviewMode, WorkerResponse, WorkerTask, Workers};
 
     use std::fs;
     use tempfile::tempdir;
@@ -102,7 +133,10 @@ mod tests {
         })?;
 
         match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
-            WorkerResponse::PreviewLoaded { lines, .. } => {
+            WorkerResponse::PreviewLoaded {
+                lines: PreviewLines::Text(lines),
+                ..
+            } => {
                 let previewed: Vec<_> = lines.iter().take(2).map(|s| s.trim_end()).collect();
                 if previewed != vec!["A", "B"] {
                     return Err(format!("Preview did not match expected, got {:?}", lines).into());
@@ -136,7 +170,11 @@ mod tests {
         })?;
 
         let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-        if let WorkerResponse::PreviewLoaded { lines, .. } = resp {
+        if let WorkerResponse::PreviewLoaded {
+            lines: PreviewLines::Text(lines),
+            ..
+        } = resp
+        {
             assert!(
                 !lines.is_empty(),
                 "Should have fallen back to internal reader"

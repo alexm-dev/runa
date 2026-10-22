@@ -159,7 +159,6 @@ pub(crate) static SPECIAL_DIR_ICON_MAP: phf::Map<
 
 /// Get the Nerd Font icon for a given file entry.
 pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str, Option<Color>) {
-    let name_str = entry.name_str();
     let is_dir = entry.is_dir();
 
     if entry.is_symlink() {
@@ -171,12 +170,20 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str,
         return ("", Some(theme.exe_color()));
     }
 
-    let ext = entry.ext();
+    name_icon(entry.name_str(), is_dir, entry.ext(), theme)
+}
+
+pub(crate) fn name_icon(
+    name: &str,
+    is_dir: bool,
+    ext: Option<&str>,
+    theme: &Theme,
+) -> (&'static str, Option<Color>) {
     let lookup = if is_dir {
-        SPECIAL_DIR_ICON_MAP.get(name_str)
+        SPECIAL_DIR_ICON_MAP.get(name)
     } else {
         SPECIAL_FILE_ICON_MAP
-            .get(name_str)
+            .get(name)
             .or_else(|| ext.and_then(|e| EXT_ICON_MAP.get(e)))
     };
 
@@ -186,7 +193,7 @@ pub(crate) fn nerd_font_icon(entry: &FileEntry, theme: &Theme) -> (&'static str,
 
     let color = theme
         .icon_color_cache()
-        .get(name_str)
+        .get(name)
         .or_else(|| ext.and_then(|e| theme.icon_color_cache().get(e)))
         .copied()
         .or_else(|| lookup.and_then(|(_, hex)| hex.map(parse_color)));

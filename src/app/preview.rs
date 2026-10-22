@@ -11,7 +11,7 @@ use ansi_to_tui::IntoText;
 use ratatui::text::Text;
 
 use crate::app::actions::ScrollState;
-use crate::core::FileEntry;
+use crate::core::{FileEntry, formatter::ListingRow, workers::PreviewLines};
 use crate::utils::{text::StrBuffer, timings::Timings};
 
 /// Pages loaded above and below the visible part of a file preview.
@@ -27,6 +27,7 @@ pub(crate) enum PreviewData {
         sort_column: Option<Arc<StrBuffer>>,
     },
     File(Text<'static>),
+    Listing(Vec<ListingRow>),
     Empty,
 }
 
@@ -109,7 +110,7 @@ impl PreviewState {
     /// Only applies the update if the request ID matches the latest
     pub(crate) fn update_content(
         &mut self,
-        lines: Vec<String>,
+        lines: PreviewLines,
         preview_height: usize,
         loaded_scroll: usize,
         is_eof: bool,
@@ -117,10 +118,20 @@ impl PreviewState {
     ) {
         if request_id == self.request_id {
             self.in_flight = false;
-            let total_lines = loaded_scroll + lines.len();
-            let raw = lines.join("\n");
-            let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
-            self.data = PreviewData::File(text);
+            let (data, len) = match lines {
+                PreviewLines::Text(lines) => {
+                    let len = lines.len();
+                    let raw = lines.join("\n");
+                    let text: Text<'static> = raw.into_text().unwrap_or_else(|_| Text::from(raw));
+                    (PreviewData::File(text), len)
+                }
+                PreviewLines::Listing(rows) => {
+                    let len = rows.len();
+                    (PreviewData::Listing(rows), len)
+                }
+            };
+            let total_lines = loaded_scroll + len;
+            self.data = data;
             self.loaded_path = self.current_path.clone();
 
             let max_offset = total_lines.saturating_sub(preview_height);
@@ -218,13 +229,15 @@ impl PreviewState {
 
     /// Returns true when the view has used up half of the preloaded lines on either side
     pub(crate) fn needs_load(&self, preview_height: usize) -> bool {
-        let PreviewData::File(text) = &self.data else {
-            return false;
+        let len = match &self.data {
+            PreviewData::File(text) => text.lines.len(),
+            PreviewData::Listing(rows) => rows.len(),
+            PreviewData::Directory { .. } | PreviewData::Empty => return false,
         };
 
         let offset = self.scroll.offset();
         let start = self.loaded_scroll;
-        let end = start + text.lines.len();
+        let end = start + len;
         let preload = preview_height * PRELOAD_PAGES;
         let margin = preload / 2;
 
@@ -237,6 +250,7 @@ impl PreviewState {
         let skip = self.scroll.offset().saturating_sub(self.loaded_scroll);
         match &self.data {
             PreviewData::File(text) => skip.min(text.lines.len().saturating_sub(1)),
+            PreviewData::Listing(rows) => skip.min(rows.len().saturating_sub(1)),
             PreviewData::Directory { .. } => self.scroll.offset(),
             PreviewData::Empty => 0,
         }
@@ -244,8 +258,14 @@ impl PreviewState {
 
     fn keep_visible_lines(&mut self) {
         let skip = self.window_offset();
-        if let PreviewData::File(text) = &mut self.data {
-            text.lines.drain(..skip);
+        match &mut self.data {
+            PreviewData::File(text) => {
+                text.lines.drain(..skip);
+            }
+            PreviewData::Listing(rows) => {
+                rows.drain(..skip);
+            }
+            PreviewData::Directory { .. } | PreviewData::Empty => {}
         }
     }
 }
@@ -275,6 +295,7 @@ impl PreviewData {
         match self {
             PreviewData::Directory { entries, .. } => entries.is_empty(),
             PreviewData::File(text) => text.lines.is_empty(),
+            PreviewData::Listing(rows) => rows.is_empty(),
             PreviewData::Empty => true,
         }
     }
@@ -302,7 +323,7 @@ mod tests {
         preview.scroll_down(5);
 
         let lines = (0..10).map(|i| i.to_string()).collect();
-        preview.update_content(lines, 5, 0, false, id);
+        preview.update_content(PreviewLines::Text(lines), 5, 0, false, id);
 
         assert_eq!(preview.loaded_scroll, 0);
         assert_eq!(preview.scroll().offset(), 2);
@@ -313,7 +334,7 @@ mod tests {
         let mut preview = PreviewState::default();
         let id = preview.prepare_new_request(PathBuf::from("file.txt"));
         let lines = (0..30).map(|i| i.to_string()).collect();
-        preview.update_content(lines, 10, 0, false, id);
+        preview.update_content(PreviewLines::Text(lines), 10, 0, false, id);
 
         for _ in 0..15 {
             preview.scroll_down(10);
@@ -330,7 +351,7 @@ mod tests {
         let mut preview = PreviewState::default();
         let id = preview.prepare_new_request(PathBuf::from("a.txt"));
         let lines = (0..30).map(|i| i.to_string()).collect();
-        preview.update_content(lines, 10, 0, false, id);
+        preview.update_content(PreviewLines::Text(lines), 10, 0, false, id);
         for _ in 0..15 {
             preview.scroll_down(10);
         }

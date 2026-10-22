@@ -33,6 +33,7 @@ use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use crate::core::{
     FileEntry, FindResult,
     cache::{DirCache, DirListOptions},
+    formatter::ListingRow,
     metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
 };
@@ -139,7 +140,20 @@ impl Workers {
 
 pub(crate) enum PreviewMode {
     Internal,
-    Bat { args: Vec<OsString> },
+    Bat {
+        args: Vec<OsString>,
+    },
+    Command {
+        program: OsString,
+        args: Vec<OsString>,
+        dir: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum PreviewLines {
+    Text(Vec<String>),
+    Listing(Vec<ListingRow>),
 }
 
 /// Tasks sent to the worker thread via channel.
@@ -239,7 +253,7 @@ pub(crate) enum WorkerResponse {
     },
     PreviewLoaded {
         path: PathBuf,
-        lines: Vec<String>,
+        lines: PreviewLines,
         scroll: usize,
         is_eof: bool,
         request_id: u64,

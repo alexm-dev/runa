@@ -14,7 +14,7 @@ use components::*;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use ratatui::style::{Color, Style};
+use ratatui::style::{Color, Modifier, Style};
 use serde::{Deserialize, Deserializer};
 
 use crate::config::presets;
@@ -32,6 +32,16 @@ impl ColorFallback for Color {
             self
         }
     }
+}
+
+#[derive(Deserialize, Debug, Clone, Copy, Default, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum ArchiveModifier {
+    #[default]
+    None,
+    Dim,
+    Italic,
+    Bold,
 }
 
 /// Theme configuration options
@@ -63,6 +73,7 @@ pub(crate) struct Theme {
     widget: WidgetTheme,
     tab: TabTheme,
     info: InfoStatusTheme,
+    archive_modifier: ArchiveModifier,
 
     #[serde(skip)]
     filename_cache: HashMap<String, Style>,
@@ -96,6 +107,7 @@ impl Default for Theme {
             widget: WidgetTheme::default(),
             tab: TabTheme::default(),
             info: InfoStatusTheme::default(),
+            archive_modifier: ArchiveModifier::None,
             filename_cache: HashMap::new(),
             extension_cache: HashMap::new(),
             icon_color_cache: HashMap::new(),
@@ -184,6 +196,15 @@ impl Theme {
             self.separator.style_or(&default.separator)
         } else {
             self.accent_style()
+        }
+    }
+
+    pub(crate) fn archive_modifier(&self) -> Modifier {
+        match self.archive_modifier {
+            ArchiveModifier::None => Modifier::empty(),
+            ArchiveModifier::Dim => Modifier::DIM,
+            ArchiveModifier::Italic => Modifier::ITALIC,
+            ArchiveModifier::Bold => Modifier::BOLD,
         }
     }
 
@@ -354,6 +375,7 @@ impl Theme {
             widget,
             tab,
             info,
+            archive_modifier,
         ]);
 
         if user.name.is_some() {

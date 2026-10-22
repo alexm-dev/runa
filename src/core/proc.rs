@@ -16,13 +16,15 @@
 
 use std::borrow::Cow;
 use std::cmp::Ordering;
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::io::{self, BufRead, Read};
 use std::path::MAIN_SEPARATOR;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::thread;
+use std::time::{Duration, Instant};
 
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2;
@@ -34,6 +36,9 @@ use crate::utils::{os, path};
 /// Larger buffers may improve performance for large outputs,
 /// but will also increase memory consumption.
 const BUFREADER_SIZE: usize = 32768;
+
+/// Most bytes read from a preview command, so a tool can never fill up the memory.
+const PREVIEW_COMMAND_MAX_BYTES: u64 = 1024 * 1024;
 
 /// A list of common directories and files to exclude from the search.
 /// This helps to speed up the search and avoid irrelevant results.
@@ -217,6 +222,73 @@ pub(crate) fn preview_bat(
 
     if lines.is_empty() {
         return Err(std::io::Error::other("bat produced no output"));
+    }
+
+    Ok(lines)
+}
+
+pub(crate) fn preview_command(
+    programm: &OsStr,
+    args: &[OsString],
+    dir: Option<&Path>,
+    max_lines: usize,
+    timeout: Duration,
+) -> io::Result<Vec<String>> {
+    if max_lines == 0 {
+        return Ok(Vec::new());
+    }
+
+    let mut cmd = Command::new(programm);
+    cmd.args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null());
+
+    if let Some(dir) = dir {
+        cmd.current_dir(dir);
+    }
+
+    let mut proc = cmd.spawn()?;
+    let Some(stdout) = proc.stdout.take() else {
+        let _ = proc.kill();
+        let _ = proc.wait();
+        return Err(io::Error::other("preview command has no output"));
+    };
+
+    let (line_tx, line_rx) = crossbeam_channel::bounded(max_lines);
+    thread::spawn(move || {
+        let mut reader = io::BufReader::new(stdout.take(PREVIEW_COMMAND_MAX_BYTES));
+        let mut buf = Vec::new();
+
+        while matches!(reader.read_until(b'\n', &mut buf), Ok(read) if read > 0) {
+            let line = String::from_utf8_lossy(&buf);
+            if line_tx
+                .send(line.trim_end_matches(['\r', '\n']).to_owned())
+                .is_err()
+            {
+                break;
+            }
+
+            buf.clear();
+        }
+    });
+
+    let deadline = Instant::now() + timeout;
+    let mut lines = Vec::with_capacity(max_lines);
+    while lines.len() < max_lines {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        let Ok(line) = line_rx.recv_timeout(remaining) else {
+            break;
+        };
+
+        lines.push(line);
+    }
+
+    let _ = proc.kill();
+    let _ = proc.wait();
+
+    if lines.is_empty() {
+        return Err(io::Error::other("preview command printed nothing"));
     }
 
     Ok(lines)

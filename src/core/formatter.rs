@@ -768,6 +768,81 @@ fn natural_cmp_bytes(a: &[u8], b: &[u8], fold_case: bool) -> Ordering {
     a.len().cmp(&b.len())
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ListingRow {
+    buf: Box<str>,
+    name_len: usize,
+    depth: usize,
+    is_dir: bool,
+}
+
+impl ListingRow {
+    fn new(name: &str, depth: usize, is_dir: bool) -> Self {
+        let ext = name
+            .rsplit_once('.')
+            .filter(|(base, ext)| !is_dir && !base.is_empty() && !ext.is_empty())
+            .map_or("", |(_, ext)| ext);
+
+        let mut buf = String::with_capacity(name.len() + ext.len());
+        buf.push_str(name);
+        buf.extend(ext.chars().flat_map(char::to_lowercase));
+
+        Self {
+            buf: buf.into_boxed_str(),
+            name_len: name.len(),
+            depth,
+            is_dir,
+        }
+    }
+
+    crate::getters! {
+        depth: usize,
+        is_dir: bool,
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        &self.buf[..self.name_len]
+    }
+
+    pub(crate) fn ext(&self) -> Option<&str> {
+        let ext = &self.buf[self.name_len..];
+        (!ext.is_empty()).then_some(ext)
+    }
+}
+
+pub(crate) fn tree_rows(paths: &[String]) -> Vec<ListingRow> {
+    let mut rows = Vec::with_capacity(paths.len());
+    let mut open: Vec<&str> = Vec::new();
+
+    for path in paths {
+        let path = path.trim_start_matches("./").trim_start_matches('/');
+        if path.is_empty() || path.ends_with('/') {
+            continue;
+        }
+
+        let (dirs, file) = path.rsplit_once('/').unwrap_or(("", path));
+        let parts = || {
+            dirs.split('/')
+                .filter(|part| !part.is_empty() && *part != ".")
+        };
+
+        let shared = open
+            .iter()
+            .zip(parts())
+            .take_while(|(open, part)| *open == part)
+            .count();
+        open.truncate(shared);
+
+        for dir in parts().skip(shared) {
+            rows.push(ListingRow::new(dir, open.len(), true));
+            open.push(dir);
+        }
+        rows.push(ListingRow::new(file, open.len(), false));
+    }
+
+    rows
+}
+
 /// Formatter integration tests
 #[cfg(test)]
 mod tests {

@@ -3,11 +3,16 @@
 //! This module defines the display configuration options which are read from the runa.toml
 //! configuration file.
 
+use std::collections::HashMap;
+use std::path::Path;
+
 use chrono::format::{Item, StrftimeItems};
 use ratatui::widgets::BorderType;
 use serde::{Deserialize, Deserializer};
 
 use crate::config::dialog::DialogPosition;
+use crate::config::input::InputKeyLists;
+use crate::utils::command;
 
 /// Default date format of the sort column.
 const SORT_DATE_FORMAT: &str = "%b %e %H:%M";
@@ -357,7 +362,7 @@ pub(crate) enum BatStyle {
 /// This struct holds various options related to file previewing,
 /// including the preview method, bat style, and text wrapping.
 /// These options can be customized by the user in the configuration file.
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
 pub(crate) struct PreviewOptions {
     #[serde(default = "PreviewOptions::default_method")]
     method: PreviewMethod,
@@ -369,6 +374,21 @@ pub(crate) struct PreviewOptions {
     wrap: bool,
     #[serde(default = "PreviewOptions::default_tab_width")]
     tab_width: usize,
+    #[serde(default)]
+    archive: HashMap<String, InputKeyLists>,
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) struct PreviewCommand<'a> {
+    args: &'a [String],
+    ext_parts: usize,
+}
+
+impl PreviewCommand<'_> {
+    crate::getters! {
+        args: &[String],
+        ext_parts: usize,
+    }
 }
 
 /// Public methods for accessing preview configuration options
@@ -380,6 +400,7 @@ impl PreviewOptions {
             theme: None,
             wrap: false,
             tab_width: 4,
+            archive: HashMap::new(),
         }
     }
 
@@ -400,6 +421,20 @@ impl PreviewOptions {
     #[inline]
     pub(crate) fn method(&self) -> &PreviewMethod {
         &self.method
+    }
+
+    pub(crate) fn archive_cmd(&self, path: &Path) -> Option<PreviewCommand<'_>> {
+        if self.archive.is_empty() {
+            return None;
+        }
+
+        let lower = path.file_name()?.to_string_lossy().to_lowercase();
+        command::extensions(&lower).find_map(|ext| {
+            self.archive.get(ext).map(|entry| PreviewCommand {
+                args: &entry.0,
+                ext_parts: ext.matches('.').count() + 1,
+            })
+        })
     }
 
     /// Generate command-line arguments for the 'bat' command based on the preview options

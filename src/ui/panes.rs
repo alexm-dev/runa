@@ -22,12 +22,14 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::app::{AppState, Clipboard, PreviewData};
 use crate::config::{Display, Theme};
-use crate::core::FileEntry;
+use crate::core::{FileEntry, formatter::ListingRow};
 use crate::ui::icons;
 use crate::utils::text::StrBuffer;
 
 const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
 const MIN_LEFT_WIDTH: u16 = 12;
+const TREE_GUIDE: &str = "│ ";
+const TREE_GUIDES: &str = "│ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ ";
 
 /// Styles used for rendering items in a pane
 /// Includes styles for regular items, directories and selected items
@@ -297,6 +299,27 @@ pub(super) fn draw_preview(
 
             frame.render_widget(
                 Paragraph::new(Text::from(visible)).block(
+                    context
+                        .block
+                        .border_style(context.accent_style)
+                        .border_type(context.border_type),
+                ),
+                context.area,
+            );
+        }
+
+        PreviewData::Listing(rows) => {
+            let offset = app.preview().window_offset();
+            let height = context.block.inner(context.area).height as usize;
+            let items: Vec<_> = rows
+                .iter()
+                .skip(offset)
+                .take(height)
+                .map(|row| make_tree_row(row, &context))
+                .collect();
+
+            frame.render_widget(
+                List::new(items).block(
                     context
                         .block
                         .border_style(context.accent_style)
@@ -718,6 +741,48 @@ fn make_entry_row<'a>(
     }
 
     ListItem::new(Line::from(spans)).style(row_style)
+}
+
+fn make_tree_row<'a>(row: &'a ListingRow, context: &PaneContext) -> ListItem<'a> {
+    let is_dir = row.is_dir();
+    let mut style = context.styles.get_style(is_dir, false);
+    if let Some(color) = context
+        .theme
+        .entry_color_override(row.name(), is_dir, row.ext())
+    {
+        style = style.patch(color);
+    }
+
+    let levels = row.depth().min(TREE_GUIDES.len() / TREE_GUIDE.len());
+    let guides = &TREE_GUIDES[..levels * TREE_GUIDE.len()];
+
+    let mut spans = Vec::with_capacity(6);
+    spans.push(Span::raw(context.padding_str));
+    spans.push(Span::styled(guides, context.accent_style));
+    let mut used_w = UnicodeWidthStr::width(context.padding_str) + UnicodeWidthStr::width(guides);
+
+    if context.show_icons {
+        let (icon, icon_color) = icons::name_icon(row.name(), is_dir, row.ext(), context.theme);
+        let mut icon_style = style.add_modifier(Modifier::BOLD);
+        if let Some(color) = icon_color {
+            icon_style = icon_style.fg(color);
+        }
+        used_w += UnicodeWidthStr::width(icon) + 1;
+        spans.push(Span::styled(icon, icon_style));
+        spans.push(Span::raw(" "));
+    }
+
+    let total_w = pane_inner_width(context) as usize;
+    let name = truncate_owned(row.name(), total_w.saturating_sub(used_w).max(1));
+    used_w += UnicodeWidthStr::width(&*name);
+
+    let name_style = style.add_modifier(context.theme.archive_modifier());
+    spans.push(Span::styled(name, name_style));
+    if is_dir && context.show_marker && left_remaining(total_w, used_w, 0) >= 1 {
+        spans.push(Span::styled("/", name_style));
+    }
+
+    ListItem::new(Line::from(spans)).style(style)
 }
 
 #[inline]
