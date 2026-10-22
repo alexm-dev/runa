@@ -86,7 +86,7 @@ impl AppState {
             let editor = self.config.editor();
             if !editor.exists(&path) {
                 let cmd = editor.cmd(&path);
-                let binary = cmd.first().map(|s| s.as_str()).unwrap_or("unknown");
+                let binary = cmd.args().first().map(|s| s.as_str()).unwrap_or("unknown");
                 let msg = format!("Editor '{}' not found", binary);
                 self.push_overlay_message(msg, Timings::MESSAGE, None);
                 return KeypressResult::Continue;
@@ -349,10 +349,9 @@ impl AppState {
     /// On return, restores raw mode and alternate sceen.
     fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Result<()> {
         let cmd = editor.cmd(file_path);
-        let binary = cmd.first().ok_or_else(|| {
+        let binary = cmd.args().first().ok_or_else(|| {
             io::Error::new(io::ErrorKind::NotFound, "No editor command configured")
         })?;
-        let args = &cmd[1..];
         let editor_path = which::which(binary).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::NotFound,
@@ -367,7 +366,7 @@ impl AppState {
         execute!(stdout, LeaveAlternateScreen)?;
 
         let mut editor_cmd = std::process::Command::new(editor_path);
-        editor_cmd.args(args).arg(file_path);
+        editor_cmd.args(cmd.expand_args(file_path));
 
         let target_dir = if resolved_path.is_dir() {
             Some(resolved_path.as_path())
