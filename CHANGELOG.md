@@ -32,8 +32,11 @@ All the changes made to runa are documented here.
 - **Editor**: Editor config module moved to `config/editor.rs` and the command arguments to `command.rs`.
 - **Core**: File previews moved to `core/preview.rs` and metadata formatting to `core/metadata.rs`.
 - **Workers**: Added the `runner` worker thread which starts editor commands in the background.
-- **CI**: Documentation deployment now runs after release workflow.
+- **CI**: Documentation deployment now runs after the release workflow.
 - **Clean-up**: Removed redundant tests and made module-local functions private.
+
+> [!NOTE]
+> There is no 0.13.0, this release follows 0.12.3.
 
 
 ---
