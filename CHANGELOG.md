@@ -7,7 +7,10 @@ All the changes made to runa are documented here.
 #### Directory preview scrolling, and editor scripting.
 
 ### Added
-- **Preview**: Directory previews are now scrollable.
+- **Preview**:
+    - Directory previews are now scrollable.
+    - Archives can preview their contents as a tree. Off by default and needs configuration. (example: `zip = ["tar", "-tf", "{path}"]` in `[display.preview_options.archive]`).
+    - Color the tree lines and mark archive content with `guide` and `modifier` in `[theme.archive]`
 - **Editor**:
     - Map multi-part extensions to their own command (example: `"tar.gz" = ["tar", "-xf"]`). The longest match wins, so `.tar.gz` and `.gz` can open differently.
     - Put the file anywhere in a command with `{path}`, `{name}`, `{dir}` and `{stem}` (example: `zip = ["7z", "x", "{path}", "-o{stem}"]` extracts `photos.zip` into its path).
