@@ -6,9 +6,10 @@ use std::path::Path;
 /// extension that {stem} drops when no extension matched
 pub(crate) const LAST_EXTENSION: usize = 1;
 
-/// File variables in editor commands: the full path, the file name, the parent directory and the file stem.
-const FILE_VARIABLES: [&str; 4] = ["{path}", "{name}", "{dir}", "{stem}"];
-const RELATIVE_VARIABLES: [&str; 2] = ["{name}", "{stem}"];
+/// File variables in editor commands: the full path, the file name, the parent directory, the file stem and an unused stem.
+const FILE_VARIABLES: [&str; 5] = ["{path}", "{name}", "{dir}", "{stem}", UNUSED_STEM];
+const RELATIVE_VARIABLES: [&str; 3] = ["{name}", "{stem}", UNUSED_STEM];
+const UNUSED_STEM: &str = "{unused_stem}";
 
 const OPTION_GUARD: &str = "./";
 const OPTION_PREFIX: &[u8] = b"-+@";
@@ -75,12 +76,14 @@ pub(crate) fn fill_file_variables(cmd: &[String], ext_parts: usize, path: &Path)
     let rest = cmd.get(1..).unwrap_or_default();
 
     let name = path.file_name().unwrap_or_default();
-    let values = [
-        path.as_os_str(),
-        name,
-        path.parent().map(Path::as_os_str).unwrap_or_default(),
-        strip_extension(name, ext_parts),
-    ];
+    let dir = path.parent().unwrap_or(Path::new(""));
+    let stem = strip_extension(name, ext_parts);
+    let unused_stem = if rest.iter().any(|arg| arg.contains(UNUSED_STEM)) {
+        unused_name(dir, stem)
+    } else {
+        OsString::new()
+    };
+    let values = [path.as_os_str(), name, dir.as_os_str(), stem, &unused_stem];
 
     rest.iter()
         .map(|arg| {
@@ -92,6 +95,17 @@ pub(crate) fn fill_file_variables(cmd: &[String], ext_parts: usize, path: &Path)
             }
         })
         .collect()
+}
+
+fn unused_name(dir: &Path, stem: &OsStr) -> OsString {
+    let mut name = stem.to_owned();
+    let mut counter = 1;
+    while dir.join(&name).symlink_metadata().is_ok() {
+        name = stem.to_owned();
+        name.push(format!("_{counter}"));
+        counter += 1;
+    }
+    name
 }
 
 /// Prefixes a name that starts with a dash with `./`, so it is never read as an option.
@@ -168,6 +182,20 @@ mod tests {
 
     fn os_args(args: &[&str]) -> Vec<OsString> {
         args.iter().map(OsString::from).collect()
+    }
+
+    #[test]
+    fn unused_stem_skips_taken_names() -> std::io::Result<()> {
+        let dir = tempfile::tempdir()?;
+        std::fs::create_dir(dir.path().join("foo"))?;
+        std::fs::create_dir(dir.path().join("foo_1"))?;
+        let path = dir.path().join("foo.zip");
+
+        assert_eq!(
+            expand_args(&cmd(&["7z", "x", "-o{unused_stem}"]), 1, &path),
+            os_args(&["x", "-ofoo_2"])
+        );
+        Ok(())
     }
 
     #[test]
