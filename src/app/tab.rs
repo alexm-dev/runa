@@ -258,13 +258,7 @@ pub(crate) fn handle_tab_action(
                 }
 
                 let active = tabs.current_tab_mut();
-
-                let current_focus = active
-                    .nav()
-                    .selected_entry()
-                    .map(|entry| entry.name().to_os_string());
-
-                active.request_dir_load(workers, current_focus);
+                active.request_dir_reload(workers);
                 active.request_parent_content(workers);
             }
             KeypressResult::Consumed

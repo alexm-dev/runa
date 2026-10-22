@@ -26,6 +26,7 @@ pub(crate) struct NavState {
     filters: HashMap<PathBuf, String>,
     sort_config: SortConfig,
     request_id: u64,
+    reload_id: Option<u64>,
 
     // UI releted fields
     sort_column: Option<Arc<StrBuffer>>,
@@ -48,7 +49,16 @@ impl NavState {
             sort_column: None,
             display_path,
             request_id: 0,
+            reload_id: None,
         }
+    }
+
+    pub(crate) fn mark_reload(&mut self, request_id: u64) {
+        self.reload_id = Some(request_id);
+    }
+
+    pub(crate) fn take_reload(&mut self, request_id: u64) -> bool {
+        self.reload_id.take_if(|id| *id == request_id).is_some()
     }
 
     crate::getters! {

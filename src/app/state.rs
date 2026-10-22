@@ -357,6 +357,12 @@ impl AppState {
             } => {
                 // only update nav if BOTH the ID and path match.
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
+                    let focus = if self.nav.take_reload(request_id) {
+                        self.nav.selected_entry().map(|e| e.name().to_os_string())
+                    } else {
+                        focus
+                    };
+
                     self.nav
                         .update_from_worker(path, entries, sort_column, focus);
                     self.is_loading = false;
@@ -577,6 +583,11 @@ impl AppState {
             request_id,
             tab_id: self.tab_id(),
         });
+    }
+
+    pub(crate) fn request_dir_reload(&mut self, workers: &Workers) {
+        self.request_dir_load(workers, None);
+        self.nav.mark_reload(self.nav.request_id());
     }
 
     #[inline]
@@ -843,8 +854,7 @@ impl AppState {
         });
 
         if touches_current {
-            let focus = self.nav.selected_entry().map(|e| e.name().to_os_string());
-            self.request_dir_load(workers, focus);
+            self.request_dir_reload(workers);
         }
 
         if touches_parent {
@@ -919,6 +929,38 @@ mod tests {
         app.is_loading = false;
         app.request_dir_load(&workers, None);
         assert!(app.is_loading);
+        Ok(())
+    }
+
+    #[test]
+    fn reload_keeps_the_selection_made_while_loading() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = dummy_workers();
+        let temp = tempdir()?;
+        let mut app = AppState::from_dir(Arc::new(dummy_config()), temp.path())?;
+        let dir = app.nav().current_dir().to_path_buf();
+        let entries: Arc<[FileEntry]> = ["a", "b", "c"]
+            .iter()
+            .map(|name| FileEntry::new(OsString::from(name), 0, None))
+            .collect();
+        app.nav
+            .update_from_worker(dir.clone(), Arc::clone(&entries), None, None);
+
+        app.refresh_changed_dirs(&workers, std::slice::from_ref(&dir));
+        let request_id = app.nav.request_id();
+        app.nav.move_down();
+        app.nav.move_down();
+
+        let loaded = WorkerResponse::DirectoryLoaded {
+            path: dir,
+            entries,
+            focus: Some(OsString::from("a")),
+            sort_column: None,
+            request_id,
+            tab_id: None,
+        };
+        app.handle_worker_response(loaded, &workers);
+
+        assert_eq!(app.nav().selected_entry().map(|e| e.name_str()), Some("c"));
         Ok(())
     }
 
