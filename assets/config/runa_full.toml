@@ -485,6 +485,15 @@ default = "nvim"
 # Example:
 # filename = { "Cargo.toml" = "nvim" }
 
+# Open these extensions with the default app of the system
+# Example:
+# system = ["pdf", "png", "jpg", "html"]
+
+# Run a command in the background with the table form and terminal = false
+# File variables: {path}, {name}, {dir}, {stem}
+# Example:
+# ext = { zip = { cmd = ["7z", "x", "-y", "{path}", "-o{stem}"], terminal = false } }
+
 # ===========================
 #          KEYBINDS
 # ===========================
