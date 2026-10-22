@@ -28,6 +28,7 @@ use crate::app::{
     state::{AppState, KeypressResult},
 };
 use crate::config::Editor;
+use crate::core::open;
 use crate::utils::Timings;
 use crate::utils::path;
 
@@ -366,7 +367,7 @@ impl AppState {
         execute!(stdout, LeaveAlternateScreen)?;
 
         let mut editor_cmd = std::process::Command::new(editor_path);
-        editor_cmd.args(cmd.expand_args(file_path));
+        editor_cmd.args(open::expand_args(cmd.args(), cmd.ext_parts(), file_path));
 
         let target_dir = if resolved_path.is_dir() {
             Some(resolved_path.as_path())
