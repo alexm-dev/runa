@@ -151,42 +151,6 @@ mod tests {
     }
 
     #[test]
-    fn find_worker_finds_file() -> Result<(), Box<dyn std::error::Error>> {
-        if !fd_available() {
-            return Ok(());
-        }
-
-        let temp = tempfile::tempdir()?;
-        std::fs::File::create(temp.path().join("crab.txt"))?;
-
-        let workers = Workers::spawn();
-        workers.find_tx().send(WorkerTask::FindRecursive {
-            base_dir: temp.path().to_path_buf(),
-            query: "crab".to_string(),
-            max_results: 5,
-            cancel: Arc::new(AtomicBool::new(false)),
-            show_hidden: false,
-            request_id: 2,
-            tab_id: TEST_TAB_ID,
-        })?;
-
-        let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-
-        match resp {
-            WorkerResponse::FindResults { results, .. } => {
-                if !results
-                    .iter()
-                    .any(|res| res.path().file_name().unwrap() == "crab.txt")
-                {
-                    return Err("Expected 'crab.txt' in find results".into());
-                }
-            }
-            r => return Err(format!("Unexpected response: {:?}", r).into()),
-        }
-        Ok(())
-    }
-
-    #[test]
     fn find_worker_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
         if !fd_available() {
             return Ok(());

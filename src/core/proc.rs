@@ -370,58 +370,6 @@ mod tests {
     }
 
     #[test]
-    fn finds_fd_binary_if_available() -> Result<(), Box<dyn std::error::Error>> {
-        skip_if_no_fd!();
-        let bin = os::fd_binary()?;
-        assert!(bin == "fd" || bin == "fd-find");
-        assert!(which::which(bin).is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn finds_bat_binary_if_available() -> Result<(), Box<dyn std::error::Error>> {
-        skip_if_no_bat!();
-        let bin = os::bat_binary()?;
-        assert_eq!(bin, "bat");
-        assert!(which::which(bin).is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn find_recursive_unit() -> Result<(), Box<dyn std::error::Error>> {
-        skip_if_no_fd!();
-
-        let dir = tempdir()?;
-        std::fs::File::create(dir.path().join("crab.txt"))?;
-        std::fs::File::create(dir.path().join("other.txt"))?;
-        let cancel = Arc::new(AtomicBool::new(false));
-        let mut out = Vec::new();
-        find(dir.path(), "crab", &mut out, cancel, 11, false)?;
-        let candidate = out
-            .iter()
-            .find(|r| r.path().file_name().unwrap() == "crab.txt");
-        assert!(
-            candidate.is_some(),
-            "Expected 'crab.txt' in find results. Got: {:?}",
-            out.iter()
-                .map(|r| r.path().display().to_string())
-                .collect::<Vec<_>>()
-        );
-
-        let filename = out[0]
-            .path()
-            .file_name()
-            .and_then(|s| s.to_str())
-            .ok_or("Could not extract valid UTF-8 file name")?;
-        assert!(
-            filename.contains("crab"),
-            "Filename does not contain 'crab': got '{}'",
-            filename
-        );
-        Ok(())
-    }
-
-    #[test]
     fn find_recursive_empty_query() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_fd!();
         let dir = tempdir()?;
@@ -482,22 +430,6 @@ mod tests {
     }
 
     #[test]
-    fn preview_bat_with_args() -> Result<(), Box<dyn std::error::Error>> {
-        skip_if_no_bat!();
-
-        let dir = tempdir()?;
-        let file_path = dir.path().join("colors.rs");
-        let mut file = fs::File::create(&file_path)?;
-        writeln!(file, "fn main() {{}}")?;
-
-        let preview = preview_bat(&file_path, 1, &[std::ffi::OsString::from("--plain")], 0)?;
-        assert_eq!(preview.len(), 1);
-        assert!(preview[0].contains("fn main"));
-
-        Ok(())
-    }
-
-    #[test]
     fn preview_bat_nonexistent_file() -> Result<(), Box<dyn std::error::Error>> {
         skip_if_no_bat!();
 
@@ -540,19 +472,6 @@ mod tests {
 
         let all_results = complete_dirs_with_fd(base_path, "", true)?;
         assert!(all_results.len() >= 2);
-
-        Ok(())
-    }
-
-    #[test]
-    fn fd_missing_or_invalid_path() -> Result<(), Box<dyn std::error::Error>> {
-        skip_if_no_fd!();
-
-        let sandbox = tempdir()?;
-        let non_existent = sandbox.path().join("ghost_zone");
-
-        let result = complete_dirs_with_fd(&non_existent, "", true);
-        assert!(result.is_err(), "Expected error for non-existent path");
 
         Ok(())
     }

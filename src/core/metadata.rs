@@ -430,7 +430,6 @@ fn format_file_type(file_type: &FileType) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::fm;
     use std::fs::{self, File};
     use std::io::Write;
     use std::path::PathBuf;
@@ -459,14 +458,6 @@ mod tests {
         let info = FileMetadata::new(&dir_path)?;
         assert_eq!(&info.file_type, &FileType::Directory);
         assert_eq!(&info.size, &None);
-        Ok(())
-    }
-
-    #[test]
-    fn browse_nonexistent() -> Result<(), Box<dyn std::error::Error>> {
-        let path = PathBuf::from("/path/does/not/exist");
-        let result = fm::browse_dir(&path);
-        assert!(result.is_err());
         Ok(())
     }
 

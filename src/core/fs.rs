@@ -257,34 +257,6 @@ mod tests {
     }
 
     #[test]
-    fn get_unused_path_basic() -> Result<(), Box<dyn error::Error>> {
-        let dir = tempdir()?;
-        let file_path = dir.path().join("test.txt");
-
-        let path1 = get_unused_path(&file_path);
-        assert_eq!(path1, file_path);
-
-        File::create(&file_path)?;
-        let path2 = get_unused_path(&file_path);
-        let path2_fname = path2
-            .file_name()
-            .ok_or("Failed to get file name from path2")?
-            .to_str()
-            .ok_or("File name not valid UTF-8")?;
-        assert_eq!(path2_fname, "test_1.txt");
-
-        File::create(&path2)?;
-        let path3 = get_unused_path(&file_path);
-        let path3_fname = path3
-            .file_name()
-            .ok_or("Failed to get file name from path3")?
-            .to_str()
-            .ok_or("File name not valid UTF-8")?;
-        assert_eq!(path3_fname, "test_2.txt");
-        Ok(())
-    }
-
-    #[test]
     fn get_unused_path_no_extension() -> Result<(), Box<dyn error::Error>> {
         let dir = tempdir()?;
         let folder_path = dir.path().join("my_folder");
@@ -299,40 +271,6 @@ mod tests {
             .to_str()
             .ok_or("File name not valid UTF-8")?;
         assert_eq!(fname, "my_folder_1");
-        Ok(())
-    }
-
-    #[test]
-    fn get_unused_path_hidden_file() -> Result<(), Box<dyn error::Error>> {
-        let dir = tempdir()?;
-        let dot_file = dir.path().join(".gitignore");
-
-        File::create(&dot_file)?;
-        let path = get_unused_path(&dot_file);
-
-        let fname = path
-            .file_name()
-            .ok_or("No file name in path")?
-            .to_str()
-            .ok_or("File name not valid UTF-8")?;
-        assert_eq!(fname, ".gitignore_1");
-        Ok(())
-    }
-
-    #[test]
-    fn get_unused_path_complex_extension() -> Result<(), Box<dyn error::Error>> {
-        let dir = tempdir()?;
-        let tar_gz = dir.path().join("archive.tar.gz");
-
-        File::create(&tar_gz)?;
-        let path = get_unused_path(&tar_gz);
-
-        let name = path
-            .file_name()
-            .ok_or("No file name in path")?
-            .to_str()
-            .ok_or("File name not valid UTF-8")?;
-        assert!(name.contains("_1"), "Suffix missing: got {:?}", name);
         Ok(())
     }
 

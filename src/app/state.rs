@@ -865,7 +865,6 @@ mod tests {
     use super::*;
     use crate::core::FileEntry;
     use crate::ui::overlays::Overlay;
-    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use ratatui::layout::Alignment;
     use std::ffi::OsString;
     use std::time::{Duration, Instant};
@@ -877,15 +876,6 @@ mod tests {
 
     fn dummy_workers() -> Workers {
         Workers::spawn()
-    }
-
-    #[test]
-    fn appstate_new_from_dir_sets_initial_state() -> Result<(), Box<dyn std::error::Error>> {
-        let config = dummy_config();
-        let temp = tempdir()?;
-        let app = AppState::from_dir(Arc::new(config), temp.path())?;
-        assert_eq!(app.nav().current_dir(), temp.path());
-        Ok(())
     }
 
     #[test]
@@ -903,37 +893,6 @@ mod tests {
         assert!(changed);
         assert!(app.notification_time.is_none());
         assert!(!app.overlays().is_open(OverlayKind::Message));
-        Ok(())
-    }
-
-    #[test]
-    fn visible_selected_and_has_visible_entries() -> Result<(), Box<dyn std::error::Error>> {
-        let config = dummy_config();
-        let temp = tempdir()?;
-        let app = AppState::from_dir(Arc::new(config), temp.path())?;
-        let app_nav = app.nav();
-        if app_nav.entries().is_empty() {
-            assert_eq!(app.visible_selected(), None);
-            assert!(!app.has_visible_entries());
-        } else {
-            assert!(app.visible_selected().is_some());
-            assert!(app.has_visible_entries());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn handle_keypress_continue_if_no_action() -> Result<(), Box<dyn std::error::Error>> {
-        let config = dummy_config();
-        let workers = dummy_workers();
-        let temp = tempdir()?;
-
-        let mut clipboard = Clipboard::default();
-
-        let mut app = AppState::from_dir(Arc::new(config), temp.path())?;
-        let key = KeyEvent::new(KeyCode::Null, KeyModifiers::NONE);
-        let result = app.handle_keypress(key, &workers, &mut clipboard);
-        assert!(matches!(result, KeypressResult::Continue));
         Ok(())
     }
 

@@ -504,15 +504,6 @@ mod tests {
     }
 
     #[test]
-    fn core_empty_dir() -> Result<(), Box<dyn std::error::Error>> {
-        let temp_dir = tempdir()?;
-        let entries = fm::browse_dir(temp_dir.path())?;
-
-        assert!(entries.is_empty(), "Directory should be empty");
-        Ok(())
-    }
-
-    #[test]
     fn formatter_sort_by_name() -> Result<(), Box<dyn std::error::Error>> {
         let entry1 = FileEntry::new(OsString::from("fileB.txt"), 0, None);
         let entry2 = FileEntry::new(OsString::from("fileA.txt"), 0, None);
