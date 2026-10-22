@@ -138,6 +138,14 @@ wrap = false
 # This does not overwrite every file preview indentation.
 tab_width = 4
 
+# Show the contents of archives as a tree.
+# Map extensions to a command that prints the paths of an archive, one per line.
+# Example (the tar of Windows reads tar, zip and 7z):
+# [display.preview_options.archive]
+# zip = ["tar", "-tf", "{path}"]
+# "7z" = ["tar", "-tf", "{path}"]
+# "tar.gz" = ["tar", "-tf", "{path}"]
+
 [display.layout]
 # Display ratios for panes (will be scaled to 100%)
 parent = 20
@@ -351,6 +359,12 @@ bg = "default"
 fg = "magenta"
 bg = "default"
 
+[theme.archive]       # Archive preview tree
+# Color of the tree lines, follows [theme.accent] if omitted
+# guide = "#444444"
+# Text style for names: "none", "dim", "italic", "bold"
+modifier = "none"
+
 # Full widget/dialog theming: position, size, and colors
 
 [theme.widget]
@@ -490,9 +504,21 @@ default = "nvim"
 # system = ["pdf", "png", "jpg", "html"]
 
 # Run a command in the background with the table form and terminal = false
-# File variables: {path}, {name}, {dir}, {stem}
+# File variables: {path}, {name}, {dir}, {stem}, {unused_stem}
+# {unused_stem} adds _1, _2, ... when the name is taken, so nothing is overwritten
 # Example:
-# ext = { zip = { cmd = ["7z", "x", "-y", "{path}", "-o{stem}"], terminal = false } }
+# ext = { zip = { cmd = ["7z", "x", "-y", "{path}", "-o{unused_stem}"], terminal = false } }
+
+# ===========================
+#          COMMANDS
+# ===========================
+
+# Own commands bound to keys, using the same key syntax as [keys]
+# File variables refer to the selected entry, no path is appended
+# Example:
+# [commands]
+# lazygit = { keys = "<m-g>", cmd = "lazygit" }
+# extract = { keys = "x", cmd = ["7z", "x", "-o{unused_stem}", "{path}"], terminal = false }
 
 # ===========================
 #          KEYBINDS

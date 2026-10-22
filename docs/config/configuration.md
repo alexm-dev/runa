@@ -119,7 +119,7 @@ File visibility, sorting, search behavior, and startup tabs.
 
 Pane layout, borders, previews, file information, and UI styling.
 
-**Sections**: `[display]`, `[display.layout]`, `[display.preview_options]`, `[display.info]`, `[display.status]`
+**Sections**: `[display]`, `[display.layout]`, `[display.preview_options]`, `[display.preview_options.archive]`, `[display.info]`, `[display.status]`
 
 ### [Theme Configuration](config-reference/theme.md)
 
@@ -132,6 +132,12 @@ Colors, icon coloring, styling, and widget customization.
 Editor program selection and per-extension/per-filename overrides.
 
 **Section**: `[editor]`
+
+### [Commands](config-reference/commands.md)
+
+Own commands bound to keys, like `lazygit` or extracting an archive.
+
+**Section**: `[commands]`
 
 ### [Key Bindings](config-reference/keys.md)
 

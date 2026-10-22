@@ -78,13 +78,14 @@ Commands can use these variables in their arguments:
 | `{name}` | `release.tar.gz` |
 | `{dir}`  | `/home/a/dl` |
 | `{stem}` | `release` (the name without the matched extension) |
+| `{unused_stem}` | `release`, or `release_1`, `release_2`, ... when that name is taken |
 
 Without any variable, the path is appended as the last argument. With variables, nothing is appended.
 
 ```toml
 [editor.ext]
 "tar.gz" = ["tar", "-xf", "{path}", "-C", "{dir}"]
-zip = ["7z", "x", "{path}", "-o{stem}"]
+zip = ["7z", "x", "{path}", "-o{unused_stem}"]
 ```
 
 To use a shell, pass the path as its own argument and read it as `$1`. Never put a file variable inside the command string, a file name could contain shell syntax.
@@ -99,11 +100,31 @@ By default a command takes over the terminal, like an editor. Use the table form
 
 ```toml
 [editor.ext]
-zip = { cmd = ["7z", "x", "-y", "{path}", "-o{stem}"], terminal = false }
+zip = { cmd = ["7z", "x", "-y", "{path}", "-o{unused_stem}"], terminal = false }
 pdf = { cmd = ["zathura", "{path}"], terminal = false }
 ```
 
 Background commands get no input, so they must not ask questions. Use flags like `-y`. Keep interactive tools like `nvim`, `less` or `lazygit` in the default form.
+
+## Extracting Safely
+
+Extract into `{unused_stem}`, so an archive never overwrites an earlier folder of the same name. `7z` creates the folder itself:
+
+```toml
+zip = { cmd = ["7z", "x", "{path}", "-o{unused_stem}"], terminal = false }
+```
+
+`tar -x` only extracts into a folder that exists. GNU `tar` creates a new one with `--one-top-level`:
+
+```toml
+"tar.gz" = { cmd = ["tar", "-xzf", "{path}", "--one-top-level={unused_stem}"], terminal = false }
+```
+
+The `tar` of Windows has no such option. Use `-k` there, it never overwrites existing files:
+
+```toml
+"tar.gz" = { cmd = ["tar", "-xkzf", "{path}", "-C", "{dir}"], terminal = false }
+```
 
 ## Editor Resolution
 

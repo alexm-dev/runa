@@ -217,6 +217,19 @@ Path bar at the top colors.
 - `fg` - Foreground color
 - `bg` - Background color
 
+### `[theme.archive]`
+
+Tree of an [archive preview](display.md#archive). Names keep the colors of the directory preview.
+
+- `guide` - Color of the tree lines. Follows `[theme.accent]` unless set.
+- `modifier` - Text style for names: `"none"` (default), `"dim"`, `"italic"` or `"bold"`. `"italic"` needs a font with an italic style.
+
+```toml
+[theme.archive]
+guide = "#555555"
+modifier = "dim"
+```
+
 ## Widget Configuration
 
 ### `[theme.widget]`

@@ -187,6 +187,35 @@ Toggle wrapping the bat output to the pane width.
 
 Configure the tab indentation of `bat`. This does not overwrite every file preview indentation.
 
+#### `archive`
+
+- **Type**: `table`
+- **Default**: none, archives preview as files
+
+Shows the contents of archives as a tree. Map extensions to a command that prints the paths of an archive, one per line. Keys can span several extensions, like `"tar.gz"`. The longest matching extension wins. [File variables](editor.md#file-variables) work as in editor commands.
+
+On Windows, the built-in `tar` reads tar, zip and 7z archives:
+
+```toml
+[display.preview_options.archive]
+zip = ["tar", "-tf", "{path}"]
+"7z" = ["tar", "-tf", "{path}"]
+"tar.gz" = ["tar", "-tf", "{path}"]
+```
+
+On Linux, GNU `tar` reads tar archives, `unzip -Z1` lists zip archives and `bsdtar` reads all of them:
+
+```toml
+[display.preview_options.archive]
+zip = ["unzip", "-Z1", "{path}"]
+"tar.gz" = ["tar", "-tf", "{path}"]
+"tar.xz" = ["tar", "-tf", "{path}"]
+```
+
+runa reads only the lines the preview shows and stops the command after that, or after 2 seconds. If the command fails, the file previews as usual. Empty folders inside an archive are not shown.
+
+To color the tree lines or mark archive contents, see [`[theme.archive]`](theme.md#themearchive).
+
 ## Layout Configuration
 
 ### `[display.layout]`
