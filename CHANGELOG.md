@@ -7,9 +7,10 @@ All the changes made to runa are documented here.
 #### Navigation, preview and config watcher fixes.
 
 ### Fixed
-- **Navigation**: Fast moves into or out of directories no longer leave previous or stale entries on screen.
+- **Navigation**:
+    - Fast moves into or out of directories no longer leave previous or stale entries on screen.
+    - Moving through a directory whose files keep changing (like build outputs) no longer jumps back or skips entries.
 - **Preview**: Errors from other panes no longer replace the preview.
-- **Navigation**: Moving through a directory whose files keep changing (like build outputs) no longer jumps back or skips entries.
 - **Config**:
     - Without a config folder, runa no longer watches the parent directory recursively.
     - Only the actual `runa.toml` inside the config directory triggers a reload.
