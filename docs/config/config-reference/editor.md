@@ -23,9 +23,11 @@ Command to open files (e.g., "nvim", "code", "vim", etc.). This is the default e
 
 Map file extensions to editors/program commands. Use single command or array of command + arguments.
 
+Keys can span several extensions, like `"tar.gz"`. The longest matching extension wins.
+
 **Inline format**:
 ```toml
-ext = { rs = "nvim", md = "code", txt = ["code", "-d"] }
+ext = { rs = "nvim", md = "code", txt = ["code", "-d"], "tar.gz" = ["tar", "-xf"] }
 ```
 
 **Section format**:
@@ -52,12 +54,63 @@ filename = { "Cargo.toml" = "nvim" }
 "Cargo.toml" = ["vim"]
 ```
 
+### `system`
+
+- **Type**: `array of strings`
+- **Default**: `[]`
+
+File extensions that open with the default app of the system: `explorer` on Windows, `open` on macOS and `xdg-open` on Linux. They open in the background, runa keeps running.
+
+```toml
+[editor]
+system = ["pdf", "png", "jpg", "html"]
+```
+
+Use this instead of `cmd /C start` or `sh -c "xdg-open ..."`. A shell can read parts of a file name as commands.
+
+## File Variables
+
+Commands can use these variables in their arguments:
+
+| Variable | Value for `/home/a/dl/release.tar.gz` |
+|----------|---------------------------------------|
+| `{path}` | `/home/a/dl/release.tar.gz` |
+| `{name}` | `release.tar.gz` |
+| `{dir}`  | `/home/a/dl` |
+| `{stem}` | `release` (the name without the matched extension) |
+
+Without any variable, the path is appended as the last argument. With variables, nothing is appended.
+
+```toml
+[editor.ext]
+"tar.gz" = ["tar", "-xf", "{path}", "-C", "{dir}"]
+zip = ["7z", "x", "{path}", "-o{stem}"]
+```
+
+To use a shell, pass the path as its own argument and read it as `$1`. Never put a file variable inside the command string, a file name could contain shell syntax.
+
+```toml
+"tar.gz" = ["sh", "-c", "tar -xf \"$1\" && echo done", "sh", "{path}"]
+```
+
+## Running Without the Terminal
+
+By default a command takes over the terminal, like an editor. Use the table form with `terminal = false` to run it in the background. runa keeps running and shows a message if the command fails.
+
+```toml
+[editor.ext]
+zip = { cmd = ["7z", "x", "-y", "{path}", "-o{stem}"], terminal = false }
+pdf = { cmd = ["zathura", "{path}"], terminal = false }
+```
+
+Background commands get no input, so they must not ask questions. Use flags like `-y`. Keep interactive tools like `nvim`, `less` or `lazygit` in the default form.
+
 ## Editor Resolution
 
 runa resolves the editor to use in the following order:
 
 1. Check if there's a filename override for the exact filename
-2. Check if there's an extension override for the file extension
+2. Check the extensions from longest to shortest, first `ext`, then `system`
 3. Use the default editor
 
 The resolved editor can be a single command string or an array of command + arguments. If you set a custom filename to a certain program/cmd, the actual file path will be handled in the actual file path directory and never in the starting directory of runa.
