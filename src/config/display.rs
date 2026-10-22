@@ -378,7 +378,7 @@ pub(crate) struct PreviewOptions {
     archive: HashMap<String, InputKeyLists>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub(crate) struct ArchivePreview<'a> {
     args: &'a [String],
     ext_parts: usize,

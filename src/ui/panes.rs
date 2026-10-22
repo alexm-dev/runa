@@ -30,6 +30,8 @@ use crate::utils::text::StrBuffer;
 const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
 const MIN_LEFT_WIDTH: u16 = 12;
 const TREE_GUIDE_WIDTH: usize = 2;
+const TREE_GUIDE_SPANS: usize = 2;
+const TREE_ROW_SPANS: usize = 5;
 
 /// Styles used for rendering items in a pane
 /// Includes styles for regular items, directories and selected items
@@ -753,7 +755,7 @@ fn make_tree_row<'a>(row: &'a ListingRow, context: &PaneContext) -> ListItem<'a>
         style = style.patch(color);
     }
 
-    let mut spans = Vec::with_capacity(5 + 2 * row.depth());
+    let mut spans = Vec::with_capacity(TREE_ROW_SPANS + TREE_GUIDE_SPANS * row.depth());
     spans.push(Span::raw(context.padding_str));
     for _ in 0..row.depth() {
         spans.push(Span::styled(line::VERTICAL, context.accent_style));
