@@ -122,21 +122,27 @@ mod tests {
     use std::time::Duration;
 
     use crossbeam_channel::{RecvTimeoutError, unbounded};
+    use tempfile::{TempDir, tempdir};
 
     const TIMEOUT: Duration = Duration::from_secs(5);
 
-    fn run(program: &str, args: &[&str], check_status: bool) -> Receiver<WorkerResponse> {
+    fn run(
+        program: &str,
+        args: &[&str],
+        check_status: bool,
+    ) -> (Receiver<WorkerResponse>, TempDir) {
+        let dir = tempdir().expect("temp dir is created");
         let (task_tx, task_rx) = unbounded();
         let (res_tx, res_rx) = unbounded();
         start(task_rx, res_tx);
         let task = WorkerTask::RunCommand {
             program: PathBuf::from(program),
             args: args.iter().map(OsString::from).collect(),
-            dir: None,
+            dir: Some(dir.path().to_path_buf()),
             check_status,
         };
         task_tx.send(task).expect("runner thread is running");
-        res_rx
+        (res_rx, dir)
     }
 
     fn error_message(res_rx: &Receiver<WorkerResponse>) -> String {
@@ -157,7 +163,7 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn failure_reports_the_first_stderr_line() {
-        let res_rx = run(
+        let (res_rx, _dir) = run(
             "sh",
             &["-c", "echo first >&2; echo second >&2; exit 3"],
             true,
@@ -168,7 +174,7 @@ mod tests {
     #[cfg(windows)]
     #[test]
     fn failure_reports_the_first_stderr_line() {
-        let res_rx = run(
+        let (res_rx, _dir) = run(
             "cmd",
             &["/C", "echo first 1>&2 & echo second 1>&2 & exit /B 3"],
             true,
@@ -179,31 +185,35 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn success_sends_nothing() {
-        assert_nothing_sent(&run("sh", &["-c", "echo ignored; exit 0"], true));
+        let (res_rx, _dir) = run("sh", &["-c", "echo ignored; exit 0"], true);
+        assert_nothing_sent(&res_rx);
     }
 
     #[cfg(windows)]
     #[test]
     fn success_sends_nothing() {
-        assert_nothing_sent(&run("cmd", &["/C", "echo ignored & exit /B 0"], true));
+        let (res_rx, _dir) = run("cmd", &["/C", "echo ignored & exit /B 0"], true);
+        assert_nothing_sent(&res_rx);
     }
 
     #[cfg(unix)]
     #[test]
     fn unchecked_failure_sends_nothing() {
-        assert_nothing_sent(&run("sh", &["-c", "echo ignored >&2; exit 1"], false));
+        let (res_rx, _dir) = run("sh", &["-c", "echo ignored >&2; exit 1"], false);
+        assert_nothing_sent(&res_rx);
     }
 
     #[cfg(windows)]
     #[test]
     fn unchecked_failure_sends_nothing() {
-        assert_nothing_sent(&run("cmd", &["/C", "echo ignored 1>&2 & exit /B 1"], false));
+        let (res_rx, _dir) = run("cmd", &["/C", "echo ignored 1>&2 & exit /B 1"], false);
+        assert_nothing_sent(&res_rx);
     }
 
     #[cfg(unix)]
     #[test]
     fn chatty_stderr_does_not_block() {
-        let res_rx = run(
+        let (res_rx, _dir) = run(
             "sh",
             &["-c", "yes runa | head -c 1000000 >&2; exit 1"],
             true,
@@ -213,7 +223,7 @@ mod tests {
 
     #[test]
     fn missing_program_reports_its_name() {
-        let res_rx = run("runa-no-such-program", &[], false);
+        let (res_rx, _dir) = run("runa-no-such-program", &[], false);
         assert!(error_message(&res_rx).starts_with("runa-no-such-program: "));
     }
 }
