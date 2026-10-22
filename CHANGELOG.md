@@ -5,10 +5,13 @@ All the changes made to runa are documented here.
 ## [0.12.4] - UNRELEASED
 
 ### Added
-**Preview**: Directory previews are now scrollable.
+- **Preview**: Directory previews are now scrollable.
+- **Editor**:
+    - `[editor.ext]` matches multi-part extensions like `tar.gz`.
+    - Open commands support file variables `{path}`, `{name}`, `{dir}` and `{stem}`.
 
 ### Fixed
-**UI**: Last line of a file preview is now correctly drawn while in `split` border mode.
+- **UI**: Last line of a file preview is now correctly drawn while in `split` border mode.
 
 
 ---
