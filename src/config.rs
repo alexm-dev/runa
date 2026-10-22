@@ -12,6 +12,7 @@ pub(crate) mod general;
 pub(crate) mod input;
 pub(crate) mod load;
 pub(crate) mod presets;
+pub(crate) mod previewers;
 pub(crate) mod theme;
 
 pub(crate) use commands::Commands;
@@ -20,4 +21,5 @@ pub(crate) use editor::Editor;
 pub(crate) use general::{General, InternalGeneral};
 pub(crate) use input::Keys;
 pub(crate) use load::Config;
+pub(crate) use previewers::Previewers;
 pub(crate) use theme::Theme;

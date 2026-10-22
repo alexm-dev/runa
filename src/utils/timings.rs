@@ -31,6 +31,8 @@ impl Timings {
     pub(crate) const FS_WATCH_DEBOUNCE_MS: u64 = 150;
     /// Time a file operation runs before the status line shows it.
     pub(crate) const WORKER_INDICATOR_MS: u64 = 200;
+    /// Time a preview command it runs before it is stopped.
+    pub(crate) const PREVIEW_COMMAND_TIMEOUT_MS: u64 = 2000;
 
     // Message durations
     /// How long short confirmations stay visible.

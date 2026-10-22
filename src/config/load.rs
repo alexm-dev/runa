@@ -11,7 +11,7 @@ use std::{fs, io, path::PathBuf};
 use serde::Deserialize;
 
 use crate::config::{
-    Commands, Display, Editor, General, InternalGeneral, Keys, Theme,
+    Commands, Display, Editor, General, InternalGeneral, Keys, Previewers, Theme,
     assets::{FULL_TOML, MINIMAL_TOML},
 };
 use crate::utils::os;
@@ -28,6 +28,8 @@ pub(crate) struct RawConfig {
     editor: Editor,
     keys: Keys,
     commands: Commands,
+    #[serde(rename = "preview")]
+    previewers: Previewers,
 }
 
 /// Default values for RawConfig
@@ -41,6 +43,7 @@ impl Default for RawConfig {
             editor: Editor::default(),
             keys: Keys::default(),
             commands: Commands::default(),
+            previewers: Previewers::default(),
         }
     }
 }
@@ -55,6 +58,7 @@ pub(crate) struct Config {
     editor: Editor,
     keys: Keys,
     commands: Commands,
+    previewers: Previewers,
 }
 
 /// Conversion from RawConfig to Config
@@ -68,6 +72,7 @@ impl From<RawConfig> for Config {
             editor: raw.editor,
             keys: raw.keys,
             commands: raw.commands,
+            previewers: raw.previewers,
         }
     }
 }
@@ -101,6 +106,7 @@ impl Config {
         editor: &Editor,
         keys: &Keys,
         commands: &Commands,
+        previewers: &Previewers,
     }
 
     pub(crate) fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
@@ -144,6 +150,7 @@ impl Default for Config {
             editor: Editor::default(),
             keys: Keys::default(),
             commands: Commands::default(),
+            previewers: Previewers::default(),
         }
     }
 }
