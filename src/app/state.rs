@@ -493,16 +493,30 @@ impl AppState {
                 }
             }
 
-            WorkerResponse::Error(e, request_id) => {
-                self.is_loading = false;
-                match request_id {
-                    Some(id) if id == self.preview.request_id() => {
-                        self.preview.set_error(e);
-                    }
-                    _ => {
-                        self.push_overlay_message(e.to_string(), Duration::from_secs(7), None);
-                    }
+            WorkerResponse::DirectoryFailed {
+                path,
+                message,
+                request_id,
+                tab_id: _tab_id,
+            } => {
+                if request_id == self.nav.request_id() && path == self.nav.current_dir() {
+                    self.is_loading = false;
+                    self.push_overlay_message(message, Timings::MESSAGE_LONG, None);
+                } else if request_id == self.preview.request_id()
+                    && let Some(entry) = self.nav.selected_entry()
+                    && path.parent() == Some(self.nav.current_dir())
+                    && path.file_name() == Some(entry.name())
+                {
+                    self.preview.set_error(message);
+                } else if request_id == self.parent.request_id()
+                    && self.nav.current_dir().parent() == Some(path.as_path())
+                {
+                    self.push_overlay_message(message, Timings::MESSAGE_LONG, None);
                 }
+            }
+
+            WorkerResponse::Error(e) => {
+                self.push_overlay_message(e, Timings::MESSAGE_LONG, None);
             }
 
             WorkerResponse::ConfigChanged => {}
@@ -553,7 +567,7 @@ impl AppState {
         let request_id = self.nav.prepare_new_request();
         let sort_config = self.nav.sort_config();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
-        let _ = workers.nav_io_tx().try_send(WorkerTask::LoadDirectory {
+        workers.send_nav_io(WorkerTask::LoadDirectory {
             path: self.nav.current_dir().to_path_buf(),
             focus,
             list: self.dir_list_options(),
@@ -607,7 +621,7 @@ impl AppState {
         let parent_path_buf = parent_path.to_path_buf();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let request_id = self.parent.prepare_new_request(&parent_path_buf);
-        let _ = workers.parent_io_tx().try_send(WorkerTask::LoadDirectory {
+        workers.send_parent_io(WorkerTask::LoadDirectory {
             path: parent_path_buf,
             focus: None,
             list: self.dir_list_options(),
@@ -626,7 +640,7 @@ impl AppState {
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let entries = self.nav.entries_arc();
 
-        let _ = workers.sort_tx().try_send(WorkerTask::SortDirectory {
+        workers.send_sort(WorkerTask::SortDirectory {
             path: self.nav.current_dir().to_path_buf(),
             entries,
             focus,
@@ -661,7 +675,7 @@ impl AppState {
         self.actions
             .set_cancel_find_token(Arc::clone(&cancel_token));
 
-        let _ = workers.find_tx().try_send(WorkerTask::FindRecursive {
+        workers.send_find(WorkerTask::FindRecursive {
             base_dir: self.nav.current_dir().to_path_buf(),
             query,
             max_results: self.config().general().max_find_results(),
@@ -905,6 +919,42 @@ mod tests {
         app.is_loading = false;
         app.request_dir_load(&workers, None);
         assert!(app.is_loading);
+        Ok(())
+    }
+
+    #[test]
+    fn only_matching_errors_reach_the_preview() -> Result<(), Box<dyn std::error::Error>> {
+        let workers = dummy_workers();
+        let temp = tempdir()?;
+        let mut app = AppState::from_dir(Arc::new(dummy_config()), temp.path())?;
+        let dir = app.nav().current_dir().to_path_buf();
+        let sub = dir.join("sub");
+        let entries = Arc::from(vec![FileEntry::new(OsString::from("sub"), 0, None)]);
+        app.nav.update_from_worker(dir.clone(), entries, None, None);
+
+        let id = app.preview.prepare_new_request(sub.clone());
+        let lines = crate::core::workers::PreviewLines::Text(vec!["hello".to_string()]);
+        app.preview.update_content(lines, 10, 0, true, id);
+        let shown = |app: &AppState| match app.preview().data() {
+            crate::app::PreviewData::File(text) => text.lines[0].to_string(),
+            _ => String::new(),
+        };
+        let failed = |path: PathBuf| WorkerResponse::DirectoryFailed {
+            path,
+            message: "I/O Error: access denied".to_string(),
+            request_id: id,
+            tab_id: None,
+        };
+
+        let metadata_error = WorkerResponse::Error("Metadata Error: access denied".to_string());
+        app.handle_worker_response(metadata_error, &workers);
+        assert_eq!(shown(&app), "hello");
+
+        app.handle_worker_response(failed(dir.join("other")), &workers);
+        assert_eq!(shown(&app), "hello");
+
+        app.handle_worker_response(failed(sub), &workers);
+        assert_eq!(shown(&app), "I/O Error: access denied");
         Ok(())
     }
 

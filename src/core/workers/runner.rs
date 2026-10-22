@@ -43,7 +43,7 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                     thread::spawn(move || wait_for(child, &name, check_status, &res_tx));
                 }
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(format!("{name}: {e}"), None));
+                    let _ = res_tx.send(WorkerResponse::Error(format!("{name}: {e}")));
                 }
             }
         }
@@ -108,7 +108,7 @@ fn wait_for(mut child: Child, name: &str, check_status: bool, res_tx: &Sender<Wo
         }
         Err(e) => format!("{name}: {e}"),
     };
-    let _ = res_tx.send(WorkerResponse::Error(message, None));
+    let _ = res_tx.send(WorkerResponse::Error(message));
 }
 
 #[cfg(test)]
@@ -144,7 +144,7 @@ mod tests {
 
     fn error_message(res_rx: &Receiver<WorkerResponse>) -> String {
         match res_rx.recv_timeout(TIMEOUT) {
-            Ok(WorkerResponse::Error(message, None)) => message,
+            Ok(WorkerResponse::Error(message)) => message,
             other => panic!("expected an error, got {other:?}"),
         }
     }

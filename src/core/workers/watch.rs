@@ -30,10 +30,10 @@ pub(super) fn start(cmd_rx: Receiver<WatchCommand>, res_tx: Sender<WorkerRespons
         ) {
             Ok(watcher) => watcher,
             Err(e) => {
-                let _ = res_tx.send(WorkerResponse::Error(
-                    format!("Watch error: failed to create watcher: {}", e),
-                    None,
-                ));
+                let _ = res_tx.send(WorkerResponse::Error(format!(
+                    "Watch error: failed to create watcher: {}",
+                    e
+                )));
                 return;
             }
         };
@@ -56,10 +56,8 @@ pub(super) fn start(cmd_rx: Receiver<WatchCommand>, res_tx: Sender<WorkerRespons
             match watcher.watch(&watched_dir, mode) {
                 Ok(()) => config_watched_dir = Some(watched_dir),
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("Config watch error: {}", e),
-                        None,
-                    ));
+                    let _ =
+                        res_tx.send(WorkerResponse::Error(format!("Config watch error: {}", e)));
                 }
             }
         }

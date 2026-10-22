@@ -51,10 +51,8 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                     Err(e) => {
                         let vanished = e.kind() == std::io::ErrorKind::NotFound || !path.exists();
                         if !vanished {
-                            let _ = res_tx.send(WorkerResponse::Error(
-                                format!("Metadata Error: {}", e),
-                                Some(request_id),
-                            ));
+                            let _ = res_tx
+                                .send(WorkerResponse::Error(format!("Metadata Error: {}", e)));
                         }
                     }
                 }

@@ -254,7 +254,7 @@ pub(super) fn start(
                     });
                 }
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e), None));
+                    let _ = res_tx.send(WorkerResponse::Error(format!("Op Error: {}", e)));
                 }
             }
         }

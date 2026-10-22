@@ -82,7 +82,7 @@ mod tests {
         File::create(dir.path().join("other.txt"))?;
 
         let workers = Workers::spawn();
-        let find_tx = workers.find_tx();
+        let find_tx = &workers.find_tx;
         let res_rx = workers.response_rx();
 
         let req_id = 42;
@@ -164,7 +164,7 @@ mod tests {
         let workers = Workers::spawn();
 
         for i in 1..=2 {
-            workers.find_tx().send(WorkerTask::FindRecursive {
+            workers.find_tx.send(WorkerTask::FindRecursive {
                 base_dir: temp_path.clone(),
                 query: format!("search_{i}"),
                 max_results: 1,

@@ -68,10 +68,12 @@ pub(super) fn start(
                     });
                 }
                 Err(e) => {
-                    let _ = res_tx.send(WorkerResponse::Error(
-                        format!("I/O Error: {}", e),
-                        Some(request_id),
-                    ));
+                    let _ = res_tx.send(WorkerResponse::DirectoryFailed {
+                        path,
+                        message: format!("I/O Error: {}", e),
+                        request_id,
+                        tab_id,
+                    });
                 }
             }
         }
@@ -97,7 +99,7 @@ mod tests {
     fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
         let temp = tempdir()?;
-        let task_tx = workers.nav_io_tx();
+        let task_tx = &workers.nav_io_tx;
         let res_rx = workers.response_rx();
 
         let temp_path = temp.path().join("test_dir");
@@ -124,7 +126,7 @@ mod tests {
                     assert!(!entry.1.name_str().is_empty());
                 }
             }
-            WorkerResponse::Error(e, None) => panic!("Worker error: {}", e),
+            WorkerResponse::DirectoryFailed { message, .. } => panic!("Worker error: {}", message),
             _ => panic!("Unexpected worker response"),
         }
         Ok(())
@@ -146,7 +148,7 @@ mod tests {
         let requests_per_thread = 25;
 
         let workers = Workers::spawn();
-        let task_tx = workers.nav_io_tx();
+        let task_tx = &workers.nav_io_tx;
         let res_rx = workers.response_rx();
 
         // Spawn threads to send requests in parallel
@@ -211,7 +213,9 @@ mod tests {
                         );
                     }
                 }
-                Ok(WorkerResponse::Error(e, None)) => panic!("Worker error: {}", e),
+                Ok(WorkerResponse::DirectoryFailed { message, .. }) => {
+                    panic!("Worker error: {}", message)
+                }
                 Ok(_) => {}
                 Err(_) => break,
             }

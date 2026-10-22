@@ -28,7 +28,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 
-use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
+use crossbeam_channel::{Receiver, Sender, TrySendError, bounded, unbounded};
 
 use crate::core::{
     FileEntry, FindResult,
@@ -42,12 +42,16 @@ use crate::utils::text::StrBuffer;
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
     nav_io_tx: Sender<WorkerTask>,
+    nav_io_queue: Receiver<WorkerTask>,
     parent_io_tx: Sender<WorkerTask>,
+    parent_io_queue: Receiver<WorkerTask>,
     preview_dir_tx: Sender<WorkerTask>,
     sort_tx: Sender<WorkerTask>,
+    sort_queue: Receiver<WorkerTask>,
     preview_file_tx: Sender<WorkerTask>,
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
+    find_queue: Receiver<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
     runner_tx: Sender<WorkerTask>,
     watch_cmd_tx: Sender<WatchCommand>,
@@ -84,6 +88,11 @@ impl Workers {
         let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
+        let nav_io_queue = nav_io_rx.clone();
+        let parent_io_queue = parent_io_rx.clone();
+        let sort_queue = sort_rx.clone();
+        let find_queue = find_rx.clone();
+
         let active_fileops = Arc::new(AtomicUsize::new(0));
 
         io::start(nav_io_rx, res_tx.clone(), Arc::clone(&cache));
@@ -100,12 +109,16 @@ impl Workers {
 
         Self {
             nav_io_tx,
+            nav_io_queue,
             parent_io_tx,
+            parent_io_queue,
             preview_dir_tx,
             sort_tx,
+            sort_queue,
             preview_file_tx,
             metadata_tx,
             find_tx,
+            find_queue,
             fileop_tx,
             runner_tx,
             watch_cmd_tx,
@@ -116,13 +129,9 @@ impl Workers {
     }
 
     crate::getters! {
-        nav_io_tx: &Sender<WorkerTask>,
-        parent_io_tx: &Sender<WorkerTask>,
         preview_dir_tx: &Sender<WorkerTask>,
-        sort_tx: &Sender<WorkerTask>,
         preview_file_tx: &Sender<WorkerTask>,
         metadata_tx: &Sender<WorkerTask>,
-        find_tx: &Sender<WorkerTask>,
         fileop_tx: &Sender<WorkerTask>,
         runner_tx: &Sender<WorkerTask>,
         response_rx: &Receiver<WorkerResponse>,
@@ -131,6 +140,22 @@ impl Workers {
 
     pub(crate) fn cache(&self) -> Arc<DirCache> {
         Arc::clone(&self.cache)
+    }
+
+    pub(crate) fn send_nav_io(&self, task: WorkerTask) {
+        send_newest(&self.nav_io_tx, &self.nav_io_queue, task);
+    }
+
+    pub(crate) fn send_parent_io(&self, task: WorkerTask) {
+        send_newest(&self.parent_io_tx, &self.parent_io_queue, task);
+    }
+
+    pub(crate) fn send_sort(&self, task: WorkerTask) {
+        send_newest(&self.sort_tx, &self.sort_queue, task);
+    }
+
+    pub(crate) fn send_find(&self, task: WorkerTask) {
+        send_newest(&self.find_tx, &self.find_queue, task);
     }
 
     pub(crate) fn retarget_watch(&self, dirs: Vec<PathBuf>) {
@@ -280,13 +305,20 @@ pub(crate) enum WorkerResponse {
     DirsChanged {
         dirs: Vec<PathBuf>,
     },
-    Error(String, Option<u64>),
+    DirectoryFailed {
+        path: PathBuf,
+        message: String,
+        request_id: u64,
+        tab_id: Option<usize>,
+    },
+    Error(String),
 }
 
 impl WorkerResponse {
     pub(crate) fn tab_id(&self) -> Option<usize> {
         match self {
             WorkerResponse::DirectoryLoaded { tab_id, .. } => *tab_id,
+            WorkerResponse::DirectoryFailed { tab_id, .. } => *tab_id,
             WorkerResponse::PreviewLoaded { tab_id, .. } => *tab_id,
             WorkerResponse::FindResults { tab_id, .. } => *tab_id,
             WorkerResponse::FileMetadataLoaded { tab_id, .. } => *tab_id,
@@ -297,6 +329,13 @@ impl WorkerResponse {
 
 pub(crate) enum WatchCommand {
     Retarget(Vec<PathBuf>),
+}
+
+fn send_newest(tx: &Sender<WorkerTask>, queue: &Receiver<WorkerTask>, task: WorkerTask) {
+    if let Err(TrySendError::Full(task)) = tx.try_send(task) {
+        let _ = queue.try_recv();
+        let _ = tx.try_send(task);
+    }
 }
 
 /// Shared helpers for the worker tests.
@@ -326,5 +365,39 @@ mod test_support {
             show_system: false,
             case_insensitive: true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_support::{TEST_TAB_ID, test_list_opts};
+    use super::*;
+
+    fn load(request_id: u64) -> WorkerTask {
+        WorkerTask::LoadDirectory {
+            path: PathBuf::from("dir"),
+            focus: None,
+            list: test_list_opts(),
+            sort_config: SortConfig::default(),
+            sort_date_format: Arc::from(""),
+            always_show: Arc::new(HashSet::new()),
+            request_id,
+            tab_id: TEST_TAB_ID,
+        }
+    }
+
+    fn request_id(task: WorkerTask) -> Option<u64> {
+        match task {
+            WorkerTask::LoadDirectory { request_id, .. } => Some(request_id),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn newest_task_replaces_the_waiting_one() {
+        let (tx, rx) = bounded(1);
+        send_newest(&tx, &rx, load(1));
+        send_newest(&tx, &rx, load(2));
+        assert_eq!(rx.try_iter().map(request_id).collect::<Vec<_>>(), [Some(2)]);
     }
 }
