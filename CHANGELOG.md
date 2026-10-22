@@ -2,7 +2,19 @@
 
 All the changes made to runa are documented here.
 
-## [0.14.1] - UNRELEASED
+## [0.14.1] - 2026-10-23
+
+#### Navigation, preview and config watcher fixes.
+
+### Fixed
+- **Navigation**: Fast moves into or out of directories no longer leave previous or stale entries on screen.
+- **Preview**: Errors from other panes no longer replace the preview.
+- **Config**:
+    - Without a config folder, runa no longer watches the parent directory recursively.
+    - Only the actual `runa.toml` inside the config directory triggers a reload.
+
+### Internal
+- **Workers**: Busy worker keeps newest request and does not drop it immediately. Errors on directory loads are routed by request and path.
 
 
 ---
