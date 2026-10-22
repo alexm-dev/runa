@@ -41,6 +41,8 @@ impl Timings {
     pub(crate) const MESSAGE: Duration = Duration::from_secs(3);
     /// How long important messages stay visible.
     pub(crate) const MESSAGE_LONG: Duration = Duration::from_secs(5);
+    /// How long worker errors stay visible.
+    pub(crate) const MESSAGE_WORKER_ERROR: Duration = Duration::from_secs(7);
 }
 
 /// Throttler to handle timings and debounce for relevant actions.

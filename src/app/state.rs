@@ -501,7 +501,7 @@ impl AppState {
             } => {
                 if request_id == self.nav.request_id() && path == self.nav.current_dir() {
                     self.is_loading = false;
-                    self.push_overlay_message(message, Timings::MESSAGE_LONG, None);
+                    self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
                 } else if request_id == self.preview.request_id()
                     && let Some(entry) = self.nav.selected_entry()
                     && path.parent() == Some(self.nav.current_dir())
@@ -511,12 +511,12 @@ impl AppState {
                 } else if request_id == self.parent.request_id()
                     && self.nav.current_dir().parent() == Some(path.as_path())
                 {
-                    self.push_overlay_message(message, Timings::MESSAGE_LONG, None);
+                    self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
                 }
             }
 
             WorkerResponse::Error(e) => {
-                self.push_overlay_message(e, Timings::MESSAGE_LONG, None);
+                self.push_overlay_message(e, Timings::MESSAGE_WORKER_ERROR, None);
             }
 
             WorkerResponse::ConfigChanged => {}
