@@ -312,4 +312,29 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn tree_builds_folders_from_file_paths() {
+        let paths: Vec<String> = ["docs/", "pkg/src/a.rs", "pkg/B.MD", "docs/c.md"]
+            .iter()
+            .map(|p| p.to_string())
+            .collect();
+        let tree = tree_rows(&paths);
+        let rows: Vec<_> = tree
+            .iter()
+            .map(|row| (row.name(), row.depth(), row.is_dir(), row.ext()))
+            .collect();
+
+        assert_eq!(
+            rows,
+            [
+                ("pkg", 0, true, None),
+                ("src", 1, true, None),
+                ("a.rs", 2, false, Some("rs")),
+                ("B.MD", 1, false, Some("md")),
+                ("docs", 0, true, None),
+                ("c.md", 1, false, Some("md")),
+            ]
+        );
+    }
 }
