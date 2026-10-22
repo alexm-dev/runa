@@ -11,7 +11,7 @@ use ansi_to_tui::IntoText;
 use ratatui::text::Text;
 
 use crate::app::actions::ScrollState;
-use crate::core::{FileEntry, formatter::ListingRow, workers::PreviewLines};
+use crate::core::{FileEntry, preview::ListingRow, workers::PreviewLines};
 use crate::utils::{text::StrBuffer, timings::Timings};
 
 /// Pages loaded above and below the visible part of a file preview.

@@ -10,8 +10,9 @@ use std::time::Duration;
 use crossbeam_channel::{Receiver, Sender};
 
 use crate::core::{
-    formatter::{self, ListingRow},
-    fs, proc,
+    fs,
+    preview::{self, ListingRow},
+    proc,
     workers::{PreviewLines, PreviewMode, WorkerResponse, WorkerTask},
 };
 use crate::utils::{os, timings::Timings};
@@ -35,30 +36,30 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
             let read_lines = max_lines + 1;
 
             let mut lines = if fs::is_temp_file(&path) {
-                PreviewLines::Text(vec![formatter::sanitize_to_exact_width(
+                PreviewLines::Text(vec![preview::sanitize_to_exact_width(
                     "[Temporary file - preview skipped]",
                     pane_width,
                 )])
-            } else if let PreviewMode::Command { program, args, dir } = &preview_mode
+            } else if let PreviewMode::Archive { program, args, dir } = &preview_mode
                 && let Some(rows) =
                     archive_rows(&path, program, args, dir.as_deref(), scroll, read_lines)
             {
                 PreviewLines::Listing(rows)
             } else {
                 PreviewLines::Text(match preview_mode {
-                    PreviewMode::Internal | PreviewMode::Command { .. } => {
-                        formatter::safe_read_preview(&path, read_lines, pane_width, scroll)
+                    PreviewMode::Internal | PreviewMode::Archive { .. } => {
+                        preview::safe_read_preview(&path, read_lines, pane_width, scroll)
                     }
                     PreviewMode::Bat { args } => {
                         if !os::is_regular_file(&path) || fs::is_preview_deny(&path) {
-                            formatter::safe_read_preview(&path, read_lines, pane_width, scroll)
+                            preview::safe_read_preview(&path, read_lines, pane_width, scroll)
                         } else {
                             match proc::preview_bat(&path, read_lines, args.as_slice(), scroll) {
                                 // Bat preview succeeded
                                 // If bat fails, fallback to internal preview
                                 // If bat is not installed or returns error, we fallback to internal preview
                                 Ok(lines) => lines,
-                                Err(_) => formatter::safe_read_preview(
+                                Err(_) => preview::safe_read_preview(
                                     &path, read_lines, pane_width, scroll,
                                 ),
                             }
@@ -97,7 +98,7 @@ fn archive_rows(
 
     let timeout = Duration::from_millis(Timings::PREVIEW_COMMAND_TIMEOUT_MS);
     let paths = proc::preview_command(program, args, dir, scroll + read_lines, timeout).ok()?;
-    let mut rows = formatter::tree_rows(&paths);
+    let mut rows = preview::tree_rows(&paths);
     rows.drain(..scroll.min(rows.len()));
     Some(rows)
 }

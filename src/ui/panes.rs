@@ -23,7 +23,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::app::{AppState, Clipboard, PreviewData};
 use crate::config::{Display, Theme};
-use crate::core::{FileEntry, formatter::ListingRow};
+use crate::core::{FileEntry, preview::ListingRow};
 use crate::ui::icons;
 use crate::utils::text::StrBuffer;
 

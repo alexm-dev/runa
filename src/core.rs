@@ -5,6 +5,7 @@
 //! - [fs]: filesystem functionality and sys-calls functions.
 //! - [formatter]: formatting and sorting logic.
 //! - [workers]: background work and message passing back into the RunaRoot struct.
+//! - [preview]: file previews and archive tree rows.
 //! - [proc]: process management for running external commands like `bat`, `fd`.
 //! - [metadata]: file metadata extraction and caching, including file properties.
 //! - [cache]: caching of FileEntry data for pane rendering.
@@ -15,6 +16,7 @@ pub(crate) mod fm;
 pub(crate) mod formatter;
 pub(crate) mod fs;
 pub(crate) mod metadata;
+pub(crate) mod preview;
 pub(crate) mod proc;
 pub(crate) mod sort;
 pub(crate) mod workers;

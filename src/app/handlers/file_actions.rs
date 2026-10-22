@@ -27,10 +27,10 @@ use crate::app::{
     keymap::FileAction,
     state::{AppState, KeypressResult},
 };
+use crate::command::{self, RunMode};
 use crate::config::editor::EditorCommand;
 use crate::core::workers::WorkerTask;
 use crate::utils::Timings;
-use crate::utils::command::{self, RunMode};
 use crate::utils::path;
 
 /// AppState file action handlers

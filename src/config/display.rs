@@ -10,9 +10,9 @@ use chrono::format::{Item, StrftimeItems};
 use ratatui::widgets::BorderType;
 use serde::{Deserialize, Deserializer};
 
+use crate::command;
 use crate::config::dialog::DialogPosition;
 use crate::config::input::InputKeyLists;
-use crate::utils::command;
 
 /// Default date format of the sort column.
 const SORT_DATE_FORMAT: &str = "%b %e %H:%M";
@@ -379,12 +379,12 @@ pub(crate) struct PreviewOptions {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct PreviewCommand<'a> {
+pub(crate) struct ArchivePreview<'a> {
     args: &'a [String],
     ext_parts: usize,
 }
 
-impl PreviewCommand<'_> {
+impl ArchivePreview<'_> {
     crate::getters! {
         args: &[String],
         ext_parts: usize,
@@ -423,14 +423,14 @@ impl PreviewOptions {
         &self.method
     }
 
-    pub(crate) fn archive_cmd(&self, path: &Path) -> Option<PreviewCommand<'_>> {
+    pub(crate) fn archive_cmd(&self, path: &Path) -> Option<ArchivePreview<'_>> {
         if self.archive.is_empty() {
             return None;
         }
 
         let lower = path.file_name()?.to_string_lossy().to_lowercase();
         command::extensions(&lower).find_map(|ext| {
-            self.archive.get(ext).map(|entry| PreviewCommand {
+            self.archive.get(ext).map(|entry| ArchivePreview {
                 args: &entry.0,
                 ext_parts: ext.matches('.').count() + 1,
             })

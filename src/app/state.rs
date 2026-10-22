@@ -27,8 +27,8 @@ use crate::core::{
     workers::{PreviewMode, WorkerResponse, WorkerTask, Workers},
 };
 
+use crate::command;
 use crate::ui::overlays::{OverlayKind, OverlayStack};
-use crate::utils::command;
 use crate::utils::timings::{Throttler, Timings};
 
 /// Enumeration for each individual keypress result processed.
@@ -747,7 +747,7 @@ impl AppState {
                     && let Some(program) = archive.args().first()
                 {
                     let target = std::path::absolute(&path).unwrap_or_else(|_| path.clone());
-                    PreviewMode::Command {
+                    PreviewMode::Archive {
                         program: program.into(),
                         args: command::expand_args(archive.args(), archive.ext_parts(), &target),
                         dir: target.parent().map(Path::to_path_buf),

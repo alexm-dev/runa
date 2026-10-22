@@ -9,7 +9,7 @@
 //! The module also includes a [preview_bat] function that uses the bat command-line tool
 //! to preview the contents of a file, returning a specified number of lines from the file.
 //! This function is used by core/workers.rs to provide file previews in the UI.
-//! Falls back to internal core/formatter::safe_read_preview if bat is not available or throws and error.
+//! Falls back to internal core/preview::safe_read_preview if bat is not available or throws and error.
 //!
 //! The module also includes [complete_dirs_with_fd] function to enable the move file function to have
 //! auto-completion of paths via fd.

@@ -33,8 +33,8 @@ use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 use crate::core::{
     FileEntry, FindResult,
     cache::{DirCache, DirListOptions},
-    formatter::ListingRow,
     metadata::{FileMetadataCache, MetadataNeeds},
+    preview::ListingRow,
     sort::SortConfig,
 };
 use crate::utils::text::StrBuffer;
@@ -143,7 +143,7 @@ pub(crate) enum PreviewMode {
     Bat {
         args: Vec<OsString>,
     },
-    Command {
+    Archive {
         program: OsString,
         args: Vec<OsString>,
         dir: Option<PathBuf>,

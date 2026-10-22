@@ -8,8 +8,8 @@ use std::path::Path;
 
 use serde::Deserialize;
 
+use crate::command::{self, LAST_EXTENSION, RunMode};
 use crate::config::input::InputKeyLists;
-use crate::utils::command::{self, LAST_EXTENSION, RunMode};
 
 /// An editor command and whether it takes over the terminal.
 #[derive(Debug)]

@@ -23,7 +23,7 @@ use crate::core::cache::{DirCache, DirListOptions};
 use crate::core::metadata::CachedMetaKey;
 use crate::core::sort::{SortConfig, SortMode, SortOrder};
 use crate::core::workers::Workers;
-use crate::core::{FileEntry, Formatter, fm, formatter};
+use crate::core::{FileEntry, Formatter, fm, preview};
 use crate::ui::terminal::POLL_INTERVAL;
 use crate::utils::text::StrBuffer;
 
@@ -357,7 +357,7 @@ impl PreviewFixture {
     }
 
     pub fn run(&self) -> Vec<String> {
-        formatter::safe_read_preview(&self.path, self.lines, self.width, self.scroll)
+        preview::safe_read_preview(&self.path, self.lines, self.width, self.scroll)
     }
 }
 
