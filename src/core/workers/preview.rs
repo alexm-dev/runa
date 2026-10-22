@@ -76,3 +76,75 @@ fn split_eof(mut lines: Vec<String>, max_lines: usize) -> (Vec<String>, bool) {
     lines.truncate(max_lines);
     (lines, is_eof)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, bat_available};
+    use crate::core::workers::{PreviewMode, WorkerResponse, WorkerTask, Workers};
+
+    use std::fs;
+    use tempfile::tempdir;
+
+    #[test]
+    fn preview_worker_internal() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let preview_file = temp.path().join("preview.txt");
+        std::fs::write(&preview_file, "A\nB\nC\nD\n")?;
+        let workers = Workers::spawn();
+        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+            path: preview_file.clone(),
+            max_lines: 2,
+            pane_width: 40,
+            scroll: 0,
+            preview_mode: PreviewMode::Internal,
+            request_id: 3,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
+            WorkerResponse::PreviewLoaded { lines, .. } => {
+                let previewed: Vec<_> = lines.iter().take(2).map(|s| s.trim_end()).collect();
+                if previewed != vec!["A", "B"] {
+                    return Err(format!("Preview did not match expected, got {:?}", lines).into());
+                }
+            }
+            r => return Err(format!("Unexpected response: {:?}", r).into()),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn preview_fallback_on_failure() -> Result<(), Box<dyn std::error::Error>> {
+        if !bat_available() {
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let file_path = temp.path().join("fallback.txt");
+        fs::write(&file_path, "Standard Text Content")?;
+
+        let workers = Workers::spawn();
+
+        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+            path: file_path,
+            max_lines: 5,
+            pane_width: 40,
+            scroll: 0,
+            preview_mode: PreviewMode::Bat { args: vec![] },
+            request_id: 99,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
+        if let WorkerResponse::PreviewLoaded { lines, .. } = resp {
+            assert!(
+                !lines.is_empty(),
+                "Should have fallen back to internal reader"
+            );
+            assert_eq!(lines[0].trim(), "Standard Text Content");
+        } else {
+            panic!("Worker failed to provide fallback preview");
+        }
+        Ok(())
+    }
+}

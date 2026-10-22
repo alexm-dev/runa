@@ -295,3 +295,62 @@ fn collect_modified_dirs(op: &FileOperation) -> Vec<PathBuf> {
 
     dirs.into_iter().collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::core::workers::test_support::TEST_TIMEOUT;
+    use crate::core::workers::{FileOperation, WorkerResponse, WorkerTask, Workers};
+
+    #[test]
+    fn fileop_worker_create_and_delete_file() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let file_path = temp.path().join("touch.txt");
+        let temp_dir = temp.path().to_path_buf();
+        let workers = Workers::spawn();
+
+        workers.fileop_tx().send(WorkerTask::FileOp {
+            op: FileOperation::Create {
+                path: file_path.clone(),
+                is_dir: false,
+                overwrite: false,
+            },
+        })?;
+
+        let r = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
+        match r {
+            WorkerResponse::OperationComplete { modified_dirs, .. } => {
+                if !modified_dirs.iter().any(|path| path == &temp_dir) {
+                    return Err(
+                        "Expected operation completion to include file parent as affected".into(),
+                    );
+                }
+                if !file_path.exists() {
+                    return Err("Expected file to exist after creation".into());
+                }
+            }
+            other => return Err(format!("Unexpected response: {:?}", other).into()),
+        }
+
+        workers.fileop_tx().send(WorkerTask::FileOp {
+            op: FileOperation::Delete(vec![file_path.clone()], false),
+        })?;
+
+        let r = workers
+            .response_rx()
+            .recv_timeout(std::time::Duration::from_secs(2))?;
+        match r {
+            WorkerResponse::OperationComplete { modified_dirs, .. } => {
+                if !modified_dirs.iter().any(|path| path == &temp_dir) {
+                    return Err(
+                        "Expected operation completion to include file parent as affected".into(),
+                    );
+                }
+                if file_path.exists() {
+                    return Err("Expected file to not exist after deletion".into());
+                }
+            }
+            other => return Err(format!("Unexpected response: {:?}", other).into()),
+        }
+        Ok(())
+    }
+}

@@ -56,3 +56,171 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
         }
     });
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, fd_available};
+    use crate::core::workers::{WorkerResponse, WorkerTask, Workers};
+
+    use std::collections::HashSet;
+    use std::fs::{self, File};
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+    use std::time::Instant;
+    use tempfile::tempdir;
+
+    #[test]
+    fn worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
+        if !fd_available() {
+            return Ok(());
+        }
+
+        let dir = tempdir()?;
+        for i in 0..5 {
+            File::create(dir.path().join(format!("crab_{i}.txt")))?;
+        }
+        File::create(dir.path().join("other.txt"))?;
+
+        let workers = Workers::spawn();
+        let find_tx = workers.find_tx();
+        let res_rx = workers.response_rx();
+
+        let req_id = 42;
+        find_tx.send(WorkerTask::FindRecursive {
+            base_dir: dir.path().to_path_buf(),
+            query: "crab".to_string(),
+            max_results: 10,
+            cancel: Arc::new(AtomicBool::new(false)),
+            show_hidden: false,
+            request_id: req_id,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        let mut got = false;
+        let deadline = Instant::now() + TEST_TIMEOUT;
+        let expected_files: HashSet<_> = (0..5).map(|i| format!("crab_{i}.txt")).collect();
+
+        while Instant::now() < deadline {
+            match res_rx.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
+                Ok(WorkerResponse::FindResults {
+                    results,
+                    request_id,
+                    ..
+                }) => {
+                    assert_eq!(request_id, req_id);
+
+                    let found_files: HashSet<_> = results
+                        .iter()
+                        .filter_map(|r| r.path().file_name())
+                        .filter_map(|os| os.to_str())
+                        .filter(|name| name.contains("crab"))
+                        .map(|s| s.to_string())
+                        .collect();
+
+                    for fname in &expected_files {
+                        assert!(
+                            found_files.contains(fname),
+                            "Expected {fname:?} in results: {:?}",
+                            found_files
+                        );
+                    }
+
+                    for r in &results {
+                        let name = r.path().file_name().unwrap().to_str().unwrap();
+                        if name.contains("crab") {
+                            assert!(
+                                expected_files.contains(name),
+                                "Unexpected crab result: {}",
+                                name
+                            );
+                        }
+                    }
+
+                    got = true;
+                    break;
+                }
+                Ok(_unexpected) => {
+                    continue;
+                }
+                Err(_) => break,
+            }
+        }
+
+        assert!(got, "Did not receive FindResults response in time");
+        Ok(())
+    }
+
+    #[test]
+    fn find_worker_finds_file() -> Result<(), Box<dyn std::error::Error>> {
+        if !fd_available() {
+            return Ok(());
+        }
+
+        let temp = tempfile::tempdir()?;
+        std::fs::File::create(temp.path().join("crab.txt"))?;
+
+        let workers = Workers::spawn();
+        workers.find_tx().send(WorkerTask::FindRecursive {
+            base_dir: temp.path().to_path_buf(),
+            query: "crab".to_string(),
+            max_results: 5,
+            cancel: Arc::new(AtomicBool::new(false)),
+            show_hidden: false,
+            request_id: 2,
+            tab_id: TEST_TAB_ID,
+        })?;
+
+        let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
+
+        match resp {
+            WorkerResponse::FindResults { results, .. } => {
+                if !results
+                    .iter()
+                    .any(|res| res.path().file_name().unwrap() == "crab.txt")
+                {
+                    return Err("Expected 'crab.txt' in find results".into());
+                }
+            }
+            r => return Err(format!("Unexpected response: {:?}", r).into()),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn find_worker_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
+        if !fd_available() {
+            return Ok(());
+        }
+
+        let temp = tempdir()?;
+        let temp_path = temp.path().to_path_buf();
+        fs::File::create(temp_path.join("search_1.txt"))?;
+        fs::File::create(temp_path.join("search_2.txt"))?;
+
+        let workers = Workers::spawn();
+
+        for i in 1..=2 {
+            workers.find_tx().send(WorkerTask::FindRecursive {
+                base_dir: temp_path.clone(),
+                query: format!("search_{i}"),
+                max_results: 1,
+                cancel: Arc::new(AtomicBool::new(false)),
+                show_hidden: false,
+                request_id: i as u64,
+                tab_id: TEST_TAB_ID,
+            })?;
+        }
+
+        let resp1 = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
+        if let WorkerResponse::FindResults { request_id, .. } = resp1 {
+            assert_eq!(request_id, 1);
+        }
+
+        let resp2 = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
+        if let WorkerResponse::FindResults { request_id, .. } = resp2 {
+            assert_eq!(request_id, 2);
+        }
+
+        Ok(())
+    }
+}

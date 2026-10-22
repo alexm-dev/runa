@@ -285,33 +285,26 @@ pub(crate) enum WatchCommand {
     Retarget(Vec<PathBuf>),
 }
 
-/// Worker threads integration tests.
+/// Shared helpers for the worker tests.
 #[cfg(test)]
-mod tests {
-    use super::*;
+mod test_support {
+    use std::time::Duration;
 
-    use rand::{RngExt, rng};
-    use std::collections::HashSet;
-    use std::fs::{self, File};
-    use std::sync::Arc;
-    use std::sync::atomic::AtomicBool;
-    use std::thread;
-    use std::time::{Duration, Instant};
-    use tempfile::tempdir;
+    use crate::core::cache::DirListOptions;
 
-    const TEST_TIMEOUT: Duration = Duration::from_secs(15);
+    pub(super) const TEST_TIMEOUT: Duration = Duration::from_secs(15);
 
-    const TEST_TAB_ID: Option<usize> = None;
+    pub(super) const TEST_TAB_ID: Option<usize> = None;
 
-    fn fd_available() -> bool {
+    pub(super) fn fd_available() -> bool {
         which::which("fd").is_ok()
     }
 
-    fn bat_available() -> bool {
+    pub(super) fn bat_available() -> bool {
         which::which("bat").is_ok()
     }
 
-    fn test_list_opts() -> DirListOptions {
+    pub(super) fn test_list_opts() -> DirListOptions {
         DirListOptions {
             dirs_first: true,
             show_hidden: false,
@@ -320,6 +313,20 @@ mod tests {
             case_insensitive: true,
         }
     }
+}
+
+/// Worker pool integration tests.
+#[cfg(test)]
+mod tests {
+    use super::test_support::{TEST_TAB_ID, TEST_TIMEOUT, test_list_opts};
+    use super::*;
+
+    use std::collections::HashSet;
+    use std::fs;
+    use std::sync::Arc;
+    use std::sync::atomic::AtomicBool;
+    use std::time::{Duration, Instant};
+    use tempfile::tempdir;
 
     #[test]
     fn worker_pool_full_integration() -> Result<(), Box<dyn std::error::Error>> {
@@ -408,408 +415,6 @@ mod tests {
         assert!(dir_found, "Nav IO worker failed");
         assert!(op_found, "FileOp worker failed");
         assert_eq!(responses_collected, 4);
-
-        Ok(())
-    }
-
-    #[test]
-    fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {
-        let workers = Workers::spawn();
-        let temp = tempdir()?;
-        let task_tx = workers.nav_io_tx();
-        let res_rx = workers.response_rx();
-
-        let temp_path = temp.path().join("test_dir");
-        fs::create_dir(&temp_path)?;
-        fs::File::create(temp_path.join("crab.txt"))?;
-
-        task_tx.send(WorkerTask::LoadDirectory {
-            path: temp_path,
-            focus: None,
-            list: test_list_opts(),
-            sort_date_format: Arc::<str>::from(""),
-            sort_config: SortConfig::default(),
-            always_show: Arc::new(HashSet::new()),
-            request_id: 1,
-            tab_id: TEST_TAB_ID,
-        })?;
-
-        match res_rx.recv()? {
-            WorkerResponse::DirectoryLoaded { entries, .. } => {
-                assert!(!entries.is_empty(), "Current dir should not be empty");
-
-                // Check display name width
-                for entry in entries.iter().enumerate() {
-                    assert!(!entry.1.name_str().is_empty());
-                }
-            }
-            WorkerResponse::Error(e, None) => panic!("Worker error: {}", e),
-            _ => panic!("Unexpected worker response"),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn worker_dir_load_requests_multithreaded() -> Result<(), Box<dyn std::error::Error>> {
-        let temp_root = tempdir()?;
-
-        let dir_a = temp_root.path().join("dir_a");
-        let dir_b = temp_root.path().join("dir_b");
-        fs::create_dir(&dir_a)?;
-        fs::create_dir(&dir_b)?;
-        fs::write(dir_a.join("file.txt"), "content")?;
-
-        let dirs = vec![temp_root.path().to_path_buf(), dir_a, dir_b];
-
-        let thread_count = 2;
-        let requests_per_thread = 25;
-
-        let workers = Workers::spawn();
-        let task_tx = workers.nav_io_tx();
-        let res_rx = workers.response_rx();
-
-        // Spawn threads to send requests in parallel
-        let mut handles = Vec::new();
-        for t in 0..thread_count {
-            let task_tx = task_tx.clone();
-            let dirs = dirs.clone();
-            handles.push(thread::spawn(move || {
-                let mut rng = rng();
-                for i in 0..requests_per_thread {
-                    let dir = &dirs[rng.random_range(0..dirs.len())];
-                    let list = DirListOptions {
-                        dirs_first: rng.random_bool(0.5),
-                        show_hidden: rng.random_bool(0.5),
-                        show_symlink: rng.random_bool(0.5),
-                        show_system: rng.random_bool(0.5),
-                        case_insensitive: rng.random_bool(0.5),
-                    };
-                    task_tx
-                        .send(WorkerTask::LoadDirectory {
-                            path: dir.clone(),
-                            focus: None,
-                            list,
-                            sort_config: SortConfig::default(),
-                            sort_date_format: Arc::<str>::from(""),
-                            always_show: Arc::new(HashSet::new()),
-                            request_id: (t * requests_per_thread + i) as u64,
-                            tab_id: TEST_TAB_ID,
-                        })
-                        .expect("Couldn't send task to worker");
-                    if i % 50 == 0 {
-                        thread::sleep(Duration::from_millis(rng.random_range(0..10)));
-                    }
-                }
-            }));
-        }
-
-        // Wait for all senders to finish
-        for h in handles {
-            if let Err(err) = h.join() {
-                panic!("Thread panicked during stress test: {:?}", err);
-            }
-        }
-
-        // Read responses
-        let total_requests = thread_count * requests_per_thread;
-        let mut valid_responses = 0;
-        let timeout = Instant::now() + TEST_TIMEOUT;
-
-        for _ in 0..total_requests {
-            let remaining = timeout.saturating_duration_since(Instant::now());
-            match res_rx.recv_timeout(remaining.min(Duration::from_millis(500))) {
-                Ok(WorkerResponse::DirectoryLoaded { entries, .. }) => {
-                    valid_responses += 1;
-                    for entry in entries.iter().enumerate() {
-                        let name = entry.1.name_str();
-
-                        assert!(!name.is_empty(), "Entry name_str must not be empty.");
-                        assert!(
-                            !name.contains('\0'),
-                            "Entry name_str must not contain null."
-                        );
-                    }
-                }
-                Ok(WorkerResponse::Error(e, None)) => panic!("Worker error: {}", e),
-                Ok(_) => {}
-                Err(_) => break,
-            }
-        }
-
-        assert_eq!(
-            valid_responses, total_requests,
-            "Not all worker requests returned results!"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn worker_find_pool() -> Result<(), Box<dyn std::error::Error>> {
-        if !fd_available() {
-            return Ok(());
-        }
-
-        let dir = tempdir()?;
-        for i in 0..5 {
-            File::create(dir.path().join(format!("crab_{i}.txt")))?;
-        }
-        File::create(dir.path().join("other.txt"))?;
-
-        let workers = Workers::spawn();
-        let find_tx = workers.find_tx();
-        let res_rx = workers.response_rx();
-
-        let req_id = 42;
-        find_tx.send(WorkerTask::FindRecursive {
-            base_dir: dir.path().to_path_buf(),
-            query: "crab".to_string(),
-            max_results: 10,
-            cancel: Arc::new(AtomicBool::new(false)),
-            show_hidden: false,
-            request_id: req_id,
-            tab_id: TEST_TAB_ID,
-        })?;
-
-        let mut got = false;
-        let deadline = Instant::now() + TEST_TIMEOUT;
-        let expected_files: HashSet<_> = (0..5).map(|i| format!("crab_{i}.txt")).collect();
-
-        while Instant::now() < deadline {
-            match res_rx.recv_timeout(deadline.saturating_duration_since(Instant::now())) {
-                Ok(WorkerResponse::FindResults {
-                    results,
-                    request_id,
-                    ..
-                }) => {
-                    assert_eq!(request_id, req_id);
-
-                    let found_files: HashSet<_> = results
-                        .iter()
-                        .filter_map(|r| r.path().file_name())
-                        .filter_map(|os| os.to_str())
-                        .filter(|name| name.contains("crab"))
-                        .map(|s| s.to_string())
-                        .collect();
-
-                    for fname in &expected_files {
-                        assert!(
-                            found_files.contains(fname),
-                            "Expected {fname:?} in results: {:?}",
-                            found_files
-                        );
-                    }
-
-                    for r in &results {
-                        let name = r.path().file_name().unwrap().to_str().unwrap();
-                        if name.contains("crab") {
-                            assert!(
-                                expected_files.contains(name),
-                                "Unexpected crab result: {}",
-                                name
-                            );
-                        }
-                    }
-
-                    got = true;
-                    break;
-                }
-                Ok(_unexpected) => {
-                    continue;
-                }
-                Err(_) => break,
-            }
-        }
-
-        assert!(got, "Did not receive FindResults response in time");
-        Ok(())
-    }
-
-    #[test]
-    fn find_worker_finds_file() -> Result<(), Box<dyn std::error::Error>> {
-        if !fd_available() {
-            return Ok(());
-        }
-
-        let temp = tempfile::tempdir()?;
-        std::fs::File::create(temp.path().join("crab.txt"))?;
-
-        let workers = Workers::spawn();
-        workers.find_tx().send(WorkerTask::FindRecursive {
-            base_dir: temp.path().to_path_buf(),
-            query: "crab".to_string(),
-            max_results: 5,
-            cancel: Arc::new(AtomicBool::new(false)),
-            show_hidden: false,
-            request_id: 2,
-            tab_id: TEST_TAB_ID,
-        })?;
-
-        let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-
-        match resp {
-            WorkerResponse::FindResults { results, .. } => {
-                if !results
-                    .iter()
-                    .any(|res| res.path().file_name().unwrap() == "crab.txt")
-                {
-                    return Err("Expected 'crab.txt' in find results".into());
-                }
-            }
-            r => return Err(format!("Unexpected response: {:?}", r).into()),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn preview_worker_internal() -> Result<(), Box<dyn std::error::Error>> {
-        let temp = tempfile::tempdir()?;
-        let preview_file = temp.path().join("preview.txt");
-        std::fs::write(&preview_file, "A\nB\nC\nD\n")?;
-        let workers = Workers::spawn();
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
-            path: preview_file.clone(),
-            max_lines: 2,
-            pane_width: 40,
-            scroll: 0,
-            preview_mode: PreviewMode::Internal,
-            request_id: 3,
-            tab_id: TEST_TAB_ID,
-        })?;
-
-        match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
-            WorkerResponse::PreviewLoaded { lines, .. } => {
-                let previewed: Vec<_> = lines.iter().take(2).map(|s| s.trim_end()).collect();
-                if previewed != vec!["A", "B"] {
-                    return Err(format!("Preview did not match expected, got {:?}", lines).into());
-                }
-            }
-            r => return Err(format!("Unexpected response: {:?}", r).into()),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn fileop_worker_create_and_delete_file() -> Result<(), Box<dyn std::error::Error>> {
-        let temp = tempfile::tempdir()?;
-        let file_path = temp.path().join("touch.txt");
-        let temp_dir = temp.path().to_path_buf();
-        let workers = Workers::spawn();
-
-        workers.fileop_tx().send(WorkerTask::FileOp {
-            op: FileOperation::Create {
-                path: file_path.clone(),
-                is_dir: false,
-                overwrite: false,
-            },
-        })?;
-
-        let r = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-        match r {
-            WorkerResponse::OperationComplete { modified_dirs, .. } => {
-                if !modified_dirs.iter().any(|path| path == &temp_dir) {
-                    return Err(
-                        "Expected operation completion to include file parent as affected".into(),
-                    );
-                }
-                if !file_path.exists() {
-                    return Err("Expected file to exist after creation".into());
-                }
-            }
-            other => return Err(format!("Unexpected response: {:?}", other).into()),
-        }
-
-        workers.fileop_tx().send(WorkerTask::FileOp {
-            op: FileOperation::Delete(vec![file_path.clone()], false),
-        })?;
-
-        let r = workers
-            .response_rx()
-            .recv_timeout(std::time::Duration::from_secs(2))?;
-        match r {
-            WorkerResponse::OperationComplete { modified_dirs, .. } => {
-                if !modified_dirs.iter().any(|path| path == &temp_dir) {
-                    return Err(
-                        "Expected operation completion to include file parent as affected".into(),
-                    );
-                }
-                if file_path.exists() {
-                    return Err("Expected file to not exist after deletion".into());
-                }
-            }
-            other => return Err(format!("Unexpected response: {:?}", other).into()),
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn preview_fallback_on_failure() -> Result<(), Box<dyn std::error::Error>> {
-        if !bat_available() {
-            return Ok(());
-        }
-
-        let temp = tempdir()?;
-        let file_path = temp.path().join("fallback.txt");
-        fs::write(&file_path, "Standard Text Content")?;
-
-        let workers = Workers::spawn();
-
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
-            path: file_path,
-            max_lines: 5,
-            pane_width: 40,
-            scroll: 0,
-            preview_mode: PreviewMode::Bat { args: vec![] },
-            request_id: 99,
-            tab_id: TEST_TAB_ID,
-        })?;
-
-        let resp = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-        if let WorkerResponse::PreviewLoaded { lines, .. } = resp {
-            assert!(
-                !lines.is_empty(),
-                "Should have fallen back to internal reader"
-            );
-            assert_eq!(lines[0].trim(), "Standard Text Content");
-        } else {
-            panic!("Worker failed to provide fallback preview");
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn find_worker_sequential_execution() -> Result<(), Box<dyn std::error::Error>> {
-        if !fd_available() {
-            return Ok(());
-        }
-
-        let temp = tempdir()?;
-        let temp_path = temp.path().to_path_buf();
-        fs::File::create(temp_path.join("search_1.txt"))?;
-        fs::File::create(temp_path.join("search_2.txt"))?;
-
-        let workers = Workers::spawn();
-
-        for i in 1..=2 {
-            workers.find_tx().send(WorkerTask::FindRecursive {
-                base_dir: temp_path.clone(),
-                query: format!("search_{i}"),
-                max_results: 1,
-                cancel: Arc::new(AtomicBool::new(false)),
-                show_hidden: false,
-                request_id: i as u64,
-                tab_id: TEST_TAB_ID,
-            })?;
-        }
-
-        let resp1 = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-        if let WorkerResponse::FindResults { request_id, .. } = resp1 {
-            assert_eq!(request_id, 1);
-        }
-
-        let resp2 = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
-        if let WorkerResponse::FindResults { request_id, .. } = resp2 {
-            assert_eq!(request_id, 2);
-        }
 
         Ok(())
     }
