@@ -1,13 +1,21 @@
-//! Open command arguments for runa.
+//! Editor command utils: the file variables and the system opener.
 
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
-/// File variables in open commands: the full path, the file name, the parent directory and the file stem.
+/// File variables in editor commands: the full path, the file name, the parent directory and the file stem.
 const FILE_VARIABLES: [&str; 4] = ["{path}", "{name}", "{dir}", "{stem}"];
 const RELATIVE_VARIABLES: [&str; 2] = ["{name}", "{stem}"];
 
 const DASH_GUARD: &str = "./";
+
+/// Opens a file with the default app of the system.
+#[cfg(windows)]
+pub(crate) const SYSTEM_OPENER: &str = "explorer";
+#[cfg(target_os = "macos")]
+pub(crate) const SYSTEM_OPENER: &str = "open";
+#[cfg(not(any(windows, target_os = "macos")))]
+pub(crate) const SYSTEM_OPENER: &str = "xdg-open";
 
 /// Returns the arguments after the program, with the file variables filled in.
 pub(crate) fn expand_args(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<OsString> {

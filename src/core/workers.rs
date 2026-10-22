@@ -18,6 +18,7 @@ mod find;
 mod io;
 mod metadata;
 mod preview;
+mod runner;
 mod sort;
 mod watch;
 
@@ -47,6 +48,7 @@ pub(crate) struct Workers {
     metadata_tx: Sender<WorkerTask>,
     find_tx: Sender<WorkerTask>,
     fileop_tx: Sender<WorkerTask>,
+    runner_tx: Sender<WorkerTask>,
     watch_cmd_tx: Sender<WatchCommand>,
     response_rx: Receiver<WorkerResponse>,
     active_fileops: Arc<AtomicUsize>,
@@ -77,6 +79,7 @@ impl Workers {
         let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
         let (find_tx, find_rx) = bounded::<WorkerTask>(1);
         let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
+        let (runner_tx, runner_rx) = unbounded::<WorkerTask>();
         let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
@@ -91,6 +94,7 @@ impl Workers {
         metadata::start(metadata_rx, res_tx.clone());
         find::start(find_rx, res_tx.clone());
         fileop::start(fileop_rx, res_tx.clone(), Arc::clone(&active_fileops));
+        runner::start(runner_rx, res_tx.clone());
         watch::start(watch_cmd_rx, res_tx.clone());
 
         Self {
@@ -102,6 +106,7 @@ impl Workers {
             metadata_tx,
             find_tx,
             fileop_tx,
+            runner_tx,
             watch_cmd_tx,
             response_rx,
             active_fileops,
@@ -118,6 +123,7 @@ impl Workers {
         metadata_tx: &Sender<WorkerTask>,
         find_tx: &Sender<WorkerTask>,
         fileop_tx: &Sender<WorkerTask>,
+        runner_tx: &Sender<WorkerTask>,
         response_rx: &Receiver<WorkerResponse>,
         active_fileops: &Arc<AtomicUsize>,
     }
@@ -172,6 +178,12 @@ pub(crate) enum WorkerTask {
     },
     FileOp {
         op: FileOperation,
+    },
+    RunCommand {
+        program: PathBuf,
+        args: Vec<OsString>,
+        dir: Option<PathBuf>,
+        check_status: bool,
     },
     FindRecursive {
         base_dir: PathBuf,

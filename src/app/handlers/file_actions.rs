@@ -10,9 +10,10 @@
 //! This module is responsible for connecting file actions
 //! to the underlying logic that performs those actions,
 
+use std::ffi::OsString;
 use std::fs;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -28,8 +29,9 @@ use crate::app::{
     state::{AppState, KeypressResult},
 };
 use crate::config::Editor;
-use crate::core::open;
+use crate::core::workers::WorkerTask;
 use crate::utils::Timings;
+use crate::utils::command;
 use crate::utils::path;
 
 /// AppState file action handlers
@@ -83,13 +85,32 @@ impl AppState {
     /// If an error occurs, prints it to stderr.
     fn handle_open_file(&mut self, workers: &Workers) -> KeypressResult {
         if let Some(entry) = self.nav.selected_entry() {
-            let path = self.nav.current_dir().join(entry.name());
+            let joined = self.nav.current_dir().join(entry.name());
+            let path = std::path::absolute(&joined).unwrap_or(joined);
             let editor = self.config.editor();
-            if !editor.exists(&path) {
-                let cmd = editor.cmd(&path);
+            let cmd = editor.cmd(&path);
+
+            if cmd.system() {
+                let Ok(program) = which::which(command::SYSTEM_OPENER) else {
+                    let msg = format!("'{}' not found", command::SYSTEM_OPENER);
+                    self.push_overlay_message(msg, Timings::MESSAGE, None);
+                    return KeypressResult::Continue;
+                };
+                let args = vec![path.as_os_str().to_owned()];
+                self.run_in_background(workers, program, args, &path, false);
+                return KeypressResult::Continue;
+            }
+
+            let Some(program) = editor.resolved_path(&path) else {
                 let binary = cmd.args().first().map(|s| s.as_str()).unwrap_or("unknown");
                 let msg = format!("Editor '{}' not found", binary);
                 self.push_overlay_message(msg, Timings::MESSAGE, None);
+                return KeypressResult::Continue;
+            };
+
+            if !cmd.terminal() {
+                let args = command::expand_args(cmd.args(), cmd.ext_parts(), &path);
+                self.run_in_background(workers, program, args, &path, true);
                 return KeypressResult::Continue;
             }
 
@@ -344,6 +365,27 @@ impl AppState {
         }
     }
 
+    /// Runs an editor command in the background, so the TUI keeps running.
+    fn run_in_background(
+        &mut self,
+        workers: &Workers,
+        program: PathBuf,
+        args: Vec<OsString>,
+        path: &Path,
+        check_status: bool,
+    ) {
+        let task = WorkerTask::RunCommand {
+            program,
+            args,
+            dir: path.parent().map(Path::to_path_buf),
+            check_status,
+        };
+        if workers.runner_tx().send(task).is_err() {
+            let msg = "Command runner is not running".to_string();
+            self.push_overlay_message(msg, Timings::MESSAGE, None);
+        }
+    }
+
     /// Opens a specified path/file in the configured editor ("nvim" or "vim" etc.).
     ///
     /// Temporary disables raw mode and exits alternate sceen while the editor runs.
@@ -367,7 +409,7 @@ impl AppState {
         execute!(stdout, LeaveAlternateScreen)?;
 
         let mut editor_cmd = std::process::Command::new(editor_path);
-        editor_cmd.args(open::expand_args(cmd.args(), cmd.ext_parts(), file_path));
+        editor_cmd.args(command::expand_args(cmd.args(), cmd.ext_parts(), file_path));
 
         let target_dir = if resolved_path.is_dir() {
             Some(resolved_path.as_path())
