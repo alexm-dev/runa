@@ -8,7 +8,7 @@ const FILE_VARIABLES: [&str; 4] = ["{path}", "{name}", "{dir}", "{stem}"];
 const RELATIVE_VARIABLES: [&str; 2] = ["{name}", "{stem}"];
 
 const OPTION_GUARD: &str = "./";
-const OPTION_PREFIX: &[u8] = b"-+";
+const OPTION_PREFIX: &[u8] = b"-+@";
 
 /// Opens a file with the default app of the system.
 #[cfg(windows)]
@@ -161,6 +161,7 @@ mod tests {
             expand_args(&cmd(&["7z", "x", "-o{stem}"]), 1, path),
             os_args(&["x", "-o...zip"])
         );
+
         let path = Path::new("/x/..tar.gz");
         assert_eq!(
             expand_args(&cmd(&["7z", "x", "-o{stem}"]), 2, path),
@@ -175,10 +176,17 @@ mod tests {
             expand_args(&cmd(&["rm", "{name}", "{stem}", "{stem}.bak"]), 1, path),
             os_args(&["./-rf.rs", "./-rf", "./-rf.bak"])
         );
+
         let path = Path::new("/x/+!id.md");
         assert_eq!(
             expand_args(&cmd(&["nvim", "{name}"]), 1, path),
             os_args(&["./+!id.md"])
+        );
+
+        let path = Path::new("/x/@list.txt");
+        assert_eq!(
+            expand_args(&cmd(&["7z", "a", "out.7z", "{name}"]), 1, path),
+            os_args(&["a", "out.7z", "./@list.txt"])
         );
     }
 
@@ -211,6 +219,7 @@ mod tests {
             path.as_os_str().to_owned(),
             OsString::from(OsStr::from_bytes(b"-ocaf\xe9")),
         ];
+
         assert_eq!(
             expand_args(&cmd(&["7z", "x", "{path}", "-o{stem}"]), 1, path),
             expected
