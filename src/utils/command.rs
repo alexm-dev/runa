@@ -7,7 +7,8 @@ use std::path::Path;
 const FILE_VARIABLES: [&str; 4] = ["{path}", "{name}", "{dir}", "{stem}"];
 const RELATIVE_VARIABLES: [&str; 2] = ["{name}", "{stem}"];
 
-const DASH_GUARD: &str = "./";
+const OPTION_GUARD: &str = "./";
+const OPTION_PREFIX: &[u8] = b"-+";
 
 /// Opens a file with the default app of the system.
 #[cfg(windows)]
@@ -41,8 +42,8 @@ pub(crate) fn expand_args(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<
     rest.iter()
         .map(|arg| {
             let expanded = expand_arg(arg, &values);
-            if RELATIVE_VARIABLES.contains(&arg.as_str()) {
-                guard_dash(expanded)
+            if RELATIVE_VARIABLES.iter().any(|rv| arg.starts_with(rv)) {
+                guard_option(expanded)
             } else {
                 expanded
             }
@@ -51,12 +52,18 @@ pub(crate) fn expand_args(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<
 }
 
 /// Prefixes a name that starts with a dash with `./`, so it is never read as an option.
-fn guard_dash(name: OsString) -> OsString {
-    if name.as_encoded_bytes().first() != Some(&b'-') {
+fn guard_option(name: OsString) -> OsString {
+    let starts_like_option = name
+        .as_encoded_bytes()
+        .first()
+        .is_some_and(|b| OPTION_PREFIX.contains(b));
+
+    if !starts_like_option {
         return name;
     }
-    let mut guarded = OsString::with_capacity(DASH_GUARD.len() + name.len());
-    guarded.push(DASH_GUARD);
+
+    let mut guarded = OsString::with_capacity(OPTION_GUARD.len() + name.len());
+    guarded.push(OPTION_GUARD);
     guarded.push(name);
     guarded
 }
@@ -66,7 +73,12 @@ fn strip_extension(name: &OsStr, count: usize) -> &OsStr {
     let mut stem = name;
     for _ in 0..count {
         match Path::new(stem).file_stem() {
-            Some(shorter) if shorter.len() < stem.len() => stem = shorter,
+            Some(shorter)
+                if shorter.len() < stem.len()
+                    && !shorter.as_encoded_bytes().iter().all(|&b| b == b'.') =>
+            {
+                stem = shorter
+            }
             _ => break,
         }
     }
@@ -143,20 +155,30 @@ mod tests {
     }
 
     #[test]
-    fn stem_without_extension_match_drops_the_last_extension() {
-        let path = Path::new("/x/Cargo.toml");
+    fn stem_is_never_a_dot_directory() {
+        let path = Path::new("/x/...zip");
         assert_eq!(
-            expand_args(&cmd(&["show", "{stem}"]), 1, path),
-            os_args(&["Cargo"])
+            expand_args(&cmd(&["7z", "x", "-o{stem}"]), 1, path),
+            os_args(&["x", "-o...zip"])
+        );
+        let path = Path::new("/x/..tar.gz");
+        assert_eq!(
+            expand_args(&cmd(&["7z", "x", "-o{stem}"]), 2, path),
+            os_args(&["x", "-o..tar"])
         );
     }
 
     #[test]
-    fn dash_names_cannot_become_options() {
+    fn names_cannot_become_options() {
         let path = Path::new("/x/-rf.rs");
         assert_eq!(
-            expand_args(&cmd(&["rm", "{name}", "{stem}"]), 1, path),
-            os_args(&["./-rf.rs", "./-rf"])
+            expand_args(&cmd(&["rm", "{name}", "{stem}", "{stem}.bak"]), 1, path),
+            os_args(&["./-rf.rs", "./-rf", "./-rf.bak"])
+        );
+        let path = Path::new("/x/+!id.md");
+        assert_eq!(
+            expand_args(&cmd(&["nvim", "{name}"]), 1, path),
+            os_args(&["./+!id.md"])
         );
     }
 

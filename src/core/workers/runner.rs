@@ -31,7 +31,12 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
                 continue;
             };
 
-            let name = program_name(&program);
+            let name = program
+                .file_stem()
+                .unwrap_or(program.as_os_str())
+                .to_string_lossy()
+                .into_owned();
+
             match spawn(&program, &args, dir.as_deref(), check_status) {
                 Ok(child) => {
                     let res_tx = res_tx.clone();
@@ -86,7 +91,8 @@ fn wait_for(mut child: Child, name: &str, check_status: bool, res_tx: &Sender<Wo
             .by_ref()
             .take(STDERR_KEEP_BYTES)
             .read_to_end(&mut head);
-        // Drain the rest so the command never blocks on a full pipe
+
+        // Drain the rest
         let _ = io::copy(&mut stderr, &mut io::sink());
     }
 
@@ -103,15 +109,6 @@ fn wait_for(mut child: Child, name: &str, check_status: bool, res_tx: &Sender<Wo
         Err(e) => format!("{name}: {e}"),
     };
     let _ = res_tx.send(WorkerResponse::Error(message, None));
-}
-
-/// Returns the program name without its directory and extension.
-fn program_name(program: &Path) -> String {
-    program
-        .file_stem()
-        .unwrap_or(program.as_os_str())
-        .to_string_lossy()
-        .into_owned()
 }
 
 #[cfg(test)]
@@ -212,13 +209,13 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn chatty_stderr_does_not_block() {
+    fn chatty_stderr_does_not_kill_the_command() {
         let (res_rx, _dir) = run(
             "sh",
-            &["-c", "yes runa | head -c 1000000 >&2; exit 1"],
+            &["-c", "yes runa | head -c 1000000 >&2 && exit 3"],
             true,
         );
-        assert_eq!(error_message(&res_rx), "sh: exit status: 1: runa");
+        assert_eq!(error_message(&res_rx), "sh: exit status: 3: runa");
     }
 
     #[test]

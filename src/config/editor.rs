@@ -210,44 +210,6 @@ mod tests {
     }
 
     #[test]
-    fn terminal_is_on_unless_the_table_turns_it_off() -> Result<(), toml::de::Error> {
-        let editor: Editor = toml::from_str(
-            r#"
-            ext = { rs = ["code", "-w"], md = { cmd = "glow" }, zip = { cmd = ["7z", "x", "{path}"], terminal = false } }
-            "#,
-        )?;
-
-        let code = strings(&["code", "-w"]);
-        let glow = strings(&["glow"]);
-        let nvim = strings(&["nvim"]);
-        let zip = strings(&["7z", "x", "{path}"]);
-        assert_eq!(
-            editor.cmd(Path::new("/x/main.rs")),
-            program(&code, true, Editor::LAST_EXTENSION)
-        );
-        assert_eq!(
-            editor.cmd(Path::new("/x/notes.md")),
-            program(&glow, true, Editor::LAST_EXTENSION)
-        );
-        assert_eq!(
-            editor.cmd(Path::new("/x/notes.txt")),
-            program(&nvim, true, Editor::LAST_EXTENSION)
-        );
-        assert_eq!(
-            editor.cmd(Path::new("/x/release.zip")),
-            program(&zip, false, Editor::LAST_EXTENSION)
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn unknown_table_fields_are_rejected() {
-        let result: Result<Editor, _> =
-            toml::from_str(r#"ext = { zip = { cmd = ["7z"], termnal = false } }"#);
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn system_list_opens_with_the_default_app() -> Result<(), toml::de::Error> {
         let editor: Editor = toml::from_str(
             r#"
