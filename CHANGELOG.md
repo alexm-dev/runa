@@ -18,7 +18,7 @@ All the changes made to runa are documented here.
 - **Workers**: Busy worker keeps newest request instead of dropping it. Errors on directory loads are routed by request and path.
 
 > [!TIP]
-> The previous version, 0.14.0, added a lot of new features.
+> The previous version, 0.14.0, added a lot of new features.  
 > Read through its [changelog](https://github.com/alexm-dev/runa/releases/tag/v0.14.0) to get up to speed,  
 > and see the [editor doc](https://alexm-dev.github.io/runa/config-reference/editor) and [commands doc](https://alexm-dev.github.io/runa/config-reference/commands) to set them up.
 
