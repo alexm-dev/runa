@@ -3,25 +3,21 @@
 //! The [Formatter] struct holds pane width and rules for sorting and filtering entries,
 //! based on user preferences from the runa.toml configuration.
 //! Used to prepare file lists for display in each pane.
-//!
-//! Also formatts FileTypes to be used by FileMetadata and ShowInfo overlay widget.
 
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::ffi::OsString;
-use std::fs::Metadata;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use chrono::{DateTime, Local};
+use chrono::Local;
 use dashmap::DashMap;
-use humansize::{self, DECIMAL};
 
 use crate::core::{
     FileEntry,
     cache::DirListOptions,
-    metadata::{self, CachedMetaKey, FileType},
+    metadata::{self, CachedMetaKey, TimeFormatCtx, format_file_size, format_file_time},
     sort::{SortConfig, SortMode, SortOrder},
 };
 
@@ -360,137 +356,6 @@ impl Formatter {
             true
         });
     }
-}
-
-/// Context for time formatting, holding the format string, current time,
-/// and precomputed values for determining how to format timestamps based on their age.
-pub(crate) struct TimeFormatCtx<'a> {
-    fmt: &'a str,
-    now: DateTime<Local>,
-    six_months: chrono::Duration,
-    has_year: bool,
-}
-
-impl<'a> TimeFormatCtx<'a> {
-    #[inline]
-    pub(crate) fn new(fmt: &'a str, now: DateTime<Local>) -> Self {
-        Self {
-            fmt,
-            now,
-            six_months: chrono::Duration::try_days(182).unwrap_or_default(),
-            has_year: fmt
-                .as_bytes()
-                .windows(2)
-                .any(|w| matches!(w, b"%Y" | b"%y")),
-        }
-    }
-}
-
-/// Formatts the file attributes like Directory, Symlink, and permissions in a unix-like format
-///
-/// On Unix: Returns a string like 'drwxr-xr-x' etc. for directories and files.
-/// On Windows: Returns a short string showing file type and attributes like:
-/// (`d`, `l`, `h` for hidden, `s` for system, `a` for archive, `r` for read-only). Not all flags map 1:1 to Unix.
-///
-/// # Returns
-/// A string representing the formatted file attributes used by FileMetadata
-pub(crate) fn format_attributes(meta: &Metadata) -> String {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-
-        let file_type = meta.file_type();
-        let first = if file_type.is_dir() {
-            'd'
-        } else if file_type.is_symlink() {
-            'l'
-        } else {
-            '-'
-        };
-        let mode = meta.permissions().mode();
-        let mut chars = [first, '-', '-', '-', '-', '-', '-', '-', '-', '-'];
-        let shifts = [6, 3, 0];
-        for (i, &shift) in shifts.iter().enumerate() {
-            let base = 1 + i * 3;
-            if (mode >> (shift + 2)) & 1u32 != 0 {
-                chars[base] = 'r';
-            }
-            if (mode >> (shift + 1)) & 1u32 != 0 {
-                chars[base + 1] = 'w';
-            }
-            if (mode >> shift) & 1u32 != 0 {
-                chars[base + 2] = 'x';
-            }
-        }
-        chars.iter().collect()
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        let attr = meta.file_attributes();
-        let mut out = String::with_capacity(7);
-        out.push(if attr & 0x10 != 0 {
-            'd'
-        } else if attr & 0x400 != 0 {
-            'l'
-        } else {
-            '-'
-        });
-
-        out.push(if attr & 0x20 != 0 { 'a' } else { '-' });
-        out.push(if attr & 0x01 != 0 { 'r' } else { '-' });
-        out.push(if attr & 0x02 != 0 { 'h' } else { '-' });
-        out.push(if attr & 0x04 != 0 { 's' } else { '-' });
-        out
-    }
-}
-
-/// Formats the FileType enum into a human-readable string.
-/// # Returns
-/// A static string representing the file type.
-pub(crate) fn format_file_type(file_type: &FileType) -> &'static str {
-    match file_type {
-        FileType::File => "File",
-        FileType::Directory => "Directory",
-        FileType::Symlink => "Symlink",
-        FileType::Other => "Other",
-    }
-}
-
-/// Formats the file size into a human-readable string.
-/// # Returns
-/// A string representing the formatted file size or "-" for directories/unknown sizes.
-pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
-    if is_dir {
-        "-".into()
-    } else if let Some(sz) = size {
-        humansize::format_size(sz, DECIMAL)
-    } else {
-        "-".to_string()
-    }
-}
-
-/// Formats the file time (modified, created, or accessed) into a human-readable string based on the
-/// provided format and context.
-/// The context allows for dynamic formatting based on how old the timestamp is compared to the
-/// current time.
-pub(crate) fn format_file_time(time: Option<SystemTime>, ctx: &TimeFormatCtx) -> String {
-    let Some(t) = time else {
-        return "-".to_string();
-    };
-
-    let dt: DateTime<Local> = DateTime::from(t);
-    let final_format = if !ctx.has_year && (ctx.now - dt).abs() > ctx.six_months {
-        "%b %e  %Y"
-    } else {
-        ctx.fmt
-    };
-
-    let formatted = dt.format(final_format).to_string();
-    if formatted.is_empty() {
-        return dt.format("%Y-%m-%d %H:%M").to_string();
-    }
-    formatted
 }
 
 #[inline]
