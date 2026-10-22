@@ -28,7 +28,7 @@ use crate::app::{
     keymap::FileAction,
     state::{AppState, KeypressResult},
 };
-use crate::config::Editor;
+use crate::config::editor::EditorCommand;
 use crate::core::workers::WorkerTask;
 use crate::utils::Timings;
 use crate::utils::command;
@@ -87,34 +87,39 @@ impl AppState {
         if let Some(entry) = self.nav.selected_entry() {
             let joined = self.nav.current_dir().join(entry.name());
             let path = std::path::absolute(&joined).unwrap_or(joined);
-            let editor = self.config.editor();
-            let cmd = editor.cmd(&path);
 
-            if cmd.system() {
-                let Ok(program) = which::which(command::SYSTEM_OPENER) else {
-                    let msg = format!("'{}' not found", command::SYSTEM_OPENER);
-                    self.push_overlay_message(msg, Timings::MESSAGE, None);
-                    return KeypressResult::Continue;
-                };
-                let args = vec![path.as_os_str().to_owned()];
-                self.run_in_background(workers, program, args, &path, false);
-                return KeypressResult::Continue;
-            }
+            let (binary, args, terminal, check_status) = match self.config.editor().cmd(&path) {
+                EditorCommand::System => {
+                    let args = vec![path.as_os_str().to_owned()];
+                    (command::SYSTEM_OPENER, args, false, false)
+                }
+                EditorCommand::Program {
+                    args,
+                    terminal,
+                    ext_parts,
+                } => {
+                    let Some(binary) = args.first() else {
+                        let msg = "No editor command configured".to_string();
+                        self.push_overlay_message(msg, Timings::MESSAGE, None);
+                        return KeypressResult::Continue;
+                    };
+                    let args = command::expand_args(args, ext_parts, &path);
+                    (binary.as_str(), args, terminal, true)
+                }
+            };
 
-            let Some(program) = editor.resolved_path(&path) else {
-                let binary = cmd.args().first().map(|s| s.as_str()).unwrap_or("unknown");
+            let Ok(program) = which::which(binary) else {
                 let msg = format!("Editor '{}' not found", binary);
                 self.push_overlay_message(msg, Timings::MESSAGE, None);
                 return KeypressResult::Continue;
             };
 
-            if !cmd.terminal() {
-                let args = command::expand_args(cmd.args(), cmd.ext_parts(), &path);
-                self.run_in_background(workers, program, args, &path, true);
+            if !terminal {
+                self.run_in_background(workers, program, args, &path, check_status);
                 return KeypressResult::Continue;
             }
 
-            match Self::open_in_editor(editor, &path) {
+            match Self::open_in_editor(&program, args, &path) {
                 Ok(_) => {
                     self.request_dir_load(workers, Some(entry.name().to_os_string()));
                     self.request_preview_force(workers);
@@ -390,26 +395,19 @@ impl AppState {
     ///
     /// Temporary disables raw mode and exits alternate sceen while the editor runs.
     /// On return, restores raw mode and alternate sceen.
-    fn open_in_editor(editor: &Editor, file_path: &Path) -> std::io::Result<()> {
-        let cmd = editor.cmd(file_path);
-        let binary = cmd.args().first().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::NotFound, "No editor command configured")
-        })?;
-        let editor_path = which::which(binary).map_err(|_| {
-            io::Error::new(
-                io::ErrorKind::NotFound,
-                format!("Editor '{}' not found", binary),
-            )
-        })?;
-
+    fn open_in_editor(
+        program: &Path,
+        args: Vec<OsString>,
+        file_path: &Path,
+    ) -> std::io::Result<()> {
         let resolved_path = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
 
         let mut stdout = io::stdout();
         disable_raw_mode()?;
         execute!(stdout, LeaveAlternateScreen)?;
 
-        let mut editor_cmd = std::process::Command::new(editor_path);
-        editor_cmd.args(command::expand_args(cmd.args(), cmd.ext_parts(), file_path));
+        let mut editor_cmd = std::process::Command::new(program);
+        editor_cmd.args(args);
 
         let target_dir = if resolved_path.is_dir() {
             Some(resolved_path.as_path())
@@ -435,7 +433,7 @@ impl AppState {
             ))),
             Err(e) => Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                format!("Command '{}' not found: {}", binary, e),
+                format!("Command '{}' not found: {}", program.display(), e),
             )),
         }
     }

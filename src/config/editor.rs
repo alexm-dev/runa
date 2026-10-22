@@ -4,7 +4,7 @@
 //! configuration file.
 
 use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde::Deserialize;
 
@@ -62,40 +62,37 @@ pub(crate) struct Editor {
 
 /// Public methods for accessing editor configuration options
 impl Editor {
+    /// Extensions that {stem} drops when no extensions are matched.
+    const LAST_EXTENSION: usize = 1;
+
     /// Returns the command that opens the path
     /// Checks the file name first then the extension from longest to shorted, then default.
     pub(crate) fn cmd(&self, path: &Path) -> EditorCommand<'_> {
         let Some(name) = path.file_name().map(|name| name.to_string_lossy()) else {
-            return EditorCommand::without_extension(&self.default);
+            return EditorCommand::program(&self.default, Self::LAST_EXTENSION);
         };
 
         if let Some(entry) = self.filename.get(name.as_ref()) {
-            return EditorCommand::without_extension(entry);
+            return EditorCommand::program(entry, Self::LAST_EXTENSION);
         }
 
         let lower = name.to_lowercase();
         if let Some(entry) = self.filename.get(&lower) {
-            return EditorCommand::without_extension(entry);
+            return EditorCommand::program(entry, Self::LAST_EXTENSION);
         }
 
         for (dot, _) in lower.match_indices('.').filter(|&(dot, _)| dot > 0) {
             let ext = &lower[dot + 1..];
-            let ext_parts = ext.matches('.').count() + 1;
             if let Some(entry) = self.ext.get(ext) {
-                return EditorCommand::new(entry, ext_parts);
+                let ext_parts = ext.matches('.').count() + 1;
+                return EditorCommand::program(entry, ext_parts);
             }
             if self.system.contains(ext) {
-                return EditorCommand::with_system_app(ext_parts);
+                return EditorCommand::System;
             }
         }
 
-        EditorCommand::without_extension(&self.default)
-    }
-
-    pub(crate) fn resolved_path(&self, path: &Path) -> Option<PathBuf> {
-        let cmd = self.cmd(path);
-        let program = cmd.args().first()?;
-        which::which(program).ok()
+        EditorCommand::program(&self.default, Self::LAST_EXTENSION)
     }
 }
 
@@ -114,43 +111,22 @@ impl Default for Editor {
     }
 }
 
-/// A command that opens a path, with the number of extensions that stem drops.
-pub(crate) struct EditorCommand<'a> {
-    args: &'a [String],
-    terminal: bool,
-    ext_parts: usize,
-    system: bool,
+#[derive(Debug, PartialEq)]
+pub(crate) enum EditorCommand<'a> {
+    Program {
+        args: &'a [String],
+        terminal: bool,
+        ext_parts: usize,
+    },
+    System,
 }
 
 impl<'a> EditorCommand<'a> {
-    crate::getters! {
-        args: &[String],
-        terminal: bool,
-        ext_parts: usize,
-        system: bool,
-    }
-
-    fn new(entry: &'a EditorEntry, ext_parts: usize) -> Self {
-        Self {
+    fn program(entry: &'a EditorEntry, ext_parts: usize) -> Self {
+        EditorCommand::Program {
             args: &entry.args,
             terminal: entry.terminal,
             ext_parts,
-            system: false,
-        }
-    }
-
-    /// Creats a command that matches no extension, so stem drops the last one.
-    fn without_extension(entry: &'a EditorEntry) -> Self {
-        Self::new(entry, 1)
-    }
-
-    /// Opens the path with the default app of the system.
-    fn with_system_app(ext_parts: usize) -> Self {
-        Self {
-            args: &[],
-            terminal: false,
-            ext_parts,
-            system: true,
         }
     }
 }
@@ -179,33 +155,58 @@ mod tests {
         }
     }
 
+    fn strings(args: &[&str]) -> Vec<String> {
+        args.iter().map(|arg| arg.to_string()).collect()
+    }
+
+    fn program(args: &[String], terminal: bool, ext_parts: usize) -> EditorCommand<'_> {
+        EditorCommand::Program {
+            args,
+            terminal,
+            ext_parts,
+        }
+    }
+
     #[test]
     fn longest_extension_wins() {
         let editor = editor(&[("gz", &["gunzip"]), ("tar.gz", &["tar"])], &[]);
-        assert_eq!(editor.cmd(Path::new("/x/release.tar.gz")).args(), ["tar"]);
-        assert_eq!(editor.cmd(Path::new("/x/access.log.gz")).args(), ["gunzip"]);
-        assert_eq!(editor.cmd(Path::new("/x/RELEASE.TAR.GZ")).args(), ["tar"]);
+        let (tar, gunzip) = (strings(&["tar"]), strings(&["gunzip"]));
+        assert_eq!(
+            editor.cmd(Path::new("/x/release.tar.gz")),
+            program(&tar, true, 2)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/access.log.gz")),
+            program(&gunzip, true, Editor::LAST_EXTENSION)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/RELEASE.TAR.GZ")),
+            program(&tar, true, 2)
+        );
     }
 
     #[test]
     fn hidden_file_has_no_extension() {
         let editor = editor(&[("bashrc", &["code"])], &[]);
-        assert_eq!(editor.cmd(Path::new("/x/.bashrc")).args(), ["nvim"]);
+        let nvim = strings(&["nvim"]);
+        assert_eq!(
+            editor.cmd(Path::new("/x/.bashrc")),
+            program(&nvim, true, Editor::LAST_EXTENSION)
+        );
     }
 
     #[test]
     fn filename_beats_extension() {
         let editor = editor(&[("toml", &["code"])], &[("Cargo.toml", &["vim"])]);
-        assert_eq!(editor.cmd(Path::new("/x/Cargo.toml")).args(), ["vim"]);
-        assert_eq!(editor.cmd(Path::new("/x/rustfmt.toml")).args(), ["code"]);
-    }
-
-    #[test]
-    fn ext_parts_count_the_matched_extension() {
-        let editor = editor(&[("tar.gz", &["tar"])], &[("Cargo.toml", &["vim"])]);
-        assert_eq!(editor.cmd(Path::new("/x/release.tar.gz")).ext_parts(), 2);
-        assert_eq!(editor.cmd(Path::new("/x/Cargo.toml")).ext_parts(), 1);
-        assert_eq!(editor.cmd(Path::new("/x/notes.txt")).ext_parts(), 1);
+        let (vim, code) = (strings(&["vim"]), strings(&["code"]));
+        assert_eq!(
+            editor.cmd(Path::new("/x/Cargo.toml")),
+            program(&vim, true, Editor::LAST_EXTENSION)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/rustfmt.toml")),
+            program(&code, true, Editor::LAST_EXTENSION)
+        );
     }
 
     #[test]
@@ -216,13 +217,26 @@ mod tests {
             "#,
         )?;
 
-        assert!(editor.cmd(Path::new("/x/main.rs")).terminal());
-        assert!(editor.cmd(Path::new("/x/notes.md")).terminal());
-        assert!(editor.cmd(Path::new("/x/notes.txt")).terminal());
-
-        let zip = editor.cmd(Path::new("/x/release.zip"));
-        assert!(!zip.terminal());
-        assert_eq!(zip.args(), ["7z", "x", "{path}"]);
+        let code = strings(&["code", "-w"]);
+        let glow = strings(&["glow"]);
+        let nvim = strings(&["nvim"]);
+        let zip = strings(&["7z", "x", "{path}"]);
+        assert_eq!(
+            editor.cmd(Path::new("/x/main.rs")),
+            program(&code, true, Editor::LAST_EXTENSION)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/notes.md")),
+            program(&glow, true, Editor::LAST_EXTENSION)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/notes.txt")),
+            program(&nvim, true, Editor::LAST_EXTENSION)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/release.zip")),
+            program(&zip, false, Editor::LAST_EXTENSION)
+        );
         Ok(())
     }
 
@@ -243,13 +257,23 @@ mod tests {
             "#,
         )?;
 
-        let pdf = editor.cmd(Path::new("/x/report.pdf"));
-        assert!(pdf.system());
-        assert!(!pdf.terminal());
-        assert!(editor.cmd(Path::new("/x/release.tar.gz")).system());
-        assert!(!editor.cmd(Path::new("/x/access.log.gz")).system());
-        assert!(!editor.cmd(Path::new("/x/manual.pdf")).system());
-        assert!(!editor.cmd(Path::new("/x/notes.txt")).system());
+        let (gunzip, zathura) = (strings(&["gunzip"]), strings(&["zathura"]));
+        assert_eq!(
+            editor.cmd(Path::new("/x/report.pdf")),
+            EditorCommand::System
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/release.tar.gz")),
+            EditorCommand::System
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/access.log.gz")),
+            program(&gunzip, true, Editor::LAST_EXTENSION)
+        );
+        assert_eq!(
+            editor.cmd(Path::new("/x/manual.pdf")),
+            program(&zathura, true, Editor::LAST_EXTENSION)
+        );
         Ok(())
     }
 }
