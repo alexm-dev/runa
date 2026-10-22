@@ -4,7 +4,7 @@ All the changes made to runa are documented here.
 
 ## [0.14.0] - 2026-10-22
 
-#### Directory preview scrolling, editor scripting and more.
+#### Archive preview, custom commands, directory scrolling and more.
 
 ### Added
 - **Preview**:
