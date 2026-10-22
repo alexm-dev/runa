@@ -9,12 +9,13 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::config::input::InputKeyLists;
+use crate::utils::command::{LAST_EXTENSION, RunMode};
 
 /// An editor command and whether it takes over the terminal.
 #[derive(Debug)]
 struct EditorEntry {
     args: Box<[String]>,
-    terminal: bool,
+    run_mode: RunMode,
 }
 
 /// The table form of an editor command: `{ cmd = [...], terminal = false }`.
@@ -40,11 +41,11 @@ impl<'de> Deserialize<'de> for EditorEntry {
         Ok(match Entry::deserialize(deserializer)? {
             Entry::Command(cmd) => EditorEntry {
                 args: cmd.0,
-                terminal: true,
+                run_mode: RunMode::Terminal,
             },
             Entry::Table(table) => EditorEntry {
                 args: table.cmd.0,
-                terminal: table.terminal.unwrap_or(true),
+                run_mode: RunMode::from_terminal(table.terminal.unwrap_or(true)),
             },
         })
     }
@@ -62,23 +63,20 @@ pub(crate) struct Editor {
 
 /// Public methods for accessing editor configuration options
 impl Editor {
-    /// Extensions that {stem} drops when no extensions are matched.
-    const LAST_EXTENSION: usize = 1;
-
     /// Returns the command that opens the path
     /// Checks the file name first then the extension from longest to shorted, then default.
     pub(crate) fn cmd(&self, path: &Path) -> EditorCommand<'_> {
         let Some(name) = path.file_name().map(|name| name.to_string_lossy()) else {
-            return EditorCommand::program(&self.default, Self::LAST_EXTENSION);
+            return EditorCommand::program(&self.default, LAST_EXTENSION);
         };
 
         if let Some(entry) = self.filename.get(name.as_ref()) {
-            return EditorCommand::program(entry, Self::LAST_EXTENSION);
+            return EditorCommand::program(entry, LAST_EXTENSION);
         }
 
         let lower = name.to_lowercase();
         if let Some(entry) = self.filename.get(&lower) {
-            return EditorCommand::program(entry, Self::LAST_EXTENSION);
+            return EditorCommand::program(entry, LAST_EXTENSION);
         }
 
         for (dot, _) in lower.match_indices('.').filter(|&(dot, _)| dot > 0) {
@@ -92,7 +90,7 @@ impl Editor {
             }
         }
 
-        EditorCommand::program(&self.default, Self::LAST_EXTENSION)
+        EditorCommand::program(&self.default, LAST_EXTENSION)
     }
 }
 
@@ -102,7 +100,7 @@ impl Default for Editor {
         Editor {
             default: EditorEntry {
                 args: Box::new(["nvim".into()]),
-                terminal: true,
+                run_mode: RunMode::Terminal,
             },
             ext: HashMap::new(),
             filename: HashMap::new(),
@@ -115,7 +113,7 @@ impl Default for Editor {
 pub(crate) enum EditorCommand<'a> {
     Program {
         args: &'a [String],
-        terminal: bool,
+        run_mode: RunMode,
         ext_parts: usize,
     },
     System,
@@ -125,7 +123,7 @@ impl<'a> EditorCommand<'a> {
     fn program(entry: &'a EditorEntry, ext_parts: usize) -> Self {
         EditorCommand::Program {
             args: &entry.args,
-            terminal: entry.terminal,
+            run_mode: entry.run_mode,
             ext_parts,
         }
     }
@@ -142,7 +140,7 @@ mod tests {
                 .map(|&(key, cmd)| {
                     let entry = EditorEntry {
                         args: cmd.iter().map(|arg| arg.to_string()).collect(),
-                        terminal: true,
+                        run_mode: RunMode::Terminal,
                     };
                     (key.to_string(), entry)
                 })
@@ -162,7 +160,7 @@ mod tests {
     fn program(args: &[String], terminal: bool, ext_parts: usize) -> EditorCommand<'_> {
         EditorCommand::Program {
             args,
-            terminal,
+            run_mode: RunMode::from_terminal(terminal),
             ext_parts,
         }
     }
@@ -177,7 +175,7 @@ mod tests {
         );
         assert_eq!(
             editor.cmd(Path::new("/x/access.log.gz")),
-            program(&gunzip, true, Editor::LAST_EXTENSION)
+            program(&gunzip, true, LAST_EXTENSION)
         );
         assert_eq!(
             editor.cmd(Path::new("/x/RELEASE.TAR.GZ")),
@@ -191,7 +189,7 @@ mod tests {
         let nvim = strings(&["nvim"]);
         assert_eq!(
             editor.cmd(Path::new("/x/.bashrc")),
-            program(&nvim, true, Editor::LAST_EXTENSION)
+            program(&nvim, true, LAST_EXTENSION)
         );
     }
 
@@ -201,11 +199,11 @@ mod tests {
         let (vim, code) = (strings(&["vim"]), strings(&["code"]));
         assert_eq!(
             editor.cmd(Path::new("/x/Cargo.toml")),
-            program(&vim, true, Editor::LAST_EXTENSION)
+            program(&vim, true, LAST_EXTENSION)
         );
         assert_eq!(
             editor.cmd(Path::new("/x/rustfmt.toml")),
-            program(&code, true, Editor::LAST_EXTENSION)
+            program(&code, true, LAST_EXTENSION)
         );
     }
 
@@ -230,11 +228,11 @@ mod tests {
         );
         assert_eq!(
             editor.cmd(Path::new("/x/access.log.gz")),
-            program(&gunzip, true, Editor::LAST_EXTENSION)
+            program(&gunzip, true, LAST_EXTENSION)
         );
         assert_eq!(
             editor.cmd(Path::new("/x/manual.pdf")),
-            program(&zathura, true, Editor::LAST_EXTENSION)
+            program(&zathura, true, LAST_EXTENSION)
         );
         Ok(())
     }

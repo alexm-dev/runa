@@ -18,6 +18,7 @@ pub(crate) enum Action {
     File(FileAction),
     System(SystemAction),
     Tab(TabAction),
+    Command(usize),
 }
 
 /// Navigation actions (move, into_parent, markers, etc.)
@@ -191,6 +192,10 @@ impl Keymap {
         bind_sort!(keys.sort_by_accessed(),     SortMode::Accessed);
         bind_sort!(keys.sort_by_size(),         SortMode::Size);
         bind_sort!(keys.sort_by_extension(),    SortMode::Extension);
+
+        for (index, command) in config.commands().list().iter().enumerate() {
+            bind(command.keys(), Action::Command(index), &mut map);
+        }
 
         Keymap { map, go_to_map, sort_map, go_to_prefix, sort_prefix }
     }

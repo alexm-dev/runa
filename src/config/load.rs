@@ -11,7 +11,7 @@ use std::{fs, io, path::PathBuf};
 use serde::Deserialize;
 
 use crate::config::{
-    Display, Editor, General, InternalGeneral, Keys, Theme,
+    Commands, Display, Editor, General, InternalGeneral, Keys, Theme,
     assets::{FULL_TOML, MINIMAL_TOML},
 };
 use crate::utils::os;
@@ -27,6 +27,7 @@ pub(crate) struct RawConfig {
     theme: Theme,
     editor: Editor,
     keys: Keys,
+    commands: Commands,
 }
 
 /// Default values for RawConfig
@@ -39,6 +40,7 @@ impl Default for RawConfig {
             theme: Theme::default(),
             editor: Editor::default(),
             keys: Keys::default(),
+            commands: Commands::default(),
         }
     }
 }
@@ -52,6 +54,7 @@ pub(crate) struct Config {
     theme: Theme,
     editor: Editor,
     keys: Keys,
+    commands: Commands,
 }
 
 /// Conversion from RawConfig to Config
@@ -64,6 +67,7 @@ impl From<RawConfig> for Config {
             theme: raw.theme,
             editor: raw.editor,
             keys: raw.keys,
+            commands: raw.commands,
         }
     }
 }
@@ -96,6 +100,7 @@ impl Config {
         theme: &Theme,
         editor: &Editor,
         keys: &Keys,
+        commands: &Commands,
     }
 
     pub(crate) fn bat_args_for_preview(&self, pane_width: usize) -> Vec<String> {
@@ -138,6 +143,7 @@ impl Default for Config {
             theme: Theme::default(),
             editor: Editor::default(),
             keys: Keys::default(),
+            commands: Commands::default(),
         }
     }
 }

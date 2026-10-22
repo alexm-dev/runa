@@ -4,6 +4,7 @@
 //! configuration options for runa, including display settings, input keybindings,
 
 pub(crate) mod assets;
+pub(crate) mod commands;
 pub(crate) mod dialog;
 pub(crate) mod display;
 pub(crate) mod editor;
@@ -13,6 +14,7 @@ pub(crate) mod load;
 pub(crate) mod presets;
 pub(crate) mod theme;
 
+pub(crate) use commands::Commands;
 pub(crate) use display::Display;
 pub(crate) use editor::Editor;
 pub(crate) use general::{General, InternalGeneral};

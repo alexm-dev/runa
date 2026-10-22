@@ -3,6 +3,9 @@
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
+/// extension that {stem} drops when no extension matched
+pub(crate) const LAST_EXTENSION: usize = 1;
+
 /// File variables in editor commands: the full path, the file name, the parent directory and the file stem.
 const FILE_VARIABLES: [&str; 4] = ["{path}", "{name}", "{dir}", "{stem}"];
 const RELATIVE_VARIABLES: [&str; 2] = ["{name}", "{stem}"];
@@ -18,18 +21,52 @@ pub(crate) const SYSTEM_OPENER: &str = "open";
 #[cfg(not(any(windows, target_os = "macos")))]
 pub(crate) const SYSTEM_OPENER: &str = "xdg-open";
 
-/// Returns the arguments after the program, with the file variables filled in.
-pub(crate) fn expand_args(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<OsString> {
-    let rest = cmd.get(1..).unwrap_or_default();
-    let has_variable = rest
-        .iter()
-        .any(|arg| FILE_VARIABLES.iter().any(|fv| arg.contains(fv)));
+/// How a command runs: in the terminal, or in the background.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum RunMode {
+    Terminal,
+    Background { check_status: bool },
+}
 
-    if !has_variable {
-        let mut args: Vec<OsString> = rest.iter().map(OsString::from).collect();
-        args.push(path.as_os_str().to_owned());
-        return args;
+impl RunMode {
+    /// Returns the run mode of a configured command.
+    pub(crate) fn from_terminal(terminal: bool) -> Self {
+        if terminal {
+            RunMode::Terminal
+        } else {
+            RunMode::Background { check_status: true }
+        }
     }
+}
+
+pub(crate) fn expand_args(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<OsString> {
+    if has_file_variables(cmd) {
+        return fill_file_variables(cmd, ext_parts, path);
+    }
+
+    let mut args = plain_args(cmd);
+    args.push(path.as_os_str().to_owned());
+    args
+}
+
+pub(crate) fn has_file_variables(cmd: &[String]) -> bool {
+    cmd.get(1..)
+        .unwrap_or_default()
+        .iter()
+        .any(|arg| FILE_VARIABLES.iter().any(|fv| arg.contains(fv)))
+}
+
+pub(crate) fn plain_args(cmd: &[String]) -> Vec<OsString> {
+    cmd.get(1..)
+        .unwrap_or_default()
+        .iter()
+        .map(OsString::from)
+        .collect()
+}
+
+/// Returns the arguments after the program, with the file variables filled in.
+pub(crate) fn fill_file_variables(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<OsString> {
+    let rest = cmd.get(1..).unwrap_or_default();
 
     let name = path.file_name().unwrap_or_default();
     let values = [

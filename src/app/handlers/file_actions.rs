@@ -11,7 +11,6 @@
 //! to the underlying logic that performs those actions,
 
 use std::ffi::OsString;
-use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -31,7 +30,7 @@ use crate::app::{
 use crate::config::editor::EditorCommand;
 use crate::core::workers::WorkerTask;
 use crate::utils::Timings;
-use crate::utils::command;
+use crate::utils::command::{self, RunMode};
 use crate::utils::path;
 
 /// AppState file action handlers
@@ -85,17 +84,23 @@ impl AppState {
     /// If an error occurs, prints it to stderr.
     fn handle_open_file(&mut self, workers: &Workers) -> KeypressResult {
         if let Some(entry) = self.nav.selected_entry() {
-            let joined = self.nav.current_dir().join(entry.name());
-            let path = std::path::absolute(&joined).unwrap_or(joined);
+            let current_dir = self.nav.current_dir();
+            let dir =
+                std::path::absolute(current_dir).unwrap_or_else(|_| current_dir.to_path_buf());
+            let path = dir.join(entry.name());
+            let focus = Some(entry.name().to_os_string());
 
-            let (binary, args, terminal, check_status) = match self.config.editor().cmd(&path) {
+            let (binary, args, run_mode) = match self.config.editor().cmd(&path) {
                 EditorCommand::System => {
-                    let args = vec![path.as_os_str().to_owned()];
-                    (command::SYSTEM_OPENER, args, false, false)
+                    let args = vec![path.into_os_string()];
+                    let run_mode = RunMode::Background {
+                        check_status: false,
+                    };
+                    (command::SYSTEM_OPENER, args, run_mode)
                 }
                 EditorCommand::Program {
                     args,
-                    terminal,
+                    run_mode,
                     ext_parts,
                 } => {
                     let Some(binary) = args.first() else {
@@ -104,7 +109,7 @@ impl AppState {
                         return KeypressResult::Continue;
                     };
                     let args = command::expand_args(args, ext_parts, &path);
-                    (binary.as_str(), args, terminal, true)
+                    (binary.as_str(), args, run_mode)
                 }
             };
 
@@ -114,23 +119,7 @@ impl AppState {
                 return KeypressResult::Continue;
             };
 
-            if !terminal {
-                self.run_in_background(workers, program, args, &path, check_status);
-                return KeypressResult::Continue;
-            }
-
-            match Self::open_in_editor(&program, args, &path) {
-                Ok(_) => {
-                    self.request_dir_load(workers, Some(entry.name().to_os_string()));
-                    self.request_preview_force(workers);
-                    KeypressResult::OpenedEditor
-                }
-                Err(e) => {
-                    let error_msg = e.to_string();
-                    self.push_overlay_message(error_msg, Timings::MESSAGE, None);
-                    KeypressResult::Recovered
-                }
-            }
+            self.launch(workers, program, args, dir, run_mode, focus)
         } else {
             KeypressResult::Continue
         }
@@ -370,19 +359,92 @@ impl AppState {
         }
     }
 
+    pub(crate) fn handle_user_command(
+        &mut self,
+        workers: &Workers,
+        index: usize,
+    ) -> KeypressResult {
+        let Some(user_command) = self.config.commands().get(index) else {
+            return KeypressResult::Continue;
+        };
+
+        let cmd = user_command.cmd();
+        let run_mode = user_command.run_mode();
+
+        let Some(binary) = cmd.first() else {
+            let msg = format!("Command '{}' has no program", user_command.name());
+            self.push_overlay_message(msg, Timings::MESSAGE, None);
+            return KeypressResult::Continue;
+        };
+
+        let current_dir = self.nav.current_dir();
+        let dir = std::path::absolute(current_dir).unwrap_or_else(|_| current_dir.to_path_buf());
+        let selected = self.nav.selected_entry().map(|e| e.name().to_os_string());
+
+        let args = if command::has_file_variables(cmd) {
+            let Some(name) = &selected else {
+                let msg = format!("Command '{}' needs a selected file", user_command.name());
+                self.push_overlay_message(msg, Timings::MESSAGE, None);
+                return KeypressResult::Continue;
+            };
+
+            command::fill_file_variables(cmd, command::LAST_EXTENSION, &dir.join(name))
+        } else {
+            command::plain_args(cmd)
+        };
+
+        let Ok(program) = which::which(binary) else {
+            let msg = format!("Command '{}' not found", binary);
+            self.push_overlay_message(msg, Timings::MESSAGE, None);
+            return KeypressResult::Continue;
+        };
+
+        self.launch(workers, program, args, dir, run_mode, selected)
+    }
+
+    /// Starts a resolved command in its working directory.
+    /// After a terminal command, reloads the directory and keeps `focus` selected.
+    fn launch(
+        &mut self,
+        workers: &Workers,
+        program: PathBuf,
+        args: Vec<OsString>,
+        cwd: PathBuf,
+        run_mode: RunMode,
+        focus: Option<OsString>,
+    ) -> KeypressResult {
+        match run_mode {
+            RunMode::Background { check_status } => {
+                self.run_in_background(workers, program, args, cwd, check_status);
+                KeypressResult::Continue
+            }
+            RunMode::Terminal => match Self::run_in_terminal(&program, args, &cwd) {
+                Ok(_) => {
+                    self.request_dir_load(workers, focus);
+                    self.request_preview_force(workers);
+                    KeypressResult::OpenedEditor
+                }
+                Err(e) => {
+                    self.push_overlay_message(e.to_string(), Timings::MESSAGE, None);
+                    KeypressResult::Recovered
+                }
+            },
+        }
+    }
+
     /// Runs an editor command in the background, so the TUI keeps running.
     fn run_in_background(
         &mut self,
         workers: &Workers,
         program: PathBuf,
         args: Vec<OsString>,
-        path: &Path,
+        cwd: PathBuf,
         check_status: bool,
     ) {
         let task = WorkerTask::RunCommand {
             program,
             args,
-            dir: path.parent().map(Path::to_path_buf),
+            dir: Some(cwd),
             check_status,
         };
         if workers.runner_tx().send(task).is_err() {
@@ -395,31 +457,13 @@ impl AppState {
     ///
     /// Temporary disables raw mode and exits alternate sceen while the editor runs.
     /// On return, restores raw mode and alternate sceen.
-    fn open_in_editor(
-        program: &Path,
-        args: Vec<OsString>,
-        file_path: &Path,
-    ) -> std::io::Result<()> {
-        let resolved_path = fs::canonicalize(file_path).unwrap_or_else(|_| file_path.to_path_buf());
-
+    fn run_in_terminal(program: &Path, args: Vec<OsString>, cwd: &Path) -> std::io::Result<()> {
         let mut stdout = io::stdout();
         disable_raw_mode()?;
         execute!(stdout, LeaveAlternateScreen)?;
 
         let mut editor_cmd = std::process::Command::new(program);
-        editor_cmd.args(args);
-
-        let target_dir = if resolved_path.is_dir() {
-            Some(resolved_path.as_path())
-        } else {
-            resolved_path.parent()
-        };
-
-        if let Some(dir) = target_dir
-            && !dir.as_os_str().is_empty()
-        {
-            editor_cmd.current_dir(dir);
-        }
+        editor_cmd.args(args).current_dir(cwd);
 
         let status = editor_cmd.status();
 

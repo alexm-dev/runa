@@ -537,6 +537,7 @@ impl AppState {
                     return self.handle_file_action(workers, file_act, clipboard);
                 }
                 Action::Tab(tab_act) => return KeypressResult::Tab(tab_act),
+                Action::Command(index) => return self.handle_user_command(workers, index),
             }
         }
 
