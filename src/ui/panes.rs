@@ -15,6 +15,7 @@ use ratatui::{
     Frame,
     layout::Rect,
     style::{Color, Modifier, Style},
+    symbols::line,
     text::{Line, Span, Text},
     widgets::{Block, List, ListItem, ListState, Paragraph},
 };
@@ -28,8 +29,7 @@ use crate::utils::text::StrBuffer;
 
 const MAX_RIGHT_COLUMN_WIDTH: u16 = 24;
 const MIN_LEFT_WIDTH: u16 = 12;
-const TREE_GUIDE: &str = "│ ";
-const TREE_GUIDES: &str = "│ │ │ │ │ │ │ │ │ │ │ │ │ │ │ │ ";
+const TREE_GUIDE_WIDTH: usize = 2;
 
 /// Styles used for rendering items in a pane
 /// Includes styles for regular items, directories and selected items
@@ -753,13 +753,13 @@ fn make_tree_row<'a>(row: &'a ListingRow, context: &PaneContext) -> ListItem<'a>
         style = style.patch(color);
     }
 
-    let levels = row.depth().min(TREE_GUIDES.len() / TREE_GUIDE.len());
-    let guides = &TREE_GUIDES[..levels * TREE_GUIDE.len()];
-
-    let mut spans = Vec::with_capacity(6);
+    let mut spans = Vec::with_capacity(5 + 2 * row.depth());
     spans.push(Span::raw(context.padding_str));
-    spans.push(Span::styled(guides, context.accent_style));
-    let mut used_w = UnicodeWidthStr::width(context.padding_str) + UnicodeWidthStr::width(guides);
+    for _ in 0..row.depth() {
+        spans.push(Span::styled(line::VERTICAL, context.accent_style));
+        spans.push(Span::raw(" "));
+    }
+    let mut used_w = UnicodeWidthStr::width(context.padding_str) + TREE_GUIDE_WIDTH * row.depth();
 
     if context.show_icons {
         let (icon, icon_color) = icons::name_icon(row.name(), is_dir, row.ext(), context.theme);
