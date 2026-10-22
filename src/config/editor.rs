@@ -9,7 +9,7 @@ use std::path::Path;
 use serde::Deserialize;
 
 use crate::config::input::InputKeyLists;
-use crate::utils::command::{LAST_EXTENSION, RunMode};
+use crate::utils::command::{self, LAST_EXTENSION, RunMode};
 
 /// An editor command and whether it takes over the terminal.
 #[derive(Debug)]
@@ -79,8 +79,7 @@ impl Editor {
             return EditorCommand::program(entry, LAST_EXTENSION);
         }
 
-        for (dot, _) in lower.match_indices('.').filter(|&(dot, _)| dot > 0) {
-            let ext = &lower[dot + 1..];
+        for ext in command::extensions(&lower) {
             if let Some(entry) = self.ext.get(ext) {
                 let ext_parts = ext.matches('.').count() + 1;
                 return EditorCommand::program(entry, ext_parts);

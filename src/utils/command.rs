@@ -39,6 +39,12 @@ impl RunMode {
     }
 }
 
+pub(crate) fn extensions(name: &str) -> impl Iterator<Item = &str> {
+    name.match_indices('.')
+        .filter(|&(dot, _)| dot > 0)
+        .map(move |(dot, _)| &name[dot + 1..])
+}
+
 pub(crate) fn expand_args(cmd: &[String], ext_parts: usize, path: &Path) -> Vec<OsString> {
     if has_file_variables(cmd) {
         return fill_file_variables(cmd, ext_parts, path);
