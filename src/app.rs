@@ -173,7 +173,7 @@ impl RunaRoot {
         Ok(true)
     }
 
-    pub(crate) fn reload_config(&mut self) {
+    fn reload_config(&mut self) {
         if !self
             .config_reload_throttler
             .can_trigger(Timings::CONFIG_RELOAD_MS)

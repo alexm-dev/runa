@@ -620,7 +620,7 @@ impl AppState {
     }
 
     /// Requests a recursive find operation for the current navigation directory
-    pub(crate) fn request_find(&mut self, workers: &Workers, query: String) {
+    fn request_find(&mut self, workers: &Workers, query: String) {
         self.actions.find_mut().cancel_current();
 
         let request_id = self.actions.find_mut().prepare_new_request();

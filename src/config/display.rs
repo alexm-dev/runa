@@ -164,7 +164,7 @@ impl Default for Display {
 /// This struct holds the ratio settings for the parent, main, and preview panes
 #[derive(Deserialize, Debug)]
 #[serde(default)]
-pub(crate) struct LayoutConfig {
+struct LayoutConfig {
     parent: u16,
     main: u16,
     preview: u16,
@@ -351,7 +351,7 @@ pub(crate) enum PreviewMethod {
 /// - Full: Full decorations including line numbers and and grid
 #[derive(Deserialize, Debug, Clone, Copy, Default)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum BatStyle {
+enum BatStyle {
     #[default]
     Plain,
     Numbers,
@@ -473,7 +473,7 @@ impl PreviewOptions {
 /// This enum defines the different border styles that can be used in the UI
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum BorderStyle {
+enum BorderStyle {
     None,
     Unified,
     Split,
@@ -483,7 +483,7 @@ pub(crate) enum BorderStyle {
 /// This enum defines the different border shapes that can be used in the UI
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum BorderShape {
+enum BorderShape {
     Square,
     Rounded,
     Double,
@@ -492,7 +492,7 @@ pub(crate) enum BorderShape {
 
 /// Public methods for accessing border shape options
 impl BorderShape {
-    pub(crate) fn as_border_type(&self) -> BorderType {
+    fn as_border_type(&self) -> BorderType {
         match self {
             BorderShape::Square => BorderType::Plain,
             BorderShape::Rounded => BorderType::Rounded,

@@ -80,12 +80,7 @@ impl TabManager {
         &mut self.tabs[self.current]
     }
 
-    pub(crate) fn add_tab(
-        &mut self,
-        mut tab: AppState,
-        workers: &Workers,
-        focus: Option<OsString>,
-    ) -> usize {
+    fn add_tab(&mut self, mut tab: AppState, workers: &Workers, focus: Option<OsString>) -> usize {
         if self.tabs.len() >= MAX_TABS {
             return self.current;
         }
@@ -99,7 +94,7 @@ impl TabManager {
         self.current
     }
 
-    pub(crate) fn switch(&mut self, dir: isize) {
+    fn switch(&mut self, dir: isize) {
         let n = self.tabs.len() as isize;
         if n == 0 {
             return;
@@ -108,14 +103,14 @@ impl TabManager {
         self.sync_tab_line();
     }
 
-    pub(crate) fn set_active(&mut self, idx: usize) {
+    fn set_active(&mut self, idx: usize) {
         if idx < self.tabs.len() {
             self.current = idx;
             self.sync_tab_line();
         }
     }
 
-    pub(crate) fn close_tab(&mut self, idx: usize) -> bool {
+    fn close_tab(&mut self, idx: usize) -> bool {
         if idx >= self.tabs.len() {
             return !self.tabs.is_empty();
         }

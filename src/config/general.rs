@@ -117,7 +117,7 @@ pub(super) struct StartupConfig {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct InternalStartup {
+struct InternalStartup {
     pub(crate) tabs: Vec<PathBuf>,
 }
 

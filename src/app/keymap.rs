@@ -86,7 +86,7 @@ pub(crate) enum PrefixCommand {
 #[derive(Hash, Eq, PartialEq, Copy, Clone, Debug)]
 pub(crate) struct Key {
     pub(crate) code: KeyCode,
-    pub(crate) modifiers: KeyModifiers,
+    modifiers: KeyModifiers,
 }
 
 /// Stores the mapping from Key to action, which is built in the config

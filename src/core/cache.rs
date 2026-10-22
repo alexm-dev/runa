@@ -40,7 +40,7 @@ impl DirCacheKey {
     }
 }
 
-pub(crate) type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<StrBuffer>>, u64, Instant)>;
+type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<StrBuffer>>, u64, Instant)>;
 
 pub(crate) struct DirCache {
     inner: DashMap<DirCacheKey, DirCacheValue>,

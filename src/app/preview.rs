@@ -211,7 +211,7 @@ impl PreviewState {
         }
     }
 
-    pub(crate) fn reset_scroll(&mut self) {
+    fn reset_scroll(&mut self) {
         self.scroll.reset();
         self.loaded_scroll = 0;
         self.loaded_eof = false;

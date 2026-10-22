@@ -36,7 +36,7 @@ impl ColorFallback for Color {
 
 #[derive(Deserialize, Debug, Clone, Copy, Default, PartialEq)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum ArchiveModifier {
+enum ArchiveModifier {
     #[default]
     None,
     Dim,

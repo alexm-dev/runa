@@ -429,7 +429,7 @@ impl FindState {
     /// Sets the cancellation token for the current find operation.
     ///
     /// Sets the internal cancel token.
-    pub(crate) fn set_cancel(&mut self, token: Arc<AtomicBool>) {
+    fn set_cancel(&mut self, token: Arc<AtomicBool>) {
         self.cancel = Some(token);
     }
 
@@ -446,7 +446,7 @@ impl FindState {
     }
 
     /// Sets the debounce timer for the find operation.
-    pub(crate) fn set_debounce(&mut self, delay: Duration) {
+    fn set_debounce(&mut self, delay: Duration) {
         self.debounce = Some(Instant::now() + delay);
     }
 

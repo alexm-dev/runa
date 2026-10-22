@@ -171,7 +171,7 @@ impl WidgetTheme {
     }
 
     /// Returns the background style, falling back to the provided style if Reset.
-    pub(crate) fn color_or(&self, fallback: Style) -> Style {
+    fn color_or(&self, fallback: Style) -> Style {
         self.color.style_or(&fallback.into())
     }
 

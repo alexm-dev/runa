@@ -19,9 +19,9 @@ use dashmap::DashMap;
 use humansize::{self, DECIMAL};
 
 #[cfg(windows)]
-pub(crate) const PERMS_WIDTH: usize = 5;
+const PERMS_WIDTH: usize = 5;
 #[cfg(unix)]
-pub(crate) const PERMS_WIDTH: usize = 10;
+const PERMS_WIDTH: usize = 10;
 
 /// Cached metadata for sorting.
 /// Holds system calls required info only.
@@ -56,7 +56,7 @@ pub(crate) fn get_or_update_cached_meta(
 ///
 /// Hold File, Directory, Symlink and Other types.
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum FileType {
+enum FileType {
     File,
     Directory,
     Symlink,
@@ -156,12 +156,12 @@ impl FileMetadata {
     }
 
     #[cfg(unix)]
-    pub(crate) fn uid(&self) -> u32 {
+    fn uid(&self) -> u32 {
         self.unix_meta.as_ref().map(|m| m.uid).unwrap_or(0)
     }
 
     #[cfg(unix)]
-    pub(crate) fn gid(&self) -> u32 {
+    fn gid(&self) -> u32 {
         self.unix_meta.as_ref().map(|m| m.gid).unwrap_or(0)
     }
 }
@@ -268,13 +268,13 @@ pub(crate) mod unix_meta {
             }
         }
 
-        pub(crate) fn fetch_user(uid: u32) -> Arc<str> {
+        fn fetch_user(uid: u32) -> Arc<str> {
             uzers::get_user_by_uid(uid)
                 .map(|u| u.name().to_string_lossy().into())
                 .unwrap_or_else(|| uid.to_string().into())
         }
 
-        pub(crate) fn fetch_group(gid: u32) -> Arc<str> {
+        fn fetch_group(gid: u32) -> Arc<str> {
             uzers::get_group_by_gid(gid)
                 .map(|g| g.name().to_string_lossy().into())
                 .unwrap_or_else(|| gid.to_string().into())
@@ -328,7 +328,7 @@ impl<'a> TimeFormatCtx<'a> {
 ///
 /// # Returns
 /// A string representing the formatted file attributes used by FileMetadata
-pub(crate) fn format_attributes(meta: &Metadata) -> String {
+fn format_attributes(meta: &Metadata) -> String {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -382,7 +382,7 @@ pub(crate) fn format_attributes(meta: &Metadata) -> String {
 /// Formats the FileType enum into a human-readable string.
 /// # Returns
 /// A static string representing the file type.
-pub(crate) fn format_file_type(file_type: &FileType) -> &'static str {
+fn format_file_type(file_type: &FileType) -> &'static str {
     match file_type {
         FileType::File => "File",
         FileType::Directory => "Directory",
