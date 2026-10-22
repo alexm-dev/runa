@@ -170,11 +170,6 @@ impl WidgetTheme {
         self.border.style_or(&fallback.into())
     }
 
-    /// Returns the background style, falling back to the provided style if Reset.
-    fn color_or(&self, fallback: Style) -> Style {
-        self.color.style_or(&fallback.into())
-    }
-
     /// Returns the foreground style, falling back to the internal default theme if Reset.
     pub(crate) fn fg_or_theme(&self) -> Style {
         self.color_or(Theme::builtin().widget.color.fg_style())
@@ -215,6 +210,11 @@ impl WidgetTheme {
             value: ColorPair::new(Color::Reset, Color::Reset),
             ..Self::default()
         }
+    }
+
+    /// Returns the background style, falling back to the provided style if Reset.
+    fn color_or(&self, fallback: Style) -> Style {
+        self.color.style_or(&fallback.into())
     }
 }
 

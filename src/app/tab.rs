@@ -80,6 +80,50 @@ impl TabManager {
         &mut self.tabs[self.current]
     }
 
+    pub(crate) fn sync_tab_line(&mut self) {
+        let tab_spans = if self.tabs.len() <= 1 {
+            Vec::new()
+        } else {
+            let (tab_theme, separator) = {
+                let theme = self.tabs[self.current].config().theme();
+                (theme.tab().clone(), theme.tab().separator().to_string())
+            };
+
+            let mut spans = Vec::with_capacity(self.tabs.len() * 2 - 1);
+            for (i, tab) in self.tabs.iter().enumerate() {
+                let is_current = i == self.current;
+                let style = if is_current {
+                    tab_theme.active_style_or_theme()
+                } else {
+                    tab_theme.inactive_style_or_theme()
+                };
+
+                let name = if tab_theme.uses_name() {
+                    let cwd = tab.nav.current_dir();
+                    let shortened = path::shorten_home_path(cwd);
+                    Path::new(&shortened)
+                        .file_name()
+                        .map(|os_str| os_str.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| cwd.to_string_lossy().into_owned())
+                } else {
+                    String::new()
+                };
+
+                let formatted = tab_theme.format_tab(i, is_current, Some(&name));
+
+                spans.push(Span::styled(formatted, style));
+                if i != self.tabs.len() - 1 {
+                    spans.push(Span::raw(separator.clone()));
+                }
+            }
+            spans
+        };
+
+        if let Some(active_tab) = self.tabs.get_mut(self.current) {
+            active_tab.tab_line = Arc::new(tab_spans);
+        }
+    }
+
     fn add_tab(&mut self, mut tab: AppState, workers: &Workers, focus: Option<OsString>) -> usize {
         if self.tabs.len() >= MAX_TABS {
             return self.current;
@@ -125,50 +169,6 @@ impl TabManager {
             }
             self.sync_tab_line();
             true
-        }
-    }
-
-    pub(crate) fn sync_tab_line(&mut self) {
-        let tab_spans = if self.tabs.len() <= 1 {
-            Vec::new()
-        } else {
-            let (tab_theme, separator) = {
-                let theme = self.tabs[self.current].config().theme();
-                (theme.tab().clone(), theme.tab().separator().to_string())
-            };
-
-            let mut spans = Vec::with_capacity(self.tabs.len() * 2 - 1);
-            for (i, tab) in self.tabs.iter().enumerate() {
-                let is_current = i == self.current;
-                let style = if is_current {
-                    tab_theme.active_style_or_theme()
-                } else {
-                    tab_theme.inactive_style_or_theme()
-                };
-
-                let name = if tab_theme.uses_name() {
-                    let cwd = tab.nav.current_dir();
-                    let shortened = path::shorten_home_path(cwd);
-                    Path::new(&shortened)
-                        .file_name()
-                        .map(|os_str| os_str.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| cwd.to_string_lossy().into_owned())
-                } else {
-                    String::new()
-                };
-
-                let formatted = tab_theme.format_tab(i, is_current, Some(&name));
-
-                spans.push(Span::styled(formatted, style));
-                if i != self.tabs.len() - 1 {
-                    spans.push(Span::raw(separator.clone()));
-                }
-            }
-            spans
-        };
-
-        if let Some(active_tab) = self.tabs.get_mut(self.current) {
-            active_tab.tab_line = Arc::new(tab_spans);
         }
     }
 }

@@ -426,13 +426,6 @@ impl FindState {
         self.selected = 0;
     }
 
-    /// Sets the cancellation token for the current find operation.
-    ///
-    /// Sets the internal cancel token.
-    fn set_cancel(&mut self, token: Arc<AtomicBool>) {
-        self.cancel = Some(token);
-    }
-
     /// Clears the cached find results.
     pub(crate) fn clear_results(&mut self) {
         self.cache.clear();
@@ -443,11 +436,6 @@ impl FindState {
     pub(crate) fn prepare_new_request(&mut self) -> u64 {
         self.request_id = self.request_id.wrapping_add(1);
         self.request_id
-    }
-
-    /// Sets the debounce timer for the find operation.
-    fn set_debounce(&mut self, delay: Duration) {
-        self.debounce = Some(Instant::now() + delay);
     }
 
     /// Takes the current query if the debounce period has elapsed and its different from the last query.
@@ -488,6 +476,18 @@ impl FindState {
         if self.selected > 0 {
             self.selected -= 1;
         }
+    }
+
+    /// Sets the cancellation token for the current find operation.
+    ///
+    /// Sets the internal cancel token.
+    fn set_cancel(&mut self, token: Arc<AtomicBool>) {
+        self.cancel = Some(token);
+    }
+
+    /// Sets the debounce timer for the find operation.
+    fn set_debounce(&mut self, delay: Duration) {
+        self.debounce = Some(Instant::now() + delay);
     }
 }
 

@@ -211,12 +211,6 @@ impl PreviewState {
         }
     }
 
-    fn reset_scroll(&mut self) {
-        self.scroll.reset();
-        self.loaded_scroll = 0;
-        self.loaded_eof = false;
-    }
-
     /// Returns the first line and line count to load: the view plus the preloaded pages around it
     pub(crate) fn load_window(&self, preview_height: usize) -> (usize, usize) {
         let offset = self.scroll.offset();
@@ -254,6 +248,12 @@ impl PreviewState {
             PreviewData::Directory { .. } => self.scroll.offset(),
             PreviewData::Empty => 0,
         }
+    }
+
+    fn reset_scroll(&mut self) {
+        self.scroll.reset();
+        self.loaded_scroll = 0;
+        self.loaded_eof = false;
     }
 
     fn keep_visible_lines(&mut self) {

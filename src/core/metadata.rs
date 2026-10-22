@@ -268,18 +268,6 @@ pub(crate) mod unix_meta {
             }
         }
 
-        fn fetch_user(uid: u32) -> Arc<str> {
-            uzers::get_user_by_uid(uid)
-                .map(|u| u.name().to_string_lossy().into())
-                .unwrap_or_else(|| uid.to_string().into())
-        }
-
-        fn fetch_group(gid: u32) -> Arc<str> {
-            uzers::get_group_by_gid(gid)
-                .map(|g| g.name().to_string_lossy().into())
-                .unwrap_or_else(|| gid.to_string().into())
-        }
-
         pub(crate) fn resolve_user(&mut self, uid: u32) -> Arc<str> {
             self.users
                 .entry(uid)
@@ -292,6 +280,18 @@ pub(crate) mod unix_meta {
                 .entry(gid)
                 .or_insert_with(|| Self::fetch_group(gid))
                 .clone()
+        }
+
+        fn fetch_user(uid: u32) -> Arc<str> {
+            uzers::get_user_by_uid(uid)
+                .map(|u| u.name().to_string_lossy().into())
+                .unwrap_or_else(|| uid.to_string().into())
+        }
+
+        fn fetch_group(gid: u32) -> Arc<str> {
+            uzers::get_group_by_gid(gid)
+                .map(|g| g.name().to_string_lossy().into())
+                .unwrap_or_else(|| gid.to_string().into())
         }
     }
 }
@@ -318,6 +318,42 @@ impl<'a> TimeFormatCtx<'a> {
                 .any(|w| matches!(w, b"%Y" | b"%y")),
         }
     }
+}
+
+/// Formats the file size into a human-readable string.
+/// # Returns
+/// A string representing the formatted file size or "-" for directories/unknown sizes.
+pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
+    if is_dir {
+        "-".into()
+    } else if let Some(sz) = size {
+        humansize::format_size(sz, DECIMAL)
+    } else {
+        "-".to_string()
+    }
+}
+
+/// Formats the file time (modified, created, or accessed) into a human-readable string based on the
+/// provided format and context.
+/// The context allows for dynamic formatting based on how old the timestamp is compared to the
+/// current time.
+pub(crate) fn format_file_time(time: Option<SystemTime>, ctx: &TimeFormatCtx) -> String {
+    let Some(t) = time else {
+        return "-".to_string();
+    };
+
+    let dt: DateTime<Local> = DateTime::from(t);
+    let final_format = if !ctx.has_year && (ctx.now - dt).abs() > ctx.six_months {
+        "%b %e  %Y"
+    } else {
+        ctx.fmt
+    };
+
+    let formatted = dt.format(final_format).to_string();
+    if formatted.is_empty() {
+        return dt.format("%Y-%m-%d %H:%M").to_string();
+    }
+    formatted
 }
 
 /// Formatts the file attributes like Directory, Symlink, and permissions in a unix-like format
@@ -389,42 +425,6 @@ fn format_file_type(file_type: &FileType) -> &'static str {
         FileType::Symlink => "Symlink",
         FileType::Other => "Other",
     }
-}
-
-/// Formats the file size into a human-readable string.
-/// # Returns
-/// A string representing the formatted file size or "-" for directories/unknown sizes.
-pub(crate) fn format_file_size(size: Option<u64>, is_dir: bool) -> String {
-    if is_dir {
-        "-".into()
-    } else if let Some(sz) = size {
-        humansize::format_size(sz, DECIMAL)
-    } else {
-        "-".to_string()
-    }
-}
-
-/// Formats the file time (modified, created, or accessed) into a human-readable string based on the
-/// provided format and context.
-/// The context allows for dynamic formatting based on how old the timestamp is compared to the
-/// current time.
-pub(crate) fn format_file_time(time: Option<SystemTime>, ctx: &TimeFormatCtx) -> String {
-    let Some(t) = time else {
-        return "-".to_string();
-    };
-
-    let dt: DateTime<Local> = DateTime::from(t);
-    let final_format = if !ctx.has_year && (ctx.now - dt).abs() > ctx.six_months {
-        "%b %e  %Y"
-    } else {
-        ctx.fmt
-    };
-
-    let formatted = dt.format(final_format).to_string();
-    if formatted.is_empty() {
-        return dt.format("%Y-%m-%d %H:%M").to_string();
-    }
-    formatted
 }
 
 #[cfg(test)]

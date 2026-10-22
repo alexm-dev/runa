@@ -248,14 +248,6 @@ impl NavState {
         }
     }
 
-    /// Returns an iterator over the entries that match the current filter.
-    /// If the filter is empty, returns all entries.
-    fn shown_entries(&self) -> impl Iterator<Item = &FileEntry> {
-        self.shown_indices
-            .iter()
-            .filter_map(|&i| self.entries.get(i))
-    }
-
     /// Returns the number of entries that match the current filter.
     pub(crate) fn shown_entries_len(&self) -> usize {
         self.shown_indices.len()
@@ -357,6 +349,14 @@ impl NavState {
 
     pub(crate) fn set_sort_config(&mut self, sort_config: SortConfig) {
         self.sort_config = sort_config;
+    }
+
+    /// Returns an iterator over the entries that match the current filter.
+    /// If the filter is empty, returns all entries.
+    fn shown_entries(&self) -> impl Iterator<Item = &FileEntry> {
+        self.shown_indices
+            .iter()
+            .filter_map(|&i| self.entries.get(i))
     }
 }
 

@@ -619,29 +619,6 @@ impl AppState {
         });
     }
 
-    /// Requests a recursive find operation for the current navigation directory
-    fn request_find(&mut self, workers: &Workers, query: String) {
-        self.actions.find_mut().cancel_current();
-
-        let request_id = self.actions.find_mut().prepare_new_request();
-        let cancel_token = Arc::new(AtomicBool::new(false));
-
-        let show_hidden = self.config.general().show_hidden();
-
-        self.actions
-            .set_cancel_find_token(Arc::clone(&cancel_token));
-
-        let _ = workers.find_tx().try_send(WorkerTask::FindRecursive {
-            base_dir: self.nav.current_dir().to_path_buf(),
-            query,
-            max_results: self.config().general().max_find_results(),
-            request_id,
-            show_hidden,
-            cancel: cancel_token,
-            tab_id: self.tab_id(),
-        });
-    }
-
     pub(crate) fn request_dir_sort(&mut self, workers: &Workers, focus: Option<OsString>) {
         self.is_loading = true;
         let request_id = self.nav.request_id();
@@ -670,6 +647,29 @@ impl AppState {
             show_system: self.config.general().show_system(),
             case_insensitive: self.config.general().case_insensitive(),
         }
+    }
+
+    /// Requests a recursive find operation for the current navigation directory
+    fn request_find(&mut self, workers: &Workers, query: String) {
+        self.actions.find_mut().cancel_current();
+
+        let request_id = self.actions.find_mut().prepare_new_request();
+        let cancel_token = Arc::new(AtomicBool::new(false));
+
+        let show_hidden = self.config.general().show_hidden();
+
+        self.actions
+            .set_cancel_find_token(Arc::clone(&cancel_token));
+
+        let _ = workers.find_tx().try_send(WorkerTask::FindRecursive {
+            base_dir: self.nav.current_dir().to_path_buf(),
+            query,
+            max_results: self.config().general().max_find_results(),
+            request_id,
+            show_hidden,
+            cancel: cancel_token,
+            tab_id: self.tab_id(),
+        });
     }
 
     /// Requests a preview load for the currently selected entry in the navigation pane
