@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   ci:
-    if: github.actor == 'alexm-dev' && (github.ref_type == 'tag' || inputs.dry_run)
+    if: github.actor == 'alexm-dev' && github.triggering_actor == 'alexm-dev' && (github.ref_type == 'tag' || inputs.dry_run)
     uses: ./.github/workflows/rust.yml
 
   release:
