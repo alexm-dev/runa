@@ -12,11 +12,13 @@ use crate::config::Theme;
 use crate::core::FileEntry;
 use crate::utils::text::parse_color;
 
+type IconMap = phf::Map<&'static str, (&'static str, Option<&'static str>)>;
+
 /// File extension to icon mapping
 /// This map associates common file extensions with their corresponding
 /// Nerd Font icons.
 /// For example, "rs" maps to the Rust icon "".
-static EXT_ICON_MAP: phf::Map<&'static str, (&'static str, Option<&'static str>)> = phf_map! {
+static EXT_ICON_MAP: IconMap = phf_map! {
     "rs"    => ("", Some("#dea584")),
     "rlib"  => ("", Some("#dea584")),
     "py"    => ("", Some("#3572a5")),
@@ -90,7 +92,7 @@ static EXT_ICON_MAP: phf::Map<&'static str, (&'static str, Option<&'static str>)
 /// Special file names
 /// This map associates specific filenames with their corresponding
 /// Nerd Font icons.
-static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, (&'static str, Option<&'static str>)> = phf_map! {
+static SPECIAL_FILE_ICON_MAP: IconMap = phf_map! {
     "README.md"          => ("", None),
     "LICENSE"            => ("", Some("#cbcb41")),
     "LICENSE-MIT"        => ("", Some("#cbcb41")),
@@ -136,7 +138,7 @@ static SPECIAL_FILE_ICON_MAP: phf::Map<&'static str, (&'static str, Option<&'sta
 /// Special directory names
 /// This map associates specific directory names with their corresponding
 /// Nerd Font icons.
-static SPECIAL_DIR_ICON_MAP: phf::Map<&'static str, (&'static str, Option<&'static str>)> = phf_map! {
+static SPECIAL_DIR_ICON_MAP: IconMap = phf_map! {
     "Desktop"      => ("󰍹", Some("#43a047")),
     "Documents"    => ("󱔗", Some("#1e88e5")),
     "Downloads"    => ("", Some("#1e88e5")),

@@ -15,6 +15,8 @@ use crate::config::{
 use crate::core::metadata::FileMetadataCache;
 use crate::ui::widgets::{self, DialogLayout};
 
+type HelpRow = (String, &'static str);
+
 pub(crate) fn draw_show_info_dialog(
     frame: &mut Frame,
     app: &AppState,
@@ -177,7 +179,7 @@ pub(crate) fn draw_prefix_help_overlay(frame: &mut Frame, app: &AppState, accent
         return;
     }
 
-    let mut go_to_prefixes: Vec<(String, &'static str)> =
+    let mut go_to_prefixes: Vec<HelpRow> =
         Vec::with_capacity(go_to_top_keys.len() + go_to_path_keys.len());
     if let Some(k) = go_to_top_keys.first() {
         go_to_prefixes.push((k.clone(), "Go to top"));
@@ -455,10 +457,10 @@ pub(crate) fn draw_keybind_help(frame: &mut Frame, app: &AppState, accent_style:
         }
     };
 
-    let sections: Vec<(&str, Vec<(String, &'static str)>)> = HELP_DATA
+    let sections: Vec<(&str, Vec<HelpRow>)> = HELP_DATA
         .iter()
         .map(|section| {
-            let mut rows: Vec<(String, &'static str)> = section
+            let mut rows: Vec<HelpRow> = section
                 .entries
                 .iter()
                 .map(|entry| {

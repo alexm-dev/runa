@@ -132,10 +132,12 @@ impl<'a> PaneContext<'a> {
     }
 }
 
+type NameSet<'a> = HashSet<&'a OsStr>;
+
 /// Marker and clipboard data for use in pane drawing functions
 pub(super) struct PaneMarkers<'a> {
-    markers: Option<HashSet<&'a OsStr>>,
-    clipboard: Option<HashSet<&'a OsStr>>,
+    markers: Option<NameSet<'a>>,
+    clipboard: Option<NameSet<'a>>,
     marker_icon: &'a str,
     marker_style: Style,
     clipboard_style: Style,
@@ -218,14 +220,14 @@ pub(super) fn draw_main(
 
     let sort_column = app.nav().sort_column();
     let inner_w = pane_inner_width(&context);
-    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
+    let right_layout = right_col_config(inner_w, sort_column.as_deref());
 
     let mut items = Vec::with_capacity(shown_len);
     for (vis_idx, &abs_idx) in app.nav().shown_indices().iter().enumerate() {
         let entry = &app.nav().entries()[abs_idx];
         let is_selected = Some(vis_idx) == selected_idx;
         let entry_style = context.styles.get_style(entry.is_dir(), is_selected);
-        let right = right_col_for(show_col, right_w, sort_column.as_deref(), abs_idx);
+        let right = right_col_for(right_layout, sort_column.as_deref(), abs_idx);
 
         items.push(make_entry_row(
             entry,
@@ -354,7 +356,7 @@ pub(super) fn draw_preview(
             }
 
             let inner_w = pane_inner_width(&context);
-            let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
+            let right_layout = right_col_config(inner_w, sort_column.as_deref());
 
             let offset = app.preview().window_offset();
             let rows = context.block.inner(context.area).height as usize;
@@ -363,7 +365,7 @@ pub(super) fn draw_preview(
             for (idx, entry) in entries.iter().enumerate().skip(offset).take(rows) {
                 let is_selected = Some(idx) == selected_idx;
                 let style = context.styles.get_style(entry.is_dir(), is_selected);
-                let right = right_col_for(show_col, right_w, sort_column.as_deref(), idx);
+                let right = right_col_for(right_layout, sort_column.as_deref(), idx);
 
                 items.push(make_entry_row(
                     entry,
@@ -424,13 +426,13 @@ pub(super) fn draw_parent(
 
     let sort_column = app.parent().sort_column();
     let inner_w = pane_inner_width(&context);
-    let (show_col, right_w) = right_col_config(inner_w, sort_column.as_deref());
+    let right_layout = right_col_config(inner_w, sort_column.as_deref());
 
     let mut items = Vec::with_capacity(entries.len());
     for (idx, entry) in entries.iter().enumerate() {
         let is_selected = Some(idx) == selected_idx;
         let style = context.styles.get_style(entry.is_dir(), is_selected);
-        let right = right_col_for(show_col, right_w, sort_column.as_deref(), idx);
+        let right = right_col_for(right_layout, sort_column.as_deref(), idx);
 
         items.push(make_entry_row(
             entry,
@@ -471,39 +473,22 @@ pub(super) fn make_pane_markers<'a>(
     marker_style: Style,
     clipboard_style: Style,
 ) -> PaneMarkers<'a> {
-    let (markers, clipboard) = pane_marker_sets(nav_markers, clipboard, dir);
+    let names_in = |set: &'a HashSet<PathBuf>, dir: &Path| -> NameSet<'a> {
+        set.iter()
+            .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
+            .filter_map(|p| p.file_name())
+            .collect()
+    };
+
+    let markers = dir.map(|dir| names_in(nav_markers, dir));
+    let clipboard = dir.and_then(|dir| clipboard.map(|set| names_in(set, dir)));
+
     PaneMarkers {
         markers,
         clipboard,
         marker_icon,
         marker_style,
         clipboard_style,
-    }
-}
-
-/// Helper: Build marker and clipboard sets for a specific preview directory.
-/// Used to decorate the preview pane with marker/copy icons.
-fn pane_marker_sets<'a>(
-    nav_markers: &'a HashSet<PathBuf>,
-    clipboard: Option<&'a HashSet<PathBuf>>,
-    dir: Option<&Path>,
-) -> (Option<HashSet<&'a OsStr>>, Option<HashSet<&'a OsStr>>) {
-    match dir {
-        Some(dir) => {
-            let markers = nav_markers
-                .iter()
-                .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
-                .filter_map(|p| p.file_name())
-                .collect();
-            let clipboard = clipboard.map(|set| {
-                set.iter()
-                    .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
-                    .filter_map(|p| p.file_name())
-                    .collect()
-            });
-            (Some(markers), clipboard)
-        }
-        None => (None, None),
     }
 }
 
@@ -523,7 +508,7 @@ fn make_main_pane_markers<'a>(
     let local_markers = if markers.is_empty() {
         None
     } else {
-        let set: HashSet<&OsStr> = markers
+        let set: NameSet = markers
             .iter()
             .filter(|p| p.parent() == Some(current_dir))
             .filter_map(|p| p.file_name())
@@ -536,7 +521,7 @@ fn make_main_pane_markers<'a>(
         set.iter()
             .filter(|p| p.parent() == Some(current_dir))
             .filter_map(|p| p.file_name())
-            .collect::<HashSet<&OsStr>>()
+            .collect::<NameSet>()
     });
 
     PaneMarkers {
@@ -859,11 +844,19 @@ fn right_col_width(sort_column: Option<&StrBuffer>) -> u16 {
     (max_w as u16).min(MAX_RIGHT_COLUMN_WIDTH)
 }
 
+#[derive(Clone, Copy)]
+struct RightColLayout {
+    show: bool,
+    width: u16,
+}
+
 #[inline]
-fn right_col_config(inner_w: u16, sort_column: Option<&StrBuffer>) -> (bool, u16) {
-    let right_w = right_col_width(sort_column);
-    let show_col = pane_show_col(inner_w, right_w);
-    (show_col, right_w)
+fn right_col_config(inner_w: u16, sort_column: Option<&StrBuffer>) -> RightColLayout {
+    let width = right_col_width(sort_column);
+    RightColLayout {
+        show: pane_show_col(inner_w, width),
+        width,
+    }
 }
 
 #[inline]
@@ -873,16 +866,15 @@ fn right_col_at(sort_column: Option<&StrBuffer>, idx: usize) -> Option<&str> {
 
 #[inline]
 fn right_col_for(
-    show_col: bool,
-    right_w: u16,
+    layout: RightColLayout,
     sort_column: Option<&StrBuffer>,
     idx: usize,
 ) -> RightCol<'_> {
-    if !show_col {
+    if !layout.show {
         return RightCol::none();
     }
     RightCol {
         text: right_col_at(sort_column, idx),
-        width: right_w,
+        width: layout.width,
     }
 }

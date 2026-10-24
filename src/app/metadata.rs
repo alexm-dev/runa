@@ -10,9 +10,15 @@ use crate::core::metadata::FileMetadataCache;
 use crate::utils::timings::Throttler;
 
 #[derive(Debug, Clone)]
+struct PendingRequest {
+    request_id: u64,
+    path: PathBuf,
+}
+
+#[derive(Debug, Clone)]
 pub(super) struct MetadataState {
     request_id: u64,
-    pending: Option<(u64, PathBuf)>,
+    pending: Option<PendingRequest>,
     selected: Option<Arc<FileMetadataCache>>,
     last_request_time: Throttler,
 }
@@ -33,7 +39,9 @@ impl MetadataState {
     }
 
     pub(super) fn is_pending_path(&self, path: &Path) -> bool {
-        self.pending.as_ref().is_some_and(|(_, p)| p == path)
+        self.pending
+            .as_ref()
+            .is_some_and(|pending| pending.path == path)
     }
 
     pub(super) fn try_request(&mut self, throttle_ms: u64) -> bool {
@@ -49,11 +57,16 @@ impl MetadataState {
     }
 
     pub(super) fn set_pending(&mut self, id: u64, path: PathBuf) {
-        self.pending = Some((id, path));
+        self.pending = Some(PendingRequest {
+            request_id: id,
+            path,
+        });
     }
 
     pub(super) fn matches_pending(&self, id: u64, path: &Path) -> bool {
-        matches!(&self.pending, Some((pid, p)) if *pid == id && p == path )
+        self.pending
+            .as_ref()
+            .is_some_and(|pending| pending.request_id == id && pending.path == path)
     }
 
     pub(super) fn selected(&self) -> Option<&FileMetadataCache> {

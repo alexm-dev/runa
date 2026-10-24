@@ -109,8 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn newer_load_replaces_the_cached_listing_of_another_requester()
-    -> Result<(), Box<dyn std::error::Error>> {
+    fn cache_keeps_newest_read() -> Result<(), Box<dyn std::error::Error>> {
         let workers = Workers::spawn();
         let temp = tempdir()?;
         fs::File::create(temp.path().join("a.txt"))?;
