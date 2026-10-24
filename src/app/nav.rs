@@ -269,6 +269,14 @@ impl NavState {
         self.entries.get(*actual_idx)
     }
 
+    /// Returns true if the path points to the selected entry of the current directory.
+    pub(crate) fn is_selected_path(&self, path: &Path) -> bool {
+        path.parent() == Some(self.current_dir.as_path())
+            && self
+                .selected_entry()
+                .is_some_and(|entry| path.file_name() == Some(entry.name()))
+    }
+
     /// Sets a new filter string, preserving the selected entry if possible.
     pub(crate) fn set_filter(&mut self, filter: String) {
         if self.active_filter == filter {

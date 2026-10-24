@@ -374,11 +374,7 @@ impl AppState {
                     return;
                 }
                 // PREVIEW CHECK: Must match the current preview request
-                if request_id == self.preview.request_id()
-                    && let Some(entry) = self.nav.selected_entry()
-                    && path.parent() == Some(self.nav.current_dir())
-                    && path.file_name() == Some(entry.name())
-                {
+                if request_id == self.preview.request_id() && self.nav.is_selected_path(&path) {
                     let pos = self
                         .nav
                         .get_position()
@@ -425,11 +421,7 @@ impl AppState {
                 request_id,
                 tab_id: _tab_id,
             } => {
-                if request_id == self.preview.request_id()
-                    && let Some(entry) = self.nav.selected_entry()
-                    && path.parent() == Some(self.nav.current_dir())
-                    && path.file_name() == Some(entry.name())
-                {
+                if request_id == self.preview.request_id() && self.nav.is_selected_path(&path) {
                     self.preview.update_content(
                         lines,
                         self.metrics.preview_height,
@@ -509,9 +501,7 @@ impl AppState {
                     self.is_loading = false;
                     self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
                 } else if request_id == self.preview.request_id()
-                    && let Some(entry) = self.nav.selected_entry()
-                    && path.parent() == Some(self.nav.current_dir())
-                    && path.file_name() == Some(entry.name())
+                    && self.nav.is_selected_path(&path)
                 {
                     self.preview.set_error(message);
                 } else if request_id == self.parent.request_id()
