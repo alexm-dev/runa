@@ -7,7 +7,7 @@
 
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::ffi::OsString;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 use ratatui::widgets::BorderType;
@@ -134,8 +134,8 @@ impl<'a> PaneContext<'a> {
 
 /// Marker and clipboard data for use in pane drawing functions
 pub(super) struct PaneMarkers<'a> {
-    markers: Option<HashSet<OsString>>,
-    clipboard: Option<HashSet<OsString>>,
+    markers: Option<HashSet<&'a OsStr>>,
+    clipboard: Option<HashSet<&'a OsStr>>,
     marker_icon: &'a str,
     marker_style: Style,
     clipboard_style: Style,
@@ -483,22 +483,22 @@ pub(super) fn make_pane_markers<'a>(
 
 /// Helper: Build marker and clipboard sets for a specific preview directory.
 /// Used to decorate the preview pane with marker/copy icons.
-fn pane_marker_sets(
-    nav_markers: &HashSet<PathBuf>,
-    clipboard: Option<&HashSet<PathBuf>>,
+fn pane_marker_sets<'a>(
+    nav_markers: &'a HashSet<PathBuf>,
+    clipboard: Option<&'a HashSet<PathBuf>>,
     dir: Option<&Path>,
-) -> (Option<HashSet<OsString>>, Option<HashSet<OsString>>) {
+) -> (Option<HashSet<&'a OsStr>>, Option<HashSet<&'a OsStr>>) {
     match dir {
         Some(dir) => {
             let markers = nav_markers
                 .iter()
                 .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
-                .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+                .filter_map(|p| p.file_name())
                 .collect();
             let clipboard = clipboard.map(|set| {
                 set.iter()
                     .filter(|p| p.parent().map(|parent| parent == dir).unwrap_or(false))
-                    .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+                    .filter_map(|p| p.file_name())
                     .collect()
             });
             (Some(markers), clipboard)
@@ -523,10 +523,10 @@ fn make_main_pane_markers<'a>(
     let local_markers = if markers.is_empty() {
         None
     } else {
-        let set: HashSet<OsString> = markers
+        let set: HashSet<&OsStr> = markers
             .iter()
             .filter(|p| p.parent() == Some(current_dir))
-            .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
+            .filter_map(|p| p.file_name())
             .collect();
 
         if set.is_empty() { None } else { Some(set) }
@@ -535,8 +535,8 @@ fn make_main_pane_markers<'a>(
     let clipboard = clipboard.entries.as_ref().map(|set| {
         set.iter()
             .filter(|p| p.parent() == Some(current_dir))
-            .filter_map(|p| p.file_name().map(|n| n.to_os_string()))
-            .collect::<HashSet<OsString>>()
+            .filter_map(|p| p.file_name())
+            .collect::<HashSet<&OsStr>>()
     });
 
     PaneMarkers {
