@@ -7,7 +7,6 @@
 
 use std::ffi::OsString;
 use std::path::Path;
-use std::sync::Arc;
 
 use ratatui::text::Span;
 
@@ -19,8 +18,8 @@ use crate::utils::{Timings, path};
 pub(crate) const MAX_TABS: usize = 9;
 
 pub(crate) struct TabManager {
-    pub(crate) tabs: Vec<AppState>,
-    pub(crate) current: usize,
+    tabs: Vec<AppState>,
+    current: usize,
     next_tab_id: usize,
 }
 
@@ -31,8 +30,8 @@ impl TabManager {
         workers: &Workers,
         focus: Option<OsString>,
     ) -> Self {
-        existing.tab_id = Some(0);
-        new_tab.tab_id = Some(1);
+        existing.set_tab_id(0);
+        new_tab.set_tab_id(1);
 
         new_tab.initialize(workers, focus);
 
@@ -47,8 +46,8 @@ impl TabManager {
 
     pub(crate) fn from_vec(mut tabs: Vec<AppState>) -> Self {
         for (i, tab) in tabs.iter_mut().enumerate() {
-            if tab.tab_id.is_none() {
-                tab.tab_id = Some(i);
+            if tab.tab_id().is_none() {
+                tab.set_tab_id(i);
             }
         }
 
@@ -70,6 +69,10 @@ impl TabManager {
     #[inline]
     pub(crate) fn is_empty(&self) -> bool {
         self.tabs.is_empty()
+    }
+
+    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = &mut AppState> {
+        self.tabs.iter_mut()
     }
 
     pub(crate) fn current_tab(&self) -> &AppState {
@@ -99,7 +102,7 @@ impl TabManager {
                 };
 
                 let name = if tab_theme.uses_name() {
-                    let cwd = tab.nav.current_dir();
+                    let cwd = tab.nav().current_dir();
                     let shortened = path::shorten_home_path(cwd);
                     Path::new(&shortened)
                         .file_name()
@@ -120,7 +123,7 @@ impl TabManager {
         };
 
         if let Some(active_tab) = self.tabs.get_mut(self.current) {
-            active_tab.tab_line = Arc::new(tab_spans);
+            active_tab.set_tab_line(tab_spans);
         }
     }
 
@@ -129,7 +132,7 @@ impl TabManager {
             return self.current;
         }
 
-        tab.tab_id = Some(self.next_tab_id);
+        tab.set_tab_id(self.next_tab_id);
         self.next_tab_id = self.next_tab_id.saturating_add(1);
         tab.initialize(workers, focus);
         self.tabs.push(tab);

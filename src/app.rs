@@ -5,7 +5,6 @@
 //! preview pane and parent pane requests.
 
 pub(crate) mod actions;
-pub(crate) mod handlers;
 pub(crate) mod keymap;
 pub(crate) mod metadata;
 pub(crate) mod nav;
@@ -141,7 +140,7 @@ impl RunaRoot {
                 }
                 AppContainer::Tabs(tabs) => {
                     let target_app = if let Some(id) = response.tab_id() {
-                        tabs.tabs.iter_mut().find(|t| t.tab_id == Some(id))
+                        tabs.iter_mut().find(|t| t.tab_id() == Some(id))
                     } else {
                         Some(tabs.current_tab_mut())
                     };
@@ -167,7 +166,7 @@ impl RunaRoot {
                 app.push_overlay_message("UI reloaded!".into(), Timings::MESSAGE_SHORT, None);
             }
             AppContainer::Tabs(tabs) => {
-                for tab in &mut tabs.tabs {
+                for tab in tabs.iter_mut() {
                     tab.push_overlay_message("UI reloaded!".into(), Timings::MESSAGE_SHORT, None);
                 }
             }
@@ -198,7 +197,7 @@ impl RunaRoot {
                         );
                     }
                     AppContainer::Tabs(tabs) => {
-                        for tab in &mut tabs.tabs {
+                        for tab in tabs.iter_mut() {
                             tab.apply_new_config(Arc::clone(&new_config));
                         }
                         tabs.sync_tab_line();

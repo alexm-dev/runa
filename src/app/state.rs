@@ -3,6 +3,11 @@
 //! This module defines the overall [AppState] struct, which holds all major application
 //! information and passes it to relevant UI/Terminal functions
 
+mod file_actions;
+mod input_mode;
+mod nav_actions;
+mod overlay_handlers;
+
 use std::env;
 use std::ffi::OsString;
 use std::io;
@@ -77,30 +82,30 @@ impl Default for LayoutMetrics {
 /// Functions are provided for the core event loop, input handling, file navigationm
 /// worker requests and Notification management.
 pub(crate) struct AppState {
-    pub(super) config: Arc<Config>,
-    pub(super) keymap: Keymap,
+    config: Arc<Config>,
+    keymap: Keymap,
 
-    pub(super) metrics: LayoutMetrics,
+    metrics: LayoutMetrics,
 
-    pub(super) nav: NavState,
-    pub(super) actions: ActionContext,
-    pub(super) preview: PreviewState,
-    pub(super) parent: ParentState,
+    nav: NavState,
+    actions: ActionContext,
+    preview: PreviewState,
+    parent: ParentState,
 
-    pub(super) metadata: MetadataState,
+    metadata: MetadataState,
 
-    pub(super) is_loading: bool,
+    is_loading: bool,
 
-    pub(super) notification_time: Option<Instant>,
-    pub(super) worker_time: Option<Instant>,
+    notification_time: Option<Instant>,
+    worker_time: Option<Instant>,
 
-    pub(super) nav_time: Throttler,
-    pub(super) preview_request_time: Throttler,
+    nav_time: Throttler,
+    preview_request_time: Throttler,
 
-    pub(super) overlays: OverlayStack,
+    overlays: OverlayStack,
 
-    pub(super) tab_id: Option<usize>,
-    pub(super) tab_line: Arc<Vec<Span<'static>>>,
+    tab_id: Option<usize>,
+    tab_line: Arc<Vec<Span<'static>>>,
 }
 
 impl AppState {
@@ -181,13 +186,17 @@ impl AppState {
     }
 
     #[inline]
-    fn tab_id(&self) -> Option<usize> {
+    pub(super) fn tab_id(&self) -> Option<usize> {
         self.tab_id
     }
 
     #[inline]
     pub(crate) fn set_tab_id(&mut self, id: usize) {
         self.tab_id = Some(id);
+    }
+
+    pub(super) fn set_tab_line(&mut self, line: Vec<Span<'static>>) {
+        self.tab_line = Arc::new(line);
     }
 
     #[inline]
