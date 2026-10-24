@@ -20,22 +20,20 @@ mod metadata;
 mod preview;
 mod runner;
 mod sort;
+mod task;
 mod watch;
 
-use std::collections::HashSet;
+pub(crate) use task::*;
+
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicUsize};
+use std::sync::atomic::AtomicUsize;
 
 use crossbeam_channel::{Receiver, Sender, TrySendError, bounded, unbounded};
 
 use crate::core::{
-    FileEntry, FindResult,
-    cache::{DirCache, DirListOptions},
-    metadata::{FileMetadataCache, MetadataNeeds},
-    preview::ListingRow,
-    sort::SortConfig,
+    FileEntry, FindResult, cache::DirCache, metadata::FileMetadataCache, preview::ListingRow,
 };
 use crate::utils::text::StrBuffer;
 
@@ -43,19 +41,28 @@ use crate::utils::text::StrBuffer;
 pub(crate) struct Workers {
     nav_io_tx: Sender<LoadDirTask>,
     nav_io_queue: Receiver<LoadDirTask>,
+
     parent_io_tx: Sender<LoadDirTask>,
     parent_io_queue: Receiver<LoadDirTask>,
+
     preview_dir_tx: Sender<LoadDirTask>,
+    preview_file_tx: Sender<PreviewTask>,
+
     sort_tx: Sender<SortDirTask>,
     sort_queue: Receiver<SortDirTask>,
-    preview_file_tx: Sender<PreviewTask>,
+
     metadata_tx: Sender<MetadataTask>,
+
     find_tx: Sender<FindTask>,
     find_queue: Receiver<FindTask>,
+
     fileop_tx: Sender<FileOperation>,
+
     runner_tx: Sender<CommandTask>,
     watch_cmd_tx: Sender<WatchCommand>,
+
     response_rx: Receiver<WorkerResponse>,
+
     active_fileops: Arc<AtomicUsize>,
     cache: Arc<DirCache>,
 }
@@ -83,6 +90,7 @@ impl Workers {
         let (preview_file_tx, preview_file_rx) = bounded::<PreviewTask>(1);
         let (metadata_tx, metadata_rx) = bounded::<MetadataTask>(1);
         let (find_tx, find_rx) = bounded::<FindTask>(1);
+
         let (fileop_tx, fileop_rx) = unbounded::<FileOperation>();
         let (runner_tx, runner_rx) = unbounded::<CommandTask>();
         let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
@@ -163,108 +171,10 @@ impl Workers {
     }
 }
 
-pub(crate) enum PreviewMode {
-    Internal,
-    Bat {
-        args: Vec<OsString>,
-    },
-    Archive {
-        program: OsString,
-        args: Vec<OsString>,
-        dir: Option<PathBuf>,
-    },
-}
-
 #[derive(Debug, Clone)]
 pub(crate) enum PreviewLines {
     Text(Vec<String>),
     Listing(Vec<ListingRow>),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum DirRequest {
-    Nav(u64),
-    Parent(u64),
-    Preview(u64),
-}
-
-pub(crate) struct LoadDirTask {
-    pub(crate) path: PathBuf,
-    pub(crate) focus: Option<OsString>,
-    pub(crate) list: DirListOptions,
-    pub(crate) sort_config: SortConfig,
-    pub(crate) sort_date_format: Arc<str>,
-    pub(crate) always_show: Arc<HashSet<OsString>>,
-    pub(crate) request: DirRequest,
-    pub(crate) tab_id: Option<usize>,
-}
-
-pub(crate) struct SortDirTask {
-    pub(crate) path: PathBuf,
-    pub(crate) entries: Arc<[FileEntry]>,
-    pub(crate) focus: Option<OsString>,
-    pub(crate) list: DirListOptions,
-    pub(crate) sort_config: SortConfig,
-    pub(crate) sort_date_format: Arc<str>,
-    pub(crate) always_show: Arc<HashSet<OsString>>,
-    pub(crate) request: DirRequest,
-    pub(crate) tab_id: Option<usize>,
-}
-
-pub(crate) struct PreviewTask {
-    pub(crate) path: PathBuf,
-    pub(crate) max_lines: usize,
-    pub(crate) pane_width: usize,
-    pub(crate) scroll: usize,
-    pub(crate) preview_mode: PreviewMode,
-    pub(crate) request_id: u64,
-    pub(crate) tab_id: Option<usize>,
-}
-
-pub(crate) struct FindTask {
-    pub(crate) base_dir: PathBuf,
-    pub(crate) query: String,
-    pub(crate) max_results: usize,
-    pub(crate) cancel: Arc<AtomicBool>,
-    pub(crate) show_hidden: bool,
-    pub(crate) request_id: u64,
-    pub(crate) tab_id: Option<usize>,
-}
-
-pub(crate) struct MetadataTask {
-    pub(crate) path: PathBuf,
-    pub(crate) date_format: String,
-    pub(crate) needs: MetadataNeeds,
-    pub(crate) request_id: u64,
-    pub(crate) tab_id: Option<usize>,
-}
-
-pub(crate) struct CommandTask {
-    pub(crate) program: PathBuf,
-    pub(crate) args: Vec<OsString>,
-    pub(crate) dir: Option<PathBuf>,
-    pub(crate) check_status: bool,
-}
-
-/// Supported file system operations the worker can perform.
-pub(crate) enum FileOperation {
-    Delete(Vec<PathBuf>, bool),
-    Rename {
-        old: PathBuf,
-        new: PathBuf,
-        overwrite: bool,
-    },
-    Copy {
-        src: Vec<PathBuf>,
-        dest: PathBuf,
-        cut: bool,
-        focus: Option<OsString>,
-    },
-    Create {
-        path: PathBuf,
-        is_dir: bool,
-        overwrite: bool,
-    },
 }
 
 /// Responses sent form the worker thread back to the main thread via the channel
