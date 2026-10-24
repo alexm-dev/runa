@@ -517,7 +517,7 @@ fn make_main_pane_markers<'a>(
         if set.is_empty() { None } else { Some(set) }
     };
 
-    let clipboard = clipboard.entries.as_ref().map(|set| {
+    let clipboard = clipboard.entries().map(|set| {
         set.iter()
             .filter(|p| p.parent() == Some(current_dir))
             .filter_map(|p| p.file_name())

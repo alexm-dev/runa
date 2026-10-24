@@ -51,8 +51,7 @@ impl AppState {
             }
             NavAction::ToggleMarker => {
                 let marker_jump = self.config.display().toggle_marker_jump();
-                self.nav
-                    .toggle_marker_advance(&mut clipboard.entries, marker_jump);
+                self.nav.toggle_marker_advance(clipboard, marker_jump);
                 self.preview.mark_pending();
                 self.update_file_info_cache(workers);
             }

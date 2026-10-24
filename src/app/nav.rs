@@ -8,6 +8,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use crate::app::Clipboard;
 use crate::core::{FileEntry, sort::SortConfig};
 use crate::utils::{path, text::StrBuffer};
 
@@ -203,20 +204,15 @@ impl NavState {
 
     /// Toggles the marker state of the currently selected entry.
     /// If the entry is in the clipboard, it is unmarked and removed from the clipboard.
-    pub(crate) fn toggle_marker(&mut self, clipboard: &mut Option<HashSet<PathBuf>>) {
+    pub(crate) fn toggle_marker(&mut self, clipboard: &mut Clipboard) {
         if let Some(entry) = self.selected_entry() {
             let path = self.current_dir().join(entry.name());
 
-            if let Some(clip) = clipboard
-                && clip.remove(&path)
-            {
-                if clip.is_empty() {
-                    *clipboard = None;
-                }
-
+            if clipboard.remove(&path) {
                 self.markers.insert(path);
                 return;
             }
+
             if !self.markers.remove(&path) {
                 self.markers.insert(path);
             }
@@ -224,11 +220,7 @@ impl NavState {
     }
 
     /// Toggles the marker state of the currently selected entry and advances the selection.
-    pub(crate) fn toggle_marker_advance(
-        &mut self,
-        clipboard: &mut Option<HashSet<PathBuf>>,
-        jump: bool,
-    ) {
+    pub(crate) fn toggle_marker_advance(&mut self, clipboard: &mut Clipboard, jump: bool) {
         self.toggle_marker(clipboard);
         let count = self.shown_entries_len();
 
@@ -393,7 +385,6 @@ mod tests {
     use std::error;
     use std::fs;
     use std::fs::File;
-    use std::path::PathBuf;
     use tempfile::tempdir;
 
     #[test]
@@ -596,7 +587,7 @@ mod tests {
         let mut nav = NavState::new(base_path.clone());
         nav.update_from_worker(base_path.clone(), Arc::from(entries), None, None);
 
-        let mut clipboard: Option<HashSet<PathBuf>> = None;
+        let mut clipboard = Clipboard::default();
 
         let to_mark = vec!["apple.txt", "banana.txt"];
         for target in to_mark {

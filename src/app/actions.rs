@@ -175,8 +175,7 @@ impl ActionContext {
             set.insert(nav.current_dir().join(entry.name()));
         }
         if !set.is_empty() {
-            clipboard.entries = Some(set);
-            clipboard.is_cut = is_cut;
+            clipboard.set(set, is_cut);
         }
     }
 
@@ -189,7 +188,7 @@ impl ActionContext {
         clipboard: &mut Clipboard,
         worker_tx: &Sender<FileOperation>,
     ) {
-        if let Some(source) = &clipboard.entries {
+        if let Some(source) = clipboard.entries() {
             let first_file_name = source
                 .iter()
                 .min()
@@ -199,11 +198,11 @@ impl ActionContext {
             let _ = worker_tx.send(FileOperation::Copy {
                 src: source.iter().cloned().collect(),
                 dest: nav.current_dir().to_path_buf(),
-                cut: clipboard.is_cut,
+                cut: clipboard.is_cut(),
                 focus: first_file_name,
             });
             if clipboard.is_cut {
-                clipboard.entries = None;
+                clipboard.clear();
             }
             nav.clear_markers();
         }
