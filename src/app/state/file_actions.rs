@@ -13,6 +13,7 @@
 use std::ffi::OsString;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::process;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -462,7 +463,7 @@ impl AppState {
         disable_raw_mode()?;
         execute!(stdout, LeaveAlternateScreen)?;
 
-        let mut editor_cmd = std::process::Command::new(program);
+        let mut editor_cmd = process::Command::new(program);
         editor_cmd.args(args).current_dir(cwd);
 
         let status = editor_cmd.status();
