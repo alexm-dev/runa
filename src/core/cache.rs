@@ -40,10 +40,21 @@ impl DirCacheKey {
     }
 }
 
-type DirCacheValue = Arc<(Arc<[FileEntry]>, Option<Arc<StrBuffer>>, u64, Instant)>;
+pub(crate) struct CachedDir {
+    entries: Arc<[FileEntry]>,
+    sort_column: Option<Arc<StrBuffer>>,
+    read_at: Instant,
+}
+
+impl CachedDir {
+    crate::getters! {
+        entries: &Arc<[FileEntry]>,
+        sort_column: &Option<Arc<StrBuffer>>,
+    }
+}
 
 pub(crate) struct DirCache {
-    inner: DashMap<DirCacheKey, DirCacheValue>,
+    inner: DashMap<DirCacheKey, Arc<CachedDir>>,
 }
 
 impl DirCache {
@@ -58,7 +69,7 @@ impl DirCache {
         path: &Path,
         sort: SortConfig,
         list_options: &DirListOptions,
-    ) -> Option<DirCacheValue> {
+    ) -> Option<Arc<CachedDir>> {
         let key = DirCacheKey::new(path, sort, list_options);
         self.inner.get(&key).map(|v| Arc::clone(v.value()))
     }
@@ -70,13 +81,13 @@ impl DirCache {
         list_options: &DirListOptions,
         entries: Arc<[FileEntry]>,
         sort_column: Option<Arc<StrBuffer>>,
-        request_id: u64,
+        read_at: Instant,
     ) {
         if self.inner.len() >= DIR_CACHE_CAP {
             let to_remove = self
                 .inner
                 .iter()
-                .min_by_key(|entry| entry.value().3)
+                .min_by_key(|entry| entry.value().read_at)
                 .map(|entry| entry.key().clone());
             if let Some(key) = to_remove {
                 self.inner.remove(&key);
@@ -84,12 +95,14 @@ impl DirCache {
         }
 
         let key = DirCacheKey::new(path, sort, list_options);
-        let new_value: DirCacheValue = Arc::new((entries, sort_column, request_id, Instant::now()));
+        let new_value = Arc::new(CachedDir {
+            entries,
+            sort_column,
+            read_at,
+        });
         match self.inner.entry(key) {
             Entry::Occupied(mut occ) => {
-                let existing = occ.get();
-                let existing_request_id = existing.2;
-                if request_id >= existing_request_id {
+                if read_at >= occ.get().read_at {
                     occ.insert(new_value);
                 }
             }

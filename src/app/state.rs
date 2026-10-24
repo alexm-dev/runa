@@ -604,7 +604,7 @@ impl AppState {
         let list_opts = self.dir_list_options();
 
         if let Some(val) = workers.cache().get(parent_path, sort_config, &list_opts) {
-            let (entries, sort_column, _, _) = &*val;
+            let (entries, sort_column) = (val.entries(), val.sort_column());
             let current_name = self
                 .nav
                 .current_dir()
@@ -720,7 +720,7 @@ impl AppState {
 
             if entry.is_dir() || entry.is_symlink() {
                 if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
-                    let (entries, sort_column, _, _) = &*val;
+                    let (entries, sort_column) = (val.entries(), val.sort_column());
                     let pos = self
                         .nav
                         .get_position()

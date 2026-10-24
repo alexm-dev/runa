@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 use std::thread;
+use std::time::Instant;
 
 use crossbeam_channel::{Receiver, Sender};
 use dashmap::DashMap;
@@ -52,7 +53,7 @@ pub(super) fn start(
                 &list,
                 Arc::clone(&entries_arc),
                 sort_column_arc.clone(),
-                request_id,
+                Instant::now(),
             );
 
             let _ = res_tx.send(WorkerResponse::DirectoryLoaded {

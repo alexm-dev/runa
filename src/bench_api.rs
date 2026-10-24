@@ -271,7 +271,7 @@ impl CacheFixture {
             &self.list,
             Arc::clone(&self.entries),
             self.sort_column.clone(),
-            self.next_id,
+            Instant::now(),
         );
     }
 

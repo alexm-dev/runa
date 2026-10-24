@@ -4,6 +4,7 @@
 
 use std::sync::Arc;
 use std::thread;
+use std::time::Instant;
 
 use crossbeam_channel::{Receiver, Sender};
 use dashmap::DashMap;
@@ -34,6 +35,7 @@ pub(super) fn start(
             tab_id,
         }) = task_rx.recv()
         {
+            let read_at = Instant::now();
             match fm::browse_dir(&path) {
                 Ok(mut entries) => {
                     let meta_cache = DashMap::with_capacity(entries.len());
@@ -52,7 +54,7 @@ pub(super) fn start(
                         &list,
                         Arc::clone(&entries_arc),
                         sort_column_arc.clone(),
-                        request_id,
+                        read_at,
                     );
 
                     let _ = res_tx.send(WorkerResponse::DirectoryLoaded {
@@ -87,10 +89,49 @@ mod tests {
     use rand::{RngExt, rng};
     use std::collections::HashSet;
     use std::fs;
+    use std::path::Path;
     use std::sync::Arc;
     use std::thread;
     use std::time::{Duration, Instant};
     use tempfile::tempdir;
+
+    fn load_task(path: &Path, request_id: u64) -> LoadDirTask {
+        LoadDirTask {
+            path: path.to_path_buf(),
+            focus: None,
+            list: test_list_opts(),
+            sort_config: SortConfig::default(),
+            sort_date_format: Arc::from(""),
+            always_show: Arc::new(HashSet::new()),
+            request_id,
+            tab_id: TEST_TAB_ID,
+        }
+    }
+
+    #[test]
+    fn newer_load_replaces_the_cached_listing_of_another_requester()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let workers = Workers::spawn();
+        let temp = tempdir()?;
+        fs::File::create(temp.path().join("a.txt"))?;
+
+        workers.preview_dir_tx().send(load_task(temp.path(), 500))?;
+        workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
+
+        fs::File::create(temp.path().join("b.txt"))?;
+        workers.send_nav_io(load_task(temp.path(), 40));
+        match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
+            WorkerResponse::DirectoryLoaded { entries, .. } => assert_eq!(entries.len(), 2),
+            other => return Err(format!("unexpected response: {other:?}").into()),
+        }
+
+        let cached = workers
+            .cache()
+            .get(temp.path(), SortConfig::default(), &test_list_opts())
+            .ok_or("listing is not cached")?;
+        assert_eq!(cached.entries().len(), 2, "cache kept the older listing");
+        Ok(())
+    }
 
     #[test]
     fn worker_load_current_dir() -> Result<(), Box<dyn std::error::Error>> {

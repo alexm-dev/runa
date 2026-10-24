@@ -292,7 +292,7 @@ impl AppState {
         let list_opts = self.dir_list_options();
 
         if let Some(val) = workers.cache().get(&path, sort_config, &list_opts) {
-            let (entries, sort_column, _, _) = &*val;
+            let (entries, sort_column) = (val.entries(), val.sort_column());
             self.nav
                 .update_from_worker(path, entries.clone(), sort_column.clone(), focus.clone());
             self.is_loading = false;
@@ -303,7 +303,7 @@ impl AppState {
                     .cache()
                     .get(parent, self.nav.sort_config(), &self.dir_list_options())
         {
-            let (entries, sort_column, _, _) = &*val;
+            let (entries, sort_column) = (val.entries(), val.sort_column());
             self.nav
                 .update_from_worker(path, entries.clone(), sort_column.clone(), focus.clone());
             self.is_loading = false;
