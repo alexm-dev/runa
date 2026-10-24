@@ -81,27 +81,28 @@ impl Workers {
     /// Spawns dedicated threads for I/O, preview, find and file operations.
     pub(crate) fn spawn() -> Self {
         let cache = Arc::new(DirCache::new());
+        let active_fileops = Arc::new(AtomicUsize::new(0));
 
         let (nav_io_tx, nav_io_rx) = bounded::<LoadDirTask>(1);
         let (parent_io_tx, parent_io_rx) = bounded::<LoadDirTask>(1);
-        let (preview_dir_tx, preview_dir_rx) = bounded::<LoadDirTask>(1);
-        let (sort_tx, sort_rx) = bounded::<SortDirTask>(1);
 
+        let (preview_dir_tx, preview_dir_rx) = bounded::<LoadDirTask>(1);
         let (preview_file_tx, preview_file_rx) = bounded::<PreviewTask>(1);
+
+        let (sort_tx, sort_rx) = bounded::<SortDirTask>(1);
         let (metadata_tx, metadata_rx) = bounded::<MetadataTask>(1);
         let (find_tx, find_rx) = bounded::<FindTask>(1);
 
         let (fileop_tx, fileop_rx) = unbounded::<FileOperation>();
         let (runner_tx, runner_rx) = unbounded::<CommandTask>();
         let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
+
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
         let nav_io_queue = nav_io_rx.clone();
         let parent_io_queue = parent_io_rx.clone();
         let sort_queue = sort_rx.clone();
         let find_queue = find_rx.clone();
-
-        let active_fileops = Arc::new(AtomicUsize::new(0));
 
         io::start(nav_io_rx, res_tx.clone(), Arc::clone(&cache));
         io::start(parent_io_rx, res_tx.clone(), Arc::clone(&cache));
