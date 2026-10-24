@@ -181,6 +181,13 @@ pub(crate) enum PreviewLines {
     Listing(Vec<ListingRow>),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum DirRequest {
+    Nav(u64),
+    Parent(u64),
+    Preview(u64),
+}
+
 pub(crate) struct LoadDirTask {
     pub(crate) path: PathBuf,
     pub(crate) focus: Option<OsString>,
@@ -188,7 +195,7 @@ pub(crate) struct LoadDirTask {
     pub(crate) sort_config: SortConfig,
     pub(crate) sort_date_format: Arc<str>,
     pub(crate) always_show: Arc<HashSet<OsString>>,
-    pub(crate) request_id: u64,
+    pub(crate) request: DirRequest,
     pub(crate) tab_id: Option<usize>,
 }
 
@@ -200,7 +207,7 @@ pub(crate) struct SortDirTask {
     pub(crate) sort_config: SortConfig,
     pub(crate) sort_date_format: Arc<str>,
     pub(crate) always_show: Arc<HashSet<OsString>>,
-    pub(crate) request_id: u64,
+    pub(crate) request: DirRequest,
     pub(crate) tab_id: Option<usize>,
 }
 
@@ -270,7 +277,7 @@ pub(crate) enum WorkerResponse {
         entries: Arc<[FileEntry]>,
         focus: Option<OsString>,
         sort_column: Option<Arc<StrBuffer>>,
-        request_id: u64,
+        request: DirRequest,
         tab_id: Option<usize>,
     },
     PreviewLoaded {
@@ -305,7 +312,7 @@ pub(crate) enum WorkerResponse {
     DirectoryFailed {
         path: PathBuf,
         message: String,
-        request_id: u64,
+        request: DirRequest,
         tab_id: Option<usize>,
     },
     Error(String),

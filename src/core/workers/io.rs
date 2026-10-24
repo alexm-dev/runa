@@ -31,7 +31,7 @@ pub(super) fn start(
             sort_config,
             sort_date_format,
             always_show,
-            request_id,
+            request,
             tab_id,
         }) = task_rx.recv()
         {
@@ -62,7 +62,7 @@ pub(super) fn start(
                         entries: entries_arc,
                         focus,
                         sort_column: sort_column_arc,
-                        request_id,
+                        request,
                         tab_id,
                     });
                 }
@@ -70,7 +70,7 @@ pub(super) fn start(
                     let _ = res_tx.send(WorkerResponse::DirectoryFailed {
                         path,
                         message: format!("I/O Error: {}", e),
-                        request_id,
+                        request,
                         tab_id,
                     });
                 }
@@ -84,7 +84,7 @@ mod tests {
     use crate::core::cache::DirListOptions;
     use crate::core::sort::SortConfig;
     use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, test_list_opts};
-    use crate::core::workers::{LoadDirTask, WorkerResponse, Workers};
+    use crate::core::workers::{DirRequest, LoadDirTask, WorkerResponse, Workers};
 
     use rand::{RngExt, rng};
     use std::collections::HashSet;
@@ -95,7 +95,7 @@ mod tests {
     use std::time::{Duration, Instant};
     use tempfile::tempdir;
 
-    fn load_task(path: &Path, request_id: u64) -> LoadDirTask {
+    fn load_task(path: &Path, request: DirRequest) -> LoadDirTask {
         LoadDirTask {
             path: path.to_path_buf(),
             focus: None,
@@ -103,7 +103,7 @@ mod tests {
             sort_config: SortConfig::default(),
             sort_date_format: Arc::from(""),
             always_show: Arc::new(HashSet::new()),
-            request_id,
+            request,
             tab_id: TEST_TAB_ID,
         }
     }
@@ -115,11 +115,13 @@ mod tests {
         let temp = tempdir()?;
         fs::File::create(temp.path().join("a.txt"))?;
 
-        workers.preview_dir_tx().send(load_task(temp.path(), 500))?;
+        workers
+            .preview_dir_tx()
+            .send(load_task(temp.path(), DirRequest::Preview(500)))?;
         workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
 
         fs::File::create(temp.path().join("b.txt"))?;
-        workers.send_nav_io(load_task(temp.path(), 40));
+        workers.send_nav_io(load_task(temp.path(), DirRequest::Nav(40)));
         match workers.response_rx().recv_timeout(TEST_TIMEOUT)? {
             WorkerResponse::DirectoryLoaded { entries, .. } => assert_eq!(entries.len(), 2),
             other => return Err(format!("unexpected response: {other:?}").into()),
@@ -151,7 +153,7 @@ mod tests {
             sort_date_format: Arc::<str>::from(""),
             sort_config: SortConfig::default(),
             always_show: Arc::new(HashSet::new()),
-            request_id: 1,
+            request: DirRequest::Nav(1),
             tab_id: TEST_TAB_ID,
         })?;
 
@@ -213,7 +215,7 @@ mod tests {
                             sort_config: SortConfig::default(),
                             sort_date_format: Arc::<str>::from(""),
                             always_show: Arc::new(HashSet::new()),
-                            request_id: (t * requests_per_thread + i) as u64,
+                            request: DirRequest::Nav((t * requests_per_thread + i) as u64),
                             tab_id: TEST_TAB_ID,
                         })
                         .expect("Couldn't send task to worker");

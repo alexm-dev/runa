@@ -25,8 +25,8 @@ use crate::core::{
     metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
     workers::{
-        FindTask, LoadDirTask, MetadataTask, PreviewMode, PreviewTask, SortDirTask, WorkerResponse,
-        Workers,
+        DirRequest, FindTask, LoadDirTask, MetadataTask, PreviewMode, PreviewTask, SortDirTask,
+        WorkerResponse, Workers,
     },
 };
 
@@ -355,66 +355,69 @@ impl AppState {
                 entries,
                 focus,
                 sort_column,
-                request_id,
-                tab_id: _tab_id,
-            } => {
-                // only update nav if BOTH the ID and path match.
-                if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                    let focus = if self.nav.take_reload(request_id) {
-                        self.nav.selected_entry().map(|e| e.name().to_os_string())
-                    } else {
-                        focus
-                    };
+                request,
+                ..
+            } => match request {
+                DirRequest::Nav(request_id) => {
+                    // only update nav if BOTH the ID and path match.
+                    if request_id == self.nav.request_id() && path == self.nav.current_dir() {
+                        let focus = if self.nav.take_reload(request_id) {
+                            self.nav.selected_entry().map(|e| e.name().to_os_string())
+                        } else {
+                            focus
+                        };
 
-                    self.nav
-                        .update_from_worker(path, entries, sort_column, focus);
-                    self.is_loading = false;
+                        self.nav
+                            .update_from_worker(path, entries, sort_column, focus);
+                        self.is_loading = false;
 
-                    self.request_parent_content(workers);
-                    self.request_preview_force(workers);
-                    self.update_file_info_cache(workers);
-                    self.refresh_show_info_if_open();
-                    return;
+                        self.request_parent_content(workers);
+                        self.request_preview_force(workers);
+                        self.update_file_info_cache(workers);
+                        self.refresh_show_info_if_open();
+                    }
                 }
-                // PREVIEW CHECK: Must match the current preview request
-                if request_id == self.preview.request_id() && self.nav.is_selected_path(&path) {
-                    let pos = self
-                        .nav
-                        .get_position()
-                        .get(&path)
-                        .and_then(|saved| entries.iter().position(|e| e.name() == saved))
-                        .unwrap_or(0);
-
-                    self.preview.update_from_entries(
-                        entries.clone(),
-                        sort_column,
-                        pos,
-                        self.metrics.preview_height,
-                        request_id,
-                    );
-
-                    return;
-                }
-                // PARENT CHECK: Must match the current parent request
-                if request_id == self.parent.request_id() {
-                    let expected_parent = self.nav.current_dir().parent();
-                    if expected_parent == Some(path.as_path()) {
-                        let current_name = self
+                DirRequest::Preview(request_id) => {
+                    // PREVIEW CHECK: Must match the current preview request
+                    if request_id == self.preview.request_id() && self.nav.is_selected_path(&path) {
+                        let pos = self
                             .nav
-                            .current_dir()
-                            .file_name()
-                            .map(|n| n.to_string_lossy().to_string())
-                            .unwrap_or_default();
-                        self.parent.update_from_entries(
+                            .get_position()
+                            .get(&path)
+                            .and_then(|saved| entries.iter().position(|e| e.name() == saved))
+                            .unwrap_or(0);
+
+                        self.preview.update_from_entries(
                             entries,
-                            &current_name,
-                            request_id,
-                            &path,
                             sort_column,
+                            pos,
+                            self.metrics.preview_height,
+                            request_id,
                         );
                     }
                 }
-            }
+                DirRequest::Parent(request_id) => {
+                    // PARENT CHECK: Must match the current parent request
+                    if request_id == self.parent.request_id() {
+                        let expected_parent = self.nav.current_dir().parent();
+                        if expected_parent == Some(path.as_path()) {
+                            let current_name = self
+                                .nav
+                                .current_dir()
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_default();
+                            self.parent.update_from_entries(
+                                entries,
+                                &current_name,
+                                request_id,
+                                &path,
+                                sort_column,
+                            );
+                        }
+                    }
+                }
+            },
 
             WorkerResponse::PreviewLoaded {
                 path,
@@ -497,22 +500,28 @@ impl AppState {
             WorkerResponse::DirectoryFailed {
                 path,
                 message,
-                request_id,
-                tab_id: _tab_id,
-            } => {
-                if request_id == self.nav.request_id() && path == self.nav.current_dir() {
-                    self.is_loading = false;
-                    self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
-                } else if request_id == self.preview.request_id()
-                    && self.nav.is_selected_path(&path)
-                {
-                    self.preview.set_error(message);
-                } else if request_id == self.parent.request_id()
-                    && self.nav.current_dir().parent() == Some(path.as_path())
-                {
-                    self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
+                request,
+                ..
+            } => match request {
+                DirRequest::Nav(request_id) => {
+                    if request_id == self.nav.request_id() && path == self.nav.current_dir() {
+                        self.is_loading = false;
+                        self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
+                    }
                 }
-            }
+                DirRequest::Preview(request_id) => {
+                    if request_id == self.preview.request_id() && self.nav.is_selected_path(&path) {
+                        self.preview.set_error(message);
+                    }
+                }
+                DirRequest::Parent(request_id) => {
+                    if request_id == self.parent.request_id()
+                        && self.nav.current_dir().parent() == Some(path.as_path())
+                    {
+                        self.push_overlay_message(message, Timings::MESSAGE_WORKER_ERROR, None);
+                    }
+                }
+            },
 
             WorkerResponse::Error(e) => {
                 self.push_overlay_message(e, Timings::MESSAGE_WORKER_ERROR, None);
@@ -573,7 +582,7 @@ impl AppState {
             sort_config,
             sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
-            request_id,
+            request: DirRequest::Nav(request_id),
             tab_id: self.tab_id(),
         });
     }
@@ -632,7 +641,7 @@ impl AppState {
             sort_config,
             sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
-            request_id,
+            request: DirRequest::Parent(request_id),
             tab_id: self.tab_id(),
         });
     }
@@ -652,7 +661,7 @@ impl AppState {
             sort_config,
             sort_date_format,
             always_show: Arc::clone(self.config.general().always_show()),
-            request_id,
+            request: DirRequest::Nav(request_id),
             tab_id: self.tab_id(),
         });
     }
@@ -749,7 +758,7 @@ impl AppState {
                         sort_config,
                         sort_date_format,
                         always_show: Arc::clone(self.config.general().always_show()),
-                        request_id,
+                        request: DirRequest::Preview(request_id),
                         tab_id: self.tab_id(),
                     })
                     .is_ok()
@@ -948,7 +957,7 @@ mod tests {
             entries,
             focus: Some(OsString::from("a")),
             sort_column: None,
-            request_id,
+            request: DirRequest::Nav(request_id),
             tab_id: None,
         };
         app.handle_worker_response(loaded, &workers);
@@ -977,7 +986,7 @@ mod tests {
         let failed = |path: PathBuf| WorkerResponse::DirectoryFailed {
             path,
             message: "I/O Error: access denied".to_string(),
-            request_id: id,
+            request: DirRequest::Preview(id),
             tab_id: None,
         };
 
@@ -986,6 +995,9 @@ mod tests {
         assert_eq!(shown(&app), "hello");
 
         app.handle_worker_response(failed(dir.join("other")), &workers);
+        assert_eq!(shown(&app), "hello");
+
+        app.handle_worker_response(failed(dir.join("other").join("sub")), &workers);
         assert_eq!(shown(&app), "hello");
 
         app.handle_worker_response(failed(sub), &workers);

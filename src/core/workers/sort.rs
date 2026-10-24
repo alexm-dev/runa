@@ -31,7 +31,7 @@ pub(super) fn start(
             sort_config,
             sort_date_format,
             always_show,
-            request_id,
+            request,
             tab_id,
         }) = task_rx.recv()
         {
@@ -61,7 +61,7 @@ pub(super) fn start(
                 entries: entries_arc,
                 focus,
                 sort_column: sort_column_arc,
-                request_id,
+                request,
                 tab_id,
             });
         }
