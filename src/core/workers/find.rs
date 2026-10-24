@@ -11,25 +11,21 @@ use crossbeam_channel::{Receiver, Sender};
 
 use crate::core::{
     proc,
-    workers::{WorkerResponse, WorkerTask},
+    workers::{FindTask, WorkerResponse},
 };
 
-pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+pub(super) fn start(task_rx: Receiver<FindTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::FindRecursive {
-                base_dir,
-                query,
-                max_results,
-                cancel,
-                show_hidden,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
+        while let Ok(FindTask {
+            base_dir,
+            query,
+            max_results,
+            cancel,
+            show_hidden,
+            request_id,
+            tab_id,
+        }) = task_rx.recv()
+        {
             let mut results = Vec::new();
             let _ = proc::find(
                 &base_dir,
@@ -60,7 +56,7 @@ pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse
 #[cfg(test)]
 mod tests {
     use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, fd_available};
-    use crate::core::workers::{WorkerResponse, WorkerTask, Workers};
+    use crate::core::workers::{FindTask, WorkerResponse, Workers};
 
     use std::collections::HashSet;
     use std::fs::{self, File};
@@ -86,7 +82,7 @@ mod tests {
         let res_rx = workers.response_rx();
 
         let req_id = 42;
-        find_tx.send(WorkerTask::FindRecursive {
+        find_tx.send(FindTask {
             base_dir: dir.path().to_path_buf(),
             query: "crab".to_string(),
             max_results: 10,
@@ -164,7 +160,7 @@ mod tests {
         let workers = Workers::spawn();
 
         for i in 1..=2 {
-            workers.find_tx.send(WorkerTask::FindRecursive {
+            workers.find_tx.send(FindTask {
                 base_dir: temp_path.clone(),
                 query: format!("search_{i}"),
                 max_results: 1,

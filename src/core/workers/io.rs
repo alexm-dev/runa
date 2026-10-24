@@ -12,31 +12,28 @@ use crate::core::{
     cache::DirCache,
     fm::{self, FileEntry},
     formatter::Formatter,
-    workers::{WorkerResponse, WorkerTask},
+    workers::{LoadDirTask, WorkerResponse},
 };
 use crate::utils::text::StrBuffer;
 
-/// Starts the io worker thread, wich listens to [WorkerTask] and sends back to [WorkerResponse]
+/// Starts the io worker thread, wich listens to [LoadDirTask] and sends back to [WorkerResponse]
 pub(super) fn start(
-    task_rx: Receiver<WorkerTask>,
+    task_rx: Receiver<LoadDirTask>,
     res_tx: Sender<WorkerResponse>,
     cache: Arc<DirCache>,
 ) {
     thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadDirectory {
-                path,
-                focus,
-                list,
-                sort_config,
-                sort_date_format,
-                always_show,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
+        while let Ok(LoadDirTask {
+            path,
+            focus,
+            list,
+            sort_config,
+            sort_date_format,
+            always_show,
+            request_id,
+            tab_id,
+        }) = task_rx.recv()
+        {
             match fm::browse_dir(&path) {
                 Ok(mut entries) => {
                     let meta_cache = DashMap::with_capacity(entries.len());
@@ -85,7 +82,7 @@ mod tests {
     use crate::core::cache::DirListOptions;
     use crate::core::sort::SortConfig;
     use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, test_list_opts};
-    use crate::core::workers::{WorkerResponse, WorkerTask, Workers};
+    use crate::core::workers::{LoadDirTask, WorkerResponse, Workers};
 
     use rand::{RngExt, rng};
     use std::collections::HashSet;
@@ -106,7 +103,7 @@ mod tests {
         fs::create_dir(&temp_path)?;
         fs::File::create(temp_path.join("crab.txt"))?;
 
-        task_tx.send(WorkerTask::LoadDirectory {
+        task_tx.send(LoadDirTask {
             path: temp_path,
             focus: None,
             list: test_list_opts(),
@@ -168,7 +165,7 @@ mod tests {
                         case_insensitive: rng.random_bool(0.5),
                     };
                     task_tx
-                        .send(WorkerTask::LoadDirectory {
+                        .send(LoadDirTask {
                             path: dir.clone(),
                             focus: None,
                             list,

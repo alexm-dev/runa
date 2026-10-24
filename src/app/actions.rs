@@ -15,10 +15,7 @@ use std::time::{Duration, Instant};
 use crossbeam_channel::Sender;
 
 use crate::app::{Clipboard, keymap::KeyPrefix, nav::NavState};
-use crate::core::{
-    proc::FindResult,
-    workers::{FileOperation, WorkerTask},
-};
+use crate::core::{proc::FindResult, workers::FileOperation};
 
 /// Describes the current mode for action handling/input.
 ///
@@ -144,7 +141,7 @@ impl ActionContext {
     pub(crate) fn action_delete(
         &mut self,
         nav: &mut NavState,
-        worker_tx: &Sender<WorkerTask>,
+        worker_tx: &Sender<FileOperation>,
         move_to_trash: bool,
     ) {
         let targets = nav.get_action_targets();
@@ -152,9 +149,10 @@ impl ActionContext {
             return;
         }
 
-        let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Delete(targets.into_iter().collect(), move_to_trash),
-        });
+        let _ = worker_tx.send(FileOperation::Delete(
+            targets.into_iter().collect(),
+            move_to_trash,
+        ));
 
         nav.clear_markers();
     }
@@ -189,7 +187,7 @@ impl ActionContext {
         &mut self,
         nav: &mut NavState,
         clipboard: &mut Clipboard,
-        worker_tx: &Sender<WorkerTask>,
+        worker_tx: &Sender<FileOperation>,
     ) {
         if let Some(source) = &clipboard.entries {
             let first_file_name = source
@@ -198,13 +196,11 @@ impl ActionContext {
                 .and_then(|p| p.file_name())
                 .map(|n| n.to_os_string());
 
-            let _ = worker_tx.send(WorkerTask::FileOp {
-                op: FileOperation::Copy {
-                    src: source.iter().cloned().collect(),
-                    dest: nav.current_dir().to_path_buf(),
-                    cut: clipboard.is_cut,
-                    focus: first_file_name,
-                },
+            let _ = worker_tx.send(FileOperation::Copy {
+                src: source.iter().cloned().collect(),
+                dest: nav.current_dir().to_path_buf(),
+                cut: clipboard.is_cut,
+                focus: first_file_name,
             });
             if clipboard.is_cut {
                 clipboard.entries = None;
@@ -225,7 +221,7 @@ impl ActionContext {
     /// Sends a rename task to the worker thread via the provided channel.
     ///
     /// Exits input mode after performing the action.
-    pub(crate) fn action_rename(&mut self, nav: &mut NavState, worker_tx: &Sender<WorkerTask>) {
+    pub(crate) fn action_rename(&mut self, nav: &mut NavState, worker_tx: &Sender<FileOperation>) {
         if self.input_buffer.is_empty() {
             return;
         }
@@ -233,12 +229,10 @@ impl ActionContext {
             let old_path = nav.current_dir().join(entry.name());
             let new_path = old_path.with_file_name(&self.input_buffer);
 
-            let _ = worker_tx.send(WorkerTask::FileOp {
-                op: FileOperation::Rename {
-                    old: old_path,
-                    new: new_path,
-                    overwrite: false,
-                },
+            let _ = worker_tx.send(FileOperation::Rename {
+                old: old_path,
+                new: new_path,
+                overwrite: false,
             });
         }
         self.exit_mode();
@@ -253,19 +247,17 @@ impl ActionContext {
         &mut self,
         nav: &mut NavState,
         is_dir: bool,
-        worker_tx: &Sender<WorkerTask>,
+        worker_tx: &Sender<FileOperation>,
     ) {
         if self.input_buffer.is_empty() {
             return;
         }
 
         let path = nav.current_dir().join(&self.input_buffer);
-        let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Create {
-                path,
-                is_dir,
-                overwrite: false,
-            },
+        let _ = worker_tx.send(FileOperation::Create {
+            path,
+            is_dir,
+            overwrite: false,
         });
         self.exit_mode();
     }
@@ -274,19 +266,17 @@ impl ActionContext {
         &mut self,
         nav: &mut NavState,
         destination: PathBuf,
-        worker_tx: &Sender<WorkerTask>,
+        worker_tx: &Sender<FileOperation>,
     ) {
         let targets = nav.get_action_targets();
         if targets.is_empty() {
             return;
         }
-        let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Copy {
-                src: targets.into_iter().collect(),
-                dest: destination,
-                cut: true,
-                focus: None,
-            },
+        let _ = worker_tx.send(FileOperation::Copy {
+            src: targets.into_iter().collect(),
+            dest: destination,
+            cut: true,
+            focus: None,
         });
         nav.clear_markers();
     }
@@ -344,14 +334,12 @@ impl ActionContext {
         &mut self,
         old: Arc<PathBuf>,
         new: Arc<PathBuf>,
-        worker_tx: &Sender<WorkerTask>,
+        worker_tx: &Sender<FileOperation>,
     ) {
-        let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Rename {
-                old: (*old).clone(),
-                new: (*new).clone(),
-                overwrite: true,
-            },
+        let _ = worker_tx.send(FileOperation::Rename {
+            old: (*old).clone(),
+            new: (*new).clone(),
+            overwrite: true,
         });
         self.exit_mode();
     }
@@ -360,14 +348,12 @@ impl ActionContext {
         &mut self,
         path: Arc<PathBuf>,
         is_dir: bool,
-        worker_tx: &Sender<WorkerTask>,
+        worker_tx: &Sender<FileOperation>,
     ) {
-        let _ = worker_tx.send(WorkerTask::FileOp {
-            op: FileOperation::Create {
-                path: (*path).clone(),
-                is_dir,
-                overwrite: true,
-            },
+        let _ = worker_tx.send(FileOperation::Create {
+            path: (*path).clone(),
+            is_dir,
+            overwrite: true,
         });
         self.exit_mode();
     }

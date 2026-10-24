@@ -24,7 +24,10 @@ use crate::core::{
     cache::DirListOptions,
     metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
-    workers::{PreviewMode, WorkerResponse, WorkerTask, Workers},
+    workers::{
+        FindTask, LoadDirTask, MetadataTask, PreviewMode, PreviewTask, SortDirTask, WorkerResponse,
+        Workers,
+    },
 };
 
 use crate::command;
@@ -253,7 +256,7 @@ impl AppState {
 
         if workers
             .metadata_tx()
-            .try_send(WorkerTask::GetFileMetadata {
+            .try_send(MetadataTask {
                 path: path.clone(),
                 date_format: date_format.to_string(),
                 needs,
@@ -563,7 +566,7 @@ impl AppState {
         let request_id = self.nav.prepare_new_request();
         let sort_config = self.nav.sort_config();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
-        workers.send_nav_io(WorkerTask::LoadDirectory {
+        workers.send_nav_io(LoadDirTask {
             path: self.nav.current_dir().to_path_buf(),
             focus,
             list: self.dir_list_options(),
@@ -622,7 +625,7 @@ impl AppState {
         let parent_path_buf = parent_path.to_path_buf();
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let request_id = self.parent.prepare_new_request(&parent_path_buf);
-        workers.send_parent_io(WorkerTask::LoadDirectory {
+        workers.send_parent_io(LoadDirTask {
             path: parent_path_buf,
             focus: None,
             list: self.dir_list_options(),
@@ -641,7 +644,7 @@ impl AppState {
         let sort_date_format: Arc<str> = Arc::from(self.config.display().sort_date_format());
         let entries = self.nav.entries_arc();
 
-        workers.send_sort(WorkerTask::SortDirectory {
+        workers.send_sort(SortDirTask {
             path: self.nav.current_dir().to_path_buf(),
             entries,
             focus,
@@ -676,7 +679,7 @@ impl AppState {
         self.actions
             .set_cancel_find_token(Arc::clone(&cancel_token));
 
-        workers.send_find(WorkerTask::FindRecursive {
+        workers.send_find(FindTask {
             base_dir: self.nav.current_dir().to_path_buf(),
             query,
             max_results: self.config().general().max_find_results(),
@@ -739,7 +742,7 @@ impl AppState {
 
                 if workers
                     .preview_dir_tx()
-                    .try_send(WorkerTask::LoadDirectory {
+                    .try_send(LoadDirTask {
                         path,
                         focus: None,
                         list: list_opts.clone(),
@@ -785,7 +788,7 @@ impl AppState {
 
                 if workers
                     .preview_file_tx()
-                    .try_send(WorkerTask::LoadPreview {
+                    .try_send(PreviewTask {
                         path,
                         max_lines,
                         pane_width: self.metrics.preview_width,

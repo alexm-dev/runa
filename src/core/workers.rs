@@ -6,7 +6,7 @@
 //! Small changes here can have big effects since this module is tightly integrated with every part
 //! of runa.
 //!
-//! Requests [WorkerTask] come in from the RunaRoot or UI via channels, and results or errors
+//! Tasks come in from the RunaRoot or UI via channels, and results or errors
 //! [WorkerResponse] go back the same way. All filesystem I/O and previews happen on these threads
 //!
 //! # Caution:
@@ -41,19 +41,19 @@ use crate::utils::text::StrBuffer;
 
 /// Manages worker threads channels for different task types.
 pub(crate) struct Workers {
-    nav_io_tx: Sender<WorkerTask>,
-    nav_io_queue: Receiver<WorkerTask>,
-    parent_io_tx: Sender<WorkerTask>,
-    parent_io_queue: Receiver<WorkerTask>,
-    preview_dir_tx: Sender<WorkerTask>,
-    sort_tx: Sender<WorkerTask>,
-    sort_queue: Receiver<WorkerTask>,
-    preview_file_tx: Sender<WorkerTask>,
-    metadata_tx: Sender<WorkerTask>,
-    find_tx: Sender<WorkerTask>,
-    find_queue: Receiver<WorkerTask>,
-    fileop_tx: Sender<WorkerTask>,
-    runner_tx: Sender<WorkerTask>,
+    nav_io_tx: Sender<LoadDirTask>,
+    nav_io_queue: Receiver<LoadDirTask>,
+    parent_io_tx: Sender<LoadDirTask>,
+    parent_io_queue: Receiver<LoadDirTask>,
+    preview_dir_tx: Sender<LoadDirTask>,
+    sort_tx: Sender<SortDirTask>,
+    sort_queue: Receiver<SortDirTask>,
+    preview_file_tx: Sender<PreviewTask>,
+    metadata_tx: Sender<MetadataTask>,
+    find_tx: Sender<FindTask>,
+    find_queue: Receiver<FindTask>,
+    fileop_tx: Sender<FileOperation>,
+    runner_tx: Sender<CommandTask>,
     watch_cmd_tx: Sender<WatchCommand>,
     response_rx: Receiver<WorkerResponse>,
     active_fileops: Arc<AtomicUsize>,
@@ -75,16 +75,16 @@ impl Workers {
     pub(crate) fn spawn() -> Self {
         let cache = Arc::new(DirCache::new());
 
-        let (nav_io_tx, nav_io_rx) = bounded::<WorkerTask>(1);
-        let (parent_io_tx, parent_io_rx) = bounded::<WorkerTask>(1);
-        let (preview_dir_tx, preview_dir_rx) = bounded::<WorkerTask>(1);
-        let (sort_tx, sort_rx) = bounded::<WorkerTask>(1);
+        let (nav_io_tx, nav_io_rx) = bounded::<LoadDirTask>(1);
+        let (parent_io_tx, parent_io_rx) = bounded::<LoadDirTask>(1);
+        let (preview_dir_tx, preview_dir_rx) = bounded::<LoadDirTask>(1);
+        let (sort_tx, sort_rx) = bounded::<SortDirTask>(1);
 
-        let (preview_file_tx, preview_file_rx) = bounded::<WorkerTask>(1);
-        let (metadata_tx, metadata_rx) = bounded::<WorkerTask>(1);
-        let (find_tx, find_rx) = bounded::<WorkerTask>(1);
-        let (fileop_tx, fileop_rx) = unbounded::<WorkerTask>();
-        let (runner_tx, runner_rx) = unbounded::<WorkerTask>();
+        let (preview_file_tx, preview_file_rx) = bounded::<PreviewTask>(1);
+        let (metadata_tx, metadata_rx) = bounded::<MetadataTask>(1);
+        let (find_tx, find_rx) = bounded::<FindTask>(1);
+        let (fileop_tx, fileop_rx) = unbounded::<FileOperation>();
+        let (runner_tx, runner_rx) = unbounded::<CommandTask>();
         let (watch_cmd_tx, watch_cmd_rx) = unbounded::<WatchCommand>();
         let (res_tx, response_rx) = unbounded::<WorkerResponse>();
 
@@ -129,11 +129,11 @@ impl Workers {
     }
 
     crate::getters! {
-        preview_dir_tx: &Sender<WorkerTask>,
-        preview_file_tx: &Sender<WorkerTask>,
-        metadata_tx: &Sender<WorkerTask>,
-        fileop_tx: &Sender<WorkerTask>,
-        runner_tx: &Sender<WorkerTask>,
+        preview_dir_tx: &Sender<LoadDirTask>,
+        preview_file_tx: &Sender<PreviewTask>,
+        metadata_tx: &Sender<MetadataTask>,
+        fileop_tx: &Sender<FileOperation>,
+        runner_tx: &Sender<CommandTask>,
         response_rx: &Receiver<WorkerResponse>,
         active_fileops: &Arc<AtomicUsize>,
     }
@@ -142,19 +142,19 @@ impl Workers {
         Arc::clone(&self.cache)
     }
 
-    pub(crate) fn send_nav_io(&self, task: WorkerTask) {
+    pub(crate) fn send_nav_io(&self, task: LoadDirTask) {
         send_newest(&self.nav_io_tx, &self.nav_io_queue, task);
     }
 
-    pub(crate) fn send_parent_io(&self, task: WorkerTask) {
+    pub(crate) fn send_parent_io(&self, task: LoadDirTask) {
         send_newest(&self.parent_io_tx, &self.parent_io_queue, task);
     }
 
-    pub(crate) fn send_sort(&self, task: WorkerTask) {
+    pub(crate) fn send_sort(&self, task: SortDirTask) {
         send_newest(&self.sort_tx, &self.sort_queue, task);
     }
 
-    pub(crate) fn send_find(&self, task: WorkerTask) {
+    pub(crate) fn send_find(&self, task: FindTask) {
         send_newest(&self.find_tx, &self.find_queue, task);
     }
 
@@ -181,65 +181,62 @@ pub(crate) enum PreviewLines {
     Listing(Vec<ListingRow>),
 }
 
-/// Tasks sent to the worker thread via channel.
-///
-/// Each variant describes a filesystem or a preview operation to perform.
-pub(crate) enum WorkerTask {
-    LoadDirectory {
-        path: PathBuf,
-        focus: Option<OsString>,
-        list: DirListOptions,
-        sort_config: SortConfig,
-        sort_date_format: Arc<str>,
-        always_show: Arc<HashSet<OsString>>,
-        request_id: u64,
-        tab_id: Option<usize>,
-    },
-    SortDirectory {
-        path: PathBuf,
-        entries: Arc<[FileEntry]>,
-        focus: Option<OsString>,
-        list: DirListOptions,
-        sort_config: SortConfig,
-        sort_date_format: Arc<str>,
-        always_show: Arc<HashSet<OsString>>,
-        request_id: u64,
-        tab_id: Option<usize>,
-    },
-    LoadPreview {
-        path: PathBuf,
-        max_lines: usize,
-        pane_width: usize,
-        scroll: usize,
-        preview_mode: PreviewMode,
-        request_id: u64,
-        tab_id: Option<usize>,
-    },
-    FileOp {
-        op: FileOperation,
-    },
-    RunCommand {
-        program: PathBuf,
-        args: Vec<OsString>,
-        dir: Option<PathBuf>,
-        check_status: bool,
-    },
-    FindRecursive {
-        base_dir: PathBuf,
-        query: String,
-        max_results: usize,
-        cancel: Arc<AtomicBool>,
-        show_hidden: bool,
-        request_id: u64,
-        tab_id: Option<usize>,
-    },
-    GetFileMetadata {
-        path: PathBuf,
-        date_format: String,
-        needs: MetadataNeeds,
-        request_id: u64,
-        tab_id: Option<usize>,
-    },
+pub(crate) struct LoadDirTask {
+    pub(crate) path: PathBuf,
+    pub(crate) focus: Option<OsString>,
+    pub(crate) list: DirListOptions,
+    pub(crate) sort_config: SortConfig,
+    pub(crate) sort_date_format: Arc<str>,
+    pub(crate) always_show: Arc<HashSet<OsString>>,
+    pub(crate) request_id: u64,
+    pub(crate) tab_id: Option<usize>,
+}
+
+pub(crate) struct SortDirTask {
+    pub(crate) path: PathBuf,
+    pub(crate) entries: Arc<[FileEntry]>,
+    pub(crate) focus: Option<OsString>,
+    pub(crate) list: DirListOptions,
+    pub(crate) sort_config: SortConfig,
+    pub(crate) sort_date_format: Arc<str>,
+    pub(crate) always_show: Arc<HashSet<OsString>>,
+    pub(crate) request_id: u64,
+    pub(crate) tab_id: Option<usize>,
+}
+
+pub(crate) struct PreviewTask {
+    pub(crate) path: PathBuf,
+    pub(crate) max_lines: usize,
+    pub(crate) pane_width: usize,
+    pub(crate) scroll: usize,
+    pub(crate) preview_mode: PreviewMode,
+    pub(crate) request_id: u64,
+    pub(crate) tab_id: Option<usize>,
+}
+
+pub(crate) struct FindTask {
+    pub(crate) base_dir: PathBuf,
+    pub(crate) query: String,
+    pub(crate) max_results: usize,
+    pub(crate) cancel: Arc<AtomicBool>,
+    pub(crate) show_hidden: bool,
+    pub(crate) request_id: u64,
+    pub(crate) tab_id: Option<usize>,
+}
+
+pub(crate) struct MetadataTask {
+    pub(crate) path: PathBuf,
+    pub(crate) date_format: String,
+    pub(crate) needs: MetadataNeeds,
+    pub(crate) request_id: u64,
+    pub(crate) tab_id: Option<usize>,
+}
+
+pub(crate) struct CommandTask {
+    pub(crate) program: PathBuf,
+    pub(crate) args: Vec<OsString>,
+    pub(crate) dir: Option<PathBuf>,
+    pub(crate) check_status: bool,
 }
 
 /// Supported file system operations the worker can perform.
@@ -331,7 +328,7 @@ pub(crate) enum WatchCommand {
     Retarget(Vec<PathBuf>),
 }
 
-fn send_newest(tx: &Sender<WorkerTask>, queue: &Receiver<WorkerTask>, task: WorkerTask) {
+fn send_newest<T>(tx: &Sender<T>, queue: &Receiver<T>, task: T) {
     if let Err(TrySendError::Full(task)) = tx.try_send(task) {
         let _ = queue.try_recv();
         let _ = tx.try_send(task);
@@ -370,34 +367,13 @@ mod test_support {
 
 #[cfg(test)]
 mod tests {
-    use super::test_support::{TEST_TAB_ID, test_list_opts};
     use super::*;
-
-    fn load(request_id: u64) -> WorkerTask {
-        WorkerTask::LoadDirectory {
-            path: PathBuf::from("dir"),
-            focus: None,
-            list: test_list_opts(),
-            sort_config: SortConfig::default(),
-            sort_date_format: Arc::from(""),
-            always_show: Arc::new(HashSet::new()),
-            request_id,
-            tab_id: TEST_TAB_ID,
-        }
-    }
-
-    fn request_id(task: WorkerTask) -> Option<u64> {
-        match task {
-            WorkerTask::LoadDirectory { request_id, .. } => Some(request_id),
-            _ => None,
-        }
-    }
 
     #[test]
     fn newest_task_replaces_the_waiting_one() {
         let (tx, rx) = bounded(1);
-        send_newest(&tx, &rx, load(1));
-        send_newest(&tx, &rx, load(2));
-        assert_eq!(rx.try_iter().map(request_id).collect::<Vec<_>>(), [Some(2)]);
+        send_newest(&tx, &rx, 1);
+        send_newest(&tx, &rx, 2);
+        assert_eq!(rx.try_iter().collect::<Vec<_>>(), [2]);
     }
 }

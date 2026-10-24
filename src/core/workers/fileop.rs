@@ -13,7 +13,7 @@ use std::thread;
 use crossbeam_channel::{Receiver, Sender};
 
 use crate::core::fs;
-use crate::core::workers::{FileOperation, WorkerResponse, WorkerTask};
+use crate::core::workers::{FileOperation, WorkerResponse};
 
 struct ActiveOpGuard(Arc<AtomicUsize>);
 
@@ -31,17 +31,13 @@ impl Drop for ActiveOpGuard {
 }
 
 pub(super) fn start(
-    task_rx: Receiver<WorkerTask>,
+    task_rx: Receiver<FileOperation>,
     res_tx: Sender<WorkerResponse>,
     active_fileop: Arc<AtomicUsize>,
 ) {
     thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
+        while let Ok(op) = task_rx.recv() {
             let _guard = ActiveOpGuard::new(Arc::clone(&active_fileop));
-
-            let WorkerTask::FileOp { op } = task else {
-                continue;
-            };
 
             let modified_dirs = collect_modified_dirs(&op);
             let mut focus_target: Option<OsString> = None;
@@ -299,7 +295,7 @@ fn collect_modified_dirs(op: &FileOperation) -> Vec<PathBuf> {
 #[cfg(test)]
 mod tests {
     use crate::core::workers::test_support::TEST_TIMEOUT;
-    use crate::core::workers::{FileOperation, WorkerResponse, WorkerTask, Workers};
+    use crate::core::workers::{FileOperation, WorkerResponse, Workers};
 
     #[test]
     fn fileop_worker_create_and_delete_file() -> Result<(), Box<dyn std::error::Error>> {
@@ -308,12 +304,10 @@ mod tests {
         let temp_dir = temp.path().to_path_buf();
         let workers = Workers::spawn();
 
-        workers.fileop_tx().send(WorkerTask::FileOp {
-            op: FileOperation::Create {
-                path: file_path.clone(),
-                is_dir: false,
-                overwrite: false,
-            },
+        workers.fileop_tx().send(FileOperation::Create {
+            path: file_path.clone(),
+            is_dir: false,
+            overwrite: false,
         })?;
 
         let r = workers.response_rx().recv_timeout(TEST_TIMEOUT)?;
@@ -331,9 +325,9 @@ mod tests {
             other => return Err(format!("Unexpected response: {:?}", other).into()),
         }
 
-        workers.fileop_tx().send(WorkerTask::FileOp {
-            op: FileOperation::Delete(vec![file_path.clone()], false),
-        })?;
+        workers
+            .fileop_tx()
+            .send(FileOperation::Delete(vec![file_path.clone()], false))?;
 
         let r = workers
             .response_rx()

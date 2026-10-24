@@ -10,7 +10,7 @@ use std::thread;
 
 use crossbeam_channel::{Receiver, Sender};
 
-use crate::core::workers::{WorkerResponse, WorkerTask};
+use crate::core::workers::{CommandTask, WorkerResponse};
 
 /// Bytes of stderr kept for the error message.
 const STDERR_KEEP_BYTES: u64 = 4096;
@@ -18,19 +18,15 @@ const STDERR_KEEP_BYTES: u64 = 4096;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
-pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+pub(super) fn start(task_rx: Receiver<CommandTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::RunCommand {
-                program,
-                args,
-                dir,
-                check_status,
-            } = task
-            else {
-                continue;
-            };
-
+        while let Ok(CommandTask {
+            program,
+            args,
+            dir,
+            check_status,
+        }) = task_rx.recv()
+        {
             let name = program
                 .file_stem()
                 .unwrap_or(program.as_os_str())
@@ -132,7 +128,7 @@ mod tests {
         let (task_tx, task_rx) = unbounded();
         let (res_tx, res_rx) = unbounded();
         start(task_rx, res_tx);
-        let task = WorkerTask::RunCommand {
+        let task = CommandTask {
             program: PathBuf::from(program),
             args: args.iter().map(OsString::from).collect(),
             dir: Some(dir.path().to_path_buf()),

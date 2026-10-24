@@ -13,26 +13,22 @@ use crate::core::{
     fs,
     preview::{self, ListingRow},
     proc,
-    workers::{PreviewLines, PreviewMode, WorkerResponse, WorkerTask},
+    workers::{PreviewLines, PreviewMode, PreviewTask, WorkerResponse},
 };
 use crate::utils::{os, timings::Timings};
 
-pub(super) fn start(task_rx: Receiver<WorkerTask>, res_tx: Sender<WorkerResponse>) {
+pub(super) fn start(task_rx: Receiver<PreviewTask>, res_tx: Sender<WorkerResponse>) {
     thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::LoadPreview {
-                path,
-                max_lines,
-                pane_width,
-                scroll,
-                preview_mode,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
+        while let Ok(PreviewTask {
+            path,
+            max_lines,
+            pane_width,
+            scroll,
+            preview_mode,
+            request_id,
+            tab_id,
+        }) = task_rx.recv()
+        {
             let read_lines = max_lines + 1;
 
             let mut lines = if fs::is_temp_file(&path) {
@@ -112,7 +108,7 @@ fn split_eof<T>(lines: &mut Vec<T>, max_lines: usize) -> bool {
 #[cfg(test)]
 mod tests {
     use crate::core::workers::test_support::{TEST_TAB_ID, TEST_TIMEOUT, bat_available};
-    use crate::core::workers::{PreviewLines, PreviewMode, WorkerResponse, WorkerTask, Workers};
+    use crate::core::workers::{PreviewLines, PreviewMode, PreviewTask, WorkerResponse, Workers};
 
     use std::fs;
     use tempfile::tempdir;
@@ -123,7 +119,7 @@ mod tests {
         let preview_file = temp.path().join("preview.txt");
         std::fs::write(&preview_file, "A\nB\nC\nD\n")?;
         let workers = Workers::spawn();
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+        workers.preview_file_tx().send(PreviewTask {
             path: preview_file.clone(),
             max_lines: 2,
             pane_width: 40,
@@ -160,7 +156,7 @@ mod tests {
 
         let workers = Workers::spawn();
 
-        workers.preview_file_tx().send(WorkerTask::LoadPreview {
+        workers.preview_file_tx().send(PreviewTask {
             path: file_path,
             max_lines: 5,
             pane_width: 40,

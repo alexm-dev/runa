@@ -29,7 +29,7 @@ use crate::app::{
 };
 use crate::command::{self, RunMode};
 use crate::config::editor::EditorCommand;
-use crate::core::workers::WorkerTask;
+use crate::core::workers::CommandTask;
 use crate::utils::Timings;
 use crate::utils::path;
 
@@ -441,7 +441,7 @@ impl AppState {
         cwd: PathBuf,
         check_status: bool,
     ) {
-        let task = WorkerTask::RunCommand {
+        let task = CommandTask {
             program,
             args,
             dir: Some(cwd),

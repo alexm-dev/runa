@@ -12,32 +12,28 @@ use dashmap::DashMap;
 use crate::core::{
     FileEntry, Formatter,
     cache::DirCache,
-    workers::{WorkerResponse, WorkerTask},
+    workers::{SortDirTask, WorkerResponse},
 };
 use crate::utils::text::StrBuffer;
 
 pub(super) fn start(
-    task_rx: Receiver<WorkerTask>,
+    task_rx: Receiver<SortDirTask>,
     res_tx: Sender<WorkerResponse>,
     cache: Arc<DirCache>,
 ) {
     thread::spawn(move || {
-        while let Ok(task) = task_rx.recv() {
-            let WorkerTask::SortDirectory {
-                path,
-                entries,
-                focus,
-                list,
-                sort_config,
-                sort_date_format,
-                always_show,
-                request_id,
-                tab_id,
-            } = task
-            else {
-                continue;
-            };
-
+        while let Ok(SortDirTask {
+            path,
+            entries,
+            focus,
+            list,
+            sort_config,
+            sort_date_format,
+            always_show,
+            request_id,
+            tab_id,
+        }) = task_rx.recv()
+        {
             let mut entries_vec = entries.to_vec();
             let meta_cache = DashMap::with_capacity(entries.len());
 
