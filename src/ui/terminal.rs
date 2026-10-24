@@ -17,8 +17,7 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
 };
 
-use crate::app::{self, AppContainer, KeypressResult, RunaRoot};
-use crate::ui;
+use crate::app::{KeypressResult, RunaRoot};
 
 pub(crate) const POLL_INTERVAL: Duration = Duration::from_millis(16);
 
@@ -51,17 +50,7 @@ where
     io::Error: From<<B as Backend>::Error>,
 {
     loop {
-        let mut changed = root.update();
-
-        changed |= root.container.current_mut().tick(&root.workers);
-
-        if changed {
-            root.sync_watch();
-
-            if let AppContainer::Tabs(tabs) = &mut root.container {
-                tabs.sync_tab_line();
-            }
-
+        if root.tick() {
             draw(terminal, root)?;
         }
 
@@ -70,13 +59,7 @@ where
             match event::read()? {
                 // handle keypress
                 Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    let result = root.container.current_mut().handle_keypress(
-                        key,
-                        &root.workers,
-                        &mut root.clipboard,
-                    );
-
-                    match result {
+                    match root.handle_keypress(key) {
                         KeypressResult::Quit => break,
                         KeypressResult::OpenedEditor | KeypressResult::Recovered => {
                             execute!(
@@ -89,16 +72,6 @@ where
                         }
                         KeypressResult::UiReload if root.reload_ui(terminal.backend_mut())? => {
                             terminal.clear()?;
-                        }
-                        KeypressResult::Tab(tab_act) => {
-                            if let KeypressResult::Quit =
-                                app::handle_tab_action(&root.workers, &mut root.container, tab_act)
-                            {
-                                break;
-                            }
-                        }
-                        KeypressResult::Sort(config) => {
-                            app::handle_sort_action(&mut root.container, config);
                         }
                         _ => {}
                     }
@@ -122,13 +95,6 @@ where
     B: Backend,
     io::Error: From<<B as Backend>::Error>,
 {
-    terminal.draw(|f| {
-        ui::render(
-            f,
-            root.container.current_mut(),
-            &root.workers,
-            &mut root.clipboard,
-        );
-    })?;
+    terminal.draw(|f| root.render(f))?;
     Ok(())
 }
