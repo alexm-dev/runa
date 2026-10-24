@@ -210,6 +210,10 @@ impl NavState {
             if let Some(clip) = clipboard
                 && clip.remove(&path)
             {
+                if clip.is_empty() {
+                    *clipboard = None;
+                }
+
                 self.markers.insert(path);
                 return;
             }
