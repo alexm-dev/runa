@@ -1,8 +1,9 @@
 //! Path string and formatting relevant utilities.
 
 use std::borrow::Cow;
+use std::fs;
+use std::io;
 use std::path::{MAIN_SEPARATOR, Path, PathBuf};
-use std::{fs, io};
 
 use crate::utils::os;
 

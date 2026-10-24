@@ -11,9 +11,10 @@
 //! as needed based on user interactions.
 
 use std::ffi::OsString;
+use std::fs;
+use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
-use std::{fs, io};
 
 use crate::app::{
     Clipboard, NavState, Workers,

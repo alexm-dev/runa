@@ -1,8 +1,9 @@
 //! Environment relevant utils.
 
+use std::env;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use std::{env, io};
 
 /// Shared cache for the home_dir dirs call
 static HOME_DIR_CACHE: OnceLock<Option<PathBuf>> = OnceLock::new();

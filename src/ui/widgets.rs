@@ -13,7 +13,6 @@ mod input;
 mod overlays;
 mod status;
 
-use crate::config::dialog::DialogPosition;
 pub(crate) use crate::config::display::StatusPosition;
 pub(crate) use dialog::{
     DialogLayout, DialogStyle, dialog_area, draw_dialog, get_pane_block, pane_borders,
@@ -25,6 +24,7 @@ pub(super) use status::*;
 use ratatui::{style::Style, text::Span, widgets::Borders};
 
 use crate::app::AppState;
+use crate::config::dialog::DialogPosition;
 
 pub(super) fn get_dialog_style(
     app: &AppState,

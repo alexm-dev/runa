@@ -3,7 +3,8 @@
 //! Handles setup/teardown of raw mode, alternate screen, redraws,
 //! and events (keypress, resize) to app logic.
 
-use std::{io, time::Duration};
+use std::io;
+use std::time::Duration;
 
 use crossterm::{
     cursor::{Hide, Show},

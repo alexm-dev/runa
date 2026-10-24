@@ -30,9 +30,10 @@ pub(crate) mod utils;
 #[doc(hidden)]
 pub mod bench_api;
 
+use std::io;
+use std::panic;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::{io, panic};
 
 use crate::app::MAX_TABS;
 use crate::cli::{CliAction, handle_args};

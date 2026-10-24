@@ -1,8 +1,9 @@
 //! Filesystem relevant functions
 
 use std::ffi::OsStr;
+use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
-use std::{fs, io};
 
 const DENY: &[&str] = &["a", "lib", "ilk", "h5", "zip", "gz", "tar", "pdb"];
 

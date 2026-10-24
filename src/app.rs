@@ -20,6 +20,11 @@ pub(crate) use preview::{PreviewData, PreviewState};
 pub(crate) use state::{AppState, KeypressResult, LayoutMetrics};
 pub(crate) use tab::{MAX_TABS, handle_sort_action, handle_tab_action};
 
+use std::collections::HashSet;
+use std::io;
+use std::path::PathBuf;
+use std::sync::Arc;
+
 use crossterm::{
     cursor::Hide,
     execute,
@@ -32,10 +37,6 @@ use crate::{
     app::tab::TabManager,
     core::workers::{WorkerResponse, Workers},
 };
-use std::collections::HashSet;
-use std::io;
-use std::path::PathBuf;
-use std::sync::Arc;
 
 /// The main container enum to hold either the TabManager or a single boxed AppState to then match
 /// either a single state or a tabs which then hold multiple AppStates.
