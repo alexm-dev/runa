@@ -201,7 +201,8 @@ impl ActionContext {
                 cut: clipboard.is_cut(),
                 focus: first_file_name,
             });
-            if clipboard.is_cut {
+
+            if clipboard.is_cut() {
                 clipboard.clear();
             }
             nav.clear_markers();
