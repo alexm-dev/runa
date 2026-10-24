@@ -49,7 +49,7 @@ It allows you to navigate directories, view file listings, and perform typical f
 - **Essential-only Rust crates:** No external TUI frameworks or bloat.
 - **Direct terminal rendering:** Uses [ratatui](https://ratatui.rs/) & [crossterm](https://github.com/crossterm-rs/crossterm).
 - **Optional blazing-fast find:** Integrates with [fd](https://github.com/sharkdp/fd) for recursive fuzzy search.
-- **Blazingly lightweight:** The `rn` binary is compact (typically 1.7-2 MB, depending on operating system and architecture).
+- **Blazingly lightweight:** The `rn` binary is compact (typically 1.9-2.2 MB, depending on operating system and architecture).
 - **Minimal memory footprint**: Optimized for low RAM usage.
 
 </details>
