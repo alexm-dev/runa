@@ -17,10 +17,11 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::app::{
-    Clipboard, NavState, Workers,
+    Clipboard, NavState,
     keymap::NavAction,
     state::{AppState, KeypressResult},
 };
+use crate::core::workers::Workers;
 use crate::utils::{os, path, timings::Timings};
 
 impl AppState {

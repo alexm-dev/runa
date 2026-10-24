@@ -22,14 +22,14 @@ use crossterm::{
 };
 
 use crate::app::{
-    Clipboard, Workers,
+    Clipboard,
     actions::{ActionMode, InputMode},
     keymap::FileAction,
     state::{AppState, KeypressResult},
 };
 use crate::command::{self, RunMode};
 use crate::config::editor::EditorCommand;
-use crate::core::workers::CommandTask;
+use crate::core::workers::{CommandTask, Workers};
 use crate::utils::Timings;
 use crate::utils::path;
 
