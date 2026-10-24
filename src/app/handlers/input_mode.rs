@@ -10,7 +10,7 @@
 //! helper functions for entering/exiting input modes
 //! and processing specific actions within those modes.
 
-use std::path::MAIN_SEPARATOR;
+use std::path::{MAIN_SEPARATOR, Path};
 use std::time::Duration;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
@@ -398,7 +398,7 @@ impl AppState {
 
         let (base_dir, prefix) = if let Some(idx) = expanded.rfind(MAIN_SEPARATOR) {
             let (base, frag) = expanded.split_at(idx + 1);
-            (std::path::Path::new(base), frag)
+            (Path::new(base), frag)
         } else {
             (self.nav.current_dir(), expanded.as_str())
         };

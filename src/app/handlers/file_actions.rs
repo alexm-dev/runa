@@ -457,7 +457,7 @@ impl AppState {
     ///
     /// Temporary disables raw mode and exits alternate sceen while the editor runs.
     /// On return, restores raw mode and alternate sceen.
-    fn run_in_terminal(program: &Path, args: Vec<OsString>, cwd: &Path) -> std::io::Result<()> {
+    fn run_in_terminal(program: &Path, args: Vec<OsString>, cwd: &Path) -> io::Result<()> {
         let mut stdout = io::stdout();
         disable_raw_mode()?;
         execute!(stdout, LeaveAlternateScreen)?;

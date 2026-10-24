@@ -4,6 +4,7 @@
 //! which is responsible for loading file metadata in a separate thread.
 //! Used by the FileInfo UI component to load file metadata asynchronously.
 
+use std::io;
 use std::sync::Arc;
 use std::thread;
 
@@ -48,7 +49,7 @@ pub(super) fn start(task_rx: Receiver<MetadataTask>, res_tx: Sender<WorkerRespon
                     });
                 }
                 Err(e) => {
-                    let vanished = e.kind() == std::io::ErrorKind::NotFound || !path.exists();
+                    let vanished = e.kind() == io::ErrorKind::NotFound || !path.exists();
                     if !vanished {
                         let _ =
                             res_tx.send(WorkerResponse::Error(format!("Metadata Error: {}", e)));

@@ -33,6 +33,7 @@ use crate::{
     core::workers::{WorkerResponse, Workers},
 };
 use std::collections::HashSet;
+use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -153,7 +154,7 @@ impl RunaRoot {
         changed
     }
 
-    pub(crate) fn reload_ui(&mut self, writer: &mut impl std::io::Write) -> std::io::Result<bool> {
+    pub(crate) fn reload_ui(&mut self, writer: &mut impl io::Write) -> io::Result<bool> {
         if !self.ui_reload_throttler.can_trigger(Timings::UI_RELOAD_MS) {
             return Ok(false);
         }

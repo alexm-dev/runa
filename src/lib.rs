@@ -30,9 +30,9 @@ pub(crate) mod utils;
 #[doc(hidden)]
 pub mod bench_api;
 
-use std::io;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::{io, panic};
 
 use crate::app::MAX_TABS;
 use crate::cli::{CliAction, handle_args};
@@ -41,10 +41,10 @@ use crate::core::workers::Workers;
 use crate::utils::path::{resolve_initial_dir, validate_path};
 
 fn set_panic_hook() {
-    std::panic::set_hook(Box::new(handle_panic));
+    panic::set_hook(Box::new(handle_panic));
 }
 
-fn handle_panic(info: &std::panic::PanicHookInfo<'_>) {
+fn handle_panic(info: &panic::PanicHookInfo<'_>) {
     let _ = crossterm::terminal::disable_raw_mode();
     let mut stdout = io::stdout();
     let _ = crossterm::execute!(

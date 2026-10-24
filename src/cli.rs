@@ -80,7 +80,7 @@ pub(crate) fn handle_args() -> CliAction {
                 };
 
                 if let Err(e) = result
-                    && e.kind() != std::io::ErrorKind::BrokenPipe
+                    && e.kind() != io::ErrorKind::BrokenPipe
                 {
                     eprintln!("[runa] Error displaying config help: {}", e);
                 }

@@ -15,7 +15,7 @@
 //! auto-completion of paths via fd.
 
 use std::borrow::Cow;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Reverse};
 use std::ffi::{OsStr, OsString};
 use std::io::{self, BufRead, Read};
 use std::path::MAIN_SEPARATOR;
@@ -162,10 +162,10 @@ pub(crate) fn find(
     }
 
     if raw_results.len() > max_results {
-        raw_results.select_nth_unstable_by_key(max_results - 1, |raw| std::cmp::Reverse(raw.score));
+        raw_results.select_nth_unstable_by_key(max_results - 1, |raw| Reverse(raw.score));
         raw_results.truncate(max_results);
     }
-    raw_results.sort_unstable_by_key(|raw| std::cmp::Reverse(raw.score));
+    raw_results.sort_unstable_by_key(|raw| Reverse(raw.score));
 
     out.reserve(raw_results.len());
     out.extend(raw_results.into_iter().map(|raw| {
@@ -188,7 +188,7 @@ pub(crate) fn preview_bat(
     max_lines: usize,
     bat_args: &[OsString],
     scroll: usize,
-) -> Result<Vec<String>, std::io::Error> {
+) -> Result<Vec<String>, io::Error> {
     if max_lines == 0 {
         return Ok(Vec::new());
     }
@@ -221,7 +221,7 @@ pub(crate) fn preview_bat(
     }
 
     if lines.is_empty() {
-        return Err(std::io::Error::other("bat produced no output"));
+        return Err(io::Error::other("bat produced no output"));
     }
 
     Ok(lines)
@@ -300,7 +300,7 @@ pub(crate) fn complete_dirs_with_fd(
     base_dir: &Path,
     prefix: &str,
     show_hidden: bool,
-) -> Result<Vec<String>, std::io::Error> {
+) -> Result<Vec<String>, io::Error> {
     let fd_bin = os::fd_binary()?;
 
     let mut cmd = Command::new(fd_bin);
@@ -314,7 +314,7 @@ pub(crate) fn complete_dirs_with_fd(
     let output = cmd.output()?;
 
     if !output.status.success() {
-        return Err(std::io::Error::other(format!(
+        return Err(io::Error::other(format!(
             "fd exited with status: {:?}",
             output.status
         )));

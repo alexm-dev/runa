@@ -159,7 +159,7 @@ impl Formatter {
 
         entries.sort_unstable_by(|a, b| {
             let ord = self.prio_for_entry(a).cmp(&self.prio_for_entry(b));
-            if ord != std::cmp::Ordering::Equal {
+            if ord != Ordering::Equal {
                 return ord;
             }
 
@@ -179,7 +179,7 @@ impl Formatter {
 
         entries.sort_unstable_by(|a, b| {
             let ord = self.prio_for_entry(a).cmp(&self.prio_for_entry(b));
-            if ord != std::cmp::Ordering::Equal {
+            if ord != Ordering::Equal {
                 return ord;
             }
 
@@ -203,7 +203,7 @@ impl Formatter {
 
         entries.sort_unstable_by(|a, b| {
             let ord = self.prio_for_entry(a).cmp(&self.prio_for_entry(b));
-            if ord != std::cmp::Ordering::Equal {
+            if ord != Ordering::Equal {
                 return ord;
             }
 
@@ -212,7 +212,7 @@ impl Formatter {
 
             let mut result = a_ext.cmp(b_ext);
 
-            if result == std::cmp::Ordering::Equal {
+            if result == Ordering::Equal {
                 result = if case_insensitive {
                     a.lowered_bytes().cmp(b.lowered_bytes())
                 } else {

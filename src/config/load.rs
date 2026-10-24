@@ -111,7 +111,7 @@ impl Config {
 
     /// Generate a default configuration file at the specified path.
     /// If the file already exists, returns an error.
-    pub(crate) fn generate_default(path: &PathBuf, minimal: bool) -> std::io::Result<()> {
+    pub(crate) fn generate_default(path: &PathBuf, minimal: bool) -> io::Result<()> {
         if path.exists() {
             return Err(io::Error::new(
                 io::ErrorKind::AlreadyExists,

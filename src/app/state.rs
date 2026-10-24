@@ -3,7 +3,9 @@
 //! This module defines the overall [AppState] struct, which holds all major application
 //! information and passes it to relevant UI/Terminal functions
 
+use std::env;
 use std::ffi::OsString;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -102,22 +104,22 @@ pub(crate) struct AppState {
 }
 
 impl AppState {
-    pub(crate) fn new(config: Arc<Config>) -> std::io::Result<Self> {
-        let current_dir = std::env::current_dir()?;
+    pub(crate) fn new(config: Arc<Config>) -> io::Result<Self> {
+        let current_dir = env::current_dir()?;
         Self::from_dir(config, &current_dir)
     }
 
-    pub(crate) fn new_current_dir(&self) -> std::io::Result<Self> {
+    pub(crate) fn new_current_dir(&self) -> io::Result<Self> {
         let mut app = Self::from_dir(Arc::clone(&self.config), self.nav.current_dir())?;
         app.nav.set_sort_config(self.nav.sort_config());
         Ok(app)
     }
 
-    pub(crate) fn from_dir(config: Arc<Config>, initial_path: &Path) -> std::io::Result<Self> {
+    pub(crate) fn from_dir(config: Arc<Config>, initial_path: &Path) -> io::Result<Self> {
         let current_dir = if initial_path.exists() && initial_path.is_dir() {
             initial_path.to_path_buf()
         } else {
-            std::env::current_dir()?
+            env::current_dir()?
         };
 
         let app = Self {

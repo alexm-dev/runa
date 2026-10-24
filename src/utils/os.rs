@@ -1,8 +1,8 @@
 //! Environment relevant utils.
 
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
+use std::{env, io};
 
 /// Shared cache for the home_dir dirs call
 static HOME_DIR_CACHE: OnceLock<Option<PathBuf>> = OnceLock::new();
@@ -19,7 +19,7 @@ static BAT_BIN: OnceLock<Option<&'static str>> = OnceLock::new();
 /// Thread safe for getting home_dir once.
 #[inline]
 pub(crate) fn get_home() -> Option<&'static PathBuf> {
-    HOME_DIR_CACHE.get_or_init(std::env::home_dir).as_ref()
+    HOME_DIR_CACHE.get_or_init(env::home_dir).as_ref()
 }
 
 #[inline]
@@ -33,11 +33,9 @@ pub(crate) fn bat_binary() -> io::Result<&'static str> {
 }
 
 pub(crate) fn default_config_path() -> PathBuf {
-    std::env::var_os("RUNA_CONFIG")
+    env::var_os("RUNA_CONFIG")
         .map(PathBuf::from)
-        .or_else(|| {
-            std::env::var_os("XDG_CONFIG_HOME").map(|s| PathBuf::from(s).join("runa/runa.toml"))
-        })
+        .or_else(|| env::var_os("XDG_CONFIG_HOME").map(|s| PathBuf::from(s).join("runa/runa.toml")))
         .or_else(|| get_home().map(|h| h.join(".config/runa/runa.toml")))
         .unwrap_or_else(|| PathBuf::from("runa.toml"))
 }

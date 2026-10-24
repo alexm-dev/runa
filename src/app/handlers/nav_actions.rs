@@ -13,6 +13,7 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::{fs, io};
 
 use crate::app::{
     Clipboard, NavState, Workers,
@@ -153,7 +154,7 @@ impl AppState {
 
         let parent_path = parent.to_path_buf();
 
-        if std::fs::metadata(&parent_path).is_err() {
+        if fs::metadata(&parent_path).is_err() {
             self.push_overlay_message(
                 "Parent directory is unreachable".to_string(),
                 Duration::from_secs(3),
@@ -178,7 +179,7 @@ impl AppState {
 
         let entry_path = self.nav.current_dir().join(entry.name());
 
-        let Ok(meta) = std::fs::metadata(&entry_path) else {
+        let Ok(meta) = fs::metadata(&entry_path) else {
             return KeypressResult::Continue;
         };
 
@@ -186,12 +187,12 @@ impl AppState {
             return KeypressResult::Continue;
         }
 
-        match std::fs::read_dir(&entry_path) {
+        match fs::read_dir(&entry_path) {
             Ok(_) => {
                 self.navigate_to(entry_path, None, workers);
                 KeypressResult::Continue
             }
-            Err(e) if e.kind() == std::io::ErrorKind::PermissionDenied => {
+            Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
                 let msg = format!("Permission Denied: {}", e);
                 self.push_overlay_message(msg, Duration::from_secs(3), None);
                 KeypressResult::Consumed
@@ -227,7 +228,7 @@ impl AppState {
             (parent.to_path_buf(), file_name)
         };
 
-        if let Err(e) = std::fs::read_dir(&target_dir) {
+        if let Err(e) = fs::read_dir(&target_dir) {
             let msg = format!("Access Denied: {}", e);
             self.push_overlay_message(msg, Duration::from_secs(3), None);
             return;
@@ -260,7 +261,7 @@ impl AppState {
             self.nav.current_dir().join(expaned)
         };
 
-        if let Ok(meta) = std::fs::metadata(&abs_path) {
+        if let Ok(meta) = fs::metadata(&abs_path) {
             if meta.is_dir() {
                 self.navigate_to(abs_path.clone(), None, workers);
             } else {

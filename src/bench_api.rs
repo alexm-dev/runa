@@ -11,6 +11,7 @@
 
 use std::collections::HashSet;
 use std::ffi::OsString;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant, UNIX_EPOCH};
@@ -369,7 +370,7 @@ pub struct IdleFixture {
 
 impl IdleFixture {
     /// Opens the directory and waits for the first loads and previews to finish.
-    pub fn new(dir: &Path) -> std::io::Result<Self> {
+    pub fn new(dir: &Path) -> io::Result<Self> {
         let workers = Workers::spawn();
         let mut app = AppState::from_dir(Arc::new(Config::default()), dir)?;
         app.initialize(&workers, None);
