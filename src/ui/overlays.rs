@@ -3,7 +3,7 @@
 //!
 //! Can be expanded to hanlde more widget types for more functions.
 //!
-//! Is used throughout the ui modules and in handlers.rs.
+//! Is used throughout the ui modules and in AppState handlers.
 
 use std::slice;
 use std::sync::Arc;

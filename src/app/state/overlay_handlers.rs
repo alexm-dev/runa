@@ -1,7 +1,7 @@
 //! Overlay handlers for AppState.
 //!
 //! This module defines the overlay-related functions for the central
-//! [app::state::handle_keypress] function.
+//! [app::state::handle_keypress](AppState::handle_keypress) function.
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};

@@ -1,6 +1,6 @@
 //! File metadata module for AppState usage.
 //!
-//! [MetadataState] struct to wrap the [FileMetadata] and manage the state of worker requests,
+//! [MetadataState] struct to wrap the [FileMetadata](crate::core::metadata::FileMetadata) and manage the state of worker requests,
 //! pending paths, and selected file metadata.
 
 use std::path::{Path, PathBuf};

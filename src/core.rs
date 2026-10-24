@@ -1,7 +1,7 @@
 //! Core runtime logic for runa.
 //!
 //! This module contains the non-UI pieces used by runa:
-//! - [fm]: directory traversal (see [browse_dir], [FileEntry]).
+//! - [fm]: directory traversal (see [browse_dir](fm::browse_dir), [FileEntry]).
 //! - [fs]: filesystem functionality and sys-calls functions.
 //! - [formatter]: formatting and sorting logic.
 //! - [workers]: background work and message passing back into the RunaRoot struct.

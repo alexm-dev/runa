@@ -5,7 +5,7 @@
 //! mode confirmation/cancellation and any special keys relevant
 //! to the specific input modes (e.g., Tab for autocomplete in path input).
 //!
-//! Defines the central [handle_input_mode] function that routes key events
+//! Defines the central [handle_input_mode](AppState::handle_input_mode) function that routes key events
 //! to the appropriate handlers based on the current input mode as well as
 //! helper functions for entering/exiting input modes
 //! and processing specific actions within those modes.

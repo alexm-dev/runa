@@ -1,7 +1,7 @@
 //! File action handlers for AppState.
 //!
-//! Defines [handle_file_action] method which dispatches file actions
-//! to the central [app::state::handle_keypress].
+//! Defines [handle_file_action](AppState::handle_file_action) method which dispatches file actions
+//! to the central [app::state::handle_keypress](AppState::handle_keypress).
 //!
 //! Also defines handlers for each file action (open, delete, copy, etc)
 //! which perform the necessary state updates

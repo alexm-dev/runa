@@ -1,6 +1,6 @@
 //! Miscellaneous utility functions for runa.
 //!
-//! This modules hodl the [helpers] submodule, which provides commonly used utilities such as:
+//! This modules hodl the [path] and [text] submodules, which provide commonly used utilities such as:
 //! - Color parsing
 //! - Computing an unused path for core/workers
 //! - Shortening the home directory path to "~"
