@@ -2,6 +2,21 @@
 
 All the changes made to runa are documented here.
 
+## [0.14.3] - UNRELEASED
+
+### Internal
+- **Frame**: Compute frame layouts before drawing to the UI resulting in performance improvements.
+- **FileOp**: Pass `FileOp` counts to the UI instead of reading directly from the workers.
+- **Runtime**: `root.rs` and `terminal.rs` are now part of the `runtime` module. `root.rs` now only holds the `RunaRoot` struct.
+- **Core**: Moved `command.rs` into the `core` module.
+- **App**:
+    - Separated `AppContainer` from `root.rs` and moved it to its own `app/container.rs` module.
+    - Moved `overlays.rs` into the `app` module.
+
+
+---
+
+
 ## [0.14.2] - 2026-10-25
 
 #### Directory cache and clipboard fixes, internal cleanup.
