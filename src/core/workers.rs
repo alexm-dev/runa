@@ -6,7 +6,7 @@
 //! Small changes here can have big effects since this module is tightly integrated with every part
 //! of runa.
 //!
-//! Tasks come in from the RunaRoot or UI via channels, and results or errors
+//! Tasks come in from the app state and the runtime via channels, and results or errors.
 //! [WorkerResponse] go back the same way. All filesystem I/O and previews happen on these threads
 //!
 //! # Caution:
@@ -80,18 +80,18 @@ impl FileOpCounts {
     }
 }
 
-/// Manages worker thread channels for different task types.
-///
-/// Each major operation (I/O (nav, preview, parent), preview, file metadata, find, file-ops) has its own dedicated worker thread.
-///
-/// The find worker uses a bounded channel of size 1: this design ensures that only the
-/// latest find request will be processed, automatically skipping obsolete queued requests
-/// from rapid-fire user input. This keeps search operations efficient, responsive, and
-/// guarantees only one concurrent find per application.
 impl Workers {
     /// Create the worker set.
     ///
-    /// Spawns dedicated threads for I/O, preview, find and file operations.
+    /// Spawns one thread per worker:
+    /// - I/O (nav, parent, folder preview),
+    /// - sort,
+    /// - file preview,
+    /// - metadata,
+    /// - find,
+    /// - file operations,
+    /// - command
+    /// - watcher.
     pub(crate) fn spawn() -> Self {
         let cache = Arc::new(DirCache::new());
         let active_fileops = Arc::new(AtomicUsize::new(0));

@@ -5,8 +5,6 @@
 //! This Module is the main orchestration of runa, that ties everything together.
 //!
 //! [RunaRoot] is the main struct, which holds the [AppContainer], the [Clipboard] and the [Workers].
-//! [AppContainer] is the main container enum, that holds either a single [AppState] or a [TabManager]
-//! which holds tabs of [AppState]s.
 
 use std::io;
 use std::path::PathBuf;

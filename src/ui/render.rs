@@ -1,6 +1,6 @@
 //! UI renderer implementation.
 //!
-//! Contains the top-level `render` entry point used by the terminal loop and the
+//! Contains the top-level `render` entry point used by the runtime and the
 //! layout helpers that split the screen into parent/main/preview chunks.
 //!
 //! This module should stay mostly “pure rendering”: it reads state + config and

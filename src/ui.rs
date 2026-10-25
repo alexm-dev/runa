@@ -6,8 +6,8 @@
 //! UI configuration is driven by the applications display/theme settings and adapts to different layouts: unified, split, or normal views.
 //!
 //! Functions:
-//! - render: Main entry point for rendering the entire UI to a frame.
-//! - layout_chunks: Utility for calculating pane positions and widths based on config.
+//! - frame_layout: Computes the layout of a frame without drawing it.
+//! - render: Draws the entire UI to a frame from that layout.
 //!
 //! See submodules [panes] and [widgets] for detailed drawing functions.
 

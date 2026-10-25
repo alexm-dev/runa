@@ -1,11 +1,10 @@
 //! Miscellaneous utility functions for runa.
 //!
-//! This modules hodl the [path] and [text] submodules, which provide commonly used utilities such as:
-//! - Color parsing
-//! - Computing an unused path for core/workers
-//! - Shortening the home directory path to "~"
-//!
-//! All of these utilities are used throughout runa for convenience and code clarity.
+//! Holds generic helpers used across the runa codebase:
+//! - [path]: expanding, normalizing, and and shortening paths for display.
+//! - [text]: the [StrBuffer](text::StrBuffer) string type.
+//! - [os]: OS-specific helpers.
+//! - [timings]: named duration constants and the throttler.
 
 pub(crate) mod os;
 pub(crate) mod path;

@@ -1,4 +1,4 @@
-//! Text and color rendering utils.
+//! Text utilities.
 
 #[derive(Debug)]
 pub(crate) struct StrBuffer {

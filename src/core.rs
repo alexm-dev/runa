@@ -9,7 +9,7 @@
 //! - [proc]: process management for running external commands like `bat`, `fd`.
 //! - [metadata]: file metadata extraction and caching, including file properties.
 //! - [cache]: caching of FileEntry data for pane rendering.
-//! - [command]: command line argument parsing and expansion.
+//! - [command]: editor and user command expansion: file variables and system opener.
 //! - [sort]: sorting configuration data for entry sorting.
 
 pub(crate) mod cache;

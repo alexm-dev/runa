@@ -1,4 +1,4 @@
-//! Application container to hold a single [AppState] or a [TabManger],
+//! Application container to hold a single [AppState] or a [TabManager],
 //! which holds multiple [AppState]s.
 //!
 //! It is used to route worker respones based on the correct container target,
