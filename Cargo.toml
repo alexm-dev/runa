@@ -62,20 +62,20 @@ crossterm = { version = "0.29.0", default-features = false, features = ["events"
 trash = { version = "5.2.9", default-features = false }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-notify = { version = "8.2.0", default-features = true }
+notify = { version = "8.2.1", default-features = true }
 
 [target.'cfg(not(target_os = "macos"))'.dependencies]
-notify = { version = "8.2.0", default-features = false }
+notify = { version = "8.2.1", default-features = false }
 
 [target.'cfg(unix)'.dependencies]
 uzers = { version = "0.12.2", default-features = false }
 
 [dev-dependencies]
-rand = "0.10.3"
-tempfile = "3.27.0"
-filetime = "0.2.29"
 criterion = { version = "0.8.2", default-features = false, features = ["cargo_bench_support"] }
+filetime = "0.2.29"
+rand = "0.10.3"
 stats_alloc = "0.1.10"
+tempfile = "3.27.0"
 
 [profile.dev]
 opt-level = 0
