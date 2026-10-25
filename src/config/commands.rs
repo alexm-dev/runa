@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::command::RunMode;
 use crate::config::input::InputKeyLists;
+use crate::core::command::RunMode;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]

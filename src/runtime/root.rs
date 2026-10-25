@@ -1,4 +1,4 @@
-//! Application root for runa.
+//! Runtime root for runa.
 //!
 //! Holds the app states, the shared clipboard and the workers and drives them for the event
 //! loop.
@@ -20,43 +20,12 @@ use crossterm::{
 };
 use ratatui::Frame;
 
-use crate::app::tab::{self, TabManager};
-use crate::app::{AppState, Clipboard, KeypressResult};
+use crate::app::tab;
+use crate::app::{AppContainer, Clipboard, KeypressResult};
 use crate::config::Config;
 use crate::core::workers::{WorkerResponse, Workers};
 use crate::ui;
 use crate::utils::timings::{Throttler, Timings};
-
-/// The main container enum to hold either the TabManager or a single boxed AppState to then match
-/// either a single state or a tabs which then hold multiple AppStates.
-pub(crate) enum AppContainer {
-    Single(Box<AppState>),
-    Tabs(Box<TabManager>),
-}
-
-impl AppContainer {
-    pub(crate) fn create_tabs(tabs: Vec<AppState>) -> Self {
-        Self::Tabs(Box::new(TabManager::from_vec(tabs)))
-    }
-
-    /// Returns the active app state, the single one or the current tab.
-    #[inline]
-    pub(crate) fn current(&self) -> &AppState {
-        match self {
-            AppContainer::Single(app) => app,
-            AppContainer::Tabs(tabs) => tabs.current_tab(),
-        }
-    }
-
-    /// Returns the mutable app state, the single or the current tab.
-    #[inline]
-    pub(crate) fn current_mut(&mut self) -> &mut AppState {
-        match self {
-            AppContainer::Single(app) => app,
-            AppContainer::Tabs(tabs) => tabs.current_tab_mut(),
-        }
-    }
-}
 
 /// The main struct of runa
 /// Contains the AppContainer, the shared clipboard and the worker pool
@@ -84,7 +53,7 @@ impl RunaRoot {
 
     pub(crate) fn tick(&mut self) -> bool {
         let mut changed = self.update();
-        changed |= self.container.current_mut().tick(&self.workers);
+        changed |= self.container.current_mut().process_timers(&self.workers);
 
         if changed {
             self.sync_watch();
@@ -154,22 +123,8 @@ impl RunaRoot {
                 continue;
             }
 
-            match &mut self.container {
-                AppContainer::Single(app) => {
-                    app.handle_worker_response(response, &self.workers);
-                }
-                AppContainer::Tabs(tabs) => {
-                    let target_app = if let Some(id) = response.tab_id() {
-                        tabs.iter_mut().find(|t| t.tab_id() == Some(id))
-                    } else {
-                        Some(tabs.current_tab_mut())
-                    };
-
-                    if let Some(app) = target_app {
-                        app.handle_worker_response(response, &self.workers);
-                    }
-                }
-            }
+            self.container
+                .route_worker_response(response, &self.workers);
         }
         changed
     }

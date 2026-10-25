@@ -9,9 +9,9 @@ use std::time::{Duration, Instant};
 use crossterm::event::{KeyCode::*, KeyEvent};
 use ratatui::layout::Alignment;
 
+use crate::app::overlays::{Overlay, OverlayKind};
 use crate::app::state::{AppState, KeypressResult};
 use crate::core::metadata::FileMetadataCache;
-use crate::ui::overlays::{Overlay, OverlayKind};
 
 /// AppState input and action handlers
 impl AppState {

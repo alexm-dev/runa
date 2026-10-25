@@ -17,7 +17,8 @@ use ratatui::{
     backend::{Backend, CrosstermBackend},
 };
 
-use crate::app::{KeypressResult, RunaRoot};
+use crate::app::KeypressResult;
+use crate::runtime::RunaRoot;
 
 pub(crate) const POLL_INTERVAL: Duration = Duration::from_millis(16);
 

@@ -25,7 +25,7 @@ use crate::core::metadata::CachedMetaKey;
 use crate::core::sort::{SortConfig, SortMode, SortOrder};
 use crate::core::workers::Workers;
 use crate::core::{FileEntry, Formatter, fm, preview};
-use crate::ui::terminal::POLL_INTERVAL;
+use crate::runtime::POLL_INTERVAL;
 use crate::utils::text::StrBuffer;
 
 /// Directory the generated entries pretend to live in. Never touched on disk.
@@ -390,7 +390,7 @@ impl IdleFixture {
                 self.app.handle_worker_response(response, &self.workers);
                 changed = true;
             }
-            changed |= self.app.tick(&self.workers);
+            changed |= self.app.process_timers(&self.workers);
             redraws += usize::from(changed);
             std::thread::sleep(POLL_INTERVAL);
         }

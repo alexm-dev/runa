@@ -24,11 +24,12 @@ use crate::app::{
     actions::{ActionContext, ActionMode, InputMode},
     keymap::{Action, Keymap, TabAction},
     metadata::MetadataState,
+    overlays::{OverlayKind, OverlayStack},
 };
-use crate::config::Config;
-use crate::config::display::PreviewMethod;
+use crate::config::{Config, display::PreviewMethod};
 use crate::core::{
     cache::DirListOptions,
+    command,
     metadata::{FileMetadataCache, MetadataNeeds},
     sort::SortConfig,
     workers::{
@@ -36,9 +37,6 @@ use crate::core::{
         WorkerResponse, Workers,
     },
 };
-
-use crate::command;
-use crate::ui::overlays::{OverlayKind, OverlayStack};
 use crate::utils::timings::{Throttler, Timings};
 
 /// Enumeration for each individual keypress result processed.
@@ -213,6 +211,7 @@ impl AppState {
             Some(self.nav.selected_idx())
         }
     }
+
     pub(crate) fn has_visible_entries(&self) -> bool {
         !self.nav.entries().is_empty()
     }
@@ -233,6 +232,7 @@ impl AppState {
         }
     }
 
+    /// Update the file info cache by requesting a metadata load.
     pub(crate) fn update_file_info_cache(&mut self, workers: &Workers) {
         let status_info = self.config.display().info().status_bar();
         let info_overlay = self.overlays().is_open(OverlayKind::ShowInfo);
@@ -281,16 +281,16 @@ impl AppState {
         }
     }
 
+    /// Applies a new sort configuration to the navigation state.
     pub(crate) fn apply_sort_config(&mut self, config: SortConfig) {
         self.nav.set_sort_config(config);
     }
 
-    /// The heart of the app: updates state and handles worker messages
+    /// Process time-based state: message expiration, fil-op indicator, prefix timeout,
+    /// preview debounce, and request throttles.
     ///
-    /// Is used by the main event loop to update the application state.
-    /// Returns a bool to determine if the AppState needs reloading
-    /// and sets it to true if a WorkerResponse was made or if a preview should be triggered.
-    pub(crate) fn tick(&mut self, workers: &Workers) -> bool {
+    /// Returns true if anything change and the UI needs a redraw.
+    pub(crate) fn process_timers(&mut self, workers: &Workers) -> bool {
         let mut changed = false;
 
         if let Some(expiry) = self.notification_time
@@ -303,6 +303,7 @@ impl AppState {
             changed = true;
         }
 
+        // Handle file operation worker activity indicator
         if workers.active_fileops().load(Ordering::Relaxed) > 0 {
             let start = *self.worker_time.get_or_insert_with(Instant::now);
 
@@ -314,6 +315,7 @@ impl AppState {
             changed = true;
         }
 
+        // Handle prefix recognition expiration and cancel if expired
         let prefix_recognizer = self.actions.prefix_recognizer_mut();
         if prefix_recognizer.expired() {
             prefix_recognizer.cancel();
@@ -336,6 +338,7 @@ impl AppState {
             changed = true;
         }
 
+        // Metadata handler for file info and cache
         if self.metadata.take_queued(Timings::FILE_INFO_THROTTLE_MS) {
             self.update_file_info_cache(workers);
             changed = true;
@@ -900,8 +903,8 @@ impl AppState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::overlays::Overlay;
     use crate::core::FileEntry;
-    use crate::ui::overlays::Overlay;
     use ratatui::layout::Alignment;
     use std::ffi::OsString;
     use std::time::{Duration, Instant};
@@ -926,7 +929,7 @@ mod tests {
             text: "Timed MSG".to_string(),
             alignment: Alignment::Center,
         });
-        let changed = app.tick(&workers);
+        let changed = app.process_timers(&workers);
         assert!(changed);
         assert!(app.notification_time.is_none());
         assert!(!app.overlays().is_open(OverlayKind::Message));

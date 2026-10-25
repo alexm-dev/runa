@@ -8,9 +8,8 @@
 use phf::phf_map;
 use ratatui::style::Color;
 
-use crate::config::Theme;
+use crate::config::{Theme, theme::parse_color};
 use crate::core::FileEntry;
-use crate::utils::text::parse_color;
 
 type IconMap = phf::Map<&'static str, (&'static str, Option<&'static str>)>;
 

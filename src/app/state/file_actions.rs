@@ -28,8 +28,8 @@ use crate::app::{
     keymap::FileAction,
     state::{AppState, KeypressResult},
 };
-use crate::command::{self, RunMode};
 use crate::config::editor::EditorCommand;
+use crate::core::command::{self, RunMode};
 use crate::core::workers::{CommandTask, Workers};
 use crate::utils::Timings;
 use crate::utils::path;

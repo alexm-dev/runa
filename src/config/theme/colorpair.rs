@@ -3,8 +3,7 @@
 use ratatui::style::{Color, Style};
 use serde::Deserialize;
 
-use crate::config::theme::{ColorFallback, deserialize_color_field};
-use crate::utils::text;
+use crate::config::theme::{ColorFallback, deserialize_color_field, parse_color};
 
 /// ColorPair struct to hold foreground and background colors.
 /// Used throughout the theme configuration.
@@ -34,7 +33,7 @@ impl<'de> Deserialize<'de> for ColorPair {
         let inner = ColorFormat::deserialize(deserializer)?;
         match inner {
             ColorFormat::Short(s) => Ok(ColorPair {
-                fg: text::parse_color(&s),
+                fg: parse_color(&s),
                 bg: Color::Reset,
             }),
             ColorFormat::Full { fg, bg } => Ok(ColorPair { fg, bg }),

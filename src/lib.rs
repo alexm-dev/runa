@@ -21,9 +21,9 @@
 
 pub(crate) mod app;
 pub(crate) mod cli;
-pub(crate) mod command;
 pub(crate) mod config;
 pub(crate) mod core;
+pub(crate) mod runtime;
 pub(crate) mod ui;
 pub(crate) mod utils;
 
@@ -166,7 +166,7 @@ pub fn run() -> io::Result<()> {
         Err(e) => exit_with_startup_error(e),
     };
 
-    let mut runa = app::RunaRoot::new(container, workers);
+    let mut runa = runtime::RunaRoot::new(container, workers);
 
-    ui::run_terminal(&mut runa)
+    runtime::run_terminal(&mut runa)
 }

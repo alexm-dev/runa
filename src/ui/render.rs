@@ -18,10 +18,10 @@ use ratatui::{
 use crate::app::{
     AppState, Clipboard, LayoutMetrics,
     actions::{ActionMode, InputMode},
+    overlays::Overlay,
 };
 use crate::core::workers::Workers;
 use crate::ui::{
-    overlays::Overlay,
     panes::{self, PaneContext, PaneStyles},
     widgets,
 };

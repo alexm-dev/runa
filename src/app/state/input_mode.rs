@@ -15,6 +15,7 @@ use std::time::Duration;
 
 use crossterm::event::{KeyCode::*, KeyEvent};
 
+use crate::app::overlays::OverlayKind;
 use crate::app::{
     actions::{ActionMode, InputMode},
     keymap::{Action, NavAction, PrefixCommand, SystemAction},
@@ -23,7 +24,6 @@ use crate::app::{
 use crate::core::proc;
 use crate::core::sort::{SortConfig, SortOrder};
 use crate::core::workers::Workers;
-use crate::ui::overlays::OverlayKind;
 use crate::utils::{os, path};
 
 /// AppState input handlers

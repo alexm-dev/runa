@@ -209,7 +209,7 @@ pub(crate) fn handle_tab_action(
                     )));
 
                     if let AppContainer::Tabs(tabs) = container {
-                        tabs.current_tab_mut().tick(workers);
+                        tabs.current_tab_mut().process_timers(workers);
                     }
                 }
                 AppContainer::Tabs(tabs) => {

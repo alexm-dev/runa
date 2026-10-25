@@ -12,12 +12,8 @@
 //! See submodules [panes] and [widgets] for detailed drawing functions.
 
 pub(crate) mod icons;
-pub(crate) mod overlays;
 pub(crate) mod panes;
 pub(crate) mod render;
-pub(crate) mod terminal;
 pub(crate) mod widgets;
 
 pub(crate) use render::render;
-
-pub(crate) use terminal::run_terminal;
