@@ -20,25 +20,47 @@ use crate::app::{
     actions::{ActionMode, InputMode},
     overlays::Overlay,
 };
-use crate::core::workers::Workers;
+use crate::core::workers::FileOpCounts;
 use crate::ui::{
     panes::{self, PaneContext, PaneStyles},
     widgets,
 };
 
+pub(crate) struct FrameLayout {
+    header: Rect,
+    chunks: Vec<Rect>,
+    metrics: LayoutMetrics,
+}
+
+impl FrameLayout {
+    crate::getters! {
+        metrics: LayoutMetrics,
+    }
+}
+
+pub(crate) fn frame_layout(area: Rect, app: &AppState) -> FrameLayout {
+    let (header, root_area) = header_and_root(area, app);
+    let chunks = layout_chunks(root_area, app);
+    let metrics = calculate_layout_metrics(area, chunks.last().copied(), app);
+    FrameLayout {
+        header,
+        chunks,
+        metrics,
+    }
+}
+
 /// Render function which renders the entire terminal UI for runa on each frame.
 /// Handles layout, pane rendering, borders, headers and coordinates all widgets.
 pub(crate) fn render(
     frame: &mut Frame,
-    app: &mut AppState,
-    workers: &Workers,
-    clipboard: &mut Clipboard,
+    app: &AppState,
+    layout: &FrameLayout,
+    clipboard: &Clipboard,
+    fileops: FileOpCounts,
 ) {
     let outer_area = frame.area();
-    let root_area = render_root_and_header(frame, app, outer_area);
-    let chunks = layout_chunks(root_area, app);
-    let metrics = calculate_layout_metrics(outer_area, chunks.last().copied(), app);
-    app.update_layout_metrics(workers, metrics);
+    render_header(frame, app, layout.header);
+    let chunks = &layout.chunks;
 
     let cfg = app.config();
     let display_cfg = cfg.display();
@@ -180,14 +202,14 @@ pub(crate) fn render(
         frame,
         app,
         widgets::StatusPosition::Header,
-        workers,
+        fileops,
         clipboard,
     );
     widgets::draw_status_bar(
         frame,
         app,
         widgets::StatusPosition::Footer,
-        workers,
+        fileops,
         clipboard,
     );
     render_overlays(frame, app, accent_style);
@@ -255,8 +277,27 @@ pub(crate) fn layout_chunks(size: Rect, app: &AppState) -> Vec<Rect> {
         .to_vec()
 }
 
+fn header_and_root(area: Rect, app: &AppState) -> (Rect, Rect) {
+    let display_cfg = app.config().display();
+
+    if display_cfg.is_unified() {
+        (area, Block::default().borders(Borders::ALL).inner(area))
+    } else {
+        let header_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(1), Constraint::Min(0)])
+            .split(area);
+
+        let mut content = header_layout[1];
+        if display_cfg.is_no_borders() {
+            content.height = content.height.saturating_sub(1);
+        }
+        (header_layout[0], content)
+    }
+}
+
 /// Renders the root block and header (if applicable) around the main content area.
-fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect {
+fn render_header(frame: &mut Frame, app: &AppState, area: Rect) {
     let cfg = app.config();
     let display_cfg = cfg.display();
     let theme_cfg = cfg.theme();
@@ -277,28 +318,15 @@ fn render_root_and_header(frame: &mut Frame, app: &AppState, area: Rect) -> Rect
             ]));
         }
 
-        let inner = outer_block.inner(area);
         frame.render_widget(outer_block, area);
-        inner
     } else {
-        let header_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Min(0)])
-            .split(area);
-
         frame.render_widget(
             Paragraph::new(Line::from(vec![
                 Span::styled(path_str, theme_cfg.path_style()),
                 Span::raw(" "),
             ])),
-            header_layout[0],
+            area,
         );
-
-        let mut content = header_layout[1];
-        if display_cfg.is_no_borders() {
-            content.height = content.height.saturating_sub(1);
-        }
-        content
     }
 }
 
@@ -502,9 +530,7 @@ mod tests {
 
             let mut metrics = LayoutMetrics::default();
             terminal.draw(|frame| {
-                let root_area = render_root_and_header(frame, &app, frame.area());
-                let chunks = layout_chunks(root_area, &app);
-                metrics = calculate_layout_metrics(frame.area(), chunks.last().copied(), &app);
+                metrics = frame_layout(frame.area(), &app).metrics();
             })?;
 
             assert_eq!(metrics.preview_height, rows, "borders = {borders}");

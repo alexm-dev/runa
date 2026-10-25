@@ -85,11 +85,15 @@ impl RunaRoot {
     }
 
     pub(crate) fn render(&mut self, frame: &mut Frame) {
+        let app = self.container.current_mut();
+        let layout = ui::frame_layout(frame.area(), app);
+        app.update_layout_metrics(&self.workers, layout.metrics());
         ui::render(
             frame,
-            self.container.current_mut(),
-            &self.workers,
-            &mut self.clipboard,
+            app,
+            &layout,
+            &self.clipboard,
+            self.workers.fileop_counts(),
         );
     }
 

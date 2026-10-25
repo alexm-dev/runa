@@ -28,7 +28,7 @@ pub(crate) use task::*;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::AtomicUsize;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crossbeam_channel::{Receiver, Sender, TrySendError, bounded, unbounded};
 
@@ -65,6 +65,19 @@ pub(crate) struct Workers {
 
     active_fileops: Arc<AtomicUsize>,
     cache: Arc<DirCache>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct FileOpCounts {
+    queued: usize,
+    active: usize,
+}
+
+impl FileOpCounts {
+    crate::getters! {
+        queued: usize,
+        active: usize,
+    }
 }
 
 /// Manages worker thread channels for different task types.
@@ -149,6 +162,13 @@ impl Workers {
 
     pub(crate) fn cache(&self) -> Arc<DirCache> {
         Arc::clone(&self.cache)
+    }
+
+    pub(crate) fn fileop_counts(&self) -> FileOpCounts {
+        FileOpCounts {
+            queued: self.fileop_tx.len(),
+            active: self.active_fileops.load(Ordering::Relaxed),
+        }
     }
 
     pub(crate) fn send_nav_io(&self, task: LoadDirTask) {

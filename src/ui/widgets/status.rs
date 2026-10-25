@@ -1,6 +1,5 @@
 //! Widget module which holds status relevant draw functions for renderer.
 
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use ratatui::{
@@ -12,7 +11,7 @@ use ratatui::{
 };
 
 use crate::config::display::{StatusSegment, StatusTag};
-use crate::core::workers::Workers;
+use crate::core::workers::FileOpCounts;
 use crate::ui::widgets::StatusPosition;
 use crate::{
     app::{AppState, Clipboard},
@@ -33,7 +32,7 @@ pub(crate) fn draw_status_bar(
     frame: &mut Frame,
     app: &AppState,
     position: StatusPosition,
-    workers: &Workers,
+    fileops: FileOpCounts,
     clipboard: &Clipboard,
 ) {
     if position == StatusPosition::None {
@@ -137,8 +136,8 @@ pub(crate) fn draw_status_bar(
     };
 
     if status_cfg.tasks() == position {
-        let queued_ops = workers.fileop_tx().len();
-        let active_ops = workers.active_fileops().load(Ordering::Relaxed);
+        let queued_ops = fileops.queued();
+        let active_ops = fileops.active();
         let total_ops = queued_ops + active_ops;
 
         if total_ops > 0

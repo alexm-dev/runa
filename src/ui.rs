@@ -16,4 +16,4 @@ pub(crate) mod panes;
 pub(crate) mod render;
 pub(crate) mod widgets;
 
-pub(crate) use render::render;
+pub(crate) use render::{frame_layout, render};
