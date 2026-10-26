@@ -4,6 +4,8 @@ All the changes made to runa are documented here.
 
 ## [0.14.3] - UNRELEASED
 
+#### Organization migration, crate rename, performance improvements and internal cleanup.
+
 ### [**BREAKING CHANGES**]
 - **runa** has moved to the `runa-fm/runa` GitHub organization. This includes the:
     - [Main repository](https://github.com/runa-fm/runa)
@@ -23,7 +25,7 @@ All the changes made to runa are documented here.
     ```
 
     - **Scoop**:
-    ```powershell
+    ```sh
     scoop bucket rm alexm-dev
     scoop bucket add runa-fm https://github.com/runa-fm/scoop-bucket
     ```
