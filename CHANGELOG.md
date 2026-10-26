@@ -4,6 +4,14 @@ All the changes made to runa are documented here.
 
 ## [0.14.3] - UNRELEASED
 
+### [**BREAKING CHANGES**]
+- **runa** has moved to the `runa-fm/runa` GitHub organization. This includes the:
+    - [Main repository](https://github.com/runa-fm/runa)
+    - [Packaging](https://github.com/runa-fm/runa-packaging)
+    - [Homebrew tap](https://github.com/runa-fm/homebrew-tap)
+    - [Scoop bucket](https://github.com/runa-fm/homebrew-tap)
+    - [Configuration](https://runa-fm.github.io/runa/)
+
 ### Internal
 - **Frame**: Compute frame layouts before drawing to the UI resulting in performance improvements.
 - **FileOp**: Pass `FileOp` counts to the UI instead of reading directly from the workers.
