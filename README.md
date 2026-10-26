@@ -2,12 +2,12 @@
 
 <div align="center">
 
-[![Build](https://img.shields.io/github/actions/workflow/status/alexm-dev/runa/rust.yml?style=flat-square&logo=github&label=Build)](https://github.com/alexm-dev/runa/actions/workflows/rust.yml)
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://alexm-dev.github.io/runa/)
-[![Latest Release](https://img.shields.io/github/v/release/alexm-dev/runa?style=flat-square&color=8839ef&label=Release)](https://github.com/alexm-dev/runa/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/runa-fm/runa/rust.yml?style=flat-square&logo=github&label=Build)](https://github.com/runa-fm/runa/actions/workflows/rust.yml)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://runa-fm.github.io/runa/)
+[![Latest Release](https://img.shields.io/github/v/release/runa-fm/runa?style=flat-square&color=8839ef&label=Release)](https://github.com/runa-fm/runa/releases)
 [![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
 [![AUR](https://img.shields.io/aur/version/runa?label=AUR&color=blue&style=flat-square&logo=archlinux)](https://aur.archlinux.org/packages/runa)
-[![Language](https://img.shields.io/github/languages/top/alexm-dev/runa?style=flat-square&logo=rust&color=%23e67e22&label=Rust)](https://github.com/alexm-dev/runa)
+[![Language](https://img.shields.io/github/languages/top/runa-fm/runa?style=flat-square&logo=rust&color=%23e67e22&label=Rust)](https://github.com/runa-fm/runa)
 [![License](https://img.shields.io/badge/License-MIT%20or%20Apache%202.0-blue?style=flat-square)](#license)
 
 </div>
@@ -18,12 +18,12 @@
 </div>
 <div align="center">
 
-<a href="https://alexm-dev.github.io/runa/configuration.html">Configuration Guide</a> • 
+<a href="https://runa-fm.github.io/runa/configuration.html">Configuration Guide</a> • 
 <a href="#installation">Installation</a> • 
-<a href="https://alexm-dev.github.io/runa/config-reference/general.html">General Settings</a> • 
-<a href="https://alexm-dev.github.io/runa/config-reference/display.html">Display Settings</a> • 
-<a href="https://alexm-dev.github.io/runa/config-reference/theme.html">Theme</a> • 
-<a href="https://alexm-dev.github.io/runa/config-reference/keys.html">Key Bindings</a>
+<a href="https://runa-fm.github.io/runa/config-reference/general.html">General Settings</a> • 
+<a href="https://runa-fm.github.io/runa/config-reference/display.html">Display Settings</a> • 
+<a href="https://runa-fm.github.io/runa/config-reference/theme.html">Theme</a> • 
+<a href="https://runa-fm.github.io/runa/config-reference/keys.html">Key Bindings</a>
 
 </div>
 
@@ -54,7 +54,7 @@ It allows you to navigate directories, view file listings, and perform typical f
 
 </details>
 
-**runa** is very customizable, check out the [Configuration](https://alexm-dev.github.io/runa/) docs for all the available options.
+**runa** is very customizable, check out the [Configuration](https://runa-fm.github.io/runa/) docs for all the available options.
 
 > [!NOTE]
 > **runa** is stable for daily use and actively developed, with new releases expanding its features while keeping it fast and lightweight.  
@@ -87,7 +87,7 @@ yay -S runa-bin
 You can install runa via homebrew.
 
 ```bash
-brew tap alexm-dev/tap
+brew tap runa-fm/tap
 brew install runa
 ```
 
@@ -96,14 +96,14 @@ brew install runa
 You can install runa via scoop.
 
 ```bash
-scoop bucket add alexm-dev https://github.com/alexm-dev/scoop-bucket
+scoop bucket add runa-fm https://github.com/runa-fm/scoop-bucket
 scoop install runa
 ```
 
 ### Pre-compiled Binaries
 
 If you'd like to download Pre-compiled binaries instead of installing runa as a crate in cargo or via the AUR,
-you can grab the latest binaries for Linux, Windows and macOS from the [Release](https://github.com/alexm-dev/runa/releases) page.
+you can grab the latest binaries for Linux, Windows and macOS from the [Release](https://github.com/runa-fm/runa/releases) page.
 
 After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to your system `PATH` to use runa from your terminal.
 
@@ -115,10 +115,10 @@ After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to yo
 > You can verify the integrity of the release archives using the attestation verification with the GitHub CLI:
 >
 > ```bash
-> gh attestation verify --repo alexm-dev/runa <file_name>
+> gh attestation verify --repo runa-fm/runa <file_name>
 > ```
 >
-> You can also verify the integrity of the release archives using the `SHA256SUMS.txt` file in the [Release](https://github.com/alexm-dev/runa/releases) page.
+> You can also verify the integrity of the release archives using the `SHA256SUMS.txt` file in the [Release](https://github.com/runa-fm/runa/releases) page.
 >
 > Unix
 > ```bash
@@ -141,7 +141,7 @@ After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to yo
 Clone the repo and build with Cargo:
 
 ```bash
-git clone https://github.com/alexm-dev/runa.git
+git clone https://github.com/runa-fm/runa.git
 cd runa
 cargo build --release
 ```
@@ -237,7 +237,7 @@ If you enjoy using **runa**, you can help the project grow:
 
 * ⭐ **Star the Repo:** It helps more people discover runa :)
 * 🐛 **Report Bugs:** Open an issue if something doesn't work as expected.
-* 💡 **Feature Requests:** Suggest new ideas in the [Discussions](https://github.com/alexm-dev/runa/discussions) tab.
+* 💡 **Feature Requests:** Suggest new ideas in the [Discussions](https://github.com/runa-fm/runa/discussions) tab.
 * 🦀 **Contribute:** Pull requests are always welcome! Check out the [CONTRIBUTING guide](CONTRIBUTING.md) for more info.
 
 
