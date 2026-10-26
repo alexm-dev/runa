@@ -11,8 +11,11 @@ All the changes made to runa are documented here.
     - [Homebrew tap](https://github.com/runa-fm/homebrew-tap)
     - [Scoop bucket](https://github.com/runa-fm/homebrew-tap)
     - [Configuration](https://runa-fm.github.io/runa/)
+- **crates.io**: The crate is now published under the new name `runa-fm`, replacing `runa-tui`.
+    _Note: runa remains be a TUI file manager, this change is solely for naming consistency._
+
 - Users who previously added the Scoop bucket or the Homebrew tap should update their tap/bucket references to the new locations.
-- Example:
+- **Migration instructions**:
     - **Homebrew**:
     ```sh
     brew untap alexm-dev/tap
@@ -22,7 +25,13 @@ All the changes made to runa are documented here.
     - **Scoop**:
     ```powershell
     scoop bucket rm alexm-dev
-    scoop bucket add runa-fm https://github.com/runa-fm/scoop-runa
+    scoop bucket add runa-fm https://github.com/runa-fm/scoop-bucket
+    ```
+
+    - **Crates**
+    ```sh
+    cargo uninstall runa-tui
+    cargo install runa-fm
     ```
 
 ### Internal
