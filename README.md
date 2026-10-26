@@ -109,16 +109,7 @@ After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to yo
 
 > [!TIP]
 > **Checksum & Attestation Check:**  
-> All releases starting with v0.5.11 are **immutable**.  
-> Each release includes a `Release Attestation` json file that verifies that the release is immutable.
-> 
-> You can verify the integrity of the release archives using the attestation verification with the GitHub CLI:
->
-> ```bash
-> gh attestation verify --repo runa-fm/runa <file_name>
-> ```
->
-> You can also verify the integrity of the release archives using the `SHA256SUMS.txt` file in the [Release](https://github.com/runa-fm/runa/releases) page.
+> You can verify the integrity of the release archives using the `SHA256SUMS.txt` file in the [Release](https://github.com/runa-fm/runa/releases) page.
 >
 > Unix
 > ```bash
@@ -135,6 +126,13 @@ After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to yo
 > Get-FileHash runa-windows-x86_64.zip -Algorithm SHA256
 > ```
 > Compare the output with the corresponding entry in `SHA256SUMS.txt`.
+>
+> You can verify the integrity of the release archives using the attestation verification with the GitHub CLI:
+>
+> ```bash
+> gh attestation verify --repo runa-fm/runa <file_name>
+> ```
+> _Attestations for releases published before the repository moved to `runa-fm/runa` may not be available through the new repository._
 
 ### Build from source
 
