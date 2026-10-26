@@ -10,6 +10,7 @@
 /// - `field: &T`           -> returns by reference
 /// - `method => field: T`  -> rename getter function
 /// - [cfg(...)]            -> apply config specific setting to
+#[doc(hidden)]
 #[macro_export]
 macro_rules! getters {
     ($( #[$meta:meta] )? $method:ident => $field:ident : &$type:ty, $($rest:tt)+) => {
@@ -67,6 +68,7 @@ macro_rules! getters {
     () => {};
 }
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! option_arc_str_getters {
     ($($field:ident),* $(,)?) => {
