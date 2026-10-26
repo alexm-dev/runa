@@ -5,7 +5,7 @@
 [![Build](https://img.shields.io/github/actions/workflow/status/runa-fm/runa/rust.yml?style=flat-square&logo=github&label=Build)](https://github.com/runa-fm/runa/actions/workflows/rust.yml)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=flat-square)](https://runa-fm.github.io/runa/)
 [![Latest Release](https://img.shields.io/github/v/release/runa-fm/runa?style=flat-square&color=8839ef&label=Release)](https://github.com/runa-fm/runa/releases)
-[![Crates.io](https://img.shields.io/crates/v/runa-tui?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-tui)
+[![Crates.io](https://img.shields.io/crates/v/runa-fm?style=flat-square&color=e67e22&logo=rust)](https://crates.io/crates/runa-fm)
 [![AUR](https://img.shields.io/aur/version/runa?label=AUR&color=blue&style=flat-square&logo=archlinux)](https://aur.archlinux.org/packages/runa)
 [![Language](https://img.shields.io/github/languages/top/runa-fm/runa?style=flat-square&logo=rust&color=%23e67e22&label=Rust)](https://github.com/runa-fm/runa)
 [![License](https://img.shields.io/badge/License-MIT%20or%20Apache%202.0-blue?style=flat-square)](#license)
@@ -68,7 +68,7 @@ For a detailed list of changes and release notes, see [CHANGELOG.md](./CHANGELOG
 ### Cargo:
 
 ```bash
-cargo install runa-tui
+cargo install runa-fm
 ```
 
 ### Arch Linux (AUR)
