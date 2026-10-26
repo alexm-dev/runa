@@ -44,7 +44,7 @@ yay -S runa-bin
 You can install runa via homebrew.
 
 ```bash
-brew tap alexm-dev/tap
+brew tap runa-fm/tap
 brew install runa
 ```
 
@@ -53,14 +53,14 @@ brew install runa
 You can install runa via scoop.
 
 ```bash
-scoop bucket add alexm-dev https://github.com/alexm-dev/scoop-bucket
+scoop bucket add runa-fm https://github.com/runa-fm/scoop-bucket
 scoop install runa
 ```
 
 ### Pre-compiled Binaries
 
 If you'd like to download Pre-compiled binaries instead of installing runa as a crate in cargo or via the AUR,
-you can grab the latest binaries for Linux, Windows and macOS from the [Release](https://github.com/alexm-dev/runa/releases) page.
+you can grab the latest binaries for Linux, Windows and macOS from the [Release](https://github.com/runa-fm/runa/releases) page.
 
 After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to your system `PATH` to use runa from your terminal.
 
@@ -69,7 +69,7 @@ After downloading, add the `rn` (Linux/macOS) or `rn.exe` (Windows) binary to yo
 Clone the repo and build with Cargo:
 
 ```bash
-git clone https://github.com/alexm-dev/runa.git
+git clone https://github.com/runa-fm/runa.git
 cd runa
 cargo build --release
 cargo install --path .
@@ -149,7 +149,7 @@ Keyboard shortcuts for all actions and navigation.
 
 For the complete list of all options with defaults and inline documentation, see:
 
-- `runa_full.toml` in [assets/config](https://github.com/alexm-dev/runa/blob/main/assets/config/runa_full.toml)
+- `runa_full.toml` in [assets/config](https://github.com/runa-fm/runa/blob/main/assets/config/runa_full.toml)
 - Run `rn --init-full` to generate a full config file with all options
 
 ## Examples

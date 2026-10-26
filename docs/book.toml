@@ -5,4 +5,4 @@ language = "en"
 src = "config"
 
 [output.html]
-git-repository-url = "https://github.com/alexm-dev/runa"
+git-repository-url = "https://github.com/runa-fm/runa"

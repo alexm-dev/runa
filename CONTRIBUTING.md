@@ -17,7 +17,7 @@ If you find a bug, please open an issue and include:
 
 ## Feature Requests
 
-Ideas and feature requests are welcome in the [Discussions](https://github.com/alexm-dev/runa/discussions) tab.
+Ideas and feature requests are welcome in the [Discussions](https://github.com/runa-fm/runa/discussions) tab.
 
 Please explain:
 - The problem your feature solves
@@ -57,7 +57,7 @@ Since the project is currently developed by a single developer, review turnaroun
 
 3. Add the upstream remote:
     ```sh
-    git remote add upstream https://github.com/alexm-dev/runa.git
+    git remote add upstream https://github.com/runa-fm/runa.git
     ```
 
 ## Development Setup
@@ -118,7 +118,7 @@ Before Submittting your Pull Request, ensure your branch is up-to-date with the 
 
 ## Communication
 
-Design clarifications, ideas, and general discussion can happen via [GitHub Discussions](https://github.com/alexm-dev/runa/discussions).  
+Design clarifications, ideas, and general discussion can happen via [GitHub Discussions](https://github.com/runa-fm/runa/discussions).  
 Please be respectful and considerate toward other contributors.
 
 We use **Issues** strictly for tracking bugs and planned features. When participating, please be respectful and considerate toward other contributors.
