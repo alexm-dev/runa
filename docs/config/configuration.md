@@ -22,10 +22,10 @@ runa is configured via a TOML file. By default, it looks for your config in the 
 
 ### Cargo
 
-You can install runa from [crates.io](https://crates.io/crates/runa-tui)
+You can install runa from [crates.io](https://crates.io/crates/runa-fm)
 
 ```bash
-cargo install runa-tui
+cargo install runa-fm
 ```
 
 ### Arch Linux (AUR)
