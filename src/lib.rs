@@ -186,8 +186,7 @@ mod tests {
         std::fs::create_dir(&b)?;
 
         let workers = Workers::spawn();
-        let container =
-            startup_container(Arc::new(Config::default()), &workers, Some(vec![a, b]))?;
+        let container = startup_container(Arc::new(Config::default()), &workers, Some(vec![a, b]))?;
         let app::AppContainer::Tabs(mut tabs) = container else {
             return Err("expected tabs".into());
         };
