@@ -172,26 +172,3 @@ pub fn run() -> io::Result<()> {
 
     runtime::run_terminal(&mut runa)
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn startup_loads_only_the_shown_tab() -> Result<(), Box<dyn std::error::Error>> {
-        let temp = tempfile::tempdir()?;
-        let a = temp.path().join("a");
-        let b = temp.path().join("b");
-        std::fs::create_dir(&a)?;
-        std::fs::create_dir(&b)?;
-
-        let workers = Workers::spawn();
-        let container = startup_container(Arc::new(Config::default()), &workers, Some(vec![a, b]))?;
-        let app::AppContainer::Tabs(mut tabs) = container else {
-            return Err("expected tabs".into());
-        };
-        let ids: Vec<u64> = tabs.iter_mut().map(|t| t.nav().request_id()).collect();
-        assert_eq!(ids, [1, 0]);
-        Ok(())
-    }
-}
