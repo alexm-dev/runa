@@ -2,13 +2,16 @@
 
 All the changes made to runa are documented here.
 
-## [0.15.1] - UNRELEASED
+## [0.15.1] - 2026-10-28
+
+#### Fix to tabs at startup.
 
 ### Fixed
 **Tabs**: Startup now loads the shown tab correctly.
 
 ### Internal
 **Dependencies**: Cargo update.
+
 
 ---
 
