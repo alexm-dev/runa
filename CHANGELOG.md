@@ -2,6 +2,12 @@
 
 All the changes made to runa are documented here.
 
+## [0.15.2] - UNRELEASED
+
+
+---
+
+
 ## [0.15.1] - 2026-10-28
 
 #### Fix to tabs at startup.
