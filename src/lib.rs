@@ -102,7 +102,6 @@ fn startup_container(
         if path_str == "." || path_str == "cwd" {
             if let Ok(mut state) = app::AppState::new(Arc::clone(&config)) {
                 state.set_tab_id(tab_index);
-                state.initialize(workers, None);
                 tabs.push(state);
             }
         } else {
@@ -114,9 +113,12 @@ fn startup_container(
 
             let mut state = app::AppState::from_dir(Arc::clone(&config), &target)?;
             state.set_tab_id(tab_index);
-            state.initialize(workers, None);
             tabs.push(state);
         }
+    }
+
+    if let Some(first) = tabs.first_mut() {
+        first.initialize(workers, None);
     }
 
     match tabs.len() {
@@ -169,4 +171,28 @@ pub fn run() -> io::Result<()> {
     let mut runa = runtime::RunaRoot::new(container, workers);
 
     runtime::run_terminal(&mut runa)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn startup_loads_only_the_shown_tab() -> Result<(), Box<dyn std::error::Error>> {
+        let temp = tempfile::tempdir()?;
+        let a = temp.path().join("a");
+        let b = temp.path().join("b");
+        std::fs::create_dir(&a)?;
+        std::fs::create_dir(&b)?;
+
+        let workers = Workers::spawn();
+        let container =
+            startup_container(Arc::new(Config::default()), &workers, Some(vec![a, b]))?;
+        let app::AppContainer::Tabs(mut tabs) = container else {
+            return Err("expected tabs".into());
+        };
+        let ids: Vec<u64> = tabs.iter_mut().map(|t| t.nav().request_id()).collect();
+        assert_eq!(ids, [1, 0]);
+        Ok(())
+    }
 }

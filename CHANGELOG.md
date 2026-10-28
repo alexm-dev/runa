@@ -2,6 +2,17 @@
 
 All the changes made to runa are documented here.
 
+## [0.15.1] - UNRELEASED
+
+### Fixed
+**Tabs**: Startup now loads the shown tab correctly.
+
+### Internal
+**Dependencies**: Cargo update.
+
+---
+
+
 ## [0.15.0] - 2026-10-26
 
 #### Organization migration, crate rename, performance improvements and internal cleanup.
